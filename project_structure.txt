@@ -145,6 +145,7 @@ src/fpg_core/types_new/buildable_space.py
 src/fpg_core/types_new/floor_plan.py
 src/fpg_core/types_new/floor_plan_spec.py
 src/fpg_core/types_new/geometry.py
+src/fpg_core/types_new/Readme.md
 src/fpg_core/usable_land/__init__.py
 src/fpg_core/usable_land/api.py
 src/fpg_core/usable_land/exceptions.py
