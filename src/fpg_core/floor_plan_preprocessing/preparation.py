@@ -13,7 +13,6 @@ from ..types import (
     RoomType,
     RoomWidthAxis,
 )
-
 from .config import PreprocessingPolicy
 from .context import (
     PreparedReferenceData,

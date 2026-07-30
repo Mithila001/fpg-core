@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 from ..types import RoomId, RoomType
 from .config import (

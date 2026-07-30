@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from shapely.errors import ShapelyError
 from shapely.geometry import Polygon

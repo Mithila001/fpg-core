@@ -16,6 +16,8 @@ from ..types.floor_plan_spec import (
     FloorPlanGenerationSpec,
     MatchPolicy,
     RoomId,
+    RoomRelationSpec,
+    RoomSpec,
     RoomType,
     RoomWidthAxis,
 )
@@ -29,6 +31,8 @@ __all__ = [
     "Point",
     "Polygon",
     "RoomId",
+    "RoomRelationSpec",
+    "RoomSpec",
     "RoomType",
     "RoomWidthAxis",
 ]

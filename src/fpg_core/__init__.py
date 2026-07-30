@@ -39,7 +39,16 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     ),
 }
 
-__all__ = ["__version__", *_EXPORTS]
+__all__ = [
+    "__version__",
+    "BuildableSpaceConfig",
+    "CandidateSearchConfig",
+    "FpgCoreConfig",
+    "FpgCoreConfigError",
+    "PreprocessingConfig",
+    "validate_fpg_core_config",
+    "canonical_aspect_ratio",
+]
 
 
 def __getattr__(name: str) -> Any:

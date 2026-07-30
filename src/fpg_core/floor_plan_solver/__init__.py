@@ -49,7 +49,24 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "FloorPlanSolverError": (".exceptions", "FloorPlanSolverError"),
 }
 
-__all__ = list(_EXPORTS)
+__all__ = [
+    "FloorPlanSolver",
+    "generate_floor_plan",
+    "FloorPlanSolveRequest",
+    "FloorPlanSolveResult",
+    "RoomPlacementHint",
+    "SolverDiagnostics",
+    "SolverStatus",
+    "DEFAULT_PROFILES",
+    "INITIAL_GENERATION_PROFILE",
+    "REFINEMENT_A_PROFILE",
+    "REFINEMENT_B_PROFILE",
+    "GenerationProfile",
+    "HardConstraintUse",
+    "SoftConstraintUse",
+    "build_default_profiles",
+    "FloorPlanSolverError",
+]
 
 
 def __getattr__(name: str) -> Any:

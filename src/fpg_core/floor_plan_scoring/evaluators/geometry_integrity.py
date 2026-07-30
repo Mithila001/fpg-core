@@ -136,7 +136,7 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
                     overlap_area = None
                 if overlap_area is None or overlap_area > config.tolerance:
                     overlap_count += 1
-                    metrics = (
+                    overlap_metrics = (
                         (ScoreMetric("overlap_area", overlap_area, "square_units"),)
                         if overlap_area is not None
                         else ()
@@ -147,11 +147,11 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
                             message=f"Rooms '{room_a.name}' and '{room_b.name}' overlap.",
                             severity=FindingSeverity.ERROR,
                             subject_ids=(room_a.room_id, room_b.room_id),
-                            metrics=metrics,
+                            metrics=overlap_metrics,
                         )
                     )
 
-        metrics = (
+        summary_metrics = (
             ScoreMetric("invalid_polygon_count", invalid_polygon_count),
             ScoreMetric("diagonal_polygon_count", diagonal_polygon_count),
             ScoreMetric("containment_failure_count", containment_failure_count),
@@ -162,5 +162,5 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
             status=EvaluationStatus.COMPLETED,
             score=0.0 if findings else 100.0,
             findings=tuple(findings),
-            metrics=metrics,
+            metrics=summary_metrics,
         )

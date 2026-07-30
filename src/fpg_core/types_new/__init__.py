@@ -4,4 +4,4 @@ New code should import domain contracts from :mod:`fpg_core.types`.
 """
 
 from ..types import *  # noqa: F403
-from ..types import __all__
+from ..types import __all__ as __all__

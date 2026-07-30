@@ -12,11 +12,10 @@ from ..types import (
     OpeningType,
     Point,
     Polygon,
-    RoomRole,
     RoomId,
+    RoomRole,
     RoomType,
 )
-
 from .domain import AnalyzedWall, PreparedFloorPlan, WallKind, WallOrientation
 from .exceptions import OpeningExtractionError, OpeningInputError
 from .profiles import OpeningGenerationProfile

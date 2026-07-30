@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from shapely.geometry import LineString, MultiPolygon, Polygon
 
 from ..context import ScoringContext

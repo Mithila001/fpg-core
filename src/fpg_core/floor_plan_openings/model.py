@@ -7,6 +7,7 @@ from typing import Any
 from ortools.sat.python import cp_model
 
 from .constraints import RoomDoorLimitConstraint, SharedPlacementConstraint
+from .constraints.base import OpeningConstraint
 from .domain import AnalyzedWall, OpeningDemand, PlacementOption, PreparedFloorPlan
 from .exceptions import OpeningConfigurationError
 from .profiles import OpeningGenerationProfile
@@ -136,7 +137,7 @@ def _create_variables(context: OpeningModelContext) -> None:
 
 
 def _apply_constraints(context: OpeningModelContext) -> None:
-    constraints = {
+    constraints: dict[str, OpeningConstraint] = {
         "shared_placement": SharedPlacementConstraint(),
         "room_door_limits": RoomDoorLimitConstraint(),
     }

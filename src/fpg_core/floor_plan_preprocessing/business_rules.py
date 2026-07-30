@@ -4,7 +4,6 @@ from collections import Counter
 from dataclasses import replace
 
 from ..types import RoomType
-
 from .config import (
     ExcessAttachedBathroomPolicy,
     PreprocessingPolicy,

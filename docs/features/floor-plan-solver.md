@@ -1,6 +1,6 @@
 # Floor Plan Solver
 
-`src/fpg_core/floor_plan_solver` is the CP-SAT-only part of the floor-plan
+`fpg_core.floor_plan_solver` is the CP-SAT-only part of the floor-plan
 pipeline. It intentionally does not own Candidate Search, Candidate Scoring,
 post-processing, openings, API validation, persistence, or job management.
 

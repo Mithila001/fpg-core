@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from decimal import Decimal
-from typing import Any, Mapping, cast
+from typing import Any, cast
 
 import optuna
 

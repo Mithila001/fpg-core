@@ -74,8 +74,8 @@ class FloorPlanScoreManager:
                 configured_allocations[str(CRITICAL_GROUP)],
                 failed=True,
             )
-            evaluator_results = list(weighted_critical)
-            group_results = [critical_result]
+            critical_evaluator_results = list(weighted_critical)
+            critical_group_results = [critical_result]
             for group in groups:
                 if group.key == CRITICAL_GROUP:
                     continue
@@ -84,8 +84,8 @@ class FloorPlanScoreManager:
                     self._skipped(rule, reason)
                     for rule in rules_by_group[str(group.key)]
                 ]
-                evaluator_results.extend(skipped)
-                group_results.append(
+                critical_evaluator_results.extend(skipped)
+                critical_group_results.append(
                     ScoringGroupResult(
                         group_key=group.key,
                         status=GroupStatus.SKIPPED,
@@ -111,8 +111,8 @@ class FloorPlanScoreManager:
                 total_score=_clamp_total(critical_result.contribution),
                 passed_critical=False,
                 critical_failure=failure,
-                group_results=tuple(group_results),
-                evaluator_results=tuple(evaluator_results),
+                group_results=tuple(critical_group_results),
+                evaluator_results=tuple(critical_evaluator_results),
                 findings=(failure,),
             )
 

@@ -6,7 +6,6 @@ from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry import Polygon as ShapelyPolygon
 
 from ..types import FloorPlan, Point, RoomId
-
 from .domain import (
     AnalyzedWall,
     PreparedFloorPlan,
@@ -136,7 +135,7 @@ def analyze_floor_plan(
         by_line.items(), key=lambda item: (item[0][0].value, item[0][1])
     ):
         endpoints = sorted({value for segment in segments for value in (segment.start, segment.end)})
-        for start, end in zip(endpoints, endpoints[1:]):
+        for start, end in zip(endpoints, endpoints[1:], strict=False):
             if start == end:
                 continue
             covering = [segment for segment in segments if segment.start <= start and segment.end >= end]

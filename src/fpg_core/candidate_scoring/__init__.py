@@ -3,11 +3,11 @@ from .config import EvaluatorRule, ScoringConfig
 from .context import ScoringContext, ScoringContextFactory
 from .defaults import create_default_config, create_default_registry
 from .evaluators import (
-    CandidateEvaluator,
     EXTERIOR_CLEARANCE_KEY,
     RELATIONSHIP_QUALITY_KEY,
     SPATIAL_DISTRIBUTION_KEY,
     ZONE_SUITABILITY_KEY,
+    CandidateEvaluator,
     ExteriorClearanceEvaluator,
     RelationshipQualityEvaluator,
     SpatialDistributionEvaluator,

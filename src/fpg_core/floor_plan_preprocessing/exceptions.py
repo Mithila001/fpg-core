@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any
 
 
 class PreprocessingStage(StrEnum):

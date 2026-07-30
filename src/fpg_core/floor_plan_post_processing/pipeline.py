@@ -4,7 +4,6 @@ import copy
 import time
 
 from ..types import FloorPlan
-
 from .config import GridSnapConfig, HallwayMergeConfig, WallExtensionConfig
 from .contracts import (
     PipelineStatus,

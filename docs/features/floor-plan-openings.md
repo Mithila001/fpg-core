@@ -1,6 +1,6 @@
 # Floor Plan Openings
 
-`src/fpg_core/floor_plan_openings` places doors and windows on a finalized
+`fpg_core.floor_plan_openings` places doors and windows on a finalized
 `fpg_core.types.FloorPlan`. It is an independent algorithm stage intended to run
 after floor-plan post-processing and before floor-plan scoring.
 

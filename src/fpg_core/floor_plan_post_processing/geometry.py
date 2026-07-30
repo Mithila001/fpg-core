@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from math import isclose
 
-from shapely.geometry import LineString, Polygon as ShapelyPolygon
+from shapely.geometry import LineString
+from shapely.geometry import Polygon as ShapelyPolygon
 from shapely.geometry.polygon import orient
 
 from ..types import Point, Polygon

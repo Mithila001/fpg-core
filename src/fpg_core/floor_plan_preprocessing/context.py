@@ -10,7 +10,6 @@ from ..types import (
     RoomSpec,
     RoomType,
 )
-
 from .contracts import (
     NormalizationRecord,
     RelationDecision,

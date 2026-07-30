@@ -5,7 +5,6 @@ from ..types import (
     LandSide,
     NormalizedLand,
 )
-
 from .geometry import unit_inward_normal
 
 SIDE_ORDER = (

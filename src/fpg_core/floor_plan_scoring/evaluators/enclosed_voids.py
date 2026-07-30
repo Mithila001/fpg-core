@@ -88,7 +88,7 @@ class EnclosedVoidsEvaluator(FloorPlanEvaluator):
         void_areas = [float(void.area) for void in void_polygons]
         significant = [area for area in void_areas if area > config.area_tolerance]
         total_area = sum(significant)
-        findings = ()
+        findings: tuple[ScoreFinding, ...] = ()
         if significant:
             findings = (
                 ScoreFinding(

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar, Mapping
+from typing import ClassVar
 
 from ..types import FloorPlan, FloorPlanGenerationSpec, Polygon, RoomId
+
 
 class PipelineStatus(str, Enum):
     SUCCESS = "success"

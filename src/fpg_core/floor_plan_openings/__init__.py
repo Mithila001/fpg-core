@@ -47,7 +47,24 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "OpeningGenerationError": (".exceptions", "OpeningGenerationError"),
 }
 
-__all__ = list(_EXPORTS)
+__all__ = [
+    "generate_openings",
+    "DimensionConfig",
+    "FeaturePolicy",
+    "GeometryConfig",
+    "ObjectiveConfig",
+    "SolverConfig",
+    "OpeningDiagnostics",
+    "OpeningGenerationRequest",
+    "OpeningGenerationResult",
+    "OpeningGenerationStatus",
+    "OpeningIssue",
+    "DEFAULT_OPENING_PROFILE",
+    "OpeningGenerationProfile",
+    "OpeningFeatureRegistry",
+    "create_default_registry",
+    "OpeningGenerationError",
+]
 
 
 def __getattr__(name: str) -> Any:

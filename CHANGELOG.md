@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Moved feature documentation from the importable package into `docs/features`.
+- Removed generated project inventories and extraction-only migration notes.
+- Added consistent local and CI lint, type-check, test, and build commands.
+- Added Pyright/Pylance source-root configuration and clarified lazy public exports.
+
 ## 0.1.0
 
 - Extracted the server-independent algorithm source into the `fpg_core` package.

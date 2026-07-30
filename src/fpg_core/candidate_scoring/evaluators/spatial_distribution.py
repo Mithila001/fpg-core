@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 from ..context import ScoringContext
 from ..types import (
@@ -13,7 +14,13 @@ from ..types import (
     ScoreFinding,
 )
 from .base import CandidateEvaluator
-from .common import EvaluationPoint, build_evaluation_data, clamp_score, setting_float, setting_int
+from .common import (
+    EvaluationPoint,
+    build_evaluation_data,
+    clamp_score,
+    setting_float,
+    setting_int,
+)
 
 SPATIAL_DISTRIBUTION_KEY = EvaluatorKey("spatial_distribution")
 

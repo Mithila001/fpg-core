@@ -6,7 +6,6 @@ from typing import NewType
 from .floor_plan_spec import RoomId, RoomType
 from .geometry import Point, Polygon
 
-
 OpeningId = NewType("OpeningId", str)
 
 

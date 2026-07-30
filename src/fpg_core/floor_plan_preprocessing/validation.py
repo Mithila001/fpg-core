@@ -4,7 +4,6 @@ import math
 from collections import Counter
 
 from ..types import FloorPlanGenerationSpec, RoomType
-
 from .config import (
     ExcessAttachedBathroomPolicy,
     PreprocessingPolicy,

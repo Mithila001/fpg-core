@@ -18,9 +18,14 @@ pip install -e ".[dev]"
 ## Checks
 
 ```bash
+ruff check .
+mypy
 pytest
 python -m build
 ```
+
+Run all checks before opening a pull request. Ruff covers formatting-independent
+lint rules and import ordering; mypy checks the public typed package.
 
 ## Architectural rule
 

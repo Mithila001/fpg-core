@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from ..context import ScoringContext
 from ..types import EvaluatorKey, EvaluatorResult

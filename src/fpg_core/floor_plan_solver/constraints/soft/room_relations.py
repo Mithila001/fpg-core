@@ -41,7 +41,11 @@ class SoftRoomRelationsConstraint:
             ]
 
             if relation.match_policy == "and":
-                for target_id, adjacent in zip(relation.target_id_keys, options):
+                for target_id, adjacent in zip(
+                    relation.target_id_keys,
+                    options,
+                    strict=False,
+                ):
                     violation = violation_when_present(
                         context,
                         adjacent,

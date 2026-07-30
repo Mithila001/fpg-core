@@ -41,7 +41,7 @@ where = ["src"]
 include = ["fpg_core*"]
 
 [tool.setuptools.package-data]
-fpg_core = ["py.typed", "**/*.md"]
+fpg_core = ["py.typed"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
@@ -54,10 +54,32 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-ignore = ["E501"]
+ignore = [
+    "E501",
+    # These enums predate StrEnum. Migrating would change str(member), which is
+    # observable behavior for consumers.
+    "UP042",
+]
 
 [tool.mypy]
 python_version = "3.11"
 packages = ["fpg_core"]
 strict = false
+follow_imports = "skip"
+disable_error_code = ["import-untyped"]
 warn_unused_configs = true
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = [
+    "**/__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "dist",
+]
+extraPaths = ["src"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"

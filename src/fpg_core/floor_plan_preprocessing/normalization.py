@@ -5,7 +5,6 @@ import re
 from collections import Counter
 
 from ..types import ConstraintStrength, MatchPolicy, RoomType
-
 from .config import PreprocessingConfig, canonical_aspect_ratio
 from .context import (
     NormalizedRequest,

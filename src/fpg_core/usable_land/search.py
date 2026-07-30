@@ -5,14 +5,13 @@ from dataclasses import dataclass
 
 from ..buildable_land.geometry import geometry_tolerance
 from ..types import (
+    BuildableSpaceErrorCode,
     FloorWidthAlignment,
     Point,
     Polygon,
     UsableLandConstraints,
 )
-
 from .exceptions import UsableLandError
-from ..types import BuildableSpaceErrorCode
 
 
 @dataclass(frozen=True, slots=True)

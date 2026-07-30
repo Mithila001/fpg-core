@@ -3,11 +3,11 @@ from __future__ import annotations
 import heapq
 import math
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 from ...types import RoomType
-
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,
@@ -395,7 +395,12 @@ def _turn_penalty(
     if len(path) < 3:
         return 0.0
     penalties: list[float] = []
-    for first_id, middle_id, last_id in zip(path, path[1:], path[2:]):
+    for first_id, middle_id, last_id in zip(
+        path,
+        path[1:],
+        path[2:],
+        strict=False,
+    ):
         first = points_by_id[first_id]
         middle = points_by_id[middle_id]
         last = points_by_id[last_id]

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any
 
 from .config import PreparationConfig, SeedPolicy, SeedSource, SolverConfig
 from .domain import RoomType
@@ -62,8 +63,11 @@ class GenerationProfile:
         self._validate_unique_keys(self.soft_constraints, "soft")
 
     @staticmethod
-    def _validate_unique_keys(items: tuple[object, ...], category: str) -> None:
-        keys = [getattr(item, "key") for item in items]
+    def _validate_unique_keys(
+        items: tuple[HardConstraintUse | SoftConstraintUse, ...],
+        category: str,
+    ) -> None:
+        keys = [item.key for item in items]
         duplicates = sorted({key for key in keys if keys.count(key) > 1})
         if duplicates:
             joined = ", ".join(duplicates)

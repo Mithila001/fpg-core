@@ -6,7 +6,6 @@ from typing import Any
 from ortools.sat.python import cp_model
 
 from ..types import FloorPlan
-
 from .contracts import (
     OpeningDiagnostics,
     OpeningGenerationResult,
@@ -97,6 +96,7 @@ def solve_opening_model(
     status = _map_status(status_code)
     solved = status.has_solution
     floor_plan = None
+    extraction_issue: OpeningIssue | None
     if solved:
         try:
             floor_plan = extract_floor_plan(source, solver, built)

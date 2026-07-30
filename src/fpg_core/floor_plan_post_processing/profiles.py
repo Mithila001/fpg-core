@@ -19,7 +19,6 @@ from .processors import (
 )
 from .registry import ProcessorRegistry
 
-
 INITIAL_GENERATION_PROFILE = PostProcessingProfile(
     name="initial_generation",
     processors=(

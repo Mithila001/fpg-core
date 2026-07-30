@@ -4,6 +4,7 @@ import math
 
 from shapely.geometry import Polygon as ShapelyPolygon
 
+from ..config import BuildableSpaceConfig
 from ..types import (
     BuildableSpaceErrorCode,
     BuildableSpaceRequestData,
@@ -12,8 +13,6 @@ from ..types import (
     Polygon,
     Segment,
 )
-from ..config import BuildableSpaceConfig
-
 from .exceptions import BuildableLandError
 from .geometry import geometry_tolerance, signed_area
 

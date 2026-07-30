@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import combinations
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ...types import OpeningPurpose, OpeningType, RoomId, RoomType
 

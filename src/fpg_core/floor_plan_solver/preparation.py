@@ -2,12 +2,21 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from .config import SeedSource
 from .contracts import FloorPlanSolveRequest, RoomPlacementHint
-from .domain import RoomId, RoomType, RoomWidthAxis
+from .domain import (
+    FloorPlan,
+    Polygon,
+    RoomId,
+    RoomRelationSpec,
+    RoomSpec,
+    RoomType,
+    RoomWidthAxis,
+)
 from .exceptions import InvalidSpecificationError, MissingSeedError
 
 
@@ -139,7 +148,7 @@ def _non_negative_float(value: Any, field_name: str) -> float:
 
 
 def _prepare_rooms(
-    room_specs: Iterable[object],
+    room_specs: Iterable[RoomSpec],
     floor: PreparedFloor,
     scale: CoordinateScale,
 ) -> tuple[PreparedRoom, ...]:
@@ -147,7 +156,7 @@ def _prepare_rooms(
     seen_ids: set[str] = set()
 
     for index, room in enumerate(room_specs):
-        room_id = getattr(room, "id")
+        room_id = room.id
         id_key = room_id_key(room_id)
         if not id_key:
             raise InvalidSpecificationError("Room identifiers cannot be empty")
@@ -155,12 +164,12 @@ def _prepare_rooms(
             raise InvalidSpecificationError(f"Duplicate room id: {id_key}")
         seen_ids.add(id_key)
 
-        size = getattr(room, "size")
+        size = room.size
         min_width_value = _positive_float(
-            getattr(size, "min_width"), f"rooms[{id_key}].size.min_width"
+            size.min_width, f"rooms[{id_key}].size.min_width"
         )
         max_short_side_value = _positive_float(
-            getattr(size, "max_width"), f"rooms[{id_key}].size.max_width"
+            size.max_width, f"rooms[{id_key}].size.max_width"
         )
         width_axis = getattr(
             size,
@@ -188,10 +197,10 @@ def _prepare_rooms(
             )
 
         min_area_value = _non_negative_float(
-            getattr(size, "min_area"), f"rooms[{id_key}].size.min_area"
+            size.min_area, f"rooms[{id_key}].size.min_area"
         )
         max_area_value = _non_negative_float(
-            getattr(size, "max_area"), f"rooms[{id_key}].size.max_area"
+            size.max_area, f"rooms[{id_key}].size.max_area"
         )
 
         dimension_min_area = min_width * min_length
@@ -223,7 +232,7 @@ def _prepare_rooms(
                 f"Room '{id_key}' has incompatible dimension and area ranges"
             )
 
-        room_type = getattr(room, "room_type")
+        room_type = room.room_type
         if not isinstance(room_type, RoomType):
             raise InvalidSpecificationError(
                 f"rooms[{id_key}].room_type must be a RoomType enum member"
@@ -234,7 +243,7 @@ def _prepare_rooms(
                 id_key=id_key,
                 variable_name=f"r{index}_{_safe_name(id_key)}",
                 room_type=room_type,
-                name=str(getattr(room, "name")),
+                name=str(room.name),
                 min_width=min_width,
                 max_width=max_width,
                 min_length=min_length,
@@ -252,13 +261,13 @@ def _prepare_rooms(
 
 
 def _prepare_relations(
-    relation_specs: Iterable[object],
+    relation_specs: Iterable[RoomRelationSpec],
     rooms_by_id: dict[str, PreparedRoom],
 ) -> tuple[PreparedRelation, ...]:
     prepared: list[PreparedRelation] = []
 
     for index, relation in enumerate(relation_specs):
-        source_room_id = getattr(relation, "source_room_id")
+        source_room_id = relation.source_room_id
         source_key = room_id_key(source_room_id)
         if source_key not in rooms_by_id:
             raise InvalidSpecificationError(
@@ -268,7 +277,7 @@ def _prepare_relations(
         targets: list[RoomId] = []
         target_keys: list[str] = []
         seen_targets: set[str] = set()
-        for target_id in tuple(getattr(relation, "target_room_ids")):
+        for target_id in tuple(relation.target_room_ids):
             target_key = room_id_key(target_id)
             if target_key == source_key:
                 raise InvalidSpecificationError(
@@ -289,8 +298,8 @@ def _prepare_relations(
                 f"Relation {index} must contain at least one target room"
             )
 
-        match_policy = normalize_enum(getattr(relation, "match_policy"))
-        strength = normalize_enum(getattr(relation, "strength"))
+        match_policy = normalize_enum(relation.match_policy)
+        strength = normalize_enum(relation.strength)
         if match_policy not in {"and", "or"}:
             raise InvalidSpecificationError(
                 f"Relation {index} has unsupported match policy '{match_policy}'"
@@ -367,34 +376,32 @@ def _prepare_candidate_seed(
     return PreparedSeed(source=SeedSource.CANDIDATE_HINTS, rooms=seeds)
 
 
-def _polygon_bounds(boundary: object) -> tuple[float, float, float, float]:
-    points = tuple(getattr(boundary, "points"))
+def _polygon_bounds(boundary: Polygon) -> tuple[float, float, float, float]:
+    points = tuple(boundary.points)
     if len(points) < 4:
         raise InvalidSpecificationError(
             "Existing floor-plan room boundaries must contain at least four points"
         )
-    xs = [float(getattr(point, "x")) for point in points]
-    ys = [float(getattr(point, "y")) for point in points]
+    xs = [float(point.x) for point in points]
+    ys = [float(point.y) for point in points]
     return min(xs), min(ys), max(xs), max(ys)
 
 
 def _prepare_existing_floor_plan_seed(
-    floor_plan: object,
+    floor_plan: FloorPlan,
     rooms_by_id: dict[str, PreparedRoom],
     floor: PreparedFloor,
     scale: CoordinateScale,
 ) -> PreparedSeed | None:
     seeds: dict[str, PreparedRoomSeed] = {}
 
-    for floor_plan_room in tuple(getattr(floor_plan, "rooms")):
-        key = room_id_key(getattr(floor_plan_room, "id"))
+    for floor_plan_room in tuple(floor_plan.rooms):
+        key = room_id_key(floor_plan_room.id)
         room = rooms_by_id.get(key)
         if room is None:
             continue
 
-        min_x, min_y, max_x, max_y = _polygon_bounds(
-            getattr(floor_plan_room, "boundary")
-        )
+        min_x, min_y, max_x, max_y = _polygon_bounds(floor_plan_room.boundary)
         width_value = max_x - min_x
         length_value = max_y - min_y
         if width_value <= 0 or length_value <= 0:
@@ -461,9 +468,9 @@ def prepare_problem(request: FloorPlanSolveRequest) -> PreparedProblem:
     spec = request.specification
     scale = CoordinateScale(request.profile.preparation.coordinate_scale)
 
-    floor_spec = getattr(spec, "floor")
-    floor_width = _positive_float(getattr(floor_spec, "width"), "floor.width")
-    floor_length = _positive_float(getattr(floor_spec, "length"), "floor.length")
+    floor_spec = spec.floor
+    floor_width = _positive_float(floor_spec.width, "floor.width")
+    floor_length = _positive_float(floor_spec.length, "floor.length")
     floor = PreparedFloor(
         width=scale.nearest_length(floor_width),
         length=scale.nearest_length(floor_length),
@@ -473,9 +480,9 @@ def prepare_problem(request: FloorPlanSolveRequest) -> PreparedProblem:
             "Scaled floor dimensions must both be at least one solver unit"
         )
 
-    rooms = _prepare_rooms(tuple(getattr(spec, "rooms")), floor, scale)
+    rooms = _prepare_rooms(tuple(spec.rooms), floor, scale)
     rooms_by_id = {room.id_key: room for room in rooms}
-    relations = _prepare_relations(tuple(getattr(spec, "room_relations")), rooms_by_id)
+    relations = _prepare_relations(tuple(spec.room_relations), rooms_by_id)
     seed = _prepare_seed(request, rooms_by_id, floor, scale)
 
     return PreparedProblem(

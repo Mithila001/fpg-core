@@ -11,7 +11,6 @@ from ..types import (
     Point,
     RoomId,
 )
-
 from .domain import WallOrientation
 from .model import BuiltOpeningModel, PlacementVariables
 
