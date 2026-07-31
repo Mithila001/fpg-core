@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+__all__ = [
+    "find_usable_land",
+]
+
 import math
 
 from shapely.geometry import Polygon as ShapelyPolygon
 
-from ..buildable_land.geometry import geometry_tolerance
+from .geometry import geometry_tolerance
 from ..domain import (
     BuildableLand,
     BuildableSpaceErrorCode,

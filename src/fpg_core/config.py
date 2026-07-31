@@ -1,3 +1,8 @@
+"""Package-wide configuration aggregation and cross-feature validation.
+
+Feature-only settings remain in each feature's own ``config.py``.
+"""
+
 from __future__ import annotations
 
 import math

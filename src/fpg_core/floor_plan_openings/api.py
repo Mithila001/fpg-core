@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+__all__ = [
+    "generate_openings",
+]
+
 from .analysis import analyze_floor_plan
 from .contracts import (
     OpeningDiagnostics,

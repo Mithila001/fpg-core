@@ -1,7 +1,8 @@
 """Core algorithms and domain contracts for floor-plan generation.
 
-The root package keeps imports lazy so applications can use lightweight domain or
-configuration features without initializing the solver runtime.
+Feature operations are exposed through each feature's ``api.py``. The root package
+keeps imports lazy and limits itself to package metadata and selected package-wide
+configuration conveniences.
 """
 
 from __future__ import annotations

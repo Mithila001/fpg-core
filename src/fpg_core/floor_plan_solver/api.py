@@ -1,6 +1,11 @@
 # src/fpg_core/floor_plan_solver/api.py
 from __future__ import annotations
 
+__all__ = [
+    "FloorPlanSolver",
+    "generate_floor_plan",
+]
+
 from .builder import build_model
 from .constraints.defaults import build_default_registry
 from .constraints.registry import ConstraintRegistry

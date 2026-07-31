@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+__all__ = [
+    "evaluate_candidate",
+]
+
 from .config import ScoringConfig
 from .context import ScoringContextFactory
 from .manager import CandidateScoreManager

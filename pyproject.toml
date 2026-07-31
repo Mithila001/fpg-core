@@ -41,7 +41,7 @@ where = ["src"]
 include = ["fpg_core*"]
 
 [tool.setuptools.package-data]
-fpg_core = ["py.typed"]
+fpg_core = ["py.typed", "*/README.md"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"

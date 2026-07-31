@@ -7,6 +7,7 @@ from typing import Any, cast
 
 import optuna
 
+from .exceptions import CandidateSearchStateError
 from .models import (
     CandidatePoint,
     CandidateSearchInput,
@@ -71,12 +72,12 @@ class CandidateSearchSession:
         """Generate exactly one unscored candidate from the current study."""
 
         if self.has_pending_trial:
-            raise RuntimeError(
+            raise CandidateSearchStateError(
                 "The current candidate trial must be scored or failed before "
                 "requesting another trial."
             )
         if not self.has_remaining_trials:
-            raise RuntimeError("Candidate search session has no remaining trials.")
+            raise CandidateSearchStateError("Candidate search session has no remaining trials.")
 
         trial = self._study.ask()
         try:
@@ -107,7 +108,7 @@ class CandidateSearchSession:
         pending_trial = self._pending_trial
         pending_suggestion = self._pending_suggestion
         if pending_trial is None or pending_suggestion is None:
-            raise RuntimeError("Candidate search session has no pending trial.")
+            raise CandidateSearchStateError("Candidate search session has no pending trial.")
         if suggestion != pending_suggestion:
             raise ValueError("The supplied suggestion is not the pending trial.")
 
@@ -153,11 +154,11 @@ class CandidateSearchSession:
         """Return the highest-scoring completed trial seen by this session."""
 
         if self._completed_trials <= 0:
-            raise RuntimeError("Candidate search session has no completed trials.")
+            raise CandidateSearchStateError("Candidate search session has no completed trials.")
 
         best_trial = self._study.best_trial
         if best_trial.value is None:
-            raise RuntimeError("The best Optuna trial does not contain a score.")
+            raise CandidateSearchStateError("The best Optuna trial does not contain a score.")
 
         return CandidateSearchResult(
             points=_points_from_trial_parameters(
@@ -296,12 +297,12 @@ def _points_from_trial_parameters(
             )
 
             if x_parameter_name not in parameters:
-                raise RuntimeError(
+                raise CandidateSearchStateError(
                     "Best trial is missing the X parameter for "
                     f"room '{target.room_id}', hint {hint_index}."
                 )
             if y_parameter_name not in parameters:
-                raise RuntimeError(
+                raise CandidateSearchStateError(
                     "Best trial is missing the Y parameter for "
                     f"room '{target.room_id}', hint {hint_index}."
                 )
@@ -348,7 +349,7 @@ def _hint_count_from_trial_parameters(
 
     parameter_name = _hallway_count_parameter_name(target_index)
     if parameter_name not in parameters:
-        raise RuntimeError(
+        raise CandidateSearchStateError(
             f"Best trial is missing the hallway hint count for room '{target.room_id}'."
         )
 
@@ -361,7 +362,7 @@ def _hint_count_from_trial_parameters(
         <= hint_count
         <= settings.max_hallway_hint_count
     ):
-        raise RuntimeError(
+        raise CandidateSearchStateError(
             f"Trial parameter '{parameter_name}' is outside the configured "
             "hallway hint-count range."
         )
@@ -386,19 +387,19 @@ def _validate_evaluator_score(value: object) -> float:
 
 def _validated_parameter_index(parameter_name: str, value: int | float) -> int:
     if isinstance(value, bool):
-        raise RuntimeError(
+        raise CandidateSearchStateError(
             f"Trial parameter '{parameter_name}' contains a boolean value."
         )
 
     numeric_value = float(value)
     if not numeric_value.is_integer():
-        raise RuntimeError(
+        raise CandidateSearchStateError(
             f"Trial parameter '{parameter_name}' is not an integer index."
         )
 
     index = int(numeric_value)
     if index < 0:
-        raise RuntimeError(
+        raise CandidateSearchStateError(
             f"Trial parameter '{parameter_name}' contains a negative index."
         )
 

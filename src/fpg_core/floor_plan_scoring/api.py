@@ -1,6 +1,10 @@
 # src/fpg_core/floor_plan_scoring/api.py
 from __future__ import annotations
 
+__all__ = [
+    "score_floor_plan",
+]
+
 from .config import ScoringProfile
 from .defaults import create_default_registry
 from .domain import FloorPlan, FloorPlanGenerationSpec

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+__all__ = [
+    "prepare_generation_input",
+]
+
 from .contracts import PreparedGenerationInput, PreprocessingInput
 from .pipeline import run_pipeline
 

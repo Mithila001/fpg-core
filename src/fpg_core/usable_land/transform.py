@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..buildable_land.geometry import unit_inward_normal
+from .geometry import unit_inward_normal
 from ..domain import NormalizedLand, Point, Polygon
 
 

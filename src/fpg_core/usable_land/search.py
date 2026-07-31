@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from ..buildable_land.geometry import geometry_tolerance
+from .geometry import geometry_tolerance
 from ..domain import (
     BuildableSpaceErrorCode,
     FloorWidthAlignment,
