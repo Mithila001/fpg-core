@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry import Polygon as ShapelyPolygon
 
-from ..types import FloorPlan, Point, RoomId
+from ..domain import FloorPlan, Point, RoomId
 from .domain import (
     AnalyzedWall,
     PreparedFloorPlan,

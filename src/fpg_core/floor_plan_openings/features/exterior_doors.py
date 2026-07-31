@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...types import OpeningPurpose, OpeningType, RoomType
+from ...domain import OpeningPurpose, OpeningType, RoomType
 from ..domain import OpeningDemand, PlacementOption, PreparedFloorPlan, WallKind
 from ..profiles import OpeningGenerationProfile
 

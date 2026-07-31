@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import time
 
-from ..types import FloorPlan
+from ..domain import FloorPlan
 from .config import GridSnapConfig, HallwayMergeConfig, WallExtensionConfig
 from .contracts import (
     PipelineStatus,

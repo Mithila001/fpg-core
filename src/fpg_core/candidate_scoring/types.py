@@ -6,7 +6,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import NewType
 
-from ..types import FloorPlanGenerationSpec
+from ..domain import FloorPlanGenerationSpec
 
 EvaluatorKey = NewType("EvaluatorKey", str)
 
@@ -104,7 +104,7 @@ class CandidateScoringInput:
 
     Candidate arrangements remain structurally typed because Candidate Search
     owns their point contract. The shared generation specification comes from
-    the project's active ``fpg_core.types`` domain package.
+    the project's shared ``fpg_core.domain`` package.
     """
 
     specification: FloorPlanGenerationSpec

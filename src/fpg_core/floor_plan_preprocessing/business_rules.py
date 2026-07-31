@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import replace
 
-from ..types import RoomType
+from ..domain import RoomType
 from .config import (
     ExcessAttachedBathroomPolicy,
     PreprocessingPolicy,

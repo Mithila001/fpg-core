@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...types import OpeningPurpose, OpeningType, RoomId
+from ...domain import OpeningPurpose, OpeningType, RoomId
 from ..domain import (
     AnalyzedWall,
     OpeningDemand,

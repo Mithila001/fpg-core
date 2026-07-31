@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..types import BuildableSpaceErrorCode
+from ..domain import BuildableSpaceErrorCode
 
 
 class BuildableLandError(Exception):

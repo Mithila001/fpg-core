@@ -4,7 +4,7 @@ import copy
 import hashlib
 from typing import Any
 
-from ..types import (
+from ..domain import (
     FloorPlan,
     FloorPlanOpening,
     OpeningId,

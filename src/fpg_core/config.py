@@ -5,12 +5,12 @@ from dataclasses import dataclass
 
 from .candidate_scoring.config import ScoringConfig as CandidateScoringConfig
 from .candidate_search.config import CandidateSearchConfig
+from .domain import SetbackProfile, UsableLandConstraints, ValidationLimits
 from .floor_plan_openings.profiles import OpeningGenerationProfile
 from .floor_plan_post_processing.contracts import PostProcessingProfile
 from .floor_plan_preprocessing.config import PreprocessingConfig
 from .floor_plan_scoring.config import ScoringProfile as FloorPlanScoringConfig
 from .floor_plan_solver.profiles import ProfileCatalog
-from .types import SetbackProfile, UsableLandConstraints, ValidationLimits
 
 __all__ = [
     "BuildableSpaceConfig",

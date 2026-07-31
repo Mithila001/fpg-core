@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import combinations
 from typing import TYPE_CHECKING, Any
 
-from ...types import OpeningPurpose, OpeningType, RoomId, RoomType
+from ...domain import OpeningPurpose, OpeningType, RoomId, RoomType
 
 if TYPE_CHECKING:
     from ..model import OpeningModelContext

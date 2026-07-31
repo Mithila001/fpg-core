@@ -4,7 +4,7 @@ from shapely.geometry import Polygon as ShapelyPolygon
 from shapely.geometry import box
 from shapely.ops import unary_union
 
-from ...types import RoomRole, RoomType
+from ...domain import RoomRole, RoomType
 from ..config import VerandaAdjustmentConfig
 from ..contracts import FloorPlanProcessor, ProcessorOutcome, ProcessorStatus
 from ..geometry import from_shapely, to_shapely

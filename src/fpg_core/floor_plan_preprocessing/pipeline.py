@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..types import FloorPlanGenerationSpec
+from ..domain import FloorPlanGenerationSpec
 from .business_rules import apply_business_rules
 from .contracts import (
     FloorSelection,

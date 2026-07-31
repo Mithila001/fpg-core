@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 
-from ..types import FloorPlan
+from ..domain import FloorPlan
 from .profiles import OpeningGenerationProfile
 
 

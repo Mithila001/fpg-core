@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from ...types import RoomType
+from ...domain import RoomType
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,

@@ -5,7 +5,7 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from ..types import FloorPlan
+from ..domain import FloorPlan
 from .contracts import (
     OpeningDiagnostics,
     OpeningGenerationResult,

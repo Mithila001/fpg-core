@@ -4,7 +4,7 @@ import math
 from collections import defaultdict
 from dataclasses import replace
 
-from ..types import (
+from ..domain import (
     FloorSpec,
     RoomId,
     RoomRelationSpec,

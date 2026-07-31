@@ -5,7 +5,7 @@ import math
 from shapely.geometry import Polygon as ShapelyPolygon
 
 from ..config import BuildableSpaceConfig
-from ..types import (
+from ..domain import (
     BuildableSpaceErrorCode,
     BuildableSpaceRequestData,
     LandEdge,

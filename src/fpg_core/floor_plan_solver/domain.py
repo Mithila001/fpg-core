@@ -5,13 +5,13 @@ shared types are moved or re-exported differently, update this file and leave
 the solver internals unchanged.
 """
 
-from ..types.floor_plan import (
+from ..domain.floor_plan import (
     FloorPlan,
     FloorPlanRoom,
     Point,
     Polygon,
 )
-from ..types.floor_plan_spec import (
+from ..domain.floor_plan_spec import (
     ConstraintStrength,
     FloorPlanGenerationSpec,
     MatchPolicy,

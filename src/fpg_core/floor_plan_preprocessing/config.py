@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from ..types import ConstraintStrength, MatchPolicy, RoomType
+from ..domain import ConstraintStrength, MatchPolicy, RoomType
 
 
 class RoomSizeSelectionStrategy(str, Enum):

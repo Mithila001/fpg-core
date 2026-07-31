@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..types import (
+from ..domain import (
     FloorPlanGenerationSpec,
     RoomType,
 )

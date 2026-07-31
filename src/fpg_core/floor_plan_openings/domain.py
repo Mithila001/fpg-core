@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 
-from ..types import (
+from ..domain import (
     FloorPlanRoom,
     OpeningPurpose,
     OpeningType,

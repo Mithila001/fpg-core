@@ -1,4 +1,5 @@
-# fpg_core\types\__init__.py
+"""Shared domain contracts used across fpg-core features."""
+
 from .buildable_space import (
     BuildableLand,
     BuildableSpaceErrorCode,

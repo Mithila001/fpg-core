@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeAlias, cast
 
-from ..types import RoomId, RoomType
+from ..domain import RoomId, RoomType
 from .config import (
     DEFAULT_MAX_HALLWAY_HINT_COUNT,
     DEFAULT_MIN_HALLWAY_HINT_COUNT,

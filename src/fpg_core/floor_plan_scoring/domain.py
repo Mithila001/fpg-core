@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from ..types import FloorPlan, FloorPlanGenerationSpec, RoomType
+from ..domain import FloorPlan, FloorPlanGenerationSpec, RoomType
 
 __all__ = ["FloorPlan", "FloorPlanGenerationSpec", "RoomType"]

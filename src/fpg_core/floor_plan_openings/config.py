@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..types import RoomType
+from ..domain import RoomType
 from .exceptions import OpeningConfigurationError
 
 

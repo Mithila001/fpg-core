@@ -5,7 +5,7 @@ from math import isclose
 from shapely.geometry import Polygon as ShapelyPolygon
 from shapely.geometry.polygon import orient
 
-from ..types import (
+from ..domain import (
     FloorPlan,
     FloorPlanOpening,
     OpeningPurpose,

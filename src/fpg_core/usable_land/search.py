@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 
 from ..buildable_land.geometry import geometry_tolerance
-from ..types import (
+from ..domain import (
     BuildableSpaceErrorCode,
     FloorWidthAlignment,
     Point,

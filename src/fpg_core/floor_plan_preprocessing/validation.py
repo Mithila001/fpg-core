@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from collections import Counter
 
-from ..types import FloorPlanGenerationSpec, RoomType
+from ..domain import FloorPlanGenerationSpec, RoomType
 from .config import (
     ExcessAttachedBathroomPolicy,
     PreprocessingPolicy,

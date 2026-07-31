@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...types import RoomRole
+from ...domain import RoomRole
 from ..config import PlaceholderRemovalConfig
 from ..contracts import FloorPlanProcessor, ProcessorOutcome, ProcessorStatus
 

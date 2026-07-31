@@ -5,7 +5,7 @@ import math
 from shapely.geometry import Polygon as ShapelyPolygon
 
 from ..buildable_land.geometry import geometry_tolerance
-from ..types import (
+from ..domain import (
     BuildableLand,
     BuildableSpaceErrorCode,
     NormalizedLand,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..buildable_land.geometry import unit_inward_normal
-from ..types import NormalizedLand, Point, Polygon
+from ..domain import NormalizedLand, Point, Polygon
 
 
 @dataclass(frozen=True, slots=True)

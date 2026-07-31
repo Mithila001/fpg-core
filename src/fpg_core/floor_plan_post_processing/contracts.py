@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import ClassVar
 
-from ..types import FloorPlan, FloorPlanGenerationSpec, Polygon, RoomId
+from ..domain import FloorPlan, FloorPlanGenerationSpec, Polygon, RoomId
 
 
 class PipelineStatus(str, Enum):
