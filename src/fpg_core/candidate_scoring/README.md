@@ -13,6 +13,7 @@ from fpg_core.candidate_scoring import (
     create_default_config,
     create_default_registry,
 )
+from fpg_core.domain import ExecutionMode
 
 result = evaluate_candidate(
     CandidateScoringInput(
@@ -21,6 +22,7 @@ result = evaluate_candidate(
     ),
     registry=create_default_registry(),
     config=create_default_config(),
+    mode=ExecutionMode.PRODUCTION,
 )
 ```
 
@@ -31,6 +33,40 @@ result = evaluate_candidate(
 - `EvaluatorRegistry`: registered evaluator implementations.
 - `ScoringConfig`: evaluator category, order, weight, threshold, settings, and failure policy.
 - Optional `ScoringContextFactory`: prepares shared derived data for custom evaluators.
+- `ExecutionMode.PRODUCTION` omits exterior-clearance debug geometry.
+- `ExecutionMode.DEBUG` includes exterior-clearance corridors, blockers, and detailed rule calculations.
+
+#### Exterior-clearance rules
+
+The exterior-clearance evaluator accepts typed rules through its evaluator settings:
+
+```python
+from fpg_core.candidate_scoring import ExteriorClearanceRule
+from fpg_core.domain import LandSide, RoomType
+
+settings = {
+    "rules": (
+        ExteriorClearanceRule(
+            room_types=(RoomType.KITCHEN, RoomType.HALLWAY),
+            required_clear_room_count=1,
+            clearance_width=30.0,
+            direction=LandSide.RIGHT,
+        ),
+    )
+}
+```
+
+A corridor starts at each matching hint point, extends to the floor boundary in the configured global direction, and uses `clearance_width` across the perpendicular axis. A source room qualifies when any of its hints has no other room hint inside that corridor. Multiple hints belonging to the same source room do not block one another and count as one room.
+
+Rule score:
+
+```text
+min(clear room count, required clear room count)
+------------------------------------------------- × 100
+          required clear room count
+```
+
+Rules matching no candidate rooms are ignored. The final exterior-clearance score is the average of applicable rule scores.
 
 ### Outputs
 
@@ -40,6 +76,11 @@ result = evaluate_candidate(
 - whether critical checks passed;
 - whether evaluation stopped early and why;
 - execution result, findings, metrics, and optional visualization payload for every evaluator.
+
+For exterior clearance:
+
+- production returns the evaluator score and findings;
+- debug additionally returns `ExteriorClearanceDetails` through `visualization_payload`.
 
 ### Errors and Expected Behaviour
 

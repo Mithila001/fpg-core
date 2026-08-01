@@ -6,7 +6,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import NewType
 
-from ..domain import FloorPlanGenerationSpec
+from ..domain import FloorPlanGenerationSpec, LandSide, RoomType
 
 EvaluatorKey = NewType("EvaluatorKey", str)
 
@@ -44,6 +44,74 @@ class ScoreFinding:
     message: str
     severity: FindingSeverity = FindingSeverity.INFO
     subject_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ClearanceCorridorBounds:
+    """Axis-aligned no-hint-point corridor bounds in project units."""
+
+    min_x: float
+    min_y: float
+    max_x: float
+    max_y: float
+
+
+@dataclass(frozen=True, slots=True)
+class ClearanceCorridorDebug:
+    """Point-level exterior-clearance geometry collected in DEBUG mode."""
+
+    rule_index: int
+    point_id: str
+    source_room_id: str
+    room_name: str
+    room_type: RoomType
+    hint_x: float
+    hint_y: float
+    direction: LandSide
+    bounds: ClearanceCorridorBounds
+    blocker_point_ids: tuple[str, ...]
+    blocker_room_ids: tuple[str, ...]
+    is_clear: bool
+    selected_for_score: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ExteriorClearanceRoomEvaluation:
+    """Room-level result after combining all hints for one source room."""
+
+    source_room_id: str
+    room_name: str
+    room_type: RoomType
+    point_ids: tuple[str, ...]
+    clear_point_ids: tuple[str, ...]
+    qualifies: bool
+    selected_for_score: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ExteriorClearanceRuleEvaluation:
+    """Detailed score calculation for one configured clearance rule."""
+
+    rule_index: int
+    room_types: tuple[RoomType, ...]
+    required_clear_room_count: int
+    clearance_width: float
+    direction: LandSide
+    applicable: bool
+    eligible_room_count: int
+    clear_room_count: int
+    score: float | None
+    room_evaluations: tuple[ExteriorClearanceRoomEvaluation, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ExteriorClearanceDetails:
+    """Exterior-clearance visualization and scoring details for DEBUG mode."""
+
+    floor_width: float
+    floor_length: float
+    rule_evaluations: tuple[ExteriorClearanceRuleEvaluation, ...]
+    corridors: tuple[ClearanceCorridorDebug, ...]
 
 
 @dataclass(frozen=True, slots=True)

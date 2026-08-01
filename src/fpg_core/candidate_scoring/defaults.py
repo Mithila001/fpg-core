@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from .config import EvaluatorRule, ScoringConfig
+from ..domain import LandSide, RoomType
+from .config import ExteriorClearanceRule, EvaluatorRule, ScoringConfig
 from .evaluators import (
     EXTERIOR_CLEARANCE_KEY,
     RELATIONSHIP_QUALITY_KEY,
@@ -41,6 +42,28 @@ def create_default_config() -> ScoringConfig:
                 category=EvaluatorCategory.QUALITY,
                 weight=20.0,
                 order=20,
+                settings={
+                    "rules": (
+                        ExteriorClearanceRule(
+                            room_types=(RoomType.VERANDA,),
+                            required_clear_room_count=1,
+                            clearance_width=20.0,
+                            direction=LandSide.FRONT,
+                        ),
+                        ExteriorClearanceRule(
+                            room_types=(RoomType.GARAGE,),
+                            required_clear_room_count=1,
+                            clearance_width=20.0,
+                            direction=LandSide.FRONT,
+                        ),
+                        ExteriorClearanceRule(
+                            room_types=(RoomType.KITCHEN, RoomType.HALLWAY),
+                            required_clear_room_count=1,
+                            clearance_width=20.0,
+                            direction=LandSide.BACK,
+                        ),
+                    )
+                },
             ),
             EvaluatorRule(
                 key=RELATIONSHIP_QUALITY_KEY,

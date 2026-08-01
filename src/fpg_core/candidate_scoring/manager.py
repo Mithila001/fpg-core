@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from ..domain import ExecutionMode
 from .config import EvaluatorRule, ScoringConfig
 from .context import ScoringContext, ScoringContextFactory
 from .registry import EvaluatorRegistry
@@ -35,9 +36,17 @@ class CandidateScoreManager:
         self._context_factory = context_factory or ScoringContextFactory()
         validate_scoring_config(config, registry)
 
-    def score(self, scoring_input: CandidateScoringInput) -> ScoringResult:
+    def score(
+        self,
+        scoring_input: CandidateScoringInput,
+        *,
+        mode: ExecutionMode = ExecutionMode.PRODUCTION,
+    ) -> ScoringResult:
+        if not isinstance(mode, ExecutionMode):
+            raise TypeError("mode must be an ExecutionMode instance.")
+
         validate_scoring_input(scoring_input)
-        context = self._context_factory.build(scoring_input)
+        context = replace(self._context_factory.build(scoring_input), mode=mode)
 
         critical_rules = self._ordered_rules(EvaluatorCategory.CRITICAL)
         quality_rules = self._ordered_rules(EvaluatorCategory.QUALITY)

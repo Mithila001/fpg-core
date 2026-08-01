@@ -19,11 +19,14 @@ class EvaluationPoint:
 
     Candidate Search may emit several hallway hints for one source room ID. In
     that case ``room_id`` is expanded to an evaluator-only ID such as
-    ``hallway_1::hint:2``. This keeps graph nodes, metrics, and visualization
-    records distinct without modifying the Candidate Search or pipeline data.
+    ``hallway_1::hint:2`` while ``source_room_id`` keeps the original room
+    identity. This keeps point-level records distinct while allowing evaluators
+    to count several hints as one room.
     """
 
     room_id: str
+    source_room_id: str
+    source_room_name: str
     room_type: RoomType
     name: str
     x: float
@@ -261,6 +264,8 @@ def _extract_candidate_points(
     return [
         EvaluationPoint(
             room_id=_required_value(evaluator_ids[index]),
+            source_room_id=point.source_room_id,
+            source_room_name=point.name,
             room_type=point.room_type,
             name=_required_value(evaluator_names[index]),
             x=point.x,
