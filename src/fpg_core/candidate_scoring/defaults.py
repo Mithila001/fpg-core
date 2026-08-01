@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from ..domain import LandSide, RoomType
-from .config import ExteriorClearanceRule, EvaluatorRule, ScoringConfig
+from .config import EvaluatorRule, ExteriorClearanceRule, ScoringConfig
 from .evaluators import (
     EXTERIOR_CLEARANCE_KEY,
-    RELATIONSHIP_QUALITY_KEY,
     SPATIAL_DISTRIBUTION_KEY,
     ZONE_SUITABILITY_KEY,
     ExteriorClearanceEvaluator,
-    RelationshipQualityEvaluator,
     SpatialDistributionEvaluator,
     ZoneSuitabilityEvaluator,
 )
@@ -21,7 +19,6 @@ def create_default_registry() -> EvaluatorRegistry:
         (
             ZoneSuitabilityEvaluator(),
             ExteriorClearanceEvaluator(),
-            RelationshipQualityEvaluator(),
             SpatialDistributionEvaluator(),
         )
     )
@@ -64,12 +61,6 @@ def create_default_config() -> ScoringConfig:
                         ),
                     )
                 },
-            ),
-            EvaluatorRule(
-                key=RELATIONSHIP_QUALITY_KEY,
-                category=EvaluatorCategory.QUALITY,
-                weight=35.0,
-                order=30,
             ),
             EvaluatorRule(
                 key=SPATIAL_DISTRIBUTION_KEY,

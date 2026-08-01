@@ -1,18 +1,27 @@
 # Restructuring Note
 
-The input/output contract restructuring from `FEATURE_TEMPLATE.md` has currently been applied only to `fpg_core.candidate_search`.
+The standard `FeatureExecution[result, details]` contract from `FEATURE_TEMPLATE.md` has currently been applied to these completed feature operations:
 
-## Completed
+- Candidate Search
+- Candidate Circulation
 
-- Added shared `ExecutionMode`, `ExecutionMetadata`, and `FeatureExecution` contracts under `fpg_core.domain`.
-- Updated the one-shot `search_candidates()` operation to:
-  - accept an optional keyword-only `ExecutionMode`;
-  - return `FeatureExecution[CandidateSearchResult, None]`;
-  - place the existing usable result under `execution.result`;
-  - return `details=None` because candidate-search-specific `DEBUG` data for diagnostics or R&D has not been designed yet;
-  - report the selected mode and execution duration through `execution.metadata`.
-- Kept `CandidateSearchSession` trial lifecycle methods unchanged. Their suggestion, trial, and best-result values are incremental session contracts rather than completed feature execution envelopes.
+## Candidate Search
 
-## Not Yet Restructured
+- `search_candidates()` returns `FeatureExecution[CandidateSearchResult, None]`.
+- `CandidateSearchSession` keeps its direct incremental trial contracts.
+- Candidate Search does not yet collect feature-specific DEBUG details.
 
-All other feature folders still use their existing input and output contracts. They should not be assumed to return `FeatureExecution` until migrated separately.
+## Candidate Circulation
+
+- `refine_candidate_circulation()` returns cleaned candidate points as its normal result.
+- PRODUCTION omits feature details.
+- DEBUG includes route paths, costs, diagnostic scores, routing passes, hallway traffic roles, and removed hallway hints.
+- Relationship routing and unused-hallway removal now belong here rather than the default Candidate Scoring pipeline.
+
+## Not Yet Fully Restructured
+
+Other feature folders should not be assumed to return `FeatureExecution` until migrated explicitly.
+
+## Important Candidate Invariant
+
+Candidate Search should generate hint points without overlapping coordinates.

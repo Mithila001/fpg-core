@@ -2,6 +2,8 @@
 
 Scores candidate room hint arrangements before floor-plan solving. Critical evaluators can reject a candidate; quality evaluators contribute to a normalized 0-100 score.
 
+Orthogonal relationship routing and unused-hallway removal now belong to `fpg_core.candidate_circulation`. The legacy relationship evaluator remains importable for compatibility but is not part of the default registry or default scoring configuration.
+
 ## Guide
 
 ### Public API
