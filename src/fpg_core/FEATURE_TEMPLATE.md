@@ -62,7 +62,7 @@ Names such as `pipeline.py`, `manager.py`, and `runner.py` are not mandatory. Us
 
 ## Input and Output Contract
 
-Every feature API should support normal production use and optional R&D execution without separate APIs.
+Every feature API should support normal production use and optional debug/R&D execution without separate APIs.
 
 ```python
 FeatureExecution[TResult, TDetails]
@@ -77,8 +77,7 @@ FeatureExecution[TResult, TDetails]
 - Accept typed feature configuration when customization is needed.
 - Accept a shared `ExecutionMode` instead of feature-specific debug booleans:
   - `PRODUCTION`: return the final result with minimal overhead.
-  - `RND`: also collect feature-specific analysis and visualization data.
-  - `DEBUG`: also collect deeper diagnostic data.
+  - `DEBUG`: collect feature-specific analysis, visualization, and diagnostic data for debugging and R&D.
 - Optional inputs such as seeds, profiles, limits, and callbacks should be explicit and typed.
 - Do not force every feature to accept inputs it does not need.
 
@@ -90,7 +89,7 @@ FeatureExecution[TResult, TDetails]
 - Shared `FeatureExecution`, `ExecutionMode`, and `ExecutionMetadata` types belong in `fpg_core.domain`.
 - Feature-specific result and details types remain inside the feature.
 - In `PRODUCTION`, avoid collecting expensive R&D details.
-- Each feature README must document what its `RND` and `DEBUG` modes capture.
+- Each feature README must document what its `DEBUG` mode captures.
 
 ## Feature README Structure
 
@@ -139,6 +138,6 @@ tests/
 - Keep tests outside `src/fpg_core`.
 - Use one dedicated folder per feature.
 - Default to one end-to-end flow test covering the public API.
-- The end-to-end test should cover normal production execution and, when supported, one R&D execution mode.
+- The end-to-end test should cover normal production execution and, when supported, `DEBUG` execution.
 - Add focused regression or unit tests only when explicitly requested or when needed to protect a known defect, invariant, or numerical edge case.
 - Tests must call the public API rather than internal implementation modules.

@@ -57,7 +57,7 @@ Use `fail_pending_trial()` when external scoring or solving fails after a sugges
 - `CandidateSearchInput`: targets, settings, and a callable returning a finite numeric score.
 - `ExecutionMode`: optional keyword-only mode for `search_candidates()`. It defaults to `PRODUCTION`.
 
-`PRODUCTION`, `RND`, and `DEBUG` currently execute the same search. Candidate-search-specific R&D and debug inputs have not been added yet.
+`PRODUCTION` and `DEBUG` currently execute the same search. Candidate-search-specific debug/R&D inputs and details have not been added yet.
 
 ### Outputs
 
@@ -84,6 +84,6 @@ A fixed random seed makes the Optuna sampler reproducible for the same environme
 - Keep public operations in `api.py`; `optimizer.py` is internal.
 - Do not couple search to candidate scoring or the solver. Accept scoring through the evaluator callback or incremental session API.
 - Keep the one-shot operation wrapped in `FeatureExecution`.
-- Do not invent candidate-search details until useful R&D or debug data is deliberately designed.
+- Do not invent candidate-search details until useful `DEBUG` data for diagnostics or R&D is deliberately designed.
 - Update this README when trial lifecycle, point identity, hallway behaviour, settings, outputs, or execution modes change.
 - Keep feature tests under `tests/candidate_search/test_end_to_end.py` unless extra tests are explicitly justified.

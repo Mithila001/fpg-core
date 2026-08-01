@@ -10,7 +10,6 @@ class ExecutionMode(StrEnum):
     """Controls how much non-result execution data a feature may collect."""
 
     PRODUCTION = "production"
-    RND = "rnd"
     DEBUG = "debug"
 
 

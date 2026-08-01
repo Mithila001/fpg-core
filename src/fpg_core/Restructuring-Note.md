@@ -9,7 +9,7 @@ The input/output contract restructuring from `FEATURE_TEMPLATE.md` has currently
   - accept an optional keyword-only `ExecutionMode`;
   - return `FeatureExecution[CandidateSearchResult, None]`;
   - place the existing usable result under `execution.result`;
-  - return `details=None` because candidate-search-specific R&D/debug data has not been designed yet;
+  - return `details=None` because candidate-search-specific `DEBUG` data for diagnostics or R&D has not been designed yet;
   - report the selected mode and execution duration through `execution.metadata`.
 - Kept `CandidateSearchSession` trial lifecycle methods unchanged. Their suggestion, trial, and best-result values are incremental session contracts rather than completed feature execution envelopes.
 
