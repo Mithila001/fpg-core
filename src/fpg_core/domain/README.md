@@ -1,6 +1,6 @@
 # Shared Domain Contracts
 
-`fpg_core.domain` is the canonical type layer shared by FPG Core features. It contains geometry, buildable-space, floor-plan, and generation-specification contracts.
+`fpg_core.domain` is the canonical type layer shared by FPG Core features. It contains shared execution, geometry, buildable-space, floor-plan, and generation-specification contracts.
 
 ## Guide
 
@@ -14,6 +14,7 @@ Features may depend on these contracts. This folder must not depend on feature i
 
 ### Main Contract Groups
 
+- `execution.py`: `FeatureExecution`, `ExecutionMetadata`, and `ExecutionMode`.
 - `geometry.py`: `Point`, `Segment`, and `Polygon`.
 - `buildable_space.py`: land requests, normalized land, setbacks, buildable land, and usable land.
 - `floor_plan_spec.py`: room requirements, floor size, relations, and generation specifications.
@@ -30,6 +31,6 @@ These types cross feature boundaries and should be treated as public contracts. 
 ## AI Instructions
 
 - Add a type here only when multiple features genuinely share the same domain concept.
-- Do not move feature-specific execution, diagnostics, evaluator, processor, or solver types here.
+- Keep feature-specific details, diagnostics, evaluator, processor, and solver types inside their owning feature.
 - Check all feature imports and consumers before changing a shared field or enum value.
 - Keep this README synchronized with shared contract changes.

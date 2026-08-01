@@ -12,7 +12,7 @@ This template keeps features recognizable without forcing every algorithm into t
    - another feature's public `api.py`, when invoking that feature; or
    - canonical shared contracts from `fpg_core.domain`.
 6. Shared types belong in `fpg_core.domain`. Do not duplicate shared domain models inside features.
-7. Feature-specific contracts, context objects, settings, and implementation types stay inside that feature.
+7. Feature-specific contracts, context objects, settings, results, and R&D detail types stay inside that feature.
 8. `fpg_core.__init__` is for package metadata and carefully selected package-wide conveniences. Do not create a giant root `api.py`.
 9. `fpg_core.config` is only for package-wide configuration aggregation and validation. Feature-only settings stay in the feature's `config.py`.
 10. Preserve public APIs and serialized enum values unless a breaking change is intentional and documented.
@@ -60,6 +60,38 @@ Names such as `pipeline.py`, `manager.py`, and `runner.py` are not mandatory. Us
 - Callers should not import modules such as `pipeline`, `manager`, `optimizer`, `model`, or processor implementations directly.
 - Extension registries and profiles may be public when customization is an intended contract.
 
+## Input and Output Contract
+
+Every feature API should support normal production use and optional R&D execution without separate APIs.
+
+```python
+FeatureExecution[TResult, TDetails]
+├── result: TResult
+├── details: TDetails | None
+└── metadata: ExecutionMetadata
+```
+
+### Inputs
+
+- Accept the required domain input.
+- Accept typed feature configuration when customization is needed.
+- Accept a shared `ExecutionMode` instead of feature-specific debug booleans:
+  - `PRODUCTION`: return the final result with minimal overhead.
+  - `RND`: also collect feature-specific analysis and visualization data.
+  - `DEBUG`: also collect deeper diagnostic data.
+- Optional inputs such as seeds, profiles, limits, and callbacks should be explicit and typed.
+- Do not force every feature to accept inputs it does not need.
+
+### Outputs
+
+- `result` is always the normal usable feature result.
+- `details` is optional and completely feature-specific. Do not enforce common fields inside it.
+- `metadata` contains only small execution-wide information such as the selected mode and duration.
+- Shared `FeatureExecution`, `ExecutionMode`, and `ExecutionMetadata` types belong in `fpg_core.domain`.
+- Feature-specific result and details types remain inside the feature.
+- In `PRODUCTION`, avoid collecting expensive R&D details.
+- Each feature README must document what its `RND` and `DEBUG` modes capture.
+
 ## Feature README Structure
 
 Every feature README should use this structure:
@@ -75,10 +107,10 @@ Every feature README should use this structure:
 <Supported operations and import paths.>
 
 ### Inputs
-<Required structures, important fields, and units.>
+<Required structures, optional configuration, execution modes, important fields, and units.>
 
 ### Outputs
-<Returned structures, statuses, and important fields.>
+<Result, R&D details, metadata, statuses, and important fields.>
 
 ### Errors and Expected Behaviour
 <Exceptions, failure results, mutation, determinism, and side effects.>
@@ -89,6 +121,7 @@ Every feature README should use this structure:
 ## AI Instructions
 - Keep this README synchronized with public behaviour.
 - Update examples when APIs or contracts change.
+- Document changes to inputs, outputs, and execution-mode details.
 - Do not document private implementation as a supported API.
 - Do not import another feature's internal modules.
 ```
@@ -106,5 +139,6 @@ tests/
 - Keep tests outside `src/fpg_core`.
 - Use one dedicated folder per feature.
 - Default to one end-to-end flow test covering the public API.
+- The end-to-end test should cover normal production execution and, when supported, one R&D execution mode.
 - Add focused regression or unit tests only when explicitly requested or when needed to protect a known defect, invariant, or numerical edge case.
 - Tests must call the public API rather than internal implementation modules.

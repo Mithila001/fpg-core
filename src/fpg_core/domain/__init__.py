@@ -22,6 +22,7 @@ from .buildable_space import (
     UsableLandConstraints,
     ValidationLimits,
 )
+from .execution import ExecutionMetadata, ExecutionMode, FeatureExecution
 from .floor_plan import (
     FloorPlan,
     FloorPlanOpening,
@@ -56,6 +57,9 @@ __all__ = [
     "ConstraintStrength",
     "EdgeClassification",
     "EdgeSetback",
+    "ExecutionMetadata",
+    "ExecutionMode",
+    "FeatureExecution",
     "FloorPlan",
     "FloorPlanGenerationSpec",
     "FloorPlanOpening",

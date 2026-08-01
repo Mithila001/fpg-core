@@ -3,10 +3,12 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from decimal import Decimal
+from time import perf_counter
 from typing import Any, cast
 
 import optuna
 
+from ..domain import ExecutionMetadata, ExecutionMode, FeatureExecution
 from .exceptions import CandidateSearchStateError
 from .models import (
     CandidatePoint,
@@ -171,18 +173,35 @@ class CandidateSearchSession:
         )
 
 
-def search_candidates(search_input: CandidateSearchInput) -> CandidateSearchResult:
-    """
-    Run the full configured candidate search and return its best result.
+def search_candidates(
+    search_input: CandidateSearchInput,
+    *,
+    mode: ExecutionMode = ExecutionMode.PRODUCTION,
+) -> FeatureExecution[CandidateSearchResult, None]:
+    """Run the configured search and return its standard execution envelope.
 
-    This batch API remains backward compatible. New orchestration that needs to
-    pause and resume should use CandidateSearchSession directly.
+    Candidate-search details are not collected yet, so ``details`` is ``None``
+    in every execution mode. Use ``CandidateSearchSession`` when orchestration
+    needs direct control over individual trials.
     """
 
+    if not isinstance(mode, ExecutionMode):
+        raise TypeError("mode must be an ExecutionMode instance.")
+
+    started_at = perf_counter()
     session = CandidateSearchSession(search_input)
     while session.has_remaining_trials:
         session.run_next_trial()
-    return session.best_result()
+
+    result = session.best_result()
+    return FeatureExecution(
+        result=result,
+        details=None,
+        metadata=ExecutionMetadata(
+            mode=mode,
+            duration_seconds=perf_counter() - started_at,
+        ),
+    )
 
 
 def _sample_candidate_points(
