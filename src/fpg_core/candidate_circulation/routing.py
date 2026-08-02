@@ -7,9 +7,13 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TypeAlias
 
-from ..domain import RoomType
-from .config import CirculationRouteRule
-from .domain import DestinationSelection, HallwayTrafficClass, TrafficClass
+from ..domain import (
+    CirculationRouteRule,
+    CirculationTrafficClass,
+    DestinationSelection,
+    HallwayTrafficClass,
+    RoomType,
+)
 from .exceptions import CirculationPathNotFoundError
 from .validation import IndexedCandidatePoint, ValidatedCirculationInput
 
@@ -45,7 +49,7 @@ class ResolvedRoute:
         return max(0, len(self.nodes) - 1)
 
     @property
-    def diagnostic_score(self) -> float:
+    def path_efficiency_score(self) -> float:
         if self.total_cost <= 0:
             return 100.0
         return max(
@@ -401,14 +405,14 @@ def _perimeter_bias_cost(
 
 
 def _is_traffic_conflict(
-    traffic_class: TrafficClass,
+    traffic_class: CirculationTrafficClass,
     hallway_class: HallwayTrafficClass | None,
 ) -> bool:
     return (
-        traffic_class is TrafficClass.PUBLIC
+        traffic_class is CirculationTrafficClass.PUBLIC
         and hallway_class is HallwayTrafficClass.PRIVATE
     ) or (
-        traffic_class is TrafficClass.PRIVATE
+        traffic_class is CirculationTrafficClass.PRIVATE
         and hallway_class is HallwayTrafficClass.PUBLIC
     )
 
@@ -444,7 +448,7 @@ def _collect_hallway_traffic(
         }
         for point_key in used_keys:
             usage = traffic[point_key]
-            if route.rule.traffic_class is TrafficClass.PUBLIC:
+            if route.rule.traffic_class is CirculationTrafficClass.PUBLIC:
                 usage.public_route_count += 1
                 usage.public_importance_weight += route.rule.importance_weight
             else:

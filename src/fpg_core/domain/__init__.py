@@ -22,6 +22,18 @@ from .buildable_space import (
     UsableLandConstraints,
     ValidationLimits,
 )
+from .candidate import CandidatePoint
+from .circulation import (
+    CirculationGrid,
+    CirculationGridNode,
+    CirculationRouteRule,
+    CirculationTrafficClass,
+    DestinationSelection,
+    GridRoutingCostProfile,
+    HallwayClassification,
+    HallwayTrafficClass,
+    RouteCostBreakdown,
+)
 from .execution import ExecutionMetadata, ExecutionMode, FeatureExecution
 from .floor_plan import (
     FloorPlan,
@@ -54,7 +66,13 @@ __all__ = [
     "BuildableSpaceRequestData",
     "BuildableSpaceResult",
     "BuildableSpaceStage",
+    "CandidatePoint",
+    "CirculationGrid",
+    "CirculationGridNode",
+    "CirculationRouteRule",
+    "CirculationTrafficClass",
     "ConstraintStrength",
+    "DestinationSelection",
     "EdgeClassification",
     "EdgeSetback",
     "ExecutionMetadata",
@@ -66,6 +84,9 @@ __all__ = [
     "FloorPlanRoom",
     "FloorSpec",
     "FloorWidthAlignment",
+    "GridRoutingCostProfile",
+    "HallwayClassification",
+    "HallwayTrafficClass",
     "LandEdge",
     "LandSide",
     "MatchPolicy",
@@ -86,6 +107,7 @@ __all__ = [
     "RoomSpec",
     "RoomType",
     "RoomWidthAxis",
+    "RouteCostBreakdown",
     "Segment",
     "SetbackCalculationMode",
     "SetbackProfile",

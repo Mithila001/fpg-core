@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from time import perf_counter
 
-from ..domain import ExecutionMetadata, ExecutionMode, FeatureExecution, RoomType
+from ..domain import (
+    CirculationGridNode,
+    ExecutionMetadata,
+    ExecutionMode,
+    FeatureExecution,
+    HallwayClassification,
+    HallwayTrafficClass,
+    RoomType,
+    RouteCostBreakdown,
+)
 from .contracts import (
     CandidateCirculationDetails,
     CandidateCirculationInput,
@@ -10,11 +19,8 @@ from .contracts import (
 )
 from .domain import (
     CirculationPathDetails,
-    GridNode,
-    HallwayTrafficClass,
     HallwayTrafficDetails,
     RemovedHallwayPointDetails,
-    RouteCostBreakdown,
     RoutingPassDetails,
 )
 from .routing import ResolvedRoute, RoutingPassResult, run_routing_passes
@@ -26,7 +32,7 @@ def refine_candidate_circulation(
     *,
     mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> FeatureExecution[CandidateCirculationResult, CandidateCirculationDetails]:
-    """Resolve configured routes and remove hallway hints unused by final traffic."""
+    """Resolve routes, classify hallways, and remove unused hallway hints."""
 
     if not isinstance(mode, ExecutionMode):
         raise TypeError("mode must be an ExecutionMode instance.")
@@ -38,14 +44,17 @@ def refine_candidate_circulation(
     removed_keys = {
         point_key
         for point_key, traffic_class in final_pass.hallway_classes.items()
-        if traffic_class.value == "unused"
+        if traffic_class is HallwayTrafficClass.UNUSED
     }
     cleaned_points = tuple(
         indexed.point
         for indexed in validated.indexed_points
         if indexed.point_key not in removed_keys
     )
-    result = CandidateCirculationResult(points=cleaned_points)
+    result = CandidateCirculationResult(
+        points=cleaned_points,
+        hallway_classifications=_hallway_classifications(validated, final_pass),
+    )
     details = (
         _build_details(validated, routing_passes, removed_keys)
         if mode is ExecutionMode.DEBUG
@@ -59,6 +68,21 @@ def refine_candidate_circulation(
             mode=mode,
             duration_seconds=perf_counter() - started_at,
         ),
+    )
+
+
+def _hallway_classifications(
+    validated: ValidatedCirculationInput,
+    final_pass: RoutingPassResult,
+) -> tuple[HallwayClassification, ...]:
+    return tuple(
+        HallwayClassification(
+            room_id=point.point.room_id,
+            hint_index=point.point.hint_index,
+            traffic_class=final_pass.hallway_classes[point.point_key],
+        )
+        for point in validated.indexed_points
+        if point.point.room_type is RoomType.HALLWAY
     )
 
 
@@ -96,7 +120,9 @@ def _build_details(
         if point.point_key in removed_keys
     )
     return CandidateCirculationDetails(
-        diagnostic_score=_diagnostic_score(final_pass.routes),
+        circulation_efficiency_score=_circulation_efficiency_score(
+            final_pass.routes
+        ),
         routing_pass_count=len(passes),
         grid_node_count=validated.grid_node_count,
         passes=pass_details,
@@ -134,7 +160,7 @@ def _path_details(
 ) -> CirculationPathDetails:
     grid = validated.source.config.grid
     nodes = tuple(
-        GridNode(
+        CirculationGridNode(
             x_index=x_index,
             y_index=y_index,
             x=grid.origin_x + x_index * grid.scale,
@@ -163,9 +189,7 @@ def _path_details(
         nodes=nodes,
         step_count=route.step_count,
         manhattan_step_count=route.manhattan_step_count,
-        detour_step_count=(
-            route.step_count - route.manhattan_step_count
-        ),
+        detour_step_count=route.step_count - route.manhattan_step_count,
         turn_count=route.turn_count,
         manhattan_reference_cost=route.manhattan_reference_cost,
         costs=RouteCostBreakdown(
@@ -175,7 +199,7 @@ def _path_details(
             traffic_conflict_cost=route.traffic_conflict_cost,
             total_cost=route.total_cost,
         ),
-        diagnostic_score=route.diagnostic_score,
+        path_efficiency_score=route.path_efficiency_score,
     )
 
 
@@ -207,13 +231,13 @@ def _hallway_traffic_details(
     return tuple(details)
 
 
-def _diagnostic_score(routes: tuple[ResolvedRoute, ...]) -> float:
+def _circulation_efficiency_score(routes: tuple[ResolvedRoute, ...]) -> float:
     total_importance_weight = sum(
         route.rule.importance_weight for route in routes
     )
     if total_importance_weight <= 0:
         return 0.0
     return sum(
-        route.diagnostic_score * route.rule.importance_weight
+        route.path_efficiency_score * route.rule.importance_weight
         for route in routes
     ) / total_importance_weight

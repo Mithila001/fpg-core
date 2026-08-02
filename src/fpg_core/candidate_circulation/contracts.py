@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..candidate_search.api import CandidatePoint
+from ..domain import CandidatePoint, HallwayClassification
 from .config import CandidateCirculationConfig
 from .domain import (
     HallwayTrafficDetails,
@@ -31,9 +31,10 @@ class CandidateCirculationInput:
 
 @dataclass(frozen=True, slots=True)
 class CandidateCirculationResult:
-    """Normal feature result containing the hallway-cleaned candidate points."""
+    """Production result with cleaned points and hallway traffic tags."""
 
     points: tuple[CandidatePoint, ...]
+    hallway_classifications: tuple[HallwayClassification, ...] = ()
 
     def __post_init__(self) -> None:
         points = tuple(self.points)
@@ -41,14 +42,30 @@ class CandidateCirculationResult:
             raise ValueError("Candidate circulation result cannot be empty.")
         if any(not isinstance(point, CandidatePoint) for point in points):
             raise TypeError("Every result point must be a CandidatePoint.")
+
+        classifications = tuple(self.hallway_classifications)
+        if any(
+            not isinstance(item, HallwayClassification)
+            for item in classifications
+        ):
+            raise TypeError(
+                "Every hallway classification must be a HallwayClassification."
+            )
+        identities = [
+            (item.room_id, item.hint_index) for item in classifications
+        ]
+        if len(identities) != len(set(identities)):
+            raise ValueError("Hallway classifications must have unique identities.")
+
         object.__setattr__(self, "points", points)
+        object.__setattr__(self, "hallway_classifications", classifications)
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateCirculationDetails:
-    """DEBUG-only route, scoring, hallway-traffic, and removal data."""
+    """DEBUG-only route efficiency, hallway traffic, and removal data."""
 
-    diagnostic_score: float
+    circulation_efficiency_score: float
     routing_pass_count: int
     grid_node_count: int
     passes: tuple[RoutingPassDetails, ...]

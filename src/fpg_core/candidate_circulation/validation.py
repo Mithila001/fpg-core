@@ -3,8 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from ..candidate_search.api import CandidatePoint
-from ..domain import RoomType
+from ..domain import CandidatePoint, RoomType
 from .config import CandidateCirculationConfig
 from .contracts import CandidateCirculationInput
 from .exceptions import CandidateCirculationInputError, GridAlignmentError
@@ -110,7 +109,7 @@ def validate_circulation_input(
 
 
 def candidate_point_key(point: CandidatePoint) -> str:
-    return f"{point.room_id}[{point.hint_index}]"
+    return point.point_key
 
 
 def _axis_node_count(extent: float, scale: float, axis_name: str) -> int:

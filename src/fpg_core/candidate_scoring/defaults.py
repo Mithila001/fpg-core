@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from ..domain import LandSide, RoomType
-from .config import EvaluatorRule, ExteriorClearanceRule, ScoringConfig
+from .config import (
+    EvaluatorRule,
+    ExteriorClearanceRule,
+    ScoringConfig,
+    ZoneSuitabilityConfig,
+)
 from .evaluators import (
     EXTERIOR_CLEARANCE_KEY,
     SPATIAL_DISTRIBUTION_KEY,
@@ -24,8 +29,12 @@ def create_default_registry() -> EvaluatorRegistry:
     )
 
 
-def create_default_config() -> ScoringConfig:
-    """Baseline configuration; tune categories, thresholds, and weights per use case."""
+def create_default_config(
+    *,
+    zone_suitability_config: ZoneSuitabilityConfig | None = None,
+) -> ScoringConfig:
+    """Create baseline scoring rules with optional caller-defined zone rules."""
+    zone_config = zone_suitability_config or ZoneSuitabilityConfig()
     return ScoringConfig(
         evaluator_rules=(
             EvaluatorRule(
@@ -33,6 +42,7 @@ def create_default_config() -> ScoringConfig:
                 category=EvaluatorCategory.QUALITY,
                 weight=20.0,
                 order=10,
+                settings={"zone_config": zone_config},
             ),
             EvaluatorRule(
                 key=EXTERIOR_CLEARANCE_KEY,

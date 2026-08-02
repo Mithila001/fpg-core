@@ -79,7 +79,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
                         message="No exterior-clearance rules were configured.",
                     ),
                 ),
-                visualization_payload=(
+                details=(
                     ExteriorClearanceDetails(
                         floor_width=data.floor_width,
                         floor_length=data.floor_length,
@@ -262,7 +262,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
                         ),
                     ),
                 ),
-                visualization_payload=details,
+                details=details,
             )
 
         final_score = clamp_score(sum(scores) / len(scores))
@@ -276,7 +276,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
             score=final_score,
             findings=tuple(findings),
             metrics=metrics,
-            visualization_payload=details,
+            details=details,
         )
 
 

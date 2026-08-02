@@ -6,7 +6,16 @@ from enum import Enum
 from types import MappingProxyType
 from typing import NewType
 
-from ..domain import FloorPlanGenerationSpec, LandSide, RoomType
+from ..domain import (
+    CirculationGridNode,
+    CirculationTrafficClass,
+    DestinationSelection,
+    FloorPlanGenerationSpec,
+    HallwayClassification,
+    LandSide,
+    RoomType,
+    RouteCostBreakdown,
+)
 
 EvaluatorKey = NewType("EvaluatorKey", str)
 
@@ -44,6 +53,70 @@ class ScoreFinding:
     message: str
     severity: FindingSeverity = FindingSeverity.INFO
     subject_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ZoneSuitabilityPointDetails:
+    """DEBUG-only score calculation for one zone-scored candidate point."""
+
+    point_id: str
+    source_room_id: str
+    room_name: str
+    room_type: RoomType
+    hint_index: int
+    x: float
+    y: float
+    preferred_cells: tuple[tuple[int, int], ...]
+    distance_to_zone: float
+    score: float
+    inside_preferred_zone: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ZoneSuitabilityRuleDetails:
+    """DEBUG-only normalized preferred cells for one room type."""
+
+    room_type: RoomType
+    preferred_cells: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ZoneSuitabilityDetails:
+    """Zone-suitability scoring and R&D data collected in DEBUG mode."""
+
+    floor_width: float
+    floor_length: float
+    grid_size: int
+    falloff_multiplier: float
+    rules: tuple[ZoneSuitabilityRuleDetails, ...]
+    points: tuple[ZoneSuitabilityPointDetails, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SpatialDistributionPointDetails:
+    """DEBUG-only candidate point used by spatial-distribution scoring."""
+
+    point_id: str
+    source_room_id: str
+    room_name: str
+    room_type: RoomType
+    hint_index: int
+    x: float
+    y: float
+
+
+@dataclass(frozen=True, slots=True)
+class SpatialDistributionDetails:
+    """Spatial-distribution scoring and R&D data collected in DEBUG mode."""
+
+    floor_width: float
+    floor_length: float
+    points: tuple[SpatialDistributionPointDetails, ...]
+    grid_size: int
+    nearest_distances: tuple[tuple[float, ...], ...]
+    ideal_point_distance: float
+    theoretical_coverage_gap: float
+    gap_zero_score_ratio: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,7 +179,7 @@ class ExteriorClearanceRuleEvaluation:
 
 @dataclass(frozen=True, slots=True)
 class ExteriorClearanceDetails:
-    """Exterior-clearance visualization and scoring details for DEBUG mode."""
+    """Exterior-clearance scoring and R&D data collected in DEBUG mode."""
 
     floor_width: float
     floor_length: float
@@ -115,11 +188,61 @@ class ExteriorClearanceDetails:
 
 
 @dataclass(frozen=True, slots=True)
+class RelationshipPathDetails:
+    """DEBUG-only information for one resolved relationship route."""
+
+    rule_id: int
+    rule_name: str
+    traffic_class: CirculationTrafficClass
+    destination_selection: DestinationSelection
+    source_point_id: str
+    source_room_id: str
+    source_room_type: RoomType
+    destination_point_id: str
+    destination_room_id: str
+    destination_room_type: RoomType
+    nodes: tuple[CirculationGridNode, ...]
+    step_count: int
+    manhattan_step_count: int
+    detour_step_count: int
+    turn_count: int
+    manhattan_reference_cost: float
+    costs: RouteCostBreakdown
+    path_efficiency_score: float
+
+
+@dataclass(frozen=True, slots=True)
+class RelationshipRouteFailureDetails:
+    """DEBUG-only information for one relationship route that could not resolve."""
+
+    rule_id: int
+    rule_name: str
+    traffic_class: CirculationTrafficClass
+    source_point_id: str
+    source_room_id: str
+    destination_point_id: str | None
+    destination_room_id: str | None
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
+class RelationshipQualityDetails:
+    """Single-pass relationship routing data collected in DEBUG mode."""
+
+    floor_width: float
+    floor_length: float
+    grid_node_count: int
+    path_efficiency_score: float
+    paths: tuple[RelationshipPathDetails, ...]
+    route_failures: tuple[RelationshipRouteFailureDetails, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class EvaluatorResult:
     """Standard result returned by every concrete evaluator.
 
-    `score` is always expressed on the common 0..100 scale when status is
-    COMPLETED. For other statuses, score must be None.
+    ``score`` uses the common 0..100 scale when status is COMPLETED. ``metrics``
+    and ``details`` are DEBUG-only and must be empty in PRODUCTION.
     """
 
     evaluator_key: EvaluatorKey
@@ -127,7 +250,7 @@ class EvaluatorResult:
     score: float | None
     findings: tuple[ScoreFinding, ...] = ()
     metrics: Mapping[str, float] = field(default_factory=dict)
-    visualization_payload: object | None = None
+    details: object | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "metrics", MappingProxyType(dict(self.metrics)))
@@ -148,7 +271,7 @@ class EvaluatorExecutionResult:
     passed_threshold: bool | None = None
     findings: tuple[ScoreFinding, ...] = ()
     metrics: Mapping[str, float] = field(default_factory=dict)
-    visualization_payload: object | None = None
+    details: object | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "metrics", MappingProxyType(dict(self.metrics)))
@@ -168,12 +291,24 @@ class ScoringResult:
 
 @dataclass(frozen=True, slots=True)
 class CandidateScoringInput:
-    """Scoring input for one typed generation specification and candidate.
-
-    Candidate arrangements remain structurally typed because Candidate Search
-    owns their point contract. The shared generation specification comes from
-    the project's shared ``fpg_core.domain`` package.
-    """
+    """One generation specification, candidate, and optional hallway tags."""
 
     specification: FloorPlanGenerationSpec
     candidate: object
+    hallway_classifications: tuple[HallwayClassification, ...] = ()
+
+    def __post_init__(self) -> None:
+        classifications = tuple(self.hallway_classifications)
+        if any(
+            not isinstance(item, HallwayClassification)
+            for item in classifications
+        ):
+            raise TypeError(
+                "Every hallway classification must be a HallwayClassification."
+            )
+        identities = [
+            (item.room_id, item.hint_index) for item in classifications
+        ]
+        if len(identities) != len(set(identities)):
+            raise ValueError("Hallway classifications must have unique identities.")
+        object.__setattr__(self, "hallway_classifications", classifications)

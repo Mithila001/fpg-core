@@ -1,54 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
 
-from ..domain import RoomType
+from ..domain import (
+    CirculationGridNode,
+    CirculationTrafficClass,
+    DestinationSelection,
+    HallwayTrafficClass,
+    RoomType,
+    RouteCostBreakdown,
+)
 
-
-class DestinationSelection(StrEnum):
-    """Determines which matching destination hints a route rule selects."""
-
-    ALL_MATCHING = "all_matching"
-    LOWEST_COST_MATCH = "lowest_cost_match"
-
-
-class TrafficClass(StrEnum):
-    """Architectural traffic carried by a configured route."""
-
-    PUBLIC = "public"
-    PRIVATE = "private"
-
-
-class HallwayTrafficClass(StrEnum):
-    """Traffic role inferred for one hallway hint point."""
-
-    PUBLIC = "public"
-    PRIVATE = "private"
-    MIXED = "mixed"
-    UNCLASSIFIED = "unclassified"
-    UNUSED = "unused"
-
-
-@dataclass(frozen=True, slots=True)
-class GridNode:
-    """One grid crossing used by an orthogonal circulation path."""
-
-    x_index: int
-    y_index: int
-    x: float
-    y: float
-
-
-@dataclass(frozen=True, slots=True)
-class RouteCostBreakdown:
-    """Cost components accumulated by one resolved route."""
-
-    movement_cost: float
-    perimeter_bias_cost: float
-    turn_cost: float
-    traffic_conflict_cost: float
-    total_cost: float
+# Compatibility names retained at the feature boundary.
+TrafficClass = CirculationTrafficClass
+GridNode = CirculationGridNode
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +22,7 @@ class CirculationPathDetails:
 
     rule_id: int
     rule_name: str
-    traffic_class: TrafficClass
+    traffic_class: CirculationTrafficClass
     destination_selection: DestinationSelection
     allowed_transit_room_types: tuple[RoomType, ...]
     importance_weight: float
@@ -67,14 +32,14 @@ class CirculationPathDetails:
     destination_point_key: str
     destination_room_id: str
     destination_room_type: RoomType
-    nodes: tuple[GridNode, ...]
+    nodes: tuple[CirculationGridNode, ...]
     step_count: int
     manhattan_step_count: int
     detour_step_count: int
     turn_count: int
     manhattan_reference_cost: float
     costs: RouteCostBreakdown
-    diagnostic_score: float
+    path_efficiency_score: float
 
 
 @dataclass(frozen=True, slots=True)

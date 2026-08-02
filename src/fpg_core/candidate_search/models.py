@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeAlias, cast
 
-from ..domain import RoomId, RoomType
+from ..domain import CandidatePoint, RoomId, RoomType
 from .config import (
     DEFAULT_MAX_HALLWAY_HINT_COUNT,
     DEFAULT_MIN_HALLWAY_HINT_COUNT,
@@ -38,41 +38,6 @@ class CandidateSearchTarget:
         """Whether Optuna may vary this target's hint-point count."""
 
         return self.room_type is RoomType.HALLWAY
-
-
-@dataclass(frozen=True, slots=True)
-class CandidatePoint:
-    """A generated hint coordinate associated with one room."""
-
-    room_id: RoomId
-    x: float
-    y: float
-    room_type: RoomType | None = None
-    hint_index: int = 1
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.room_id, str):
-            raise TypeError("Candidate point room_id must be a string-based RoomId.")
-
-        cleaned_room_id = self.room_id.strip()
-        if not cleaned_room_id:
-            raise ValueError("Candidate point room_id cannot be empty.")
-
-        if self.room_type is not None and not isinstance(self.room_type, RoomType):
-            raise TypeError("Candidate point room_type must be a RoomType or None.")
-
-        if isinstance(self.hint_index, bool) or not isinstance(self.hint_index, int):
-            raise TypeError("Candidate point hint_index must be an integer.")
-        if self.hint_index <= 0:
-            raise ValueError("Candidate point hint_index must be greater than zero.")
-        if self.room_type is not RoomType.HALLWAY and self.hint_index != 1:
-            raise ValueError(
-                "Only hallway candidate points may use a hint_index greater than one."
-            )
-
-        object.__setattr__(self, "room_id", RoomId(cleaned_room_id))
-        object.__setattr__(self, "x", _validated_finite_number("x", self.x))
-        object.__setattr__(self, "y", _validated_finite_number("y", self.y))
 
 
 @dataclass(frozen=True, slots=True)

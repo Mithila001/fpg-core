@@ -1,5 +1,12 @@
 from .api import evaluate_candidate
-from .config import ExteriorClearanceRule, EvaluatorRule, ScoringConfig
+from .config import (
+    DEFAULT_VALID_ZONES,
+    EvaluatorRule,
+    ExteriorClearanceRule,
+    RelationshipQualityConfig,
+    ScoringConfig,
+    ZoneSuitabilityConfig,
+)
 from .context import ScoringContext, ScoringContextFactory
 from .defaults import create_default_config, create_default_registry
 from .evaluators import (
@@ -28,8 +35,16 @@ from .types import (
     ExteriorClearanceRoomEvaluation,
     ExteriorClearanceRuleEvaluation,
     FindingSeverity,
+    RelationshipPathDetails,
+    RelationshipQualityDetails,
+    RelationshipRouteFailureDetails,
     ScoreFinding,
     ScoringResult,
+    SpatialDistributionDetails,
+    SpatialDistributionPointDetails,
+    ZoneSuitabilityDetails,
+    ZoneSuitabilityPointDetails,
+    ZoneSuitabilityRuleDetails,
 )
 
 __all__ = [
@@ -38,6 +53,7 @@ __all__ = [
     "CandidateScoringInput",
     "ClearanceCorridorBounds",
     "ClearanceCorridorDebug",
+    "DEFAULT_VALID_ZONES",
     "EXTERIOR_CLEARANCE_KEY",
     "EvaluationStatus",
     "EvaluatorCategory",
@@ -53,16 +69,26 @@ __all__ = [
     "ExteriorClearanceRuleEvaluation",
     "FindingSeverity",
     "RELATIONSHIP_QUALITY_KEY",
+    "RelationshipPathDetails",
+    "RelationshipQualityConfig",
+    "RelationshipQualityDetails",
     "RelationshipQualityEvaluator",
+    "RelationshipRouteFailureDetails",
     "SPATIAL_DISTRIBUTION_KEY",
     "ScoreFinding",
     "ScoringConfig",
     "ScoringContext",
     "ScoringContextFactory",
     "ScoringResult",
+    "SpatialDistributionDetails",
     "SpatialDistributionEvaluator",
+    "SpatialDistributionPointDetails",
     "ZONE_SUITABILITY_KEY",
+    "ZoneSuitabilityConfig",
+    "ZoneSuitabilityDetails",
     "ZoneSuitabilityEvaluator",
+    "ZoneSuitabilityPointDetails",
+    "ZoneSuitabilityRuleDetails",
     "create_default_config",
     "create_default_registry",
     "evaluate_candidate",

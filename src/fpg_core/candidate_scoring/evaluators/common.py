@@ -29,6 +29,7 @@ class EvaluationPoint:
     source_room_name: str
     room_type: RoomType
     name: str
+    hint_index: int
     x: float
     y: float
 
@@ -226,6 +227,7 @@ def _extract_candidate_points(
 
     evaluator_ids: list[str | None] = [None] * len(parsed_points)
     evaluator_names: list[str | None] = [None] * len(parsed_points)
+    evaluator_hint_indices: list[int | None] = [None] * len(parsed_points)
 
     # Preserve existing IDs for every non-duplicated point. These IDs are also
     # reserved so generated hallway IDs cannot collide with an actual room ID.
@@ -240,6 +242,9 @@ def _extract_candidate_points(
             index = indices[0]
             evaluator_ids[index] = source_room_id
             evaluator_names[index] = parsed_points[index].name
+            evaluator_hint_indices[index] = (
+                parsed_points[index].explicit_hint_index or 1
+            )
             continue
 
         duplicate_points = [parsed_points[index] for index in indices]
@@ -260,6 +265,7 @@ def _extract_candidate_points(
             used_ids.add(evaluator_id)
             evaluator_ids[point_index] = evaluator_id
             evaluator_names[point_index] = f"{point.name} (hint {hint_index})"
+            evaluator_hint_indices[point_index] = hint_index
 
     return [
         EvaluationPoint(
@@ -268,6 +274,7 @@ def _extract_candidate_points(
             source_room_name=point.name,
             room_type=point.room_type,
             name=_required_value(evaluator_names[index]),
+            hint_index=_required_integer(evaluator_hint_indices[index]),
             x=point.x,
             y=point.y,
         )
@@ -343,6 +350,12 @@ def _unique_hallway_evaluator_id(
 def _required_value(value: str | None) -> str:
     if value is None:
         raise RuntimeError("Candidate scoring point identity was not assigned.")
+    return value
+
+
+def _required_integer(value: int | None) -> int:
+    if value is None:
+        raise RuntimeError("Candidate scoring hint index was not assigned.")
     return value
 
 

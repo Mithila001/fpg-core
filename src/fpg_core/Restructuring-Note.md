@@ -13,10 +13,10 @@ The standard `FeatureExecution[result, details]` contract from `FEATURE_TEMPLATE
 
 ## Candidate Circulation
 
-- `refine_candidate_circulation()` returns cleaned candidate points as its normal result.
+- `refine_candidate_circulation()` returns cleaned candidate points and production hallway classifications as its normal result.
 - PRODUCTION omits feature details.
-- DEBUG includes route paths, costs, diagnostic scores, routing passes, hallway traffic roles, and removed hallway hints.
-- Relationship routing and unused-hallway removal now belong here rather than the default Candidate Scoring pipeline.
+- DEBUG includes route paths, costs, path/circulation efficiency scores, routing passes, hallway traffic roles, and removed hallway hints.
+- Hallway classification and unused-hallway removal belong here. Relationship Quality performs its own single scoring pass without importing this feature.
 
 ## Not Yet Fully Restructured
 

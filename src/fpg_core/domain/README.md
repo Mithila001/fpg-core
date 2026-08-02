@@ -1,6 +1,6 @@
 # Shared Domain Contracts
 
-`fpg_core.domain` is the canonical type layer shared by FPG Core features. It contains shared execution, geometry, buildable-space, floor-plan, and generation-specification contracts.
+`fpg_core.domain` is the canonical type layer shared by FPG Core features. It contains shared execution, geometry, candidate, circulation, buildable-space, floor-plan, and generation-specification contracts.
 
 ## Guide
 
@@ -14,6 +14,8 @@ Features may depend on these contracts. This folder must not depend on feature i
 
 ### Main Contract Groups
 
+- `candidate.py`: reusable `CandidatePoint` hints shared across pipeline stages.
+- `circulation.py`: shared routing grids, rules, traffic enums, hallway classifications, and routing detail primitives.
 - `execution.py`: `FeatureExecution`, `ExecutionMetadata`, and `ExecutionMode`.
 - `geometry.py`: `Point`, `Segment`, and `Polygon`.
 - `buildable_space.py`: land requests, normalized land, setbacks, buildable land, and usable land.
