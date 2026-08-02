@@ -170,7 +170,10 @@ def _add_hallways(
 
 
 def _prepare_relations(
-    rooms: tuple[RoomSpec, ...], reference_data: PreparedReferenceData
+    rooms: tuple[RoomSpec, ...],
+    reference_data: PreparedReferenceData,
+    *,
+    collect_details: bool,
 ) -> tuple[tuple[RoomRelationSpec, ...], tuple[RelationDecision, ...]]:
     by_type: dict[RoomType, list[RoomSpec]] = defaultdict(list)
     for room in rooms:
@@ -182,9 +185,14 @@ def _prepare_relations(
         source_type = reference.source_room_type
         sources = by_type.get(source_type, [])
         if not sources:
-            decisions.append(
-                RelationDecision(source_type, "removed", "source type is not present")
-            )
+            if collect_details:
+                decisions.append(
+                    RelationDecision(
+                        source_type,
+                        "removed",
+                        "source type is not present",
+                    )
+                )
             continue
         for source_index, source in enumerate(sources):
             targets: list[RoomSpec] = []
@@ -214,11 +222,14 @@ def _prepare_relations(
                     seen.add(str(target.id))
                     unique_targets.append(target)
             if not unique_targets:
-                decisions.append(
-                    RelationDecision(
-                        source_type, "removed", f"no targets remained for '{source.id}'"
+                if collect_details:
+                    decisions.append(
+                        RelationDecision(
+                            source_type,
+                            "removed",
+                            f"no targets remained for '{source.id}'",
+                        )
                     )
-                )
                 continue
             prepared.append(
                 RoomRelationSpec(
@@ -228,13 +239,14 @@ def _prepare_relations(
                     strength=reference.strength,
                 )
             )
-            decisions.append(
-                RelationDecision(
-                    source_type,
-                    "expanded",
-                    f"{source.id} -> {', '.join(str(t.id) for t in unique_targets)}",
+            if collect_details:
+                decisions.append(
+                    RelationDecision(
+                        source_type,
+                        "expanded",
+                        f"{source.id} -> {', '.join(str(t.id) for t in unique_targets)}",
+                    )
                 )
-            )
     return tuple(prepared), tuple(decisions)
 
 
@@ -242,13 +254,19 @@ def build_preprocessing_context(
     request: RuledRequest,
     reference_data: PreparedReferenceData,
     policy: PreprocessingPolicy,
+    *,
+    collect_details: bool,
 ) -> PreprocessingContext:
     non_hallways, final_request = _prepare_non_hallway_rooms(
         request, reference_data, policy
     )
     floor, minimum, maximum = _select_floor(final_request, non_hallways, policy)
     rooms = _add_hallways(final_request, non_hallways, floor, policy)
-    relations, relation_decisions = _prepare_relations(rooms, reference_data)
+    relations, relation_decisions = _prepare_relations(
+        rooms,
+        reference_data,
+        collect_details=collect_details,
+    )
     return PreprocessingContext(
         request=final_request,
         reference_data=reference_data,

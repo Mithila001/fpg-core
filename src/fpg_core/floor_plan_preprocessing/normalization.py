@@ -89,7 +89,10 @@ def _parse_aspect_ratio(value: float | str, config: PreprocessingConfig) -> floa
 
 
 def normalize_request(
-    request: PreprocessingRequest, policy: PreprocessingConfig
+    request: PreprocessingRequest,
+    policy: PreprocessingConfig,
+    *,
+    collect_details: bool,
 ) -> NormalizedRequest:
     ratio = _parse_aspect_ratio(request.aspect_ratio, policy)
     records: list[NormalizationRecord] = []
@@ -119,19 +122,24 @@ def normalize_request(
                 room_id = f"{room_type.value}_{generated_counts[room_type]}"
                 if room_id not in supplied_ids and room_id not in used_ids:
                     break
-            defaults.append(f"generated room id '{room_id}'")
+            if collect_details:
+                defaults.append(f"generated room id '{room_id}'")
 
         name = room.name.strip() if isinstance(room.name, str) else ""
         if not name:
             name = room_id.replace("_", " ").title()
-            defaults.append(f"generated room name '{name}' for '{room_id}'")
+            if collect_details:
+                defaults.append(f"generated room name '{name}' for '{room_id}'")
 
         requested_size = None
         if room.requested_size is not None:
             requested_size = _normalize_size(room.requested_size)
             if not requested_size:
                 requested_size = None
-            elif str(room.requested_size).strip() != requested_size:
+            elif (
+                collect_details
+                and str(room.requested_size).strip() != requested_size
+            ):
                 records.append(
                     NormalizationRecord(
                         "requested_size", str(room.requested_size), requested_size

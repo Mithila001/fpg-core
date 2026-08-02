@@ -43,7 +43,10 @@ def _select_majority_size(
 
 
 def apply_business_rules(
-    request: NormalizedRequest, policy: PreprocessingPolicy
+    request: NormalizedRequest,
+    policy: PreprocessingPolicy,
+    *,
+    collect_details: bool,
 ) -> RuledRequest:
     decisions = list(request.room_decisions)
     defaults = list(request.applied_defaults)
@@ -89,10 +92,11 @@ def apply_business_rules(
         next_index += 1
         used_ids.add(room_id)
         sanitized.append(hallway)
-        decisions.append(
-            RoomDecision(room_id, RoomType.HALLWAY, "derived", "hallway policy")
-        )
-        defaults.append(f"derived hallway '{room_id}'")
+        if collect_details:
+            decisions.append(
+                RoomDecision(room_id, RoomType.HALLWAY, "derived", "hallway policy")
+            )
+            defaults.append(f"derived hallway '{room_id}'")
 
     selected_size = _select_majority_size(tuple(sanitized), policy)
     normalized_rooms = tuple(

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypeAlias
 
 from ..domain import (
+    FeatureExecution,
     FloorPlanGenerationSpec,
     RoomType,
 )
@@ -86,6 +88,8 @@ class FloorSelection:
 
 @dataclass(frozen=True, slots=True)
 class PreprocessingReport:
+    """Debug-only preprocessing decisions and normalized input information."""
+
     normalizations: tuple[NormalizationRecord, ...]
     room_decisions: tuple[RoomDecision, ...]
     relation_decisions: tuple[RelationDecision, ...]
@@ -97,5 +101,12 @@ class PreprocessingReport:
 
 @dataclass(frozen=True, slots=True)
 class PreparedGenerationInput:
+    """Normal production result consumed by later generation features."""
+
     generation_spec: FloorPlanGenerationSpec
-    report: PreprocessingReport
+
+
+PreprocessingExecution: TypeAlias = FeatureExecution[
+    PreparedGenerationInput,
+    PreprocessingReport,
+]

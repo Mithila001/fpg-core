@@ -19,15 +19,30 @@ from .validation import (
 )
 
 
-def run_pipeline(value: PreprocessingInput) -> PreparedGenerationInput:
+def run_pipeline(
+    value: PreprocessingInput,
+    *,
+    collect_details: bool,
+) -> tuple[PreparedGenerationInput, PreprocessingReport | None]:
     validate_input(value)
-    normalized_request = normalize_request(value.request, value.policy)
+    normalized_request = normalize_request(
+        value.request,
+        value.policy,
+        collect_details=collect_details,
+    )
     validate_normalized_request(normalized_request, value.policy)
     reference_data = prepare_reference_data(value.reference_data)
     validate_reference_data(reference_data)
-    ruled_request = apply_business_rules(normalized_request, value.policy)
+    ruled_request = apply_business_rules(
+        normalized_request,
+        value.policy,
+        collect_details=collect_details,
+    )
     context = build_preprocessing_context(
-        ruled_request, reference_data, value.policy
+        ruled_request,
+        reference_data,
+        value.policy,
+        collect_details=collect_details,
     )
     validate_context(context)
 
@@ -37,7 +52,12 @@ def run_pipeline(value: PreprocessingInput) -> PreparedGenerationInput:
         room_relations=context.relations,
     )
     validate_output(specification, value.policy)
-    report = PreprocessingReport(
+
+    result = PreparedGenerationInput(generation_spec=specification)
+    if not collect_details:
+        return result, None
+
+    details = PreprocessingReport(
         normalizations=context.request.normalizations,
         room_decisions=context.request.room_decisions,
         relation_decisions=context.relation_decisions,
@@ -53,4 +73,4 @@ def run_pipeline(value: PreprocessingInput) -> PreparedGenerationInput:
         ),
         applied_defaults=context.request.applied_defaults,
     )
-    return PreparedGenerationInput(generation_spec=specification, report=report)
+    return result, details
