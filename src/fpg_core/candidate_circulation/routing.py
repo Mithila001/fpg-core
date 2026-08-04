@@ -393,9 +393,11 @@ def _perimeter_bias_cost(
     if max_cost == 0:
         return 0.0
 
-    grid = validated.source.config.grid
-    midpoint_x = grid.origin_x + ((start[0] + end[0]) / 2.0) * grid.scale
-    midpoint_y = grid.origin_y + ((start[1] + end[1]) / 2.0) * grid.scale
+    grid = validated.source.candidate.grid
+    start_x, start_y = grid.coordinates(start[0], start[1])
+    end_x, end_y = grid.coordinates(end[0], end[1])
+    midpoint_x = (start_x + end_x) / 2.0
+    midpoint_y = (start_y + end_y) / 2.0
     center_x = grid.origin_x + grid.width / 2.0
     center_y = grid.origin_y + grid.length / 2.0
     normalized_x = abs(midpoint_x - center_x) / (grid.width / 2.0)

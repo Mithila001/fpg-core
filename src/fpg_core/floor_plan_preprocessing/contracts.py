@@ -79,11 +79,22 @@ class RelationDecision:
 class FloorSelection:
     requested_width: float
     requested_length: float
-    selected_width: float
-    selected_length: float
-    aspect_ratio: float
+    normalized_max_width: int
+    normalized_max_length: int
+    selected_width: int
+    selected_length: int
+    requested_aspect_ratio: float
+    selected_aspect_ratio: float
+    aspect_residual_units: float
     minimum_required_area: float
     maximum_target_area: float
+    unused_limit_area: float
+
+    @property
+    def aspect_ratio(self) -> float:
+        """Deprecated alias for requested_aspect_ratio."""
+
+        return self.requested_aspect_ratio
 
 
 @dataclass(frozen=True, slots=True)

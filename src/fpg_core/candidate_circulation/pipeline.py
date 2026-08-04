@@ -3,6 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 
 from ..domain import (
+    CandidateMap,
     CirculationGridNode,
     ExecutionMetadata,
     ExecutionMode,
@@ -52,7 +53,10 @@ def refine_candidate_circulation(
         if indexed.point_key not in removed_keys
     )
     result = CandidateCirculationResult(
-        points=cleaned_points,
+        candidate=CandidateMap(
+            grid=validated.source.candidate.grid,
+            points=cleaned_points,
+        ),
         hallway_classifications=_hallway_classifications(validated, final_pass),
     )
     details = (
@@ -158,13 +162,13 @@ def _path_details(
     validated: ValidatedCirculationInput,
     route: ResolvedRoute,
 ) -> CirculationPathDetails:
-    grid = validated.source.config.grid
+    grid = validated.source.candidate.grid
     nodes = tuple(
         CirculationGridNode(
             x_index=x_index,
             y_index=y_index,
-            x=grid.origin_x + x_index * grid.scale,
-            y=grid.origin_y + y_index * grid.scale,
+            x=grid.x_positions[x_index],
+            y=grid.y_positions[y_index],
         )
         for x_index, y_index in route.nodes
     )

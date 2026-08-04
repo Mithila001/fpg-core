@@ -100,36 +100,47 @@ def _select_floor(
         + hallway_count * hallway_area
         + policy.floor_area_buffer
     )
-    ratio = request.aspect_ratio
-    width = min(
-        request.max_width,
-        request.max_length / ratio,
-        math.sqrt(maximum / ratio),
+
+    minimum_axis = max(
+        [room.size.min_width for room in rooms]
+        + ([policy.hallway_min_width] if hallway_count else [])
+        + [1.0]
     )
-    length = width * ratio
-    area = width * length
-    if area + 1e-9 < minimum:
-        raise FloorPreparationError(
-            "The largest permitted floor at the requested aspect ratio has area "
-            f"{area:.2f}, below the required minimum {minimum:.2f}"
+    minimum_axis_units = math.ceil(minimum_axis)
+    ratio = request.aspect_ratio
+    tolerance = policy.max_aspect_residual_units
+
+    best: tuple[tuple[float, float, float, int, int], int, int] | None = None
+    for width in range(minimum_axis_units, request.max_width + 1):
+        max_length_by_area = math.floor((maximum + 1e-9) / width)
+        maximum_length = min(
+            request.max_length,
+            max_length_by_area,
+            math.floor(width * ratio + tolerance + 1e-9),
         )
-    oversized = [
-        str(room.id)
-        for room in rooms
-        if room.size.min_width > width or room.size.min_width > length
-    ]
-    if oversized:
-        raise FloorPreparationError(
-            "Selected floor cannot contain minimum dimensions for room(s): "
-            + ", ".join(oversized)
+        minimum_length = max(
+            minimum_axis_units,
+            math.ceil(width * ratio - tolerance - 1e-9),
+            math.ceil((minimum - 1e-9) / width),
         )
-    if hallway_count and (
-        width < policy.hallway_min_width
-        or length < policy.hallway_min_width
-    ):
+        if minimum_length > maximum_length:
+            continue
+
+        length = maximum_length
+        area = width * length
+        residual = abs(length - width * ratio)
+        reduction = (request.max_width - width) + (request.max_length - length)
+        ranking = (area, -residual, -reduction, width, length)
+        if best is None or ranking > best[0]:
+            best = (ranking, width, length)
+
+    if best is None:
         raise FloorPreparationError(
-            "Selected floor cannot contain the configured hallway dimensions"
+            "No whole-project-unit floor satisfies the area, room-width, floor-limit, "
+            "and aspect-ratio residual requirements."
         )
+
+    _, width, length = best
     return FloorSpec(width=width, length=length), minimum, maximum
 
 

@@ -1,4 +1,4 @@
-from .api import CandidateSearchSession, search_candidates
+from .api import CandidateSearchSession, build_candidate_grid, search_candidates
 from .config import (
     DEFAULT_MAX_HALLWAY_HINT_COUNT,
     DEFAULT_MIN_HALLWAY_HINT_COUNT,
@@ -7,7 +7,7 @@ from .config import (
 from .exceptions import CandidateSearchError, CandidateSearchStateError
 from .models import (
     CandidateEvaluator,
-    CandidatePoint,
+    CandidateSearchDetails,
     CandidateSearchInput,
     CandidateSearchResult,
     CandidateSearchSettings,
@@ -18,8 +18,8 @@ from .models import (
 
 __all__ = [
     "CandidateEvaluator",
-    "CandidatePoint",
     "CandidateSearchConfig",
+    "CandidateSearchDetails",
     "CandidateSearchError",
     "CandidateSearchInput",
     "CandidateSearchResult",
@@ -31,5 +31,6 @@ __all__ = [
     "CandidateTrialResult",
     "DEFAULT_MAX_HALLWAY_HINT_COUNT",
     "DEFAULT_MIN_HALLWAY_HINT_COUNT",
+    "build_candidate_grid",
     "search_candidates",
 ]

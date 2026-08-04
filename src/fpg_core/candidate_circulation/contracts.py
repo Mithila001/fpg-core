@@ -2,46 +2,48 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..domain import CandidatePoint, HallwayClassification
-from .config import CandidateCirculationConfig
-from .domain import (
-    HallwayTrafficDetails,
-    RemovedHallwayPointDetails,
-    RoutingPassDetails,
+from ..domain import (
+    CandidateMap,
+    CandidatePoint,
+    HallwayClassification,
+    ResolvedCandidateGrid,
 )
+from .config import CandidateCirculationConfig
+from .domain import HallwayTrafficDetails, RemovedHallwayPointDetails, RoutingPassDetails
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateCirculationInput:
-    """Candidate hint points and required circulation configuration."""
+    """Candidate map and reusable circulation policy."""
 
-    points: tuple[CandidatePoint, ...]
+    candidate: CandidateMap
     config: CandidateCirculationConfig
 
     def __post_init__(self) -> None:
-        points = tuple(self.points)
-        if not points:
-            raise ValueError("Candidate circulation requires at least one hint point.")
-        if any(not isinstance(point, CandidatePoint) for point in points):
-            raise TypeError("Every circulation point must be a CandidatePoint.")
+        if not isinstance(self.candidate, CandidateMap):
+            raise TypeError("candidate must be a CandidateMap instance.")
         if not isinstance(self.config, CandidateCirculationConfig):
             raise TypeError("config must be a CandidateCirculationConfig instance.")
-        object.__setattr__(self, "points", points)
+
+    @property
+    def points(self) -> tuple[CandidatePoint, ...]:
+        return self.candidate.points
+
+    @property
+    def grid(self) -> ResolvedCandidateGrid:
+        return self.candidate.grid
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateCirculationResult:
-    """Production result with cleaned points and hallway traffic tags."""
+    """Production result with cleaned candidate and hallway traffic tags."""
 
-    points: tuple[CandidatePoint, ...]
+    candidate: CandidateMap
     hallway_classifications: tuple[HallwayClassification, ...] = ()
 
     def __post_init__(self) -> None:
-        points = tuple(self.points)
-        if not points:
-            raise ValueError("Candidate circulation result cannot be empty.")
-        if any(not isinstance(point, CandidatePoint) for point in points):
-            raise TypeError("Every result point must be a CandidatePoint.")
+        if not isinstance(self.candidate, CandidateMap):
+            raise TypeError("candidate must be a CandidateMap instance.")
 
         classifications = tuple(self.hallway_classifications)
         if any(
@@ -51,14 +53,18 @@ class CandidateCirculationResult:
             raise TypeError(
                 "Every hallway classification must be a HallwayClassification."
             )
-        identities = [
-            (item.room_id, item.hint_index) for item in classifications
-        ]
+        identities = [(item.room_id, item.hint_index) for item in classifications]
         if len(identities) != len(set(identities)):
             raise ValueError("Hallway classifications must have unique identities.")
-
-        object.__setattr__(self, "points", points)
         object.__setattr__(self, "hallway_classifications", classifications)
+
+    @property
+    def points(self) -> tuple[CandidatePoint, ...]:
+        return self.candidate.points
+
+    @property
+    def grid(self) -> ResolvedCandidateGrid:
+        return self.candidate.grid
 
 
 @dataclass(frozen=True, slots=True)

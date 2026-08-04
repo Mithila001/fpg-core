@@ -51,9 +51,13 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
         coverage_weight /= total_weight
 
         sensitivity = setting_float(settings, "nnd_cv_sensitivity", 8.0)
-        grid_size = setting_int(settings, "grid_size", 20)
-        if grid_size < 2:
-            raise ValueError("grid_size must be at least 2.")
+        sample_count_per_axis = setting_int(
+            settings,
+            "sample_count_per_axis",
+            setting_int(settings, "grid_size", 20),
+        )
+        if sample_count_per_axis < 2:
+            raise ValueError("sample_count_per_axis must be at least 2.")
         gap_zero_score_ratio = setting_float(settings, "gap_zero_score_ratio", 1.5)
         if gap_zero_score_ratio <= 1.0:
             raise ValueError("gap_zero_score_ratio must be greater than 1.0.")
@@ -64,7 +68,7 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
                     floor_width=data.floor_width,
                     floor_length=data.floor_length,
                     points=(),
-                    grid_size=grid_size,
+                    sample_count_per_axis=sample_count_per_axis,
                     nearest_distances=(),
                     ideal_point_distance=0.0,
                     theoretical_coverage_gap=0.0,
@@ -98,7 +102,7 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
             data.points,
             data.floor_width,
             data.floor_length,
-            grid_size,
+            sample_count_per_axis,
             gap_zero_score_ratio,
             collect_nearest_distances=debug_enabled,
         )
@@ -141,7 +145,7 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
                 floor_width=data.floor_width,
                 floor_length=data.floor_length,
                 points=tuple(_point_details(point) for point in data.points),
-                grid_size=grid_size,
+                sample_count_per_axis=sample_count_per_axis,
                 nearest_distances=nearest_distances,
                 ideal_point_distance=nnd_metrics["ideal_point_distance"],
                 theoretical_coverage_gap=coverage_metrics[
@@ -224,18 +228,18 @@ def _coverage_score(
     points: tuple[EvaluationPoint, ...],
     floor_width: float,
     floor_length: float,
-    grid_size: int,
+    sample_count_per_axis: int,
     gap_zero_score_ratio: float,
     *,
     collect_nearest_distances: bool,
 ) -> tuple[float, dict[str, float], tuple[tuple[float, ...], ...]]:
     distances: list[float] = []
     rows: list[tuple[float, ...]] = []
-    for x_index in range(grid_size):
-        x = floor_width * x_index / (grid_size - 1)
+    for x_index in range(sample_count_per_axis):
+        x = floor_width * x_index / (sample_count_per_axis - 1)
         column: list[float] | None = [] if collect_nearest_distances else None
-        for y_index in range(grid_size):
-            y = floor_length * y_index / (grid_size - 1)
+        for y_index in range(sample_count_per_axis):
+            y = floor_length * y_index / (sample_count_per_axis - 1)
             nearest = min(
                 math.hypot(x - point.x, y - point.y) for point in points
             )
@@ -262,7 +266,7 @@ def _coverage_score(
             "coverage_mean_gap": mean_gap,
             "theoretical_coverage_gap": theoretical_gap,
             "gap_ratio": gap_ratio,
-            "coverage_grid_size": float(grid_size),
+            "coverage_sample_count_per_axis": float(sample_count_per_axis),
         },
         tuple(rows),
     )

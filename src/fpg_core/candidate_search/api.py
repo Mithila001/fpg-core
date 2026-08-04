@@ -1,8 +1,9 @@
 """Public entry points and contracts for candidate search."""
 
+from .grid import build_candidate_grid
 from .models import (
     CandidateEvaluator,
-    CandidatePoint,
+    CandidateSearchDetails,
     CandidateSearchInput,
     CandidateSearchResult,
     CandidateSearchSettings,
@@ -14,7 +15,7 @@ from .optimizer import CandidateSearchSession, search_candidates
 
 __all__ = [
     "CandidateEvaluator",
-    "CandidatePoint",
+    "CandidateSearchDetails",
     "CandidateSearchInput",
     "CandidateSearchResult",
     "CandidateSearchSession",
@@ -22,5 +23,6 @@ __all__ = [
     "CandidateSearchTarget",
     "CandidateSuggestion",
     "CandidateTrialResult",
+    "build_candidate_grid",
     "search_candidates",
 ]

@@ -60,6 +60,7 @@ class PreprocessingConfig:
     hallway_count: int
     hallway_min_width: float
     default_room_size: str
+    max_aspect_residual_units: float
     min_aspect_ratio: float = 0.5
     max_aspect_ratio: float = 2.0
     room_size_strategy: RoomSizeSelectionStrategy = RoomSizeSelectionStrategy.MAJORITY

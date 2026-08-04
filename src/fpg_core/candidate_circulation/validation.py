@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 from ..domain import CandidatePoint, RoomType
@@ -40,41 +39,29 @@ def validate_circulation_input(
             "circulation_input must be a CandidateCirculationInput instance."
         )
 
-    config = circulation_input.config
-    x_node_count = _axis_node_count(config.grid.width, config.grid.scale, "width")
-    y_node_count = _axis_node_count(config.grid.length, config.grid.scale, "length")
-    grid_node_count = x_node_count * y_node_count
-    if grid_node_count > _MAX_GRID_NODE_COUNT:
+    grid = circulation_input.candidate.grid
+    if grid.node_count > _MAX_GRID_NODE_COUNT:
         raise CandidateCirculationInputError(
-            "Configured circulation grid exceeds the 250,000-node safety limit."
+            "Candidate grid exceeds the 250,000-node circulation safety limit."
         )
 
     indexed_points: list[IndexedCandidatePoint] = []
     occupied_nodes: dict[tuple[int, int], IndexedCandidatePoint] = {}
     point_keys: set[str] = set()
 
-    for point in circulation_input.points:
+    for point in circulation_input.candidate.points:
         if point.room_type is None:
             raise CandidateCirculationInputError(
                 f"Candidate point '{point.room_id}' has no room_type."
             )
+        try:
+            x_index, y_index = grid.node_indexes(point.x, point.y)
+        except (TypeError, ValueError) as exc:
+            raise GridAlignmentError(
+                f"Candidate point '{point.point_key}' is not aligned with the "
+                "candidate grid."
+            ) from exc
 
-        x_index = _coordinate_index(
-            coordinate=point.x,
-            origin=config.grid.origin_x,
-            scale=config.grid.scale,
-            node_count=x_node_count,
-            axis_name="x",
-            point=point,
-        )
-        y_index = _coordinate_index(
-            coordinate=point.y,
-            origin=config.grid.origin_y,
-            scale=config.grid.scale,
-            node_count=y_node_count,
-            axis_name="y",
-            point=point,
-        )
         point_key = candidate_point_key(point)
         if point_key in point_keys:
             raise CandidateCirculationInputError(
@@ -98,11 +85,11 @@ def validate_circulation_input(
         occupied_nodes[node] = indexed
         indexed_points.append(indexed)
 
-    _validate_route_matches(config, tuple(indexed_points))
+    _validate_route_matches(circulation_input.config, tuple(indexed_points))
     return ValidatedCirculationInput(
         source=circulation_input,
-        x_node_count=x_node_count,
-        y_node_count=y_node_count,
+        x_node_count=grid.x_node_count,
+        y_node_count=grid.y_node_count,
         indexed_points=tuple(indexed_points),
         occupied_nodes=occupied_nodes,
     )
@@ -110,42 +97,6 @@ def validate_circulation_input(
 
 def candidate_point_key(point: CandidatePoint) -> str:
     return point.point_key
-
-
-def _axis_node_count(extent: float, scale: float, axis_name: str) -> int:
-    raw_steps = extent / scale
-    steps = round(raw_steps)
-    tolerance = max(1e-9, abs(raw_steps) * 1e-9)
-    if not math.isclose(raw_steps, steps, rel_tol=0.0, abs_tol=tolerance):
-        raise GridAlignmentError(
-            f"Grid {axis_name} extent must be an exact multiple of grid scale."
-        )
-    return int(steps) + 1
-
-
-def _coordinate_index(
-    *,
-    coordinate: float,
-    origin: float,
-    scale: float,
-    node_count: int,
-    axis_name: str,
-    point: CandidatePoint,
-) -> int:
-    raw_index = (coordinate - origin) / scale
-    index = round(raw_index)
-    tolerance = max(1e-8, abs(raw_index) * 1e-9)
-    if not math.isclose(raw_index, index, rel_tol=0.0, abs_tol=tolerance):
-        raise GridAlignmentError(
-            f"Candidate point '{candidate_point_key(point)}' {axis_name} coordinate "
-            "does not align with the configured grid."
-        )
-    if index < 0 or index >= node_count:
-        raise GridAlignmentError(
-            f"Candidate point '{candidate_point_key(point)}' is outside the "
-            f"configured grid on the {axis_name} axis."
-        )
-    return int(index)
 
 
 def _validate_route_matches(

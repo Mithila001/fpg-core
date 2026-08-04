@@ -7,7 +7,6 @@ from types import MappingProxyType
 from typing import Any
 
 from ..domain import (
-    CirculationGrid,
     CirculationRouteRule,
     GridRoutingCostProfile,
     LandSide,
@@ -71,17 +70,17 @@ def _freeze(value: Any) -> Any:
 class ZoneSuitabilityConfig:
     """Typed caller configuration for zone-suitability scoring."""
 
-    grid_size: int = 3
+    zone_count_per_axis: int = 3
     falloff_multiplier: float = 1.5
     valid_zones: Mapping[RoomType, tuple[tuple[int, int], ...]] = field(
         default_factory=lambda: DEFAULT_VALID_ZONES
     )
 
     def __post_init__(self) -> None:
-        if isinstance(self.grid_size, bool) or not isinstance(self.grid_size, int):
-            raise TypeError("grid_size must be an integer.")
-        if self.grid_size <= 0:
-            raise ValueError("grid_size must be greater than zero.")
+        if isinstance(self.zone_count_per_axis, bool) or not isinstance(self.zone_count_per_axis, int):
+            raise TypeError("zone_count_per_axis must be an integer.")
+        if self.zone_count_per_axis <= 0:
+            raise ValueError("zone_count_per_axis must be greater than zero.")
 
         if isinstance(self.falloff_multiplier, bool):
             raise TypeError("falloff_multiplier must be numeric, not boolean.")
@@ -129,10 +128,10 @@ class ZoneSuitabilityConfig:
                     raise TypeError(
                         f"Zone cell for '{room_type.value}' must use integer coordinates."
                     )
-                if not 1 <= cell_x <= self.grid_size or not 1 <= cell_y <= self.grid_size:
+                if not 1 <= cell_x <= self.zone_count_per_axis or not 1 <= cell_y <= self.zone_count_per_axis:
                     raise ValueError(
                         f"Zone cell {(cell_x, cell_y)} for '{room_type.value}' "
-                        f"is outside the 1..{self.grid_size} grid."
+                        f"is outside the 1..{self.zone_count_per_axis} grid."
                     )
                 cells.append((cell_x, cell_y))
 
@@ -144,6 +143,13 @@ class ZoneSuitabilityConfig:
 
         object.__setattr__(self, "falloff_multiplier", falloff_multiplier)
         object.__setattr__(self, "valid_zones", MappingProxyType(normalized))
+
+
+    @property
+    def grid_size(self) -> int:
+        """Deprecated read-only alias for zone_count_per_axis."""
+
+        return self.zone_count_per_axis
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,14 +205,11 @@ class ExteriorClearanceRule:
 class RelationshipQualityConfig:
     """Typed single-pass routing configuration for relationship scoring."""
 
-    grid: CirculationGrid
     costs: GridRoutingCostProfile
     route_rules: tuple[CirculationRouteRule, ...]
     always_traversable_room_types: tuple[RoomType, ...] = (RoomType.HALLWAY,)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.grid, CirculationGrid):
-            raise TypeError("grid must be a CirculationGrid instance.")
         if not isinstance(self.costs, GridRoutingCostProfile):
             raise TypeError("costs must be a GridRoutingCostProfile instance.")
 

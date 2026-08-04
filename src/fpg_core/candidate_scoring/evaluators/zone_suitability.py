@@ -55,7 +55,7 @@ class ZoneSuitabilityEvaluator(CandidateEvaluator):
                 nx,
                 ny,
                 cells,
-                config.grid_size,
+                config.zone_count_per_axis,
             )
             score = clamp_score(
                 100.0 * (1.0 - distance_to_zone * config.falloff_multiplier)
@@ -101,7 +101,7 @@ class ZoneSuitabilityEvaluator(CandidateEvaluator):
             details: ZoneSuitabilityDetails | None = ZoneSuitabilityDetails(
                 floor_width=data.floor_width,
                 floor_length=data.floor_length,
-                grid_size=config.grid_size,
+                zone_count_per_axis=config.zone_count_per_axis,
                 falloff_multiplier=config.falloff_multiplier,
                 rules=tuple(
                     ZoneSuitabilityRuleDetails(
@@ -153,7 +153,9 @@ def _read_config(settings: Mapping[str, Any]) -> ZoneSuitabilityConfig:
 
     # Preserve existing caller settings while providing a typed public config.
     return ZoneSuitabilityConfig(
-        grid_size=int(settings.get("grid_size", 3)),
+        zone_count_per_axis=int(
+            settings.get("zone_count_per_axis", settings.get("grid_size", 3))
+        ),
         falloff_multiplier=float(settings.get("falloff_multiplier", 1.5)),
         valid_zones=settings.get("valid_zones", DEFAULT_VALID_ZONES),
     )

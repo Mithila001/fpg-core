@@ -63,13 +63,24 @@ def run_pipeline(
         relation_decisions=context.relation_decisions,
         selected_room_size=context.request.selected_room_size,
         floor_selection=FloorSelection(
-            requested_width=context.request.max_width,
-            requested_length=context.request.max_length,
-            selected_width=context.floor.width,
-            selected_length=context.floor.length,
-            aspect_ratio=context.request.aspect_ratio,
+            requested_width=context.request.raw_max_width,
+            requested_length=context.request.raw_max_length,
+            normalized_max_width=context.request.max_width,
+            normalized_max_length=context.request.max_length,
+            selected_width=int(context.floor.width),
+            selected_length=int(context.floor.length),
+            requested_aspect_ratio=context.request.aspect_ratio,
+            selected_aspect_ratio=context.floor.length / context.floor.width,
+            aspect_residual_units=abs(
+                context.floor.length
+                - context.floor.width * context.request.aspect_ratio
+            ),
             minimum_required_area=context.minimum_required_area,
             maximum_target_area=context.maximum_target_area,
+            unused_limit_area=(
+                context.request.max_width * context.request.max_length
+                - context.floor.width * context.floor.length
+            ),
         ),
         applied_defaults=context.request.applied_defaults,
     )

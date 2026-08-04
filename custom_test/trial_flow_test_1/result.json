@@ -1,0 +1,6282 @@
+{
+  "run": {
+    "input_file": "input.json",
+    "started_at_utc": "2026-08-04T09:59:12.183750+00:00",
+    "completed_at_utc": "2026-08-04T09:59:24.957711+00:00",
+    "duration_seconds": 12.773974313997314
+  },
+  "summary": {
+    "floor_width": 150,
+    "floor_length": 120,
+    "room_count": 12,
+    "search_trial_count": 24,
+    "search_best_score": 65.16571726663267,
+    "search_candidate_point_count": 16,
+    "final_candidate_point_count": 12,
+    "removed_hallway_point_count": 4,
+    "final_candidate_score": 65.16571726663267,
+    "passed_critical_checks": true
+  },
+  "preprocessing": {
+    "result": {
+      "generation_spec": {
+        "floor": {
+          "width": 150,
+          "length": 120
+        },
+        "rooms": [
+          {
+            "id": "living_main",
+            "room_type": "living_room",
+            "name": "Main Living Room",
+            "size": {
+              "min_width": 35.0,
+              "max_width": 62.0,
+              "min_area": 1500.0,
+              "max_area": 3200.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "kitchen_main",
+            "room_type": "kitchen",
+            "name": "Main Kitchen",
+            "size": {
+              "min_width": 25.0,
+              "max_width": 46.0,
+              "min_area": 900.0,
+              "max_area": 1800.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "dining_main",
+            "room_type": "dining_room",
+            "name": "Dining Room",
+            "size": {
+              "min_width": 28.0,
+              "max_width": 48.0,
+              "min_area": 850.0,
+              "max_area": 1700.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "bedroom_master",
+            "room_type": "bedroom",
+            "name": "Master Bedroom",
+            "size": {
+              "min_width": 30.0,
+              "max_width": 46.0,
+              "min_area": 1050.0,
+              "max_area": 1800.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "bedroom_2",
+            "room_type": "bedroom",
+            "name": "Bedroom 2",
+            "size": {
+              "min_width": 30.0,
+              "max_width": 46.0,
+              "min_area": 1050.0,
+              "max_area": 1800.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "bedroom_3",
+            "room_type": "bedroom",
+            "name": "Bedroom 3",
+            "size": {
+              "min_width": 30.0,
+              "max_width": 46.0,
+              "min_area": 1050.0,
+              "max_area": 1800.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "bathroom_common",
+            "room_type": "bathroom",
+            "name": "Common Bathroom",
+            "size": {
+              "min_width": 18.0,
+              "max_width": 30.0,
+              "min_area": 400.0,
+              "max_area": 750.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "bathroom_master",
+            "room_type": "attached_bathroom",
+            "name": "Master Attached Bathroom",
+            "size": {
+              "min_width": 16.0,
+              "max_width": 27.0,
+              "min_area": 320.0,
+              "max_area": 650.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "bathroom_bedroom_2",
+            "room_type": "attached_bathroom",
+            "name": "Bedroom 2 Attached Bathroom",
+            "size": {
+              "min_width": 16.0,
+              "max_width": 27.0,
+              "min_area": 320.0,
+              "max_area": 650.0,
+              "width_axis": "any"
+            }
+          },
+          {
+            "id": "veranda_front",
+            "room_type": "veranda",
+            "name": "Front Veranda",
+            "size": {
+              "min_width": 18.0,
+              "max_width": 55.0,
+              "min_area": 450.0,
+              "max_area": 1400.0,
+              "width_axis": "x"
+            }
+          },
+          {
+            "id": "garage_single",
+            "room_type": "garage",
+            "name": "Single Vehicle Garage",
+            "size": {
+              "min_width": 30.0,
+              "max_width": 66.0,
+              "min_area": 1500.0,
+              "max_area": 3200.0,
+              "width_axis": "x"
+            }
+          },
+          {
+            "id": "hallway_1",
+            "room_type": "hallway",
+            "name": "Hallway 1",
+            "size": {
+              "min_width": 10.0,
+              "max_width": 90.0,
+              "min_area": 900.0,
+              "max_area": 18000,
+              "width_axis": "any"
+            }
+          }
+        ],
+        "room_relations": [
+          {
+            "source_room_id": "living_main",
+            "target_room_ids": [
+              "veranda_front",
+              "dining_main"
+            ],
+            "match_policy": "or",
+            "strength": "hard"
+          },
+          {
+            "source_room_id": "kitchen_main",
+            "target_room_ids": [
+              "dining_main"
+            ],
+            "match_policy": "and",
+            "strength": "hard"
+          },
+          {
+            "source_room_id": "bedroom_master",
+            "target_room_ids": [
+              "bathroom_common",
+              "bathroom_master",
+              "bathroom_bedroom_2"
+            ],
+            "match_policy": "or",
+            "strength": "soft"
+          },
+          {
+            "source_room_id": "bedroom_2",
+            "target_room_ids": [
+              "bathroom_common",
+              "bathroom_master",
+              "bathroom_bedroom_2"
+            ],
+            "match_policy": "or",
+            "strength": "soft"
+          },
+          {
+            "source_room_id": "bedroom_3",
+            "target_room_ids": [
+              "bathroom_common",
+              "bathroom_master",
+              "bathroom_bedroom_2"
+            ],
+            "match_policy": "or",
+            "strength": "soft"
+          },
+          {
+            "source_room_id": "bathroom_master",
+            "target_room_ids": [
+              "bedroom_master"
+            ],
+            "match_policy": "and",
+            "strength": "hard"
+          },
+          {
+            "source_room_id": "bathroom_bedroom_2",
+            "target_room_ids": [
+              "bedroom_2"
+            ],
+            "match_policy": "and",
+            "strength": "hard"
+          },
+          {
+            "source_room_id": "garage_single",
+            "target_room_ids": [
+              "kitchen_main"
+            ],
+            "match_policy": "or",
+            "strength": "soft"
+          }
+        ]
+      }
+    },
+    "details": {
+      "normalizations": [
+        {
+          "field": "floor_limits.max_width",
+          "original": "150.8",
+          "normalized": "150"
+        },
+        {
+          "field": "floor_limits.max_length",
+          "original": "120.9",
+          "normalized": "120"
+        }
+      ],
+      "room_decisions": [
+        {
+          "room_id": "hallway_1",
+          "room_type": "hallway",
+          "action": "derived",
+          "reason": "hallway policy"
+        }
+      ],
+      "relation_decisions": [
+        {
+          "source_room_type": "living_room",
+          "action": "expanded",
+          "detail": "living_main -> veranda_front, dining_main"
+        },
+        {
+          "source_room_type": "kitchen",
+          "action": "expanded",
+          "detail": "kitchen_main -> dining_main"
+        },
+        {
+          "source_room_type": "bedroom",
+          "action": "expanded",
+          "detail": "bedroom_master -> bathroom_common, bathroom_master, bathroom_bedroom_2"
+        },
+        {
+          "source_room_type": "bedroom",
+          "action": "expanded",
+          "detail": "bedroom_2 -> bathroom_common, bathroom_master, bathroom_bedroom_2"
+        },
+        {
+          "source_room_type": "bedroom",
+          "action": "expanded",
+          "detail": "bedroom_3 -> bathroom_common, bathroom_master, bathroom_bedroom_2"
+        },
+        {
+          "source_room_type": "attached_bathroom",
+          "action": "expanded",
+          "detail": "bathroom_master -> bedroom_master"
+        },
+        {
+          "source_room_type": "attached_bathroom",
+          "action": "expanded",
+          "detail": "bathroom_bedroom_2 -> bedroom_2"
+        },
+        {
+          "source_room_type": "garage",
+          "action": "expanded",
+          "detail": "garage_single -> kitchen_main"
+        }
+      ],
+      "selected_room_size": "medium",
+      "floor_selection": {
+        "requested_width": 150.8,
+        "requested_length": 120.9,
+        "normalized_max_width": 150,
+        "normalized_max_length": 120,
+        "selected_width": 150,
+        "selected_length": 120,
+        "requested_aspect_ratio": 0.8,
+        "selected_aspect_ratio": 0.8,
+        "aspect_residual_units": 0.0,
+        "minimum_required_area": 11490.0,
+        "maximum_target_area": 20850.0,
+        "unused_limit_area": 0
+      },
+      "applied_defaults": [
+        "derived hallway 'hallway_1'"
+      ],
+      "warnings": []
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 0.0007520580002164934
+    }
+  },
+  "candidate_search": {
+    "result": {
+      "candidate": {
+        "grid": {
+          "x_positions": [
+            0,
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            50,
+            57,
+            64,
+            71,
+            78,
+            85,
+            92,
+            100,
+            107,
+            114,
+            121,
+            128,
+            135,
+            142,
+            150
+          ],
+          "y_positions": [
+            0,
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            49,
+            56,
+            63,
+            70,
+            77,
+            84,
+            91,
+            98,
+            105,
+            112,
+            120
+          ]
+        },
+        "points": [
+          {
+            "room_id": "living_main",
+            "x": 92.0,
+            "y": 49.0,
+            "room_type": "living_room",
+            "hint_index": 1
+          },
+          {
+            "room_id": "kitchen_main",
+            "x": 85.0,
+            "y": 49.0,
+            "room_type": "kitchen",
+            "hint_index": 1
+          },
+          {
+            "room_id": "dining_main",
+            "x": 135.0,
+            "y": 84.0,
+            "room_type": "dining_room",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bedroom_master",
+            "x": 0.0,
+            "y": 42.0,
+            "room_type": "bedroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bedroom_2",
+            "x": 14.0,
+            "y": 77.0,
+            "room_type": "bedroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bedroom_3",
+            "x": 121.0,
+            "y": 70.0,
+            "room_type": "bedroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bathroom_common",
+            "x": 78.0,
+            "y": 98.0,
+            "room_type": "bathroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bathroom_master",
+            "x": 64.0,
+            "y": 63.0,
+            "room_type": "attached_bathroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bathroom_bedroom_2",
+            "x": 85.0,
+            "y": 70.0,
+            "room_type": "attached_bathroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "veranda_front",
+            "x": 150.0,
+            "y": 35.0,
+            "room_type": "veranda",
+            "hint_index": 1
+          },
+          {
+            "room_id": "garage_single",
+            "x": 71.0,
+            "y": 56.0,
+            "room_type": "garage",
+            "hint_index": 1
+          },
+          {
+            "room_id": "hallway_1",
+            "x": 50.0,
+            "y": 120.0,
+            "room_type": "hallway",
+            "hint_index": 1
+          },
+          {
+            "room_id": "hallway_1",
+            "x": 21.0,
+            "y": 63.0,
+            "room_type": "hallway",
+            "hint_index": 2
+          },
+          {
+            "room_id": "hallway_1",
+            "x": 135.0,
+            "y": 112.0,
+            "room_type": "hallway",
+            "hint_index": 3
+          },
+          {
+            "room_id": "hallway_1",
+            "x": 35.0,
+            "y": 98.0,
+            "room_type": "hallway",
+            "hint_index": 4
+          },
+          {
+            "room_id": "hallway_1",
+            "x": 92.0,
+            "y": 70.0,
+            "room_type": "hallway",
+            "hint_index": 5
+          }
+        ]
+      },
+      "score": 65.16571726663267,
+      "completed_trials": 24
+    },
+    "details": {
+      "grid": {
+        "x_positions": [
+          0,
+          7,
+          14,
+          21,
+          28,
+          35,
+          42,
+          50,
+          57,
+          64,
+          71,
+          78,
+          85,
+          92,
+          100,
+          107,
+          114,
+          121,
+          128,
+          135,
+          142,
+          150
+        ],
+        "y_positions": [
+          0,
+          7,
+          14,
+          21,
+          28,
+          35,
+          42,
+          49,
+          56,
+          63,
+          70,
+          77,
+          84,
+          91,
+          98,
+          105,
+          112,
+          120
+        ]
+      },
+      "overlap_rejection_count": 34,
+      "optuna_trial_count": 58,
+      "completed_trial_count": 24
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 12.441939747001015
+    }
+  },
+  "candidate_circulation": {
+    "result": {
+      "candidate": {
+        "grid": {
+          "x_positions": [
+            0,
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            50,
+            57,
+            64,
+            71,
+            78,
+            85,
+            92,
+            100,
+            107,
+            114,
+            121,
+            128,
+            135,
+            142,
+            150
+          ],
+          "y_positions": [
+            0,
+            7,
+            14,
+            21,
+            28,
+            35,
+            42,
+            49,
+            56,
+            63,
+            70,
+            77,
+            84,
+            91,
+            98,
+            105,
+            112,
+            120
+          ]
+        },
+        "points": [
+          {
+            "room_id": "living_main",
+            "x": 92.0,
+            "y": 49.0,
+            "room_type": "living_room",
+            "hint_index": 1
+          },
+          {
+            "room_id": "kitchen_main",
+            "x": 85.0,
+            "y": 49.0,
+            "room_type": "kitchen",
+            "hint_index": 1
+          },
+          {
+            "room_id": "dining_main",
+            "x": 135.0,
+            "y": 84.0,
+            "room_type": "dining_room",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bedroom_master",
+            "x": 0.0,
+            "y": 42.0,
+            "room_type": "bedroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bedroom_2",
+            "x": 14.0,
+            "y": 77.0,
+            "room_type": "bedroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bedroom_3",
+            "x": 121.0,
+            "y": 70.0,
+            "room_type": "bedroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bathroom_common",
+            "x": 78.0,
+            "y": 98.0,
+            "room_type": "bathroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bathroom_master",
+            "x": 64.0,
+            "y": 63.0,
+            "room_type": "attached_bathroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "bathroom_bedroom_2",
+            "x": 85.0,
+            "y": 70.0,
+            "room_type": "attached_bathroom",
+            "hint_index": 1
+          },
+          {
+            "room_id": "veranda_front",
+            "x": 150.0,
+            "y": 35.0,
+            "room_type": "veranda",
+            "hint_index": 1
+          },
+          {
+            "room_id": "garage_single",
+            "x": 71.0,
+            "y": 56.0,
+            "room_type": "garage",
+            "hint_index": 1
+          },
+          {
+            "room_id": "hallway_1",
+            "x": 92.0,
+            "y": 70.0,
+            "room_type": "hallway",
+            "hint_index": 5
+          }
+        ]
+      },
+      "hallway_classifications": [
+        {
+          "room_id": "hallway_1",
+          "hint_index": 1,
+          "traffic_class": "unused"
+        },
+        {
+          "room_id": "hallway_1",
+          "hint_index": 2,
+          "traffic_class": "unused"
+        },
+        {
+          "room_id": "hallway_1",
+          "hint_index": 3,
+          "traffic_class": "unused"
+        },
+        {
+          "room_id": "hallway_1",
+          "hint_index": 4,
+          "traffic_class": "unused"
+        },
+        {
+          "room_id": "hallway_1",
+          "hint_index": 5,
+          "traffic_class": "private"
+        }
+      ]
+    },
+    "details": {
+      "circulation_efficiency_score": 75.97552705996003,
+      "routing_pass_count": 2,
+      "grid_node_count": 396,
+      "passes": [
+        {
+          "pass_number": 1,
+          "classifications_changed_from_previous": false,
+          "paths": [
+            {
+              "rule_id": 1,
+              "rule_name": "Living to front veranda",
+              "traffic_class": "public",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.3,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "veranda_front[1]",
+              "destination_room_id": "veranda_front",
+              "destination_room_type": "veranda",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 6,
+                  "x": 92,
+                  "y": 42
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 5,
+                  "x": 92,
+                  "y": 35
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 5,
+                  "x": 100,
+                  "y": 35
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 5,
+                  "x": 107,
+                  "y": 35
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 5,
+                  "x": 114,
+                  "y": 35
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 5,
+                  "x": 121,
+                  "y": 35
+                },
+                {
+                  "x_index": 18,
+                  "y_index": 5,
+                  "x": 128,
+                  "y": 35
+                },
+                {
+                  "x_index": 19,
+                  "y_index": 5,
+                  "x": 135,
+                  "y": 35
+                },
+                {
+                  "x_index": 20,
+                  "y_index": 5,
+                  "x": 142,
+                  "y": 35
+                },
+                {
+                  "x_index": 21,
+                  "y_index": 5,
+                  "x": 150,
+                  "y": 35
+                }
+              ],
+              "step_count": 10,
+              "manhattan_step_count": 10,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 18.75,
+              "costs": {
+                "movement_cost": 18.75,
+                "perimeter_bias_cost": 8.52,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 27.62
+              },
+              "path_efficiency_score": 67.88559015206371
+            },
+            {
+              "rule_id": 2,
+              "rule_name": "Living to kitchen",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway",
+                "dining_room"
+              ],
+              "importance_weight": 1.2,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "kitchen_main[1]",
+              "destination_room_id": "kitchen_main",
+              "destination_room_type": "kitchen",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                }
+              ],
+              "step_count": 1,
+              "manhattan_step_count": 1,
+              "detour_step_count": 0,
+              "turn_count": 0,
+              "manhattan_reference_cost": 0.75,
+              "costs": {
+                "movement_cost": 0.75,
+                "perimeter_bias_cost": 0.27499999999999997,
+                "turn_cost": 0.0,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 1.025
+              },
+              "path_efficiency_score": 73.17073170731707
+            },
+            {
+              "rule_id": 3,
+              "rule_name": "Kitchen to dining",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway",
+                "living_room"
+              ],
+              "importance_weight": 1.4,
+              "source_point_key": "kitchen_main[1]",
+              "source_room_id": "kitchen_main",
+              "source_room_type": "kitchen",
+              "destination_point_key": "dining_main[1]",
+              "destination_room_id": "dining_main",
+              "destination_room_type": "dining_room",
+              "nodes": [
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 8,
+                  "x": 92,
+                  "y": 56
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 9,
+                  "x": 92,
+                  "y": 63
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 11,
+                  "x": 92,
+                  "y": 77
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 12,
+                  "x": 92,
+                  "y": 84
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 12,
+                  "x": 100,
+                  "y": 84
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 12,
+                  "x": 107,
+                  "y": 84
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 12,
+                  "x": 114,
+                  "y": 84
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 12,
+                  "x": 121,
+                  "y": 84
+                },
+                {
+                  "x_index": 18,
+                  "y_index": 12,
+                  "x": 128,
+                  "y": 84
+                },
+                {
+                  "x_index": 19,
+                  "y_index": 12,
+                  "x": 135,
+                  "y": 84
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 2,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 20.25,
+                "perimeter_bias_cost": 7.0275,
+                "turn_cost": 0.7,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 27.9775
+              },
+              "path_efficiency_score": 81.31534268608704
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.1,
+              "source_point_key": "bedroom_master[1]",
+              "source_room_id": "bedroom_master",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_common[1]",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 6,
+                  "x": 71,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 6,
+                  "x": 78,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 7,
+                  "x": 78,
+                  "y": 49
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 8,
+                  "x": 78,
+                  "y": 56
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 9,
+                  "x": 78,
+                  "y": 63
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 10,
+                  "x": 78,
+                  "y": 70
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 19,
+              "manhattan_step_count": 19,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 36.75,
+              "costs": {
+                "movement_cost": 36.75,
+                "perimeter_bias_cost": 12.0325,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 49.1325
+              },
+              "path_efficiency_score": 74.79774080293085
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.1,
+              "source_point_key": "bedroom_2[1]",
+              "source_room_id": "bedroom_2",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_common[1]",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 11,
+                  "x": 71,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 22.75,
+                "perimeter_bias_cost": 8.1075,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 31.207500000000003
+              },
+              "path_efficiency_score": 72.89914283425458
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.1,
+              "source_point_key": "bedroom_3[1]",
+              "source_room_id": "bedroom_3",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_common[1]",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 11,
+                  "x": 92,
+                  "y": 77
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 11,
+                  "x": 85,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 10,
+              "manhattan_step_count": 10,
+              "detour_step_count": 0,
+              "turn_count": 3,
+              "manhattan_reference_cost": 18.75,
+              "costs": {
+                "movement_cost": 17.5,
+                "perimeter_bias_cost": 5.802499999999999,
+                "turn_cost": 1.0499999999999998,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 24.3525
+              },
+              "path_efficiency_score": 76.9941484447182
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.5,
+              "source_point_key": "bedroom_master[1]",
+              "source_room_id": "bedroom_master",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_master[1]",
+              "destination_room_id": "bathroom_master",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 7,
+                  "x": 64,
+                  "y": 49
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 8,
+                  "x": 64,
+                  "y": 56
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 9,
+                  "x": 64,
+                  "y": 63
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 22.75,
+                "perimeter_bias_cost": 8.762500000000003,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 31.862500000000004
+              },
+              "path_efficiency_score": 71.4005492349941
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.5,
+              "source_point_key": "bedroom_2[1]",
+              "source_room_id": "bedroom_2",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_master[1]",
+              "destination_room_id": "bathroom_master",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 10,
+                  "x": 64,
+                  "y": 70
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 9,
+                  "x": 64,
+                  "y": 63
+                }
+              ],
+              "step_count": 9,
+              "manhattan_step_count": 9,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 16.75,
+              "costs": {
+                "movement_cost": 16.75,
+                "perimeter_bias_cost": 5.7524999999999995,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 22.8525
+              },
+              "path_efficiency_score": 73.29613827808774
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.5,
+              "source_point_key": "bedroom_3[1]",
+              "source_room_id": "bedroom_3",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_bedroom_2[1]",
+              "destination_room_id": "bathroom_bedroom_2",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 10,
+                  "x": 85,
+                  "y": 70
+                }
+              ],
+              "step_count": 5,
+              "manhattan_step_count": 5,
+              "detour_step_count": 0,
+              "turn_count": 0,
+              "manhattan_reference_cost": 8.75,
+              "costs": {
+                "movement_cost": 7.5,
+                "perimeter_bias_cost": 2.82,
+                "turn_cost": 0.0,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 10.32
+              },
+              "path_efficiency_score": 84.78682170542635
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.0,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "bedroom_master[1]",
+              "destination_room_id": "bedroom_master",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 6,
+                  "x": 92,
+                  "y": 42
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 6,
+                  "x": 85,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 6,
+                  "x": 78,
+                  "y": 42
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 6,
+                  "x": 71,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                }
+              ],
+              "step_count": 14,
+              "manhattan_step_count": 14,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 26.75,
+              "costs": {
+                "movement_cost": 26.75,
+                "perimeter_bias_cost": 10.1225,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 37.222500000000004
+              },
+              "path_efficiency_score": 71.86513533481093
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.0,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "bedroom_2[1]",
+              "destination_room_id": "bedroom_2",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 8,
+                  "x": 92,
+                  "y": 56
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 9,
+                  "x": 92,
+                  "y": 63
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 11,
+                  "x": 92,
+                  "y": 77
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 11,
+                  "x": 85,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 11,
+                  "x": 71,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                }
+              ],
+              "step_count": 15,
+              "manhattan_step_count": 15,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 28.75,
+              "costs": {
+                "movement_cost": 27.5,
+                "perimeter_bias_cost": 8.254999999999999,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 36.105
+              },
+              "path_efficiency_score": 79.62886026866086
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.0,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "bedroom_3[1]",
+              "destination_room_id": "bedroom_3",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 8,
+                  "x": 92,
+                  "y": 56
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 9,
+                  "x": 92,
+                  "y": 63
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                }
+              ],
+              "step_count": 7,
+              "manhattan_step_count": 7,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 12.75,
+              "costs": {
+                "movement_cost": 11.5,
+                "perimeter_bias_cost": 3.57,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 15.42
+              },
+              "path_efficiency_score": 82.68482490272373
+            },
+            {
+              "rule_id": 7,
+              "rule_name": "Garage to kitchen",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway",
+                "dining_room"
+              ],
+              "importance_weight": 0.8,
+              "source_point_key": "garage_single[1]",
+              "source_room_id": "garage_single",
+              "source_room_type": "garage",
+              "destination_point_key": "kitchen_main[1]",
+              "destination_room_id": "kitchen_main",
+              "destination_room_type": "kitchen",
+              "nodes": [
+                {
+                  "x_index": 10,
+                  "y_index": 8,
+                  "x": 71,
+                  "y": 56
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 8,
+                  "x": 78,
+                  "y": 56
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 8,
+                  "x": 85,
+                  "y": 56
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                }
+              ],
+              "step_count": 3,
+              "manhattan_step_count": 3,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 4.75,
+              "costs": {
+                "movement_cost": 4.75,
+                "perimeter_bias_cost": 0.43000000000000005,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 5.529999999999999
+              },
+              "path_efficiency_score": 85.89511754068717
+            }
+          ],
+          "hallway_traffic": [
+            {
+              "point_key": "hallway_1[1]",
+              "room_id": "hallway_1",
+              "hint_index": 1,
+              "x": 50.0,
+              "y": 120.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[2]",
+              "room_id": "hallway_1",
+              "hint_index": 2,
+              "x": 21.0,
+              "y": 63.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[3]",
+              "room_id": "hallway_1",
+              "hint_index": 3,
+              "x": 135.0,
+              "y": 112.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[4]",
+              "room_id": "hallway_1",
+              "hint_index": 4,
+              "x": 35.0,
+              "y": 98.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[5]",
+              "room_id": "hallway_1",
+              "hint_index": 5,
+              "x": 92.0,
+              "y": 70.0,
+              "public_route_count": 1,
+              "private_route_count": 4,
+              "public_importance_weight": 1.4,
+              "private_importance_weight": 4.6,
+              "traffic_class": "private",
+              "removed": false
+            }
+          ]
+        },
+        {
+          "pass_number": 2,
+          "classifications_changed_from_previous": false,
+          "paths": [
+            {
+              "rule_id": 1,
+              "rule_name": "Living to front veranda",
+              "traffic_class": "public",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.3,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "veranda_front[1]",
+              "destination_room_id": "veranda_front",
+              "destination_room_type": "veranda",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 6,
+                  "x": 92,
+                  "y": 42
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 5,
+                  "x": 92,
+                  "y": 35
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 5,
+                  "x": 100,
+                  "y": 35
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 5,
+                  "x": 107,
+                  "y": 35
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 5,
+                  "x": 114,
+                  "y": 35
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 5,
+                  "x": 121,
+                  "y": 35
+                },
+                {
+                  "x_index": 18,
+                  "y_index": 5,
+                  "x": 128,
+                  "y": 35
+                },
+                {
+                  "x_index": 19,
+                  "y_index": 5,
+                  "x": 135,
+                  "y": 35
+                },
+                {
+                  "x_index": 20,
+                  "y_index": 5,
+                  "x": 142,
+                  "y": 35
+                },
+                {
+                  "x_index": 21,
+                  "y_index": 5,
+                  "x": 150,
+                  "y": 35
+                }
+              ],
+              "step_count": 10,
+              "manhattan_step_count": 10,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 18.75,
+              "costs": {
+                "movement_cost": 18.75,
+                "perimeter_bias_cost": 8.52,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 27.62
+              },
+              "path_efficiency_score": 67.88559015206371
+            },
+            {
+              "rule_id": 2,
+              "rule_name": "Living to kitchen",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway",
+                "dining_room"
+              ],
+              "importance_weight": 1.2,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "kitchen_main[1]",
+              "destination_room_id": "kitchen_main",
+              "destination_room_type": "kitchen",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                }
+              ],
+              "step_count": 1,
+              "manhattan_step_count": 1,
+              "detour_step_count": 0,
+              "turn_count": 0,
+              "manhattan_reference_cost": 0.75,
+              "costs": {
+                "movement_cost": 0.75,
+                "perimeter_bias_cost": 0.27499999999999997,
+                "turn_cost": 0.0,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 1.025
+              },
+              "path_efficiency_score": 73.17073170731707
+            },
+            {
+              "rule_id": 3,
+              "rule_name": "Kitchen to dining",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway",
+                "living_room"
+              ],
+              "importance_weight": 1.4,
+              "source_point_key": "kitchen_main[1]",
+              "source_room_id": "kitchen_main",
+              "source_room_type": "kitchen",
+              "destination_point_key": "dining_main[1]",
+              "destination_room_id": "dining_main",
+              "destination_room_type": "dining_room",
+              "nodes": [
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 7,
+                  "x": 100,
+                  "y": 49
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 8,
+                  "x": 100,
+                  "y": 56
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 9,
+                  "x": 100,
+                  "y": 63
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 11,
+                  "x": 100,
+                  "y": 77
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 12,
+                  "x": 100,
+                  "y": 84
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 12,
+                  "x": 107,
+                  "y": 84
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 12,
+                  "x": 114,
+                  "y": 84
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 12,
+                  "x": 121,
+                  "y": 84
+                },
+                {
+                  "x_index": 18,
+                  "y_index": 12,
+                  "x": 128,
+                  "y": 84
+                },
+                {
+                  "x_index": 19,
+                  "y_index": 12,
+                  "x": 135,
+                  "y": 84
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 2,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 21.5,
+                "perimeter_bias_cost": 7.4875,
+                "turn_cost": 0.7,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 29.6875
+              },
+              "path_efficiency_score": 76.63157894736842
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.1,
+              "source_point_key": "bedroom_master[1]",
+              "source_room_id": "bedroom_master",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_common[1]",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 6,
+                  "x": 71,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 6,
+                  "x": 78,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 7,
+                  "x": 78,
+                  "y": 49
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 8,
+                  "x": 78,
+                  "y": 56
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 9,
+                  "x": 78,
+                  "y": 63
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 10,
+                  "x": 78,
+                  "y": 70
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 19,
+              "manhattan_step_count": 19,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 36.75,
+              "costs": {
+                "movement_cost": 36.75,
+                "perimeter_bias_cost": 12.0325,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 49.1325
+              },
+              "path_efficiency_score": 74.79774080293085
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.1,
+              "source_point_key": "bedroom_2[1]",
+              "source_room_id": "bedroom_2",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_common[1]",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 11,
+                  "x": 71,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 22.75,
+                "perimeter_bias_cost": 8.1075,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 31.207500000000003
+              },
+              "path_efficiency_score": 72.89914283425458
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.1,
+              "source_point_key": "bedroom_3[1]",
+              "source_room_id": "bedroom_3",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_common[1]",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 11,
+                  "x": 92,
+                  "y": 77
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 11,
+                  "x": 85,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 10,
+              "manhattan_step_count": 10,
+              "detour_step_count": 0,
+              "turn_count": 3,
+              "manhattan_reference_cost": 18.75,
+              "costs": {
+                "movement_cost": 17.5,
+                "perimeter_bias_cost": 5.802499999999999,
+                "turn_cost": 1.0499999999999998,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 24.3525
+              },
+              "path_efficiency_score": 76.9941484447182
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.5,
+              "source_point_key": "bedroom_master[1]",
+              "source_room_id": "bedroom_master",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_master[1]",
+              "destination_room_id": "bathroom_master",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 7,
+                  "x": 64,
+                  "y": 49
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 8,
+                  "x": 64,
+                  "y": 56
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 9,
+                  "x": 64,
+                  "y": 63
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 22.75,
+                "perimeter_bias_cost": 8.762500000000003,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 31.862500000000004
+              },
+              "path_efficiency_score": 71.4005492349941
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.5,
+              "source_point_key": "bedroom_2[1]",
+              "source_room_id": "bedroom_2",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_master[1]",
+              "destination_room_id": "bathroom_master",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 10,
+                  "x": 64,
+                  "y": 70
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 9,
+                  "x": 64,
+                  "y": 63
+                }
+              ],
+              "step_count": 9,
+              "manhattan_step_count": 9,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 16.75,
+              "costs": {
+                "movement_cost": 16.75,
+                "perimeter_bias_cost": 5.7524999999999995,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 22.8525
+              },
+              "path_efficiency_score": 73.29613827808774
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.5,
+              "source_point_key": "bedroom_3[1]",
+              "source_room_id": "bedroom_3",
+              "source_room_type": "bedroom",
+              "destination_point_key": "bathroom_bedroom_2[1]",
+              "destination_room_id": "bathroom_bedroom_2",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 10,
+                  "x": 85,
+                  "y": 70
+                }
+              ],
+              "step_count": 5,
+              "manhattan_step_count": 5,
+              "detour_step_count": 0,
+              "turn_count": 0,
+              "manhattan_reference_cost": 8.75,
+              "costs": {
+                "movement_cost": 7.5,
+                "perimeter_bias_cost": 2.82,
+                "turn_cost": 0.0,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 10.32
+              },
+              "path_efficiency_score": 84.78682170542635
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.0,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "bedroom_master[1]",
+              "destination_room_id": "bedroom_master",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 6,
+                  "x": 92,
+                  "y": 42
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 6,
+                  "x": 85,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 6,
+                  "x": 78,
+                  "y": 42
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 6,
+                  "x": 71,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                }
+              ],
+              "step_count": 14,
+              "manhattan_step_count": 14,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 26.75,
+              "costs": {
+                "movement_cost": 26.75,
+                "perimeter_bias_cost": 10.1225,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 37.222500000000004
+              },
+              "path_efficiency_score": 71.86513533481093
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.0,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "bedroom_2[1]",
+              "destination_room_id": "bedroom_2",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 8,
+                  "x": 92,
+                  "y": 56
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 9,
+                  "x": 92,
+                  "y": 63
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 11,
+                  "x": 92,
+                  "y": 77
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 11,
+                  "x": 85,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 11,
+                  "x": 71,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                }
+              ],
+              "step_count": 15,
+              "manhattan_step_count": 15,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 28.75,
+              "costs": {
+                "movement_cost": 27.5,
+                "perimeter_bias_cost": 8.254999999999999,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 36.105
+              },
+              "path_efficiency_score": 79.62886026866086
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "allowed_transit_room_types": [
+                "hallway"
+              ],
+              "importance_weight": 1.0,
+              "source_point_key": "living_main[1]",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_key": "bedroom_3[1]",
+              "destination_room_id": "bedroom_3",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 8,
+                  "x": 92,
+                  "y": 56
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 9,
+                  "x": 92,
+                  "y": 63
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                }
+              ],
+              "step_count": 7,
+              "manhattan_step_count": 7,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 12.75,
+              "costs": {
+                "movement_cost": 11.5,
+                "perimeter_bias_cost": 3.57,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 15.42
+              },
+              "path_efficiency_score": 82.68482490272373
+            },
+            {
+              "rule_id": 7,
+              "rule_name": "Garage to kitchen",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "allowed_transit_room_types": [
+                "hallway",
+                "dining_room"
+              ],
+              "importance_weight": 0.8,
+              "source_point_key": "garage_single[1]",
+              "source_room_id": "garage_single",
+              "source_room_type": "garage",
+              "destination_point_key": "kitchen_main[1]",
+              "destination_room_id": "kitchen_main",
+              "destination_room_type": "kitchen",
+              "nodes": [
+                {
+                  "x_index": 10,
+                  "y_index": 8,
+                  "x": 71,
+                  "y": 56
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 8,
+                  "x": 78,
+                  "y": 56
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 8,
+                  "x": 85,
+                  "y": 56
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                }
+              ],
+              "step_count": 3,
+              "manhattan_step_count": 3,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 4.75,
+              "costs": {
+                "movement_cost": 4.75,
+                "perimeter_bias_cost": 0.43000000000000005,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 5.529999999999999
+              },
+              "path_efficiency_score": 85.89511754068717
+            }
+          ],
+          "hallway_traffic": [
+            {
+              "point_key": "hallway_1[1]",
+              "room_id": "hallway_1",
+              "hint_index": 1,
+              "x": 50.0,
+              "y": 120.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[2]",
+              "room_id": "hallway_1",
+              "hint_index": 2,
+              "x": 21.0,
+              "y": 63.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[3]",
+              "room_id": "hallway_1",
+              "hint_index": 3,
+              "x": 135.0,
+              "y": 112.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[4]",
+              "room_id": "hallway_1",
+              "hint_index": 4,
+              "x": 35.0,
+              "y": 98.0,
+              "public_route_count": 0,
+              "private_route_count": 0,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 0.0,
+              "traffic_class": "unused",
+              "removed": true
+            },
+            {
+              "point_key": "hallway_1[5]",
+              "room_id": "hallway_1",
+              "hint_index": 5,
+              "x": 92.0,
+              "y": 70.0,
+              "public_route_count": 0,
+              "private_route_count": 4,
+              "public_importance_weight": 0.0,
+              "private_importance_weight": 4.6,
+              "traffic_class": "private",
+              "removed": false
+            }
+          ]
+        }
+      ],
+      "final_hallway_traffic": [
+        {
+          "point_key": "hallway_1[1]",
+          "room_id": "hallway_1",
+          "hint_index": 1,
+          "x": 50.0,
+          "y": 120.0,
+          "public_route_count": 0,
+          "private_route_count": 0,
+          "public_importance_weight": 0.0,
+          "private_importance_weight": 0.0,
+          "traffic_class": "unused",
+          "removed": true
+        },
+        {
+          "point_key": "hallway_1[2]",
+          "room_id": "hallway_1",
+          "hint_index": 2,
+          "x": 21.0,
+          "y": 63.0,
+          "public_route_count": 0,
+          "private_route_count": 0,
+          "public_importance_weight": 0.0,
+          "private_importance_weight": 0.0,
+          "traffic_class": "unused",
+          "removed": true
+        },
+        {
+          "point_key": "hallway_1[3]",
+          "room_id": "hallway_1",
+          "hint_index": 3,
+          "x": 135.0,
+          "y": 112.0,
+          "public_route_count": 0,
+          "private_route_count": 0,
+          "public_importance_weight": 0.0,
+          "private_importance_weight": 0.0,
+          "traffic_class": "unused",
+          "removed": true
+        },
+        {
+          "point_key": "hallway_1[4]",
+          "room_id": "hallway_1",
+          "hint_index": 4,
+          "x": 35.0,
+          "y": 98.0,
+          "public_route_count": 0,
+          "private_route_count": 0,
+          "public_importance_weight": 0.0,
+          "private_importance_weight": 0.0,
+          "traffic_class": "unused",
+          "removed": true
+        },
+        {
+          "point_key": "hallway_1[5]",
+          "room_id": "hallway_1",
+          "hint_index": 5,
+          "x": 92.0,
+          "y": 70.0,
+          "public_route_count": 0,
+          "private_route_count": 4,
+          "public_importance_weight": 0.0,
+          "private_importance_weight": 4.6,
+          "traffic_class": "private",
+          "removed": false
+        }
+      ],
+      "removed_hallway_points": [
+        {
+          "point_key": "hallway_1[1]",
+          "room_id": "hallway_1",
+          "hint_index": 1,
+          "x": 50.0,
+          "y": 120.0
+        },
+        {
+          "point_key": "hallway_1[2]",
+          "room_id": "hallway_1",
+          "hint_index": 2,
+          "x": 21.0,
+          "y": 63.0
+        },
+        {
+          "point_key": "hallway_1[3]",
+          "room_id": "hallway_1",
+          "hint_index": 3,
+          "x": 135.0,
+          "y": 112.0
+        },
+        {
+          "point_key": "hallway_1[4]",
+          "room_id": "hallway_1",
+          "hint_index": 4,
+          "x": 35.0,
+          "y": 98.0
+        }
+      ]
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 0.22627026000191108
+    }
+  },
+  "candidate_scoring": {
+    "total_score": 65.16571726663267,
+    "passed_critical_checks": true,
+    "stopped_early": false,
+    "stop_reason": null,
+    "evaluator_results": [
+      {
+        "evaluator_key": "zone_suitability",
+        "category": "quality",
+        "status": "completed",
+        "raw_score": 88.56263655012604,
+        "configured_weight": 25.0,
+        "normalized_weight": 0.25,
+        "contribution": 22.14065913753151,
+        "threshold": null,
+        "passed_threshold": null,
+        "findings": [
+          {
+            "code": "ROOM_OUTSIDE_PREFERRED_ZONE",
+            "message": "Room 'Main Kitchen' is outside its preferred zone by 0.205 normalized units.",
+            "severity": "warning",
+            "subject_ids": [
+              "kitchen_main"
+            ]
+          },
+          {
+            "code": "ROOM_OUTSIDE_PREFERRED_ZONE",
+            "message": "Room 'Dining Room' is outside its preferred zone by 0.150 normalized units.",
+            "severity": "warning",
+            "subject_ids": [
+              "dining_main"
+            ]
+          },
+          {
+            "code": "ROOM_OUTSIDE_PREFERRED_ZONE",
+            "message": "Room 'Master Bedroom' is outside its preferred zone by 0.150 normalized units.",
+            "severity": "warning",
+            "subject_ids": [
+              "bedroom_master"
+            ]
+          },
+          {
+            "code": "ROOM_OUTSIDE_PREFERRED_ZONE",
+            "message": "Room 'Front Veranda' is outside its preferred zone by 0.042 normalized units.",
+            "severity": "warning",
+            "subject_ids": [
+              "veranda_front"
+            ]
+          },
+          {
+            "code": "ROOM_OUTSIDE_PREFERRED_ZONE",
+            "message": "Room 'Single Vehicle Garage' is outside its preferred zone by 0.311 normalized units.",
+            "severity": "warning",
+            "subject_ids": [
+              "garage_single"
+            ]
+          }
+        ],
+        "metrics": {
+          "room.living_main.score": 100.0,
+          "room.living_main.distance_to_zone": 0.0,
+          "room.kitchen_main.score": 67.20433633000307,
+          "room.kitchen_main.distance_to_zone": 0.20497289793748075,
+          "room.dining_main.score": 76.0,
+          "room.dining_main.distance_to_zone": 0.15000000000000002,
+          "room.bedroom_master.score": 76.0,
+          "room.bedroom_master.distance_to_zone": 0.15000000000000002,
+          "room.bedroom_2.score": 100.0,
+          "room.bedroom_2.distance_to_zone": 0.0,
+          "room.bedroom_3.score": 100.0,
+          "room.bedroom_3.distance_to_zone": 0.0,
+          "room.bathroom_common.score": 100.0,
+          "room.bathroom_common.distance_to_zone": 0.0,
+          "room.bathroom_master.score": 100.0,
+          "room.bathroom_master.distance_to_zone": 0.0,
+          "room.bathroom_bedroom_2.score": 100.0,
+          "room.bathroom_bedroom_2.distance_to_zone": 0.0,
+          "room.veranda_front.score": 93.33333333333333,
+          "room.veranda_front.distance_to_zone": 0.041666666666666685,
+          "room.garage_single.score": 50.21396893817616,
+          "room.garage_single.distance_to_zone": 0.311162694136399,
+          "room.hallway_1.score": 100.0,
+          "room.hallway_1.distance_to_zone": 0.0,
+          "scored_room_count": 12.0
+        },
+        "details": {
+          "floor_width": 150.0,
+          "floor_length": 120.0,
+          "zone_count_per_axis": 4,
+          "falloff_multiplier": 1.6,
+          "rules": [
+            {
+              "room_type": "veranda",
+              "preferred_cells": [
+                [
+                  1,
+                  1
+                ],
+                [
+                  2,
+                  1
+                ],
+                [
+                  3,
+                  1
+                ],
+                [
+                  4,
+                  1
+                ]
+              ]
+            },
+            {
+              "room_type": "garage",
+              "preferred_cells": [
+                [
+                  1,
+                  1
+                ],
+                [
+                  4,
+                  1
+                ]
+              ]
+            },
+            {
+              "room_type": "living_room",
+              "preferred_cells": [
+                [
+                  2,
+                  1
+                ],
+                [
+                  3,
+                  1
+                ],
+                [
+                  2,
+                  2
+                ],
+                [
+                  3,
+                  2
+                ]
+              ]
+            },
+            {
+              "room_type": "kitchen",
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ]
+            },
+            {
+              "room_type": "dining_room",
+              "preferred_cells": [
+                [
+                  2,
+                  2
+                ],
+                [
+                  3,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ]
+              ]
+            },
+            {
+              "room_type": "bedroom",
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ]
+            },
+            {
+              "room_type": "bathroom",
+              "preferred_cells": [
+                [
+                  1,
+                  2
+                ],
+                [
+                  4,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ]
+              ]
+            },
+            {
+              "room_type": "attached_bathroom",
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ]
+            },
+            {
+              "room_type": "hallway",
+              "preferred_cells": [
+                [
+                  2,
+                  2
+                ],
+                [
+                  3,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ]
+              ]
+            }
+          ],
+          "points": [
+            {
+              "point_id": "living_main",
+              "source_room_id": "living_main",
+              "room_name": "Main Living Room",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 92.0,
+              "y": 49.0,
+              "preferred_cells": [
+                [
+                  2,
+                  1
+                ],
+                [
+                  3,
+                  1
+                ],
+                [
+                  2,
+                  2
+                ],
+                [
+                  3,
+                  2
+                ]
+              ],
+              "distance_to_zone": 0.0,
+              "score": 100.0,
+              "inside_preferred_zone": true
+            },
+            {
+              "point_id": "kitchen_main",
+              "source_room_id": "kitchen_main",
+              "room_name": "Main Kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 85.0,
+              "y": 49.0,
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ],
+              "distance_to_zone": 0.20497289793748075,
+              "score": 67.20433633000307,
+              "inside_preferred_zone": false
+            },
+            {
+              "point_id": "dining_main",
+              "source_room_id": "dining_main",
+              "room_name": "Dining Room",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 135.0,
+              "y": 84.0,
+              "preferred_cells": [
+                [
+                  2,
+                  2
+                ],
+                [
+                  3,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ]
+              ],
+              "distance_to_zone": 0.15000000000000002,
+              "score": 76.0,
+              "inside_preferred_zone": false
+            },
+            {
+              "point_id": "bedroom_master",
+              "source_room_id": "bedroom_master",
+              "room_name": "Master Bedroom",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 0.0,
+              "y": 42.0,
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ],
+              "distance_to_zone": 0.15000000000000002,
+              "score": 76.0,
+              "inside_preferred_zone": false
+            },
+            {
+              "point_id": "bedroom_2",
+              "source_room_id": "bedroom_2",
+              "room_name": "Bedroom 2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 14.0,
+              "y": 77.0,
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ],
+              "distance_to_zone": 0.0,
+              "score": 100.0,
+              "inside_preferred_zone": true
+            },
+            {
+              "point_id": "bedroom_3",
+              "source_room_id": "bedroom_3",
+              "room_name": "Bedroom 3",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 121.0,
+              "y": 70.0,
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ],
+              "distance_to_zone": 0.0,
+              "score": 100.0,
+              "inside_preferred_zone": true
+            },
+            {
+              "point_id": "bathroom_common",
+              "source_room_id": "bathroom_common",
+              "room_name": "Common Bathroom",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 78.0,
+              "y": 98.0,
+              "preferred_cells": [
+                [
+                  1,
+                  2
+                ],
+                [
+                  4,
+                  2
+                ],
+                [
+                  1,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ]
+              ],
+              "distance_to_zone": 0.0,
+              "score": 100.0,
+              "inside_preferred_zone": true
+            },
+            {
+              "point_id": "bathroom_master",
+              "source_room_id": "bathroom_master",
+              "room_name": "Master Attached Bathroom",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 64.0,
+              "y": 63.0,
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ],
+              "distance_to_zone": 0.0,
+              "score": 100.0,
+              "inside_preferred_zone": true
+            },
+            {
+              "point_id": "bathroom_bedroom_2",
+              "source_room_id": "bathroom_bedroom_2",
+              "room_name": "Bedroom 2 Attached Bathroom",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 85.0,
+              "y": 70.0,
+              "preferred_cells": [
+                [
+                  1,
+                  3
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ],
+                [
+                  4,
+                  3
+                ],
+                [
+                  1,
+                  4
+                ],
+                [
+                  2,
+                  4
+                ],
+                [
+                  3,
+                  4
+                ],
+                [
+                  4,
+                  4
+                ]
+              ],
+              "distance_to_zone": 0.0,
+              "score": 100.0,
+              "inside_preferred_zone": true
+            },
+            {
+              "point_id": "veranda_front",
+              "source_room_id": "veranda_front",
+              "room_name": "Front Veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 35.0,
+              "preferred_cells": [
+                [
+                  1,
+                  1
+                ],
+                [
+                  2,
+                  1
+                ],
+                [
+                  3,
+                  1
+                ],
+                [
+                  4,
+                  1
+                ]
+              ],
+              "distance_to_zone": 0.041666666666666685,
+              "score": 93.33333333333333,
+              "inside_preferred_zone": false
+            },
+            {
+              "point_id": "garage_single",
+              "source_room_id": "garage_single",
+              "room_name": "Single Vehicle Garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 71.0,
+              "y": 56.0,
+              "preferred_cells": [
+                [
+                  1,
+                  1
+                ],
+                [
+                  4,
+                  1
+                ]
+              ],
+              "distance_to_zone": 0.311162694136399,
+              "score": 50.21396893817616,
+              "inside_preferred_zone": false
+            },
+            {
+              "point_id": "hallway_1",
+              "source_room_id": "hallway_1",
+              "room_name": "Hallway 1",
+              "room_type": "hallway",
+              "hint_index": 5,
+              "x": 92.0,
+              "y": 70.0,
+              "preferred_cells": [
+                [
+                  2,
+                  2
+                ],
+                [
+                  3,
+                  2
+                ],
+                [
+                  2,
+                  3
+                ],
+                [
+                  3,
+                  3
+                ]
+              ],
+              "distance_to_zone": 0.0,
+              "score": 100.0,
+              "inside_preferred_zone": true
+            }
+          ]
+        }
+      },
+      {
+        "evaluator_key": "exterior_clearance",
+        "category": "quality",
+        "status": "completed",
+        "raw_score": 100.0,
+        "configured_weight": 20.0,
+        "normalized_weight": 0.2,
+        "contribution": 20.0,
+        "threshold": null,
+        "passed_threshold": null,
+        "findings": [],
+        "metrics": {
+          "rule.0.score": 100.0,
+          "rule.0.eligible_room_count": 2.0,
+          "rule.0.clear_room_count": 2.0,
+          "rule.1.score": 100.0,
+          "rule.1.eligible_room_count": 2.0,
+          "rule.1.clear_room_count": 1.0,
+          "applicable_rule_count": 2.0,
+          "final_clearance_score": 100.0
+        },
+        "details": {
+          "floor_width": 150.0,
+          "floor_length": 120.0,
+          "rule_evaluations": [
+            {
+              "rule_index": 0,
+              "room_types": [
+                "veranda",
+                "garage"
+              ],
+              "required_clear_room_count": 2,
+              "clearance_width": 24.0,
+              "direction": "front",
+              "applicable": true,
+              "eligible_room_count": 2,
+              "clear_room_count": 2,
+              "score": 100.0,
+              "room_evaluations": [
+                {
+                  "source_room_id": "veranda_front",
+                  "room_name": "Front Veranda",
+                  "room_type": "veranda",
+                  "point_ids": [
+                    "veranda_front"
+                  ],
+                  "clear_point_ids": [
+                    "veranda_front"
+                  ],
+                  "qualifies": true,
+                  "selected_for_score": true
+                },
+                {
+                  "source_room_id": "garage_single",
+                  "room_name": "Single Vehicle Garage",
+                  "room_type": "garage",
+                  "point_ids": [
+                    "garage_single"
+                  ],
+                  "clear_point_ids": [
+                    "garage_single"
+                  ],
+                  "qualifies": true,
+                  "selected_for_score": true
+                }
+              ]
+            },
+            {
+              "rule_index": 1,
+              "room_types": [
+                "kitchen",
+                "dining_room"
+              ],
+              "required_clear_room_count": 1,
+              "clearance_width": 22.0,
+              "direction": "back",
+              "applicable": true,
+              "eligible_room_count": 2,
+              "clear_room_count": 1,
+              "score": 100.0,
+              "room_evaluations": [
+                {
+                  "source_room_id": "kitchen_main",
+                  "room_name": "Main Kitchen",
+                  "room_type": "kitchen",
+                  "point_ids": [
+                    "kitchen_main"
+                  ],
+                  "clear_point_ids": [],
+                  "qualifies": false,
+                  "selected_for_score": false
+                },
+                {
+                  "source_room_id": "dining_main",
+                  "room_name": "Dining Room",
+                  "room_type": "dining_room",
+                  "point_ids": [
+                    "dining_main"
+                  ],
+                  "clear_point_ids": [
+                    "dining_main"
+                  ],
+                  "qualifies": true,
+                  "selected_for_score": true
+                }
+              ]
+            }
+          ],
+          "corridors": [
+            {
+              "rule_index": 0,
+              "point_id": "veranda_front",
+              "source_room_id": "veranda_front",
+              "room_name": "Front Veranda",
+              "room_type": "veranda",
+              "hint_x": 150.0,
+              "hint_y": 35.0,
+              "direction": "front",
+              "bounds": {
+                "min_x": 138.0,
+                "min_y": 0.0,
+                "max_x": 150.0,
+                "max_y": 35.0
+              },
+              "blocker_point_ids": [],
+              "blocker_room_ids": [],
+              "is_clear": true,
+              "selected_for_score": true
+            },
+            {
+              "rule_index": 0,
+              "point_id": "garage_single",
+              "source_room_id": "garage_single",
+              "room_name": "Single Vehicle Garage",
+              "room_type": "garage",
+              "hint_x": 71.0,
+              "hint_y": 56.0,
+              "direction": "front",
+              "bounds": {
+                "min_x": 59.0,
+                "min_y": 0.0,
+                "max_x": 83.0,
+                "max_y": 56.0
+              },
+              "blocker_point_ids": [],
+              "blocker_room_ids": [],
+              "is_clear": true,
+              "selected_for_score": true
+            },
+            {
+              "rule_index": 1,
+              "point_id": "kitchen_main",
+              "source_room_id": "kitchen_main",
+              "room_name": "Main Kitchen",
+              "room_type": "kitchen",
+              "hint_x": 85.0,
+              "hint_y": 49.0,
+              "direction": "back",
+              "bounds": {
+                "min_x": 74.0,
+                "min_y": 49.0,
+                "max_x": 96.0,
+                "max_y": 120.0
+              },
+              "blocker_point_ids": [
+                "living_main",
+                "bathroom_common",
+                "bathroom_bedroom_2",
+                "hallway_1"
+              ],
+              "blocker_room_ids": [
+                "living_main",
+                "bathroom_common",
+                "bathroom_bedroom_2",
+                "hallway_1"
+              ],
+              "is_clear": false,
+              "selected_for_score": false
+            },
+            {
+              "rule_index": 1,
+              "point_id": "dining_main",
+              "source_room_id": "dining_main",
+              "room_name": "Dining Room",
+              "room_type": "dining_room",
+              "hint_x": 135.0,
+              "hint_y": 84.0,
+              "direction": "back",
+              "bounds": {
+                "min_x": 124.0,
+                "min_y": 84.0,
+                "max_x": 146.0,
+                "max_y": 120.0
+              },
+              "blocker_point_ids": [],
+              "blocker_room_ids": [],
+              "is_clear": true,
+              "selected_for_score": true
+            }
+          ]
+        }
+      },
+      {
+        "evaluator_key": "relationship_quality",
+        "category": "quality",
+        "status": "completed",
+        "raw_score": 75.97552705996003,
+        "configured_weight": 30.0,
+        "normalized_weight": 0.3,
+        "contribution": 22.792658117988008,
+        "threshold": null,
+        "passed_threshold": null,
+        "findings": [],
+        "metrics": {
+          "active_rule_count": 7.0,
+          "resolved_route_count": 13.0,
+          "failed_route_count": 0.0,
+          "path_efficiency_score": 75.97552705996003,
+          "average_route_cost": 24.79519230769231
+        },
+        "details": {
+          "floor_width": 150.0,
+          "floor_length": 120.0,
+          "grid_node_count": 396,
+          "path_efficiency_score": 75.97552705996003,
+          "paths": [
+            {
+              "rule_id": 1,
+              "rule_name": "Living to front veranda",
+              "traffic_class": "public",
+              "destination_selection": "all_matching",
+              "source_point_id": "living_main",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_id": "veranda_front",
+              "destination_room_id": "veranda_front",
+              "destination_room_type": "veranda",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 6,
+                  "x": 92,
+                  "y": 42
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 5,
+                  "x": 92,
+                  "y": 35
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 5,
+                  "x": 100,
+                  "y": 35
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 5,
+                  "x": 107,
+                  "y": 35
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 5,
+                  "x": 114,
+                  "y": 35
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 5,
+                  "x": 121,
+                  "y": 35
+                },
+                {
+                  "x_index": 18,
+                  "y_index": 5,
+                  "x": 128,
+                  "y": 35
+                },
+                {
+                  "x_index": 19,
+                  "y_index": 5,
+                  "x": 135,
+                  "y": 35
+                },
+                {
+                  "x_index": 20,
+                  "y_index": 5,
+                  "x": 142,
+                  "y": 35
+                },
+                {
+                  "x_index": 21,
+                  "y_index": 5,
+                  "x": 150,
+                  "y": 35
+                }
+              ],
+              "step_count": 10,
+              "manhattan_step_count": 10,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 18.75,
+              "costs": {
+                "movement_cost": 18.75,
+                "perimeter_bias_cost": 8.52,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 27.62
+              },
+              "path_efficiency_score": 67.88559015206371
+            },
+            {
+              "rule_id": 2,
+              "rule_name": "Living to kitchen",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "living_main",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_id": "kitchen_main",
+              "destination_room_id": "kitchen_main",
+              "destination_room_type": "kitchen",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                }
+              ],
+              "step_count": 1,
+              "manhattan_step_count": 1,
+              "detour_step_count": 0,
+              "turn_count": 0,
+              "manhattan_reference_cost": 0.75,
+              "costs": {
+                "movement_cost": 0.75,
+                "perimeter_bias_cost": 0.27499999999999997,
+                "turn_cost": 0.0,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 1.025
+              },
+              "path_efficiency_score": 73.17073170731707
+            },
+            {
+              "rule_id": 3,
+              "rule_name": "Kitchen to dining",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "kitchen_main",
+              "source_room_id": "kitchen_main",
+              "source_room_type": "kitchen",
+              "destination_point_id": "dining_main",
+              "destination_room_id": "dining_main",
+              "destination_room_type": "dining_room",
+              "nodes": [
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 7,
+                  "x": 100,
+                  "y": 49
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 8,
+                  "x": 100,
+                  "y": 56
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 9,
+                  "x": 100,
+                  "y": 63
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 11,
+                  "x": 100,
+                  "y": 77
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 12,
+                  "x": 100,
+                  "y": 84
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 12,
+                  "x": 107,
+                  "y": 84
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 12,
+                  "x": 114,
+                  "y": 84
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 12,
+                  "x": 121,
+                  "y": 84
+                },
+                {
+                  "x_index": 18,
+                  "y_index": 12,
+                  "x": 128,
+                  "y": 84
+                },
+                {
+                  "x_index": 19,
+                  "y_index": 12,
+                  "x": 135,
+                  "y": 84
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 2,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 21.5,
+                "perimeter_bias_cost": 7.4875,
+                "turn_cost": 0.7,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 29.6875
+              },
+              "path_efficiency_score": 76.63157894736842
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "bedroom_master",
+              "source_room_id": "bedroom_master",
+              "source_room_type": "bedroom",
+              "destination_point_id": "bathroom_common",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 6,
+                  "x": 71,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 6,
+                  "x": 78,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 7,
+                  "x": 78,
+                  "y": 49
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 8,
+                  "x": 78,
+                  "y": 56
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 9,
+                  "x": 78,
+                  "y": 63
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 10,
+                  "x": 78,
+                  "y": 70
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 19,
+              "manhattan_step_count": 19,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 36.75,
+              "costs": {
+                "movement_cost": 36.75,
+                "perimeter_bias_cost": 12.0325,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 49.1325
+              },
+              "path_efficiency_score": 74.79774080293085
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "bedroom_2",
+              "source_room_id": "bedroom_2",
+              "source_room_type": "bedroom",
+              "destination_point_id": "bathroom_common",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 11,
+                  "x": 71,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 22.75,
+                "perimeter_bias_cost": 8.1075,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 31.207500000000003
+              },
+              "path_efficiency_score": 72.89914283425458
+            },
+            {
+              "rule_id": 4,
+              "rule_name": "Bedrooms to common bathroom",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "bedroom_3",
+              "source_room_id": "bedroom_3",
+              "source_room_type": "bedroom",
+              "destination_point_id": "bathroom_common",
+              "destination_room_id": "bathroom_common",
+              "destination_room_type": "bathroom",
+              "nodes": [
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 11,
+                  "x": 92,
+                  "y": 77
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 11,
+                  "x": 85,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 12,
+                  "x": 78,
+                  "y": 84
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 13,
+                  "x": 78,
+                  "y": 91
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 14,
+                  "x": 78,
+                  "y": 98
+                }
+              ],
+              "step_count": 10,
+              "manhattan_step_count": 10,
+              "detour_step_count": 0,
+              "turn_count": 3,
+              "manhattan_reference_cost": 18.75,
+              "costs": {
+                "movement_cost": 17.5,
+                "perimeter_bias_cost": 5.802499999999999,
+                "turn_cost": 1.0499999999999998,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 24.3525
+              },
+              "path_efficiency_score": 76.9941484447182
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "bedroom_master",
+              "source_room_id": "bedroom_master",
+              "source_room_type": "bedroom",
+              "destination_point_id": "bathroom_master",
+              "destination_room_id": "bathroom_master",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 7,
+                  "x": 64,
+                  "y": 49
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 8,
+                  "x": 64,
+                  "y": 56
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 9,
+                  "x": 64,
+                  "y": 63
+                }
+              ],
+              "step_count": 12,
+              "manhattan_step_count": 12,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 22.75,
+              "costs": {
+                "movement_cost": 22.75,
+                "perimeter_bias_cost": 8.762500000000003,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 31.862500000000004
+              },
+              "path_efficiency_score": 71.4005492349941
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "bedroom_2",
+              "source_room_id": "bedroom_2",
+              "source_room_type": "bedroom",
+              "destination_point_id": "bathroom_master",
+              "destination_room_id": "bathroom_master",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 10,
+                  "x": 64,
+                  "y": 70
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 9,
+                  "x": 64,
+                  "y": 63
+                }
+              ],
+              "step_count": 9,
+              "manhattan_step_count": 9,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 16.75,
+              "costs": {
+                "movement_cost": 16.75,
+                "perimeter_bias_cost": 5.7524999999999995,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 22.8525
+              },
+              "path_efficiency_score": 73.29613827808774
+            },
+            {
+              "rule_id": 5,
+              "rule_name": "Bedrooms to attached bathrooms",
+              "traffic_class": "private",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "bedroom_3",
+              "source_room_id": "bedroom_3",
+              "source_room_type": "bedroom",
+              "destination_point_id": "bathroom_bedroom_2",
+              "destination_room_id": "bathroom_bedroom_2",
+              "destination_room_type": "attached_bathroom",
+              "nodes": [
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 10,
+                  "x": 85,
+                  "y": 70
+                }
+              ],
+              "step_count": 5,
+              "manhattan_step_count": 5,
+              "detour_step_count": 0,
+              "turn_count": 0,
+              "manhattan_reference_cost": 8.75,
+              "costs": {
+                "movement_cost": 7.5,
+                "perimeter_bias_cost": 2.82,
+                "turn_cost": 0.0,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 10.32
+              },
+              "path_efficiency_score": 84.78682170542635
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "source_point_id": "living_main",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_id": "bedroom_master",
+              "destination_room_id": "bedroom_master",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 6,
+                  "x": 92,
+                  "y": 42
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 6,
+                  "x": 85,
+                  "y": 42
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 6,
+                  "x": 78,
+                  "y": 42
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 6,
+                  "x": 71,
+                  "y": 42
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 6,
+                  "x": 64,
+                  "y": 42
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 6,
+                  "x": 57,
+                  "y": 42
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 6,
+                  "x": 50,
+                  "y": 42
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 6,
+                  "x": 42,
+                  "y": 42
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 6,
+                  "x": 35,
+                  "y": 42
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 6,
+                  "x": 28,
+                  "y": 42
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 6,
+                  "x": 21,
+                  "y": 42
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 6,
+                  "x": 14,
+                  "y": 42
+                },
+                {
+                  "x_index": 1,
+                  "y_index": 6,
+                  "x": 7,
+                  "y": 42
+                },
+                {
+                  "x_index": 0,
+                  "y_index": 6,
+                  "x": 0,
+                  "y": 42
+                }
+              ],
+              "step_count": 14,
+              "manhattan_step_count": 14,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 26.75,
+              "costs": {
+                "movement_cost": 26.75,
+                "perimeter_bias_cost": 10.1225,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 37.222500000000004
+              },
+              "path_efficiency_score": 71.86513533481093
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "source_point_id": "living_main",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_id": "bedroom_2",
+              "destination_room_id": "bedroom_2",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 8,
+                  "x": 92,
+                  "y": 56
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 9,
+                  "x": 92,
+                  "y": 63
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 11,
+                  "x": 92,
+                  "y": 77
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 11,
+                  "x": 85,
+                  "y": 77
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 11,
+                  "x": 78,
+                  "y": 77
+                },
+                {
+                  "x_index": 10,
+                  "y_index": 11,
+                  "x": 71,
+                  "y": 77
+                },
+                {
+                  "x_index": 9,
+                  "y_index": 11,
+                  "x": 64,
+                  "y": 77
+                },
+                {
+                  "x_index": 8,
+                  "y_index": 11,
+                  "x": 57,
+                  "y": 77
+                },
+                {
+                  "x_index": 7,
+                  "y_index": 11,
+                  "x": 50,
+                  "y": 77
+                },
+                {
+                  "x_index": 6,
+                  "y_index": 11,
+                  "x": 42,
+                  "y": 77
+                },
+                {
+                  "x_index": 5,
+                  "y_index": 11,
+                  "x": 35,
+                  "y": 77
+                },
+                {
+                  "x_index": 4,
+                  "y_index": 11,
+                  "x": 28,
+                  "y": 77
+                },
+                {
+                  "x_index": 3,
+                  "y_index": 11,
+                  "x": 21,
+                  "y": 77
+                },
+                {
+                  "x_index": 2,
+                  "y_index": 11,
+                  "x": 14,
+                  "y": 77
+                }
+              ],
+              "step_count": 15,
+              "manhattan_step_count": 15,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 28.75,
+              "costs": {
+                "movement_cost": 27.5,
+                "perimeter_bias_cost": 8.254999999999999,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 36.105
+              },
+              "path_efficiency_score": 79.62886026866086
+            },
+            {
+              "rule_id": 6,
+              "rule_name": "Living to all bedrooms",
+              "traffic_class": "private",
+              "destination_selection": "all_matching",
+              "source_point_id": "living_main",
+              "source_room_id": "living_main",
+              "source_room_type": "living_room",
+              "destination_point_id": "bedroom_3",
+              "destination_room_id": "bedroom_3",
+              "destination_room_type": "bedroom",
+              "nodes": [
+                {
+                  "x_index": 13,
+                  "y_index": 7,
+                  "x": 92,
+                  "y": 49
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 8,
+                  "x": 92,
+                  "y": 56
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 9,
+                  "x": 92,
+                  "y": 63
+                },
+                {
+                  "x_index": 13,
+                  "y_index": 10,
+                  "x": 92,
+                  "y": 70
+                },
+                {
+                  "x_index": 14,
+                  "y_index": 10,
+                  "x": 100,
+                  "y": 70
+                },
+                {
+                  "x_index": 15,
+                  "y_index": 10,
+                  "x": 107,
+                  "y": 70
+                },
+                {
+                  "x_index": 16,
+                  "y_index": 10,
+                  "x": 114,
+                  "y": 70
+                },
+                {
+                  "x_index": 17,
+                  "y_index": 10,
+                  "x": 121,
+                  "y": 70
+                }
+              ],
+              "step_count": 7,
+              "manhattan_step_count": 7,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 12.75,
+              "costs": {
+                "movement_cost": 11.5,
+                "perimeter_bias_cost": 3.57,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 15.42
+              },
+              "path_efficiency_score": 82.68482490272373
+            },
+            {
+              "rule_id": 7,
+              "rule_name": "Garage to kitchen",
+              "traffic_class": "public",
+              "destination_selection": "lowest_cost_match",
+              "source_point_id": "garage_single",
+              "source_room_id": "garage_single",
+              "source_room_type": "garage",
+              "destination_point_id": "kitchen_main",
+              "destination_room_id": "kitchen_main",
+              "destination_room_type": "kitchen",
+              "nodes": [
+                {
+                  "x_index": 10,
+                  "y_index": 8,
+                  "x": 71,
+                  "y": 56
+                },
+                {
+                  "x_index": 11,
+                  "y_index": 8,
+                  "x": 78,
+                  "y": 56
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 8,
+                  "x": 85,
+                  "y": 56
+                },
+                {
+                  "x_index": 12,
+                  "y_index": 7,
+                  "x": 85,
+                  "y": 49
+                }
+              ],
+              "step_count": 3,
+              "manhattan_step_count": 3,
+              "detour_step_count": 0,
+              "turn_count": 1,
+              "manhattan_reference_cost": 4.75,
+              "costs": {
+                "movement_cost": 4.75,
+                "perimeter_bias_cost": 0.43000000000000005,
+                "turn_cost": 0.35,
+                "traffic_conflict_cost": 0.0,
+                "total_cost": 5.529999999999999
+              },
+              "path_efficiency_score": 85.89511754068717
+            }
+          ],
+          "route_failures": []
+        }
+      },
+      {
+        "evaluator_key": "spatial_distribution",
+        "category": "quality",
+        "status": "completed",
+        "raw_score": 0.9296000444525929,
+        "configured_weight": 25.0,
+        "normalized_weight": 0.25,
+        "contribution": 0.23240001111314823,
+        "threshold": null,
+        "passed_threshold": null,
+        "findings": [
+          {
+            "code": "LARGE_UNCOVERED_REGION",
+            "message": "Candidate points leave a comparatively large uncovered floor region.",
+            "severity": "warning",
+            "subject_ids": []
+          }
+        ],
+        "metrics": {
+          "nnd_score": 2.324000111131482,
+          "coverage_score": 0.0,
+          "nnd_weight": 0.4,
+          "coverage_weight": 0.6,
+          "point_count": 12.0,
+          "mean_nearest_distance": 14.551940706365812,
+          "nearest_distance_std": 6.842832382262991,
+          "coefficient_of_variation": 0.4702350373974217,
+          "ideal_point_distance": 38.72983346207417,
+          "coverage_gap_95": 46.53134647725283,
+          "coverage_mean_gap": 23.565664083086585,
+          "theoretical_coverage_gap": 27.386127875258303,
+          "gap_ratio": 1.6990845397786616,
+          "coverage_sample_count_per_axis": 20.0
+        },
+        "details": {
+          "floor_width": 150.0,
+          "floor_length": 120.0,
+          "points": [
+            {
+              "point_id": "living_main",
+              "source_room_id": "living_main",
+              "room_name": "Main Living Room",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 92.0,
+              "y": 49.0
+            },
+            {
+              "point_id": "kitchen_main",
+              "source_room_id": "kitchen_main",
+              "room_name": "Main Kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 85.0,
+              "y": 49.0
+            },
+            {
+              "point_id": "dining_main",
+              "source_room_id": "dining_main",
+              "room_name": "Dining Room",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 135.0,
+              "y": 84.0
+            },
+            {
+              "point_id": "bedroom_master",
+              "source_room_id": "bedroom_master",
+              "room_name": "Master Bedroom",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 0.0,
+              "y": 42.0
+            },
+            {
+              "point_id": "bedroom_2",
+              "source_room_id": "bedroom_2",
+              "room_name": "Bedroom 2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 14.0,
+              "y": 77.0
+            },
+            {
+              "point_id": "bedroom_3",
+              "source_room_id": "bedroom_3",
+              "room_name": "Bedroom 3",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 121.0,
+              "y": 70.0
+            },
+            {
+              "point_id": "bathroom_common",
+              "source_room_id": "bathroom_common",
+              "room_name": "Common Bathroom",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 78.0,
+              "y": 98.0
+            },
+            {
+              "point_id": "bathroom_master",
+              "source_room_id": "bathroom_master",
+              "room_name": "Master Attached Bathroom",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 64.0,
+              "y": 63.0
+            },
+            {
+              "point_id": "bathroom_bedroom_2",
+              "source_room_id": "bathroom_bedroom_2",
+              "room_name": "Bedroom 2 Attached Bathroom",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 85.0,
+              "y": 70.0
+            },
+            {
+              "point_id": "veranda_front",
+              "source_room_id": "veranda_front",
+              "room_name": "Front Veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 35.0
+            },
+            {
+              "point_id": "garage_single",
+              "source_room_id": "garage_single",
+              "room_name": "Single Vehicle Garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 71.0,
+              "y": 56.0
+            },
+            {
+              "point_id": "hallway_1",
+              "source_room_id": "hallway_1",
+              "room_name": "Hallway 1",
+              "room_type": "hallway",
+              "hint_index": 5,
+              "x": 92.0,
+              "y": 70.0
+            }
+          ],
+          "sample_count_per_axis": 20,
+          "nearest_distances": [
+            [
+              42.0,
+              35.68421052631579,
+              29.36842105263158,
+              23.05263157894737,
+              16.736842105263158,
+              10.421052631578949,
+              4.10526315789474,
+              2.2105263157894726,
+              8.526315789473685,
+              14.842105263157897,
+              19.687658015019043,
+              15.89482398024215,
+              14.052237329379933,
+              14.901802304129436,
+              18.067662915089386,
+              22.59636182811375,
+              27.830362661535265,
+              33.44011060433139,
+              39.264886373693464,
+              45.221676218380054
+            ],
+            [
+              42.73554574129239,
+              36.54708949687404,
+              30.411034591587768,
+              24.36700007224475,
+              18.505370935558247,
+              13.073836764937548,
+              8.898317560171813,
+              8.19837156994558,
+              11.620022837667852,
+              16.811155773734104,
+              15.128718265057698,
+              9.691216001618564,
+              6.224115373960036,
+              7.95851431728964,
+              12.950470317345358,
+              18.758193039154467,
+              24.815384826750584,
+              30.976042927673372,
+              37.18878245070959,
+              43.43125876862363
+            ],
+            [
+              44.869895021321106,
+              39.021408996995525,
+              33.343839526200796,
+              27.941569425124605,
+              23.009332082459203,
+              18.918398906210726,
+              16.314431182849884,
+              15.943459656460215,
+              17.944512814958365,
+              20.23716720018117,
+              13.957295374922232,
+              7.73612599621819,
+              2.1604606054498756,
+              5.4097992548558915,
+              11.560391830720027,
+              17.82688374151574,
+              24.119106574229864,
+              30.421098160592408,
+              36.727830292647845,
+              43.037218962968346
+            ],
+            [
+              48.217650588294404,
+              42.82878365236718,
+              37.72858310855977,
+              33.05095537150975,
+              29.001098460426586,
+              25.875474221837678,
+              24.037367032402187,
+              23.78714473928398,
+              25.17220469479533,
+              22.36346694364745,
+              16.89342510074109,
+              12.264964854449705,
+              9.759575168992983,
+              10.947494938540183,
+              14.97412357139148,
+              20.208401752366314,
+              25.928999583296342,
+              31.875145972182185,
+              37.940944050683086,
+              44.0770227388149
+            ],
+            [
+              52.54740637650451,
+              47.65073764155108,
+              43.12463416682118,
+              39.098001734259874,
+              35.740058765396796,
+              33.253996073369066,
+              31.844671492937003,
+              31.656221244651178,
+              31.778535936389325,
+              26.746216756829813,
+              22.374612146315766,
+              19.122364392109002,
+              17.62057787199206,
+              18.305275264061855,
+              20.96329730254794,
+              24.972283805226017,
+              29.791751819157827,
+              35.08932013892025,
+              40.678626974380244,
+              46.4544873029691
+            ],
+            [
+              57.638283676323624,
+              53.21216614683883,
+              49.20036483886078,
+              45.712094328164795,
+              42.87532657378675,
+              39.86003907024478,
+              35.097213627753035,
+              30.896350715491078,
+              27.51604920748834,
+              25.287543055722395,
+              24.52682402906884,
+              25.366291677393523,
+              25.5024304963044,
+              25.98022900532201,
+              27.916823430879703,
+              31.040363321402246,
+              35.03480659473082,
+              39.637729305392035,
+              41.59653192447713,
+              44.36526804055453
+            ],
+            [
+              60.781999996262925,
+              55.01792707081006,
+              49.38898124221681,
+              43.947116293005095,
+              38.77118757724071,
+              33.98292711318516,
+              29.769986186801074,
+              25.09290217595781,
+              20.789473684210524,
+              17.734967884734836,
+              16.632328430814212,
+              17.847072744295243,
+              20.980468426650102,
+              25.3302289491224,
+              30.37827077336785,
+              30.804899419651534,
+              30.783310224302564,
+              32.032186029496245,
+              34.413487016613985,
+              37.713308377930254
+            ],
+            [
+              57.31736018339777,
+              52.021357216514446,
+              46.135324254244935,
+              40.256002116096816,
+              34.5311694277773,
+              29.052297862309143,
+              23.98851294813007,
+              19.663160712272987,
+              15.229090838137143,
+              10.688876347040733,
+              8.738268748454788,
+              10.873867629777221,
+              15.488803927076248,
+              21.00817674870214,
+              24.67225611099739,
+              22.969810368517432,
+              22.940848904878266,
+              24.591285081082244,
+              27.621702495564293,
+              31.63801493329927
+            ],
+            [
+              53.64771721449917,
+              47.94809058327263,
+              42.42333806041629,
+              37.15155753325578,
+              31.721476598076688,
+              25.649296805035373,
+              19.730665700251205,
+              14.159459901745594,
+              9.563463483226874,
+              6.215207869755114,
+              0.8567800313736709,
+              6.52822552703688,
+              12.817167331097448,
+              19.12381294634123,
+              17.66477628869497,
+              15.196588041025613,
+              15.152776913801842,
+              17.551507105147692,
+              21.593576555921775,
+              26.538426642185467
+            ],
+            [
+              50.946335352727544,
+              44.90513238069145,
+              38.951137797682776,
+              33.13140127873436,
+              27.531196105559417,
+              22.316410120465612,
+              17.828515240441938,
+              11.789591164828195,
+              5.4739372411151725,
+              0.8437483969411289,
+              7.054398835924157,
+              9.573306609838808,
+              14.605144617821457,
+              17.34671690140868,
+              11.833095988152042,
+              7.67555388384595,
+              7.588444342197287,
+              11.663328898613372,
+              17.154019581766676,
+              23.070889189145685
+            ],
+            [
+              49.37240473210183,
+              43.11120709612894,
+              36.868637063118655,
+              30.656076295742995,
+              24.496367529914814,
+              18.442543854433822,
+              12.647577587687106,
+              7.718381125742373,
+              6.242114138628644,
+              7.991858738377625,
+              9.135028925110415,
+              6.075471779271157,
+              8.37570024359976,
+              13.534095653288205,
+              9.625681254445755,
+              3.397897345593461,
+              3.196258200145049,
+              9.416199867494225,
+              15.712796274342862,
+              22.020388437200825
+            ],
+            [
+              49.03461381310711,
+              42.723941532300145,
+              36.41504361746735,
+              30.10903546479858,
+              23.808213392246547,
+              17.51817417977107,
+              11.257007666633626,
+              5.1315114705415175,
+              2.3922775110238943,
+              8.055555024888278,
+              7.085743167282243,
+              1.9158183919159217,
+              6.075471779271148,
+              12.244621183296678,
+              13.036067588492518,
+              9.425021216461415,
+              9.354217500226898,
+              12.882163580088362,
+              18.00492391871067,
+              23.710394882514386
+            ],
+            [
+              49.07637216328384,
+              42.77186146246138,
+              36.471253811332524,
+              30.176994043958157,
+              23.894099226364137,
+              17.634720851246417,
+              11.437533585316178,
+              5.516281617256907,
+              3.1336790834956263,
+              8.305956878505336,
+              7.369172893973537,
+              2.7869899568155283,
+              6.403773126002157,
+              12.410789694093806,
+              18.62325118674349,
+              17.051981793987856,
+              17.012949280277557,
+              19.180437864550967,
+              22.93722615074249,
+              27.64275463220896
+            ],
+            [
+              50.14010840548839,
+              43.98832003121937,
+              37.89053339259851,
+              31.877752990668466,
+              26.00900121197124,
+              20.408908488852884,
+              15.373917546293194,
+              11.660597286840527,
+              10.740582423841092,
+              13.210945684264102,
+              12.642977313364938,
+              10.644598593858616,
+              12.105720815147425,
+              16.11111004977656,
+              21.268889274466805,
+              24.846788140249167,
+              24.82001694192069,
+              26.353026286554528,
+              29.201183901928335,
+              33.02596980317828
+            ],
+            [
+              52.38534505690787,
+              46.53134647725283,
+              40.81527197744488,
+              35.30417881145583,
+              30.110829444927216,
+              25.430640014037117,
+              21.599797372600424,
+              19.13539743258674,
+              18.58908326466097,
+              16.817498471759862,
+              12.510494209820859,
+              10.486899887577717,
+              11.967291526573353,
+              16.007356342123206,
+              21.19040445572547,
+              26.725287598638054,
+              29.82873551801816,
+              33.83850353265699,
+              36.11032648246704,
+              39.26781403180683
+            ],
+            [
+              47.14053369338861,
+              42.66162034446784,
+              38.69852939434932,
+              35.42480624515716,
+              33.04596815165706,
+              31.647513282292948,
+              28.66005743132346,
+              25.918100286048613,
+              19.64371009408324,
+              13.408249827434712,
+              7.312002048770151,
+              2.632105210536842,
+              6.337899894227742,
+              12.376928764882248,
+              17.158298348497922,
+              19.751994183834384,
+              23.783476188568155,
+              28.652130781810104,
+              34.00020368197098,
+              39.634095118280115
+            ],
+            [
+              42.260404970312905,
+              37.19846450826772,
+              32.57741685036829,
+              28.611690073539283,
+              25.607575489250703,
+              23.93001106065104,
+              23.86045535273561,
+              25.412115678721012,
+              20.18618325637201,
+              14.191117349749064,
+              8.664411241432669,
+              5.3417811672494695,
+              7.859747023199788,
+              8.888506070550049,
+              9.74480471002704,
+              13.809246571001838,
+              19.136555495508777,
+              24.9298739458997,
+              30.92843137043991,
+              37.03262767432759
+            ],
+            [
+              38.3967118282852,
+              32.742807038224164,
+              27.379805324585273,
+              22.51653747434971,
+              18.550298472186427,
+              16.155837345442972,
+              16.052631578947363,
+              18.279531565065525,
+              22.144388933064654,
+              18.64532647732357,
+              14.877244703650584,
+              13.221006536962898,
+              8.248394454700412,
+              2.0526315789473633,
+              4.490988206314068,
+              10.76582774761945,
+              17.070896650890194,
+              23.381752953770075,
+              29.69470699078707,
+              36.00865546917937
+            ],
+            [
+              35.879337644472955,
+              29.750811809496888,
+              23.72073207542098,
+              17.888930946691936,
+              12.535268804015317,
+              8.604096170669374,
+              8.408708057194973,
+              12.130979549069586,
+              17.41819025618201,
+              23.2250819618137,
+              22.019948145794768,
+              16.1709188037801,
+              10.858061840181604,
+              7.35355643507054,
+              8.36842105263158,
+              12.874957978039706,
+              18.47368421052632,
+              24.424738832503632,
+              30.522731186995273,
+              36.69447866563765
+            ],
+            [
+              35.0,
+              28.684210526315788,
+              22.36842105263158,
+              16.05263157894737,
+              9.736842105263158,
+              3.4210526315789487,
+              2.89473684210526,
+              9.210526315789473,
+              15.526315789473685,
+              21.842105263157897,
+              25.678655568400657,
+              20.88094467248818,
+              17.10008018642812,
+              15.119194016244087,
+              15.637957231403055,
+              18.446673911395298,
+              22.71105994372154,
+              27.768383145100014,
+              33.25886881074938,
+              39.0
+            ]
+          ],
+          "ideal_point_distance": 38.72983346207417,
+          "theoretical_coverage_gap": 27.386127875258303,
+          "gap_zero_score_ratio": 1.6
+        }
+      }
+    ],
+    "findings": []
+  }
+}

@@ -106,6 +106,8 @@ def apply_business_rules(
         for room in sanitized
     )
     return RuledRequest(
+        raw_max_width=request.raw_max_width,
+        raw_max_length=request.raw_max_length,
         max_width=request.max_width,
         max_length=request.max_length,
         aspect_ratio=request.aspect_ratio,

@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "preprocessing": {
+    "max_aspect_residual_units": 20
+  },
+  "candidate_search": {
+    "long_axis_node_count": 20,
+    "max_grid_node_count": 250000,
+    "max_internal_sampling_attempts": 100,
+    "min_hallway_hint_count": 1,
+    "max_hallway_hint_count": 5
+  },
+  "candidate_scoring": {
+    "zone_suitability": {
+      "zone_count_per_axis": 3,
+      "falloff_multiplier": 1.5,
+      "valid_zones": null
+    },
+    "spatial_distribution": {
+      "sample_count_per_axis": 20,
+      "nnd_weight": 0.4,
+      "coverage_weight": 0.6,
+      "nnd_cv_sensitivity": 8.0,
+      "gap_zero_score_ratio": 1.5
+    }
+  },
+  "p01a": {
+    "note": "Remove p01a.grid_resolution. Build CandidateSearchSettings from the preprocessed FloorSpec and candidate_search profile."
+  }
+}

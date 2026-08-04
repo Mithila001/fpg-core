@@ -23,6 +23,7 @@ from .buildable_space import (
     ValidationLimits,
 )
 from .candidate import CandidatePoint
+from .candidate_grid import CandidateMap, ResolvedCandidateGrid
 from .circulation import (
     CirculationGrid,
     CirculationGridNode,
@@ -66,6 +67,7 @@ __all__ = [
     "BuildableSpaceRequestData",
     "BuildableSpaceResult",
     "BuildableSpaceStage",
+    "CandidateMap",
     "CandidatePoint",
     "CirculationGrid",
     "CirculationGridNode",
@@ -98,6 +100,7 @@ __all__ = [
     "Polygon",
     "RoadAttachment",
     "RoadRole",
+    "ResolvedCandidateGrid",
     "RoadType",
     "RoomId",
     "RoomMetadata",

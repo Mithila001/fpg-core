@@ -78,6 +78,14 @@ def _validate_preprocessing(config: PreprocessingConfig) -> None:
         raise FpgCoreConfigError("aspect-ratio rules must be unambiguous")
     _finite_positive("hallway_area_buffer", config.hallway_area_buffer)
     _finite_positive("hallway_min_width", config.hallway_min_width)
+    if (
+        isinstance(config.max_aspect_residual_units, bool)
+        or not math.isfinite(float(config.max_aspect_residual_units))
+        or config.max_aspect_residual_units < 0
+    ):
+        raise FpgCoreConfigError(
+            "max_aspect_residual_units must be finite and non-negative"
+        )
     if config.floor_area_buffer < 0 or config.hallway_count < 0:
         raise FpgCoreConfigError("preprocessing buffers/counts are invalid")
     configured_sizes = {(item.room_type, item.size) for item in config.room_sizes}
@@ -118,11 +126,20 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
 
     if not isinstance(config, FpgCoreConfig):
         raise FpgCoreConfigError("config must be an FpgCoreConfig")
-    if config.schema_version != 1:
+    if config.schema_version != 2:
         raise FpgCoreConfigError("unsupported schema_version")
     if config.project_units_per_meter <= 0:
         raise FpgCoreConfigError("project_units_per_meter must be positive")
     _validate_preprocessing(config.preprocessing)
+    candidate_search = config.candidate_search
+    if candidate_search.long_axis_node_count < 2:
+        raise FpgCoreConfigError("candidate_search.long_axis_node_count must be at least 2")
+    if candidate_search.max_grid_node_count < 4:
+        raise FpgCoreConfigError("candidate_search.max_grid_node_count must be at least 4")
+    if candidate_search.max_internal_sampling_attempts <= 0:
+        raise FpgCoreConfigError(
+            "candidate_search.max_internal_sampling_attempts must be positive"
+        )
     buildable = config.buildable_space
     if (
         buildable.usable_land_constraints.minimum_width <= 0

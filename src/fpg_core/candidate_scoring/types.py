@@ -7,6 +7,7 @@ from types import MappingProxyType
 from typing import NewType
 
 from ..domain import (
+    CandidateMap,
     CirculationGridNode,
     CirculationTrafficClass,
     DestinationSelection,
@@ -86,10 +87,17 @@ class ZoneSuitabilityDetails:
 
     floor_width: float
     floor_length: float
-    grid_size: int
+    zone_count_per_axis: int
     falloff_multiplier: float
     rules: tuple[ZoneSuitabilityRuleDetails, ...]
     points: tuple[ZoneSuitabilityPointDetails, ...]
+
+
+    @property
+    def grid_size(self) -> int:
+        """Deprecated read-only alias for zone_count_per_axis."""
+
+        return self.zone_count_per_axis
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,11 +120,18 @@ class SpatialDistributionDetails:
     floor_width: float
     floor_length: float
     points: tuple[SpatialDistributionPointDetails, ...]
-    grid_size: int
+    sample_count_per_axis: int
     nearest_distances: tuple[tuple[float, ...], ...]
     ideal_point_distance: float
     theoretical_coverage_gap: float
     gap_zero_score_ratio: float
+
+
+    @property
+    def grid_size(self) -> int:
+        """Deprecated read-only alias for sample_count_per_axis."""
+
+        return self.sample_count_per_axis
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,10 +309,14 @@ class CandidateScoringInput:
     """One generation specification, candidate, and optional hallway tags."""
 
     specification: FloorPlanGenerationSpec
-    candidate: object
+    candidate: CandidateMap
     hallway_classifications: tuple[HallwayClassification, ...] = ()
 
     def __post_init__(self) -> None:
+        if not isinstance(self.specification, FloorPlanGenerationSpec):
+            raise TypeError("specification must be a FloorPlanGenerationSpec instance.")
+        if not isinstance(self.candidate, CandidateMap):
+            raise TypeError("candidate must be a CandidateMap instance.")
         classifications = tuple(self.hallway_classifications)
         if any(
             not isinstance(item, HallwayClassification)

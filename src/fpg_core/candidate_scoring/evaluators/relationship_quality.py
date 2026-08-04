@@ -15,6 +15,7 @@ from ...domain import (
     DestinationSelection,
     ExecutionMode,
     HallwayTrafficClass,
+    ResolvedCandidateGrid,
     RoomType,
     RouteCostBreakdown,
 )
@@ -59,6 +60,7 @@ class _IndexedPoint:
 class _ValidatedRouting:
     data: EvaluationData
     config: RelationshipQualityConfig
+    grid: ResolvedCandidateGrid
     x_node_count: int
     y_node_count: int
     indexed_points: tuple[_IndexedPoint, ...]
@@ -123,7 +125,11 @@ class RelationshipQualityEvaluator(CandidateEvaluator):
     ) -> EvaluatorResult:
         routing_config = _read_routing_config(settings)
         data = build_evaluation_data(context)
-        validated = _validate_routing(data, routing_config)
+        validated = _validate_routing(
+            data,
+            routing_config,
+            context.scoring_input.candidate.grid,
+        )
         active_rules = _active_rules(validated)
 
         if not active_rules:
@@ -196,31 +202,29 @@ def _read_routing_config(
 def _validate_routing(
     data: EvaluationData,
     config: RelationshipQualityConfig,
+    grid: ResolvedCandidateGrid,
 ) -> _ValidatedRouting:
-    grid = config.grid
+    if not isinstance(grid, ResolvedCandidateGrid):
+        raise TypeError("Candidate scoring requires a ResolvedCandidateGrid.")
     if not math.isclose(
-        grid.width,
+        float(grid.width),
         data.floor_width,
         rel_tol=0.0,
         abs_tol=1e-9,
     ):
         raise ValueError(
-            "Relationship routing grid width must match the specification floor width."
+            "Candidate grid width must match the specification floor width."
         )
     if not math.isclose(
-        grid.length,
+        float(grid.length),
         data.floor_length,
         rel_tol=0.0,
         abs_tol=1e-9,
     ):
         raise ValueError(
-            "Relationship routing grid length must match the specification floor length."
+            "Candidate grid length must match the specification floor length."
         )
-
-    x_node_count = _axis_node_count(grid.width, grid.scale, "width")
-    y_node_count = _axis_node_count(grid.length, grid.scale, "length")
-    grid_node_count = x_node_count * y_node_count
-    if grid_node_count > _MAX_GRID_NODE_COUNT:
+    if grid.node_count > _MAX_GRID_NODE_COUNT:
         raise ValueError(
             "Relationship routing grid exceeds the 250,000-node safety limit."
         )
@@ -228,22 +232,13 @@ def _validate_routing(
     indexed_points: list[_IndexedPoint] = []
     occupied_nodes: dict[_Node, _IndexedPoint] = {}
     for point in data.points:
-        x_index = _coordinate_index(
-            coordinate=point.x,
-            origin=grid.origin_x,
-            scale=grid.scale,
-            node_count=x_node_count,
-            axis_name="x",
-            point_id=point.room_id,
-        )
-        y_index = _coordinate_index(
-            coordinate=point.y,
-            origin=grid.origin_y,
-            scale=grid.scale,
-            node_count=y_node_count,
-            axis_name="y",
-            point_id=point.room_id,
-        )
+        try:
+            x_index, y_index = grid.node_indexes(point.x, point.y)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Candidate point '{point.room_id}' does not align with the "
+                "candidate grid."
+            ) from exc
         indexed = _IndexedPoint(
             point=point,
             x_index=x_index,
@@ -262,48 +257,12 @@ def _validate_routing(
     return _ValidatedRouting(
         data=data,
         config=config,
-        x_node_count=x_node_count,
-        y_node_count=y_node_count,
+        grid=grid,
+        x_node_count=grid.x_node_count,
+        y_node_count=grid.y_node_count,
         indexed_points=tuple(indexed_points),
         occupied_nodes=occupied_nodes,
     )
-
-
-def _axis_node_count(extent: float, scale: float, axis_name: str) -> int:
-    raw_steps = extent / scale
-    steps = round(raw_steps)
-    tolerance = max(1e-9, abs(raw_steps) * 1e-9)
-    if not math.isclose(raw_steps, steps, rel_tol=0.0, abs_tol=tolerance):
-        raise ValueError(
-            f"Relationship grid {axis_name} extent must be an exact multiple "
-            "of grid scale."
-        )
-    return int(steps) + 1
-
-
-def _coordinate_index(
-    *,
-    coordinate: float,
-    origin: float,
-    scale: float,
-    node_count: int,
-    axis_name: str,
-    point_id: str,
-) -> int:
-    raw_index = (coordinate - origin) / scale
-    index = round(raw_index)
-    tolerance = max(1e-8, abs(raw_index) * 1e-9)
-    if not math.isclose(raw_index, index, rel_tol=0.0, abs_tol=tolerance):
-        raise ValueError(
-            f"Candidate point '{point_id}' {axis_name} coordinate does not "
-            "align with the relationship grid."
-        )
-    if index < 0 or index >= node_count:
-        raise ValueError(
-            f"Candidate point '{point_id}' is outside the relationship grid "
-            f"on the {axis_name} axis."
-        )
-    return int(index)
 
 
 def _active_rules(
@@ -633,9 +592,11 @@ def _perimeter_bias_cost(
     if max_cost == 0:
         return 0.0
 
-    grid = validated.config.grid
-    midpoint_x = grid.origin_x + ((start[0] + end[0]) / 2.0) * grid.scale
-    midpoint_y = grid.origin_y + ((start[1] + end[1]) / 2.0) * grid.scale
+    grid = validated.grid
+    start_x, start_y = grid.coordinates(start[0], start[1])
+    end_x, end_y = grid.coordinates(end[0], end[1])
+    midpoint_x = (start_x + end_x) / 2.0
+    midpoint_y = (start_y + end_y) / 2.0
     center_x = grid.origin_x + grid.width / 2.0
     center_y = grid.origin_y + grid.length / 2.0
     normalized_x = abs(midpoint_x - center_x) / (grid.width / 2.0)
@@ -725,7 +686,7 @@ def _path_details(
     validated: _ValidatedRouting,
     route: _ResolvedRoute,
 ) -> RelationshipPathDetails:
-    grid = validated.config.grid
+    grid = validated.grid
     return RelationshipPathDetails(
         rule_id=route.rule.id,
         rule_name=route.rule.name,
@@ -741,8 +702,8 @@ def _path_details(
             CirculationGridNode(
                 x_index=x_index,
                 y_index=y_index,
-                x=grid.origin_x + x_index * grid.scale,
-                y=grid.origin_y + y_index * grid.scale,
+                x=grid.x_positions[x_index],
+                y=grid.y_positions[y_index],
             )
             for x_index, y_index in route.nodes
         ),

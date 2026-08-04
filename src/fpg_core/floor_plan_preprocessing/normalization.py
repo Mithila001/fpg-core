@@ -88,6 +88,39 @@ def _parse_aspect_ratio(value: float | str, config: PreprocessingConfig) -> floa
     return canonical
 
 
+def _floor_project_unit_limit(
+    field_name: str,
+    value: object,
+    *,
+    collect_details: bool,
+    records: list[NormalizationRecord],
+) -> tuple[float, int]:
+    if isinstance(value, bool):
+        raise NormalizationError(f"{field_name} must be numeric, not boolean")
+    try:
+        raw = float(value)
+    except (TypeError, ValueError) as exc:
+        raise NormalizationError(f"{field_name} must be numeric") from exc
+    if not math.isfinite(raw) or raw <= 0:
+        raise NormalizationError(f"{field_name} must be positive and finite")
+    normalized = math.floor(raw)
+    if normalized <= 0:
+        raise NormalizationError(
+            f"{field_name} becomes non-positive after whole-unit normalization"
+        )
+    if collect_details and not math.isclose(
+        raw, normalized, rel_tol=0.0, abs_tol=1e-12
+    ):
+        records.append(
+            NormalizationRecord(
+                field=field_name,
+                original=str(raw),
+                normalized=str(normalized),
+            )
+        )
+    return raw, normalized
+
+
 def normalize_request(
     request: PreprocessingRequest,
     policy: PreprocessingConfig,
@@ -98,6 +131,18 @@ def normalize_request(
     records: list[NormalizationRecord] = []
     decisions: list[RoomDecision] = []
     defaults: list[str] = []
+    raw_max_width, max_width = _floor_project_unit_limit(
+        "floor_limits.max_width",
+        request.floor_limits.max_width,
+        collect_details=collect_details,
+        records=records,
+    )
+    raw_max_length, max_length = _floor_project_unit_limit(
+        "floor_limits.max_length",
+        request.floor_limits.max_length,
+        collect_details=collect_details,
+        records=records,
+    )
 
     supplied_ids = {
         room.id.strip()
@@ -136,10 +181,7 @@ def normalize_request(
             requested_size = _normalize_size(room.requested_size)
             if not requested_size:
                 requested_size = None
-            elif (
-                collect_details
-                and str(room.requested_size).strip() != requested_size
-            ):
+            elif collect_details and str(room.requested_size).strip() != requested_size:
                 records.append(
                     NormalizationRecord(
                         "requested_size", str(room.requested_size), requested_size
@@ -158,8 +200,10 @@ def normalize_request(
         used_ids.add(room_id)
 
     return NormalizedRequest(
-        max_width=float(request.floor_limits.max_width),
-        max_length=float(request.floor_limits.max_length),
+        raw_max_width=raw_max_width,
+        raw_max_length=raw_max_length,
+        max_width=max_width,
+        max_length=max_length,
         aspect_ratio=ratio,
         rooms=tuple(rooms),
         normalizations=tuple(records),

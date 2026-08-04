@@ -161,6 +161,12 @@ def validate_policy(policy: PreprocessingPolicy) -> None:
     ):
         raise InputValidationError("hallway_count must be a non-negative integer")
     _finite_number(policy.hallway_min_width, "hallway_min_width", positive=True)
+    _finite_number(
+        policy.max_aspect_residual_units,
+        "max_aspect_residual_units",
+    )
+    if policy.max_aspect_residual_units < 0:
+        raise InputValidationError("max_aspect_residual_units cannot be negative")
     if not isinstance(policy.default_room_size, str) or not policy.default_room_size.strip():
         raise InputValidationError("default_room_size cannot be empty")
 
@@ -232,8 +238,11 @@ def validate_reference_data(reference_data: PreparedReferenceData) -> None:
 def validate_context(context: PreprocessingContext) -> None:
     if not context.rooms:
         raise ContextValidationError("Prepared context contains no rooms")
-    if context.minimum_required_area > context.floor.width * context.floor.length:
+    floor_area = context.floor.width * context.floor.length
+    if context.minimum_required_area > floor_area:
         raise ContextValidationError("Selected floor does not meet minimum required area")
+    if floor_area > context.maximum_target_area + 1e-9:
+        raise ContextValidationError("Selected floor exceeds maximum target area")
 
 
 def validate_output(
@@ -241,6 +250,12 @@ def validate_output(
 ) -> None:
     if specification.floor.width <= 0 or specification.floor.length <= 0:
         raise OutputValidationError("Final floor dimensions must be positive")
+    if not float(specification.floor.width).is_integer() or not float(
+        specification.floor.length
+    ).is_integer():
+        raise OutputValidationError(
+            "Final floor dimensions must use whole project units"
+        )
     if not specification.rooms:
         raise OutputValidationError("Final specification must contain rooms")
     ids = [str(room.id) for room in specification.rooms]
