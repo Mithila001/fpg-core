@@ -1,38 +1,65 @@
 # Shared Domain Contracts
 
-`fpg_core.domain` is the canonical type layer shared by FPG Core features. It contains shared execution, geometry, candidate, circulation, buildable-space, floor-plan, and generation-specification contracts.
+`fpg_core.domain` is the canonical type layer shared by FPG Core features. Feature implementations may depend on these contracts; the domain package must not import feature modules.
 
-## Guide
+## Main candidate contracts
 
-Import shared contracts from the package:
+### `CandidateSearchSpace`
+
+Describes the exact centered search rectangle prepared from a selected floor:
 
 ```python
-from fpg_core.domain import FloorPlan, FloorPlanGenerationSpec, Point, Polygon
+CandidateSearchSpace(
+    origin_x=0.5,
+    origin_y=2.5,
+    width=120,
+    length=78,
+    grid_spacing=6,
+)
 ```
 
-Features may depend on these contracts. This folder must not depend on feature implementations.
+Width and length are exact spacing multiples. Origins may use half project units when an odd-sized floor is trimmed equally from both sides.
 
-### Main Contract Groups
+### `HallwayRoomCountRange`
 
-- `candidate.py`: reusable `CandidatePoint` hints shared across pipeline stages.
-- `circulation.py`: shared routing grids, rules, traffic enums, hallway classifications, and routing detail primitives.
+Defines the number of distinct hallway rooms Candidate Search may activate in one trial:
+
+```python
+HallwayRoomCountRange(maximum=3)
+```
+
+The minimum is always `1`.
+
+### `ResolvedCandidateGrid`
+
+Contains exact X/Y nodes, uniform spacing, coordinate/index conversion, and row-major flat-node conversion.
+
+### `CandidatePoint`
+
+Represents one room hint coordinate. Current Candidate Search creates one point per room and uses `hint_index=1`.
+
+### `CandidateMap`
+
+Couples candidate points to the resolved grid and rejects off-grid or overlapping points.
+
+## Other contract groups
+
+- `circulation.py`: routing grids, rules, traffic enums, classifications, and route detail primitives.
 - `execution.py`: `FeatureExecution`, `ExecutionMetadata`, and `ExecutionMode`.
 - `geometry.py`: `Point`, `Segment`, and `Polygon`.
-- `buildable_space.py`: land requests, normalized land, setbacks, buildable land, and usable land.
+- `buildable_space.py`: land, setback, buildable-land, and usable-land contracts.
 - `floor_plan_spec.py`: room requirements, floor size, relations, and generation specifications.
 - `floor_plan.py`: generated rooms, openings, metadata, and completed floor plans.
 
-### Units
+## Units
 
-Geometry uses project units. The package-wide configuration records the conversion; the current project convention is 10 project units per meter.
+The current convention is:
 
-### Stability
+- `10` project units = `1` meter
+- `1` project unit = `10` centimeters
 
-These types cross feature boundaries and should be treated as public contracts. Identity fields, enum values, and field meanings must remain stable unless a breaking migration is intentional.
+Intermediate geometry and centered search origins may use floating-point values.
 
-## AI Instructions
+## Stability
 
-- Add a type here only when multiple features genuinely share the same domain concept.
-- Keep feature-specific details, diagnostics, evaluator, processor, and solver types inside their owning feature.
-- Check all feature imports and consumers before changing a shared field or enum value.
-- Keep this README synchronized with shared contract changes.
+These types cross feature boundaries and are public contracts. Identity fields, enum values, and field meanings should change only through an intentional migration.

@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from ..domain import ConstraintStrength, MatchPolicy, RoomType
+from ..domain import (
+    ConstraintStrength,
+    HallwayRoomCountRange,
+    MatchPolicy,
+    RoomType,
+)
 
 
 class RoomSizeSelectionStrategy(str, Enum):
@@ -57,8 +62,9 @@ class PreprocessingConfig:
     mandatory_room_types: tuple[RoomType, ...]
     floor_area_buffer: float
     hallway_area_buffer: float
-    hallway_count: int
+    max_hallway_room_count: int
     hallway_min_width: float
+    candidate_search_grid_spacing: int
     default_room_size: str
     max_aspect_residual_units: float
     min_aspect_ratio: float = 0.5
@@ -76,6 +82,10 @@ class PreprocessingConfig:
     @property
     def allowed_client_room_types(self) -> frozenset[RoomType]:
         return frozenset(rule.room_type for rule in self.client_room_count_rules)
+
+    @property
+    def hallway_room_count_range(self) -> HallwayRoomCountRange:
+        return HallwayRoomCountRange(maximum=self.max_hallway_room_count)
 
 
 # Temporary source-compatibility name for callers while they move to the complete

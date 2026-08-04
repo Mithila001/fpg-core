@@ -41,10 +41,11 @@ from fpg_core.candidate_scoring import (  # noqa: E402
 from fpg_core.candidate_search import (  # noqa: E402
     CandidateSearchInput,
     CandidateSearchSettings,
-    CandidateSearchTarget,
+    build_candidate_search_targets,
     search_candidates,
 )
 from fpg_core.domain import (  # noqa: E402
+    CandidateMap,
     CirculationRouteRule,
     CirculationTrafficClass,
     ConstraintStrength,
@@ -150,8 +151,11 @@ def build_preprocessing_input(data: dict[str, Any]) -> PreprocessingInput:
         ),
         floor_area_buffer=config_data["floor_area_buffer"],
         hallway_area_buffer=config_data["hallway_area_buffer"],
-        hallway_count=config_data["hallway_count"],
+        max_hallway_room_count=config_data["max_hallway_room_count"],
         hallway_min_width=config_data["hallway_min_width"],
+        candidate_search_grid_spacing=config_data[
+            "candidate_search_grid_spacing"
+        ],
         default_room_size=config_data["default_room_size"],
         max_aspect_residual_units=config_data["max_aspect_residual_units"],
         min_aspect_ratio=config_data.get("min_aspect_ratio", 0.5),
@@ -326,7 +330,8 @@ def run() -> dict[str, Any]:
         build_preprocessing_input(raw_input),
         mode=ExecutionMode.DEBUG,
     )
-    specification = preprocessing.result.generation_spec
+    prepared = preprocessing.result
+    specification_template = prepared.generation_spec
 
     circulation_config = build_circulation_config(raw_input)
     scoring_config = build_scoring_config(
@@ -335,7 +340,8 @@ def run() -> dict[str, Any]:
     )
     scoring_registry = create_default_registry()
 
-    def evaluate_search_candidate(candidate: Any) -> float:
+    def evaluate_search_candidate(candidate: CandidateMap) -> float:
+        candidate_specification = prepared.generation_spec_for_candidate(candidate)
         circulation = refine_candidate_circulation(
             CandidateCirculationInput(
                 candidate=candidate,
@@ -345,7 +351,7 @@ def run() -> dict[str, Any]:
         )
         scoring = evaluate_candidate(
             CandidateScoringInput(
-                specification=specification,
+                specification=candidate_specification,
                 candidate=circulation.result.candidate,
                 hallway_classifications=(
                     circulation.result.hallway_classifications
@@ -361,32 +367,21 @@ def run() -> dict[str, Any]:
     search_data = raw_input["candidate_search"]
     search = search_candidates(
         CandidateSearchInput(
-            targets=tuple(
-                CandidateSearchTarget(
-                    room_id=room.id,
-                    room_type=room.room_type,
-                )
-                for room in specification.rooms
-            ),
+            targets=build_candidate_search_targets(specification_template),
             settings=CandidateSearchSettings(
-                floor=specification.floor,
-                long_axis_node_count=search_data["long_axis_node_count"],
+                search_space=prepared.candidate_search_space,
+                hallway_room_count_range=prepared.hallway_room_count_range,
                 max_grid_node_count=search_data["max_grid_node_count"],
-                max_internal_sampling_attempts=search_data[
-                    "max_internal_sampling_attempts"
-                ],
                 trial_count=search_data["trial_count"],
                 random_seed=search_data.get("random_seed"),
-                min_hallway_hint_count=search_data[
-                    "min_hallway_hint_count"
-                ],
-                max_hallway_hint_count=search_data[
-                    "max_hallway_hint_count"
-                ],
             ),
             evaluator=evaluate_search_candidate,
         ),
         mode=ExecutionMode.DEBUG,
+    )
+
+    candidate_specification = prepared.generation_spec_for_candidate(
+        search.result.candidate
     )
 
     print("3/4 Refining the winning candidate circulation in DEBUG mode...")
@@ -401,7 +396,7 @@ def run() -> dict[str, Any]:
     print("4/4 Scoring the refined candidate in DEBUG mode...")
     scoring = evaluate_candidate(
         CandidateScoringInput(
-            specification=specification,
+            specification=candidate_specification,
             candidate=circulation.result.candidate,
             hallway_classifications=circulation.result.hallway_classifications,
         ),
@@ -419,13 +414,21 @@ def run() -> dict[str, Any]:
             "duration_seconds": perf_counter() - started_timer,
         },
         "summary": {
-            "floor_width": specification.floor.width,
-            "floor_length": specification.floor.length,
-            "room_count": len(specification.rooms),
+            "floor_width": specification_template.floor.width,
+            "floor_length": specification_template.floor.length,
+            "candidate_grid_spacing": prepared.candidate_search_space.grid_spacing,
+            "candidate_grid_node_count": search.result.candidate.grid.node_count,
+            "hallway_room_count_range": prepared.hallway_room_count_range,
+            "template_room_count": len(specification_template.rooms),
             "search_trial_count": search.result.completed_trials,
             "search_best_score": search.result.score,
-            "search_candidate_point_count": len(search.result.candidate.points),
-            "final_candidate_point_count": len(circulation.result.candidate.points),
+            "search_candidate_room_count": len(search.result.candidate.points),
+            "search_hallway_room_count": search.result.hallway_room_count,
+            "final_room_count": len(circulation.result.candidate.points),
+            "final_hallway_room_count": sum(
+                point.room_type is RoomType.HALLWAY
+                for point in circulation.result.candidate.points
+            ),
             "removed_hallway_point_count": len(
                 circulation.details.removed_hallway_points
                 if circulation.details is not None
@@ -437,6 +440,7 @@ def run() -> dict[str, Any]:
         "preprocessing": preprocessing,
         "candidate_search": search,
         "candidate_circulation": circulation,
+        "candidate_specific_generation_spec": candidate_specification,
         "candidate_scoring": scoring,
     }
     return make_json_safe(payload)

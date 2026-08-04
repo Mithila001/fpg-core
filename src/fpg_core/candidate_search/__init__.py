@@ -1,9 +1,11 @@
-from .api import CandidateSearchSession, build_candidate_grid, search_candidates
-from .config import (
-    DEFAULT_MAX_HALLWAY_HINT_COUNT,
-    DEFAULT_MIN_HALLWAY_HINT_COUNT,
-    CandidateSearchConfig,
+from ..domain import CandidateSearchSpace, HallwayRoomCountRange
+from .api import (
+    CandidateSearchSession,
+    build_candidate_grid,
+    build_candidate_search_targets,
+    search_candidates,
 )
+from .config import CandidateSearchConfig
 from .exceptions import CandidateSearchError, CandidateSearchStateError
 from .models import (
     CandidateEvaluator,
@@ -25,12 +27,13 @@ __all__ = [
     "CandidateSearchResult",
     "CandidateSearchSession",
     "CandidateSearchSettings",
+    "CandidateSearchSpace",
     "CandidateSearchStateError",
     "CandidateSearchTarget",
     "CandidateSuggestion",
     "CandidateTrialResult",
-    "DEFAULT_MAX_HALLWAY_HINT_COUNT",
-    "DEFAULT_MIN_HALLWAY_HINT_COUNT",
+    "HallwayRoomCountRange",
     "build_candidate_grid",
+    "build_candidate_search_targets",
     "search_candidates",
 ]

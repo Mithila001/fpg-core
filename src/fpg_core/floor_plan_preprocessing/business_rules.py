@@ -80,7 +80,7 @@ def apply_business_rules(
 
     used_ids = {room.id for room in sanitized}
     next_index = max((room.request_index for room in sanitized), default=-1) + 1
-    for _ in range(policy.hallway_count):
+    for _ in range(policy.max_hallway_room_count):
         room_id = _next_available_id("hallway", used_ids)
         hallway = NormalizedRoom(
             room_id,
@@ -94,9 +94,14 @@ def apply_business_rules(
         sanitized.append(hallway)
         if collect_details:
             decisions.append(
-                RoomDecision(room_id, RoomType.HALLWAY, "derived", "hallway policy")
+                RoomDecision(
+                    room_id,
+                    RoomType.HALLWAY,
+                    "derived",
+                    "candidate hallway room capacity",
+                )
             )
-            defaults.append(f"derived hallway '{room_id}'")
+            defaults.append(f"derived candidate hallway room '{room_id}'")
 
     selected_size = _select_majority_size(tuple(sanitized), policy)
     normalized_rooms = tuple(

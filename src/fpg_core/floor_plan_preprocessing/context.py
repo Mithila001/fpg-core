@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..domain import (
+    CandidateSearchSpace,
     ConstraintStrength,
     FloorSpec,
+    HallwayRoomCountRange,
     MatchPolicy,
     RoomRelationSpec,
     RoomSpec,
@@ -88,3 +90,5 @@ class PreprocessingContext:
     relation_decisions: tuple[RelationDecision, ...]
     minimum_required_area: float
     maximum_target_area: float
+    candidate_search_space: CandidateSearchSpace
+    hallway_room_count_range: HallwayRoomCountRange

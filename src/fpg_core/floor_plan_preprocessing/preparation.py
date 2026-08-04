@@ -5,6 +5,7 @@ from collections import defaultdict
 from dataclasses import replace
 
 from ..domain import (
+    CandidateSearchSpace,
     FloorSpec,
     RoomId,
     RoomRelationSpec,
@@ -104,7 +105,7 @@ def _select_floor(
     minimum_axis = max(
         [room.size.min_width for room in rooms]
         + ([policy.hallway_min_width] if hallway_count else [])
-        + [1.0]
+        + [float(policy.candidate_search_grid_spacing * 2), 1.0]
     )
     minimum_axis_units = math.ceil(minimum_axis)
     ratio = request.aspect_ratio
@@ -143,6 +144,34 @@ def _select_floor(
     _, width, length = best
     return FloorSpec(width=width, length=length), minimum, maximum
 
+
+
+def _build_candidate_search_space(
+    floor: FloorSpec,
+    policy: PreprocessingPolicy,
+) -> CandidateSearchSpace:
+    floor_width = int(floor.width)
+    floor_length = int(floor.length)
+    spacing = policy.candidate_search_grid_spacing
+
+    search_width = floor_width - (floor_width % spacing)
+    search_length = floor_length - (floor_length % spacing)
+    origin_x = (floor_width - search_width) / 2
+    origin_y = (floor_length - search_length) / 2
+
+    try:
+        return CandidateSearchSpace(
+            origin_x=origin_x,
+            origin_y=origin_y,
+            width=search_width,
+            length=search_length,
+            grid_spacing=spacing,
+        )
+    except (TypeError, ValueError) as exc:
+        raise FloorPreparationError(
+            "The selected floor cannot produce a valid centered Candidate Search "
+            "space with the configured grid spacing."
+        ) from exc
 
 def _add_hallways(
     request: RuledRequest,
@@ -273,6 +302,7 @@ def build_preprocessing_context(
     )
     floor, minimum, maximum = _select_floor(final_request, non_hallways, policy)
     rooms = _add_hallways(final_request, non_hallways, floor, policy)
+    candidate_search_space = _build_candidate_search_space(floor, policy)
     relations, relation_decisions = _prepare_relations(
         rooms,
         reference_data,
@@ -287,4 +317,6 @@ def build_preprocessing_context(
         relation_decisions=relation_decisions,
         minimum_required_area=minimum,
         maximum_target_area=maximum,
+        candidate_search_space=candidate_search_space,
+        hallway_room_count_range=policy.hallway_room_count_range,
     )

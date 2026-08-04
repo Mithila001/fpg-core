@@ -27,9 +27,11 @@ from .models import (
     CandidateTrialResult,
 )
 
+_HALLWAY_ROOM_COUNT_PARAMETER = "hallway_room_count"
+
 
 class CandidateSearchSession:
-    """Incremental Optuna-backed adaptive-grid candidate search."""
+    """Incremental Optuna-backed uniform-grid candidate search."""
 
     def __init__(self, search_input: CandidateSearchInput) -> None:
         if not isinstance(search_input, CandidateSearchInput):
@@ -37,8 +39,7 @@ class CandidateSearchSession:
 
         self._input = search_input
         self._grid = build_candidate_grid(
-            search_input.settings.floor,
-            long_axis_node_count=search_input.settings.long_axis_node_count,
+            search_space=search_input.settings.search_space,
             max_grid_node_count=search_input.settings.max_grid_node_count,
         )
         self._study = optuna.create_study(
@@ -48,7 +49,6 @@ class CandidateSearchSession:
             ),
         )
         self._completed_trials = 0
-        self._overlap_rejection_count = 0
         self._pending_trial: optuna.Trial | None = None
         self._pending_suggestion: CandidateSuggestion | None = None
 
@@ -77,15 +77,11 @@ class CandidateSearchSession:
         return self._pending_trial is not None
 
     @property
-    def overlap_rejection_count(self) -> int:
-        return self._overlap_rejection_count
-
-    @property
     def optuna_trial_count(self) -> int:
         return len(self._study.trials)
 
     def ask_next_trial(self) -> CandidateSuggestion:
-        """Generate one valid unscored candidate, rejecting overlaps internally."""
+        """Generate one unscored candidate using sampling without replacement."""
 
         if self.has_pending_trial:
             raise CandidateSearchStateError(
@@ -97,37 +93,25 @@ class CandidateSearchSession:
                 "Candidate search session has no remaining trials."
             )
 
-        for _ in range(self._input.settings.max_internal_sampling_attempts):
-            trial = self._study.ask()
-            try:
-                candidate = _sample_candidate_map(
-                    trial=trial,
-                    targets=self._input.targets,
-                    settings=self._input.settings,
-                    grid=self._grid,
-                )
-            except Exception:
-                self._study.tell(trial, state=optuna.trial.TrialState.FAIL)
-                raise
-
-            if candidate is None:
-                self._study.tell(trial, state=optuna.trial.TrialState.FAIL)
-                self._overlap_rejection_count += 1
-                continue
-
-            suggestion = CandidateSuggestion(
-                trial_number=trial.number,
-                candidate=candidate,
+        trial = self._study.ask()
+        try:
+            candidate = _sample_candidate_map(
+                trial=trial,
+                targets=self._input.targets,
+                settings=self._input.settings,
+                grid=self._grid,
             )
-            self._pending_trial = trial
-            self._pending_suggestion = suggestion
-            return suggestion
+        except Exception:
+            self._study.tell(trial, state=optuna.trial.TrialState.FAIL)
+            raise
 
-        raise CandidateSearchStateError(
-            "Candidate Search could not generate a non-overlapping candidate within "
-            f"max_internal_sampling_attempts="
-            f"{self._input.settings.max_internal_sampling_attempts}."
+        suggestion = CandidateSuggestion(
+            trial_number=trial.number,
+            candidate=candidate,
         )
+        self._pending_trial = trial
+        self._pending_suggestion = suggestion
+        return suggestion
 
     def record_score(
         self,
@@ -171,7 +155,7 @@ class CandidateSearchSession:
         self._pending_suggestion = None
 
     def run_next_trial(self) -> CandidateTrialResult:
-        """Evaluate one valid candidate using the configured callback."""
+        """Evaluate one candidate using the configured callback."""
 
         suggestion = self.ask_next_trial()
         try:
@@ -208,7 +192,6 @@ class CandidateSearchSession:
     def debug_details(self) -> CandidateSearchDetails:
         return CandidateSearchDetails(
             grid=self._grid,
-            overlap_rejection_count=self._overlap_rejection_count,
             optuna_trial_count=self.optuna_trial_count,
             completed_trial_count=self._completed_trials,
         )
@@ -219,7 +202,7 @@ def search_candidates(
     *,
     mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> FeatureExecution[CandidateSearchResult, CandidateSearchDetails]:
-    """Run the complete adaptive-grid candidate search."""
+    """Run the complete uniform-grid candidate search."""
 
     if not isinstance(mode, ExecutionMode):
         raise TypeError("mode must be an ExecutionMode instance.")
@@ -245,72 +228,39 @@ def _sample_candidate_map(
     targets: tuple[CandidateSearchTarget, ...],
     settings: CandidateSearchSettings,
     grid: ResolvedCandidateGrid,
-) -> CandidateMap | None:
-    points: list[CandidatePoint] = []
-    occupied_nodes: set[tuple[int, int]] = set()
-    has_overlap = False
-
-    for target_index, target in enumerate(targets):
-        hint_count = _sample_target_hint_count(
-            trial=trial,
-            target_index=target_index,
-            target=target,
-            settings=settings,
-        )
-        for zero_based_hint_index in range(hint_count):
-            hint_index = zero_based_hint_index + 1
-            x_index = trial.suggest_int(
-                name=_x_parameter_name(
-                    target_index=target_index,
-                    hint_index=hint_index,
-                    is_hallway=target.is_hallway,
-                ),
-                low=0,
-                high=grid.x_node_count - 1,
-            )
-            y_index = trial.suggest_int(
-                name=_y_parameter_name(
-                    target_index=target_index,
-                    hint_index=hint_index,
-                    is_hallway=target.is_hallway,
-                ),
-                low=0,
-                high=grid.y_node_count - 1,
-            )
-            node = (x_index, y_index)
-            if node in occupied_nodes:
-                has_overlap = True
-            occupied_nodes.add(node)
-            x, y = grid.coordinates(x_index, y_index)
-            points.append(
-                CandidatePoint(
-                    room_id=target.room_id,
-                    room_type=target.room_type,
-                    hint_index=hint_index,
-                    x=x,
-                    y=y,
-                )
-            )
-
-    if has_overlap:
-        return None
-    return CandidateMap(grid=grid, points=tuple(points))
-
-
-def _sample_target_hint_count(
-    *,
-    trial: optuna.Trial,
-    target_index: int,
-    target: CandidateSearchTarget,
-    settings: CandidateSearchSettings,
-) -> int:
-    if not target.is_hallway:
-        return 1
-    return trial.suggest_int(
-        name=_hallway_count_parameter_name(target_index),
-        low=settings.min_hallway_hint_count,
-        high=settings.max_hallway_hint_count,
+) -> CandidateMap:
+    hallway_room_count = trial.suggest_int(
+        name=_HALLWAY_ROOM_COUNT_PARAMETER,
+        low=settings.hallway_room_count_range.minimum,
+        high=settings.hallway_room_count_range.maximum,
     )
+    active_targets = _active_targets(
+        targets=targets,
+        hallway_room_count=hallway_room_count,
+    )
+    available_flat_node_indexes = list(range(grid.node_count))
+    points: list[CandidatePoint] = []
+
+    for target_index, target in active_targets:
+        selection_rank = trial.suggest_int(
+            name=_node_rank_parameter_name(target_index),
+            low=0,
+            high=len(available_flat_node_indexes) - 1,
+        )
+        flat_node_index = available_flat_node_indexes.pop(selection_rank)
+        x_index, y_index = grid.indexes_from_flat_node_index(flat_node_index)
+        x, y = grid.coordinates(x_index, y_index)
+        points.append(
+            CandidatePoint(
+                room_id=target.room_id,
+                room_type=target.room_type,
+                hint_index=1,
+                x=x,
+                y=y,
+            )
+        )
+
+    return CandidateMap(grid=grid, points=tuple(points))
 
 
 def _candidate_from_trial_parameters(
@@ -320,90 +270,84 @@ def _candidate_from_trial_parameters(
     parameters: Mapping[str, int | float],
     grid: ResolvedCandidateGrid,
 ) -> CandidateMap:
-    points: list[CandidatePoint] = []
-    for target_index, target in enumerate(targets):
-        hint_count = _hint_count_from_trial_parameters(
-            target_index=target_index,
-            target=target,
-            settings=settings,
-            parameters=parameters,
+    if _HALLWAY_ROOM_COUNT_PARAMETER not in parameters:
+        raise CandidateSearchStateError(
+            "Best trial is missing the global hallway room count."
         )
-        for zero_based_hint_index in range(hint_count):
-            hint_index = zero_based_hint_index + 1
-            x_parameter_name = _x_parameter_name(
-                target_index=target_index,
-                hint_index=hint_index,
-                is_hallway=target.is_hallway,
+    hallway_room_count = _validated_parameter_index(
+        parameter_name=_HALLWAY_ROOM_COUNT_PARAMETER,
+        value=parameters[_HALLWAY_ROOM_COUNT_PARAMETER],
+    )
+    if not (
+        settings.hallway_room_count_range.minimum
+        <= hallway_room_count
+        <= settings.hallway_room_count_range.maximum
+    ):
+        raise CandidateSearchStateError(
+            "The best trial hallway room count is outside the configured range."
+        )
+
+    active_targets = _active_targets(
+        targets=targets,
+        hallway_room_count=hallway_room_count,
+    )
+    available_flat_node_indexes = list(range(grid.node_count))
+    points: list[CandidatePoint] = []
+
+    for target_index, target in active_targets:
+        parameter_name = _node_rank_parameter_name(target_index)
+        if parameter_name not in parameters:
+            raise CandidateSearchStateError(
+                "Best trial is missing the remaining-node rank for "
+                f"room '{target.room_id}'."
             )
-            y_parameter_name = _y_parameter_name(
-                target_index=target_index,
-                hint_index=hint_index,
-                is_hallway=target.is_hallway,
+        selection_rank = _validated_parameter_index(
+            parameter_name=parameter_name,
+            value=parameters[parameter_name],
+        )
+        if selection_rank >= len(available_flat_node_indexes):
+            raise CandidateSearchStateError(
+                f"Trial parameter '{parameter_name}' is outside the remaining "
+                "candidate-node pool."
             )
-            if x_parameter_name not in parameters:
-                raise CandidateSearchStateError(
-                    "Best trial is missing the X parameter for "
-                    f"room '{target.room_id}', hint {hint_index}."
-                )
-            if y_parameter_name not in parameters:
-                raise CandidateSearchStateError(
-                    "Best trial is missing the Y parameter for "
-                    f"room '{target.room_id}', hint {hint_index}."
-                )
-            x_index = _validated_parameter_index(
-                parameter_name=x_parameter_name,
-                value=parameters[x_parameter_name],
+        flat_node_index = available_flat_node_indexes.pop(selection_rank)
+        x_index, y_index = grid.indexes_from_flat_node_index(flat_node_index)
+        x, y = grid.coordinates(x_index, y_index)
+        points.append(
+            CandidatePoint(
+                room_id=target.room_id,
+                room_type=target.room_type,
+                hint_index=1,
+                x=x,
+                y=y,
             )
-            y_index = _validated_parameter_index(
-                parameter_name=y_parameter_name,
-                value=parameters[y_parameter_name],
-            )
-            try:
-                x, y = grid.coordinates(x_index, y_index)
-            except IndexError as exc:
-                raise CandidateSearchStateError(
-                    "Best trial contains a candidate node outside the resolved grid."
-                ) from exc
-            points.append(
-                CandidatePoint(
-                    room_id=target.room_id,
-                    room_type=target.room_type,
-                    hint_index=hint_index,
-                    x=x,
-                    y=y,
-                )
-            )
+        )
+
     return CandidateMap(grid=grid, points=tuple(points))
 
 
-def _hint_count_from_trial_parameters(
+def _active_targets(
     *,
-    target_index: int,
-    target: CandidateSearchTarget,
-    settings: CandidateSearchSettings,
-    parameters: Mapping[str, int | float],
-) -> int:
-    if not target.is_hallway:
-        return 1
-    parameter_name = _hallway_count_parameter_name(target_index)
-    if parameter_name not in parameters:
+    targets: tuple[CandidateSearchTarget, ...],
+    hallway_room_count: int,
+) -> tuple[tuple[int, CandidateSearchTarget], ...]:
+    active: list[tuple[int, CandidateSearchTarget]] = []
+    selected_hallways = 0
+
+    for target_index, target in enumerate(targets):
+        if not target.is_hallway:
+            active.append((target_index, target))
+            continue
+        if selected_hallways < hallway_room_count:
+            active.append((target_index, target))
+            selected_hallways += 1
+
+    if selected_hallways != hallway_room_count:
         raise CandidateSearchStateError(
-            f"Best trial is missing the hallway hint count for room '{target.room_id}'."
+            "Candidate Search could not activate the requested number of hallway "
+            "room targets."
         )
-    hint_count = _validated_parameter_index(
-        parameter_name=parameter_name,
-        value=parameters[parameter_name],
-    )
-    if not (
-        settings.min_hallway_hint_count
-        <= hint_count
-        <= settings.max_hallway_hint_count
-    ):
-        raise CandidateSearchStateError(
-            f"Trial parameter '{parameter_name}' is outside the configured "
-            "hallway hint-count range."
-        )
-    return hint_count
+    return tuple(active)
 
 
 def _validate_evaluator_score(value: object) -> float:
@@ -436,27 +380,5 @@ def _validated_parameter_index(parameter_name: str, value: int | float) -> int:
     return index
 
 
-def _hallway_count_parameter_name(target_index: int) -> str:
-    return f"candidate_{target_index}_hallway_hint_count"
-
-
-def _x_parameter_name(
-    *,
-    target_index: int,
-    hint_index: int,
-    is_hallway: bool,
-) -> str:
-    if is_hallway:
-        return f"candidate_{target_index}_hallway_{hint_index}_x_index"
-    return f"candidate_{target_index}_x_index"
-
-
-def _y_parameter_name(
-    *,
-    target_index: int,
-    hint_index: int,
-    is_hallway: bool,
-) -> str:
-    if is_hallway:
-        return f"candidate_{target_index}_hallway_{hint_index}_y_index"
-    return f"candidate_{target_index}_y_index"
+def _node_rank_parameter_name(target_index: int) -> str:
+    return f"candidate_{target_index}_remaining_node_rank"

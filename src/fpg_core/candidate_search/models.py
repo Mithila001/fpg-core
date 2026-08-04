@@ -8,21 +8,17 @@ from typing import Any, TypeAlias, cast
 from ..domain import (
     CandidateMap,
     CandidatePoint,
-    FloorSpec,
+    CandidateSearchSpace,
+    HallwayRoomCountRange,
     ResolvedCandidateGrid,
     RoomId,
     RoomType,
 )
-from .config import (
-    DEFAULT_MAX_HALLWAY_HINT_COUNT,
-    DEFAULT_MIN_HALLWAY_HINT_COUNT,
-)
-from .grid import build_candidate_grid
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchTarget:
-    """Identifies one room that needs one or more candidate coordinates."""
+    """Identifies one concrete room that may receive one candidate point."""
 
     room_id: RoomId
     room_type: RoomType | None = None
@@ -44,56 +40,36 @@ class CandidateSearchTarget:
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchSettings:
-    """Configuration controlling adaptive-grid candidate exploration."""
+    """Prepared geometry plus runtime controls for one search."""
 
-    floor: FloorSpec
-    long_axis_node_count: int
+    search_space: CandidateSearchSpace
+    hallway_room_count_range: HallwayRoomCountRange
     max_grid_node_count: int
-    max_internal_sampling_attempts: int
     trial_count: int
     random_seed: int | None = None
-    min_hallway_hint_count: int = DEFAULT_MIN_HALLWAY_HINT_COUNT
-    max_hallway_hint_count: int = DEFAULT_MAX_HALLWAY_HINT_COUNT
 
     def __post_init__(self) -> None:
-        if not isinstance(self.floor, FloorSpec):
-            raise TypeError("floor must be a FloorSpec instance.")
+        if not isinstance(self.search_space, CandidateSearchSpace):
+            raise TypeError("search_space must be a CandidateSearchSpace instance.")
+        if not isinstance(self.hallway_room_count_range, HallwayRoomCountRange):
+            raise TypeError(
+                "hallway_room_count_range must be a HallwayRoomCountRange instance."
+            )
         _validate_positive_integer(
-            "long_axis_node_count", self.long_axis_node_count, minimum=2
-        )
-        _validate_positive_integer(
-            "max_grid_node_count", self.max_grid_node_count, minimum=4
-        )
-        _validate_positive_integer(
-            "max_internal_sampling_attempts",
-            self.max_internal_sampling_attempts,
+            "max_grid_node_count", self.max_grid_node_count, minimum=9
         )
         _validate_positive_integer("trial_count", self.trial_count)
-        _validate_positive_integer(
-            "min_hallway_hint_count",
-            self.min_hallway_hint_count,
-        )
-        _validate_positive_integer(
-            "max_hallway_hint_count",
-            self.max_hallway_hint_count,
-        )
-        if self.min_hallway_hint_count > self.max_hallway_hint_count:
-            raise ValueError(
-                "min_hallway_hint_count cannot be greater than "
-                "max_hallway_hint_count."
-            )
         if self.random_seed is not None and (
             isinstance(self.random_seed, bool)
             or not isinstance(self.random_seed, int)
         ):
             raise TypeError("random_seed must be an integer or None.")
-
-        # Fail during settings construction rather than after Optuna starts.
-        build_candidate_grid(
-            self.floor,
-            long_axis_node_count=self.long_axis_node_count,
-            max_grid_node_count=self.max_grid_node_count,
-        )
+        if self.search_space.node_count > self.max_grid_node_count:
+            raise ValueError(
+                "Resolved candidate grid contains "
+                f"{self.search_space.node_count} nodes, exceeding "
+                f"max_grid_node_count={self.max_grid_node_count}."
+            )
 
 
 CandidateEvaluator: TypeAlias = Callable[[CandidateMap], float]
@@ -101,7 +77,12 @@ CandidateEvaluator: TypeAlias = Callable[[CandidateMap], float]
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchInput:
-    """Complete input contract for one candidate-search operation or session."""
+    """Complete input contract for one Candidate Search operation or session.
+
+    All possible hallway room targets must be supplied. Each trial selects one
+    global hallway count and activates that many hallway targets. Every active
+    target receives exactly one point.
+    """
 
     targets: tuple[CandidateSearchTarget, ...]
     settings: CandidateSearchSettings
@@ -129,22 +110,35 @@ class CandidateSearchInput:
         if not callable(self.evaluator):
             raise TypeError("evaluator must be callable.")
 
-        grid = build_candidate_grid(
-            self.settings.floor,
-            long_axis_node_count=self.settings.long_axis_node_count,
-            max_grid_node_count=self.settings.max_grid_node_count,
+        hallway_target_count = sum(target.is_hallway for target in normalized_targets)
+        expected_hallway_target_count = (
+            self.settings.hallway_room_count_range.maximum
         )
-        maximum_point_count = sum(
-            self.settings.max_hallway_hint_count if target.is_hallway else 1
-            for target in normalized_targets
-        )
-        if maximum_point_count > grid.node_count:
+        if hallway_target_count != expected_hallway_target_count:
+            raise ValueError(
+                "The number of hallway targets must equal the configured maximum "
+                "hallway room count: "
+                f"expected {expected_hallway_target_count}, received "
+                f"{hallway_target_count}."
+            )
+
+        non_hallway_count = len(normalized_targets) - hallway_target_count
+        maximum_point_count = non_hallway_count + expected_hallway_target_count
+        if maximum_point_count > self.settings.search_space.node_count:
             raise ValueError(
                 "Candidate search may request up to "
-                f"{maximum_point_count} points but the resolved grid contains only "
-                f"{grid.node_count} nodes."
+                f"{maximum_point_count} room points but the resolved grid contains "
+                f"only {self.settings.search_space.node_count} nodes."
             )
         object.__setattr__(self, "targets", normalized_targets)
+
+    @property
+    def hallway_targets(self) -> tuple[CandidateSearchTarget, ...]:
+        return tuple(target for target in self.targets if target.is_hallway)
+
+    @property
+    def non_hallway_targets(self) -> tuple[CandidateSearchTarget, ...]:
+        return tuple(target for target in self.targets if not target.is_hallway)
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,6 +160,10 @@ class CandidateSuggestion:
     @property
     def grid(self) -> ResolvedCandidateGrid:
         return self.candidate.grid
+
+    @property
+    def hallway_room_count(self) -> int:
+        return sum(point.room_type is RoomType.HALLWAY for point in self.points)
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,6 +190,10 @@ class CandidateTrialResult:
     def grid(self) -> ResolvedCandidateGrid:
         return self.candidate.grid
 
+    @property
+    def hallway_room_count(self) -> int:
+        return sum(point.room_type is RoomType.HALLWAY for point in self.points)
+
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchResult:
@@ -215,22 +217,22 @@ class CandidateSearchResult:
     def grid(self) -> ResolvedCandidateGrid:
         return self.candidate.grid
 
+    @property
+    def hallway_room_count(self) -> int:
+        return sum(point.room_type is RoomType.HALLWAY for point in self.points)
+
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchDetails:
-    """DEBUG-only adaptive-grid and internal trial-rejection information."""
+    """DEBUG-only grid and Optuna trial information."""
 
     grid: ResolvedCandidateGrid
-    overlap_rejection_count: int
     optuna_trial_count: int
     completed_trial_count: int
 
     def __post_init__(self) -> None:
         if not isinstance(self.grid, ResolvedCandidateGrid):
             raise TypeError("grid must be a ResolvedCandidateGrid instance.")
-        _validate_non_negative_integer(
-            "overlap_rejection_count", self.overlap_rejection_count
-        )
         _validate_non_negative_integer("optuna_trial_count", self.optuna_trial_count)
         _validate_non_negative_integer(
             "completed_trial_count", self.completed_trial_count

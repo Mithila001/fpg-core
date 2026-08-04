@@ -86,7 +86,7 @@ def _validate_preprocessing(config: PreprocessingConfig) -> None:
         raise FpgCoreConfigError(
             "max_aspect_residual_units must be finite and non-negative"
         )
-    if config.floor_area_buffer < 0 or config.hallway_count < 0:
+    if config.floor_area_buffer < 0 or config.max_hallway_room_count < 0:
         raise FpgCoreConfigError("preprocessing buffers/counts are invalid")
     configured_sizes = {(item.room_type, item.size) for item in config.room_sizes}
     for item in config.room_sizes:
@@ -97,9 +97,7 @@ def _validate_preprocessing(config: PreprocessingConfig) -> None:
             raise FpgCoreConfigError("room-size ranges are invalid")
     for room_type in config.allowed_client_room_types:
         if (room_type, config.default_room_size) not in configured_sizes:
-            raise FpgCoreConfigError(
-                f"default room size missing for {room_type.value}"
-            )
+            raise FpgCoreConfigError(f"default room size missing for {room_type.value}")
 
 
 def validate_fpg_core_config(config: FpgCoreConfig) -> None:
@@ -132,13 +130,9 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
         raise FpgCoreConfigError("project_units_per_meter must be positive")
     _validate_preprocessing(config.preprocessing)
     candidate_search = config.candidate_search
-    if candidate_search.long_axis_node_count < 2:
-        raise FpgCoreConfigError("candidate_search.long_axis_node_count must be at least 2")
-    if candidate_search.max_grid_node_count < 4:
-        raise FpgCoreConfigError("candidate_search.max_grid_node_count must be at least 4")
-    if candidate_search.max_internal_sampling_attempts <= 0:
+    if candidate_search.max_grid_node_count < 9:
         raise FpgCoreConfigError(
-            "candidate_search.max_internal_sampling_attempts must be positive"
+            "candidate_search.max_grid_node_count must be at least 9"
         )
     buildable = config.buildable_space
     if (
@@ -181,9 +175,7 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
     for feature_id in config.openings.enabled_features:
         openings.resolve(feature_id)
     known_opening_constraints = {"shared_placement", "room_door_limits"}
-    if not set(config.openings.enabled_constraints).issubset(
-        known_opening_constraints
-    ):
+    if not set(config.openings.enabled_constraints).issubset(known_opening_constraints):
         raise FpgCoreConfigError("unknown opening constraint ID")
     scoring = scoring_registry()
     group_keys = {group.key for group in config.floor_plan_scoring.groups}

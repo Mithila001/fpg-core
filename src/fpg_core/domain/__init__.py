@@ -22,8 +22,8 @@ from .buildable_space import (
     UsableLandConstraints,
     ValidationLimits,
 )
-from .candidate import CandidatePoint
-from .candidate_grid import CandidateMap, ResolvedCandidateGrid
+from .candidate import CandidatePoint, HallwayRoomCountRange
+from .candidate_grid import CandidateMap, CandidateSearchSpace, ResolvedCandidateGrid
 from .circulation import (
     CirculationGrid,
     CirculationGridNode,
@@ -69,6 +69,7 @@ __all__ = [
     "BuildableSpaceStage",
     "CandidateMap",
     "CandidatePoint",
+    "CandidateSearchSpace",
     "CirculationGrid",
     "CirculationGridNode",
     "CirculationRouteRule",
@@ -88,6 +89,7 @@ __all__ = [
     "FloorWidthAlignment",
     "GridRoutingCostProfile",
     "HallwayClassification",
+    "HallwayRoomCountRange",
     "HallwayTrafficClass",
     "LandEdge",
     "LandSide",

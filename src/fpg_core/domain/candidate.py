@@ -8,6 +8,28 @@ from .floor_plan_spec import RoomId, RoomType
 
 
 @dataclass(frozen=True, slots=True)
+class HallwayRoomCountRange:
+    """Allowed number of distinct hallway rooms in one candidate trial.
+
+    Candidate generation always requires at least one hallway room. ``maximum``
+    is prepared by Floor Plan Preprocessing and consumed by Candidate Search.
+    """
+
+    maximum: int
+    minimum: int = 1
+
+    def __post_init__(self) -> None:
+        if isinstance(self.minimum, bool) or not isinstance(self.minimum, int):
+            raise TypeError("minimum must be an integer.")
+        if isinstance(self.maximum, bool) or not isinstance(self.maximum, int):
+            raise TypeError("maximum must be an integer.")
+        if self.minimum != 1:
+            raise ValueError("Hallway room-count minimum must always be 1.")
+        if self.maximum < self.minimum:
+            raise ValueError("maximum must be at least 1.")
+
+
+@dataclass(frozen=True, slots=True)
 class CandidatePoint:
     """A reusable room hint coordinate passed between generation features."""
 
@@ -43,7 +65,12 @@ class CandidatePoint:
 
     @property
     def point_key(self) -> str:
-        """Stable point identity including the hallway hint index."""
+        """Stable point identity.
+
+        Current Candidate Search creates one point per room, so generated points
+        use ``hint_index=1``. The index remains in the shared contract for
+        compatibility with existing downstream feature data.
+        """
 
         return f"{self.room_id}[{self.hint_index}]"
 

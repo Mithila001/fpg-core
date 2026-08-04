@@ -95,7 +95,7 @@ def _floor_project_unit_limit(
     collect_details: bool,
     records: list[NormalizationRecord],
 ) -> tuple[float, int]:
-    if isinstance(value, bool):
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
         raise NormalizationError(f"{field_name} must be numeric, not boolean")
     try:
         raw = float(value)

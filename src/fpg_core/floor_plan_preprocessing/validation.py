@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from collections import Counter
 
-from ..domain import FloorPlanGenerationSpec, RoomType
+from ..domain import RoomType
 from .config import (
     ExcessAttachedBathroomPolicy,
     PreprocessingPolicy,
@@ -13,6 +13,7 @@ from .config import (
 from .context import NormalizedRequest, PreparedReferenceData, PreprocessingContext
 from .contracts import (
     FloorLimits,
+    PreparedGenerationInput,
     PreprocessingInput,
     PreprocessingRequest,
     RequestedRoom,
@@ -41,14 +42,19 @@ def _finite_number(value: object, field: str, *, positive: bool = False) -> floa
     return number
 
 
+def _positive_integer(value: object, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise InputValidationError(f"{field} must be an integer")
+    if value < 1:
+        raise InputValidationError(f"{field} must be at least 1")
+    return value
+
+
 def _validate_attached_bathroom_count(
     request: PreprocessingRequest,
     policy: PreprocessingPolicy,
 ) -> None:
-    if (
-        policy.excess_attached_bathrooms
-        is not ExcessAttachedBathroomPolicy.REJECT
-    ):
+    if policy.excess_attached_bathrooms is not ExcessAttachedBathroomPolicy.REJECT:
         return
 
     bedroom_count = sum(
@@ -64,9 +70,7 @@ def _validate_attached_bathroom_count(
             f"Requested {attached_bathroom_count} attached bathroom(s), "
             f"but only {bedroom_count} bedroom(s) were provided. "
             "Each attached bathroom requires a unique bedroom.",
-            code=(
-                PreprocessingErrorCode.ATTACHED_BATHROOM_COUNT_EXCEEDS_BEDROOMS
-            ),
+            code=PreprocessingErrorCode.ATTACHED_BATHROOM_COUNT_EXCEEDS_BEDROOMS,
             details={
                 "bedroom_count": bedroom_count,
                 "attached_bathroom_count": attached_bathroom_count,
@@ -86,11 +90,10 @@ def validate_input(value: PreprocessingInput) -> None:
     _finite_number(request.floor_limits.max_length, "max_length", positive=True)
     if not request.rooms:
         raise InputValidationError("At least one requested room is required")
+
     for index, room in enumerate(request.rooms):
         if not isinstance(room, RequestedRoom):
-            raise InputValidationError(
-                f"rooms[{index}] must be a RequestedRoom"
-            )
+            raise InputValidationError(f"rooms[{index}] must be a RequestedRoom")
         if room.id is not None and not isinstance(room.id, str):
             raise InputValidationError(f"rooms[{index}].id must be a string or None")
         if room.room_type not in value.config.allowed_client_room_types:
@@ -102,6 +105,7 @@ def validate_input(value: PreprocessingInput) -> None:
                     "room_type": room.room_type.value,
                 },
             )
+
     counts = Counter(room.room_type for room in request.rooms)
     invalid_counts = [
         {
@@ -121,10 +125,9 @@ def validate_input(value: PreprocessingInput) -> None:
             code=PreprocessingErrorCode.INVALID_ROOM_COUNT,
             details={"room_counts": invalid_counts},
         )
+
     if not isinstance(value.config, PreprocessingPolicy):
-        raise InputValidationError(
-            "config must be a PreprocessingConfig"
-        )
+        raise InputValidationError("config must be a PreprocessingConfig")
     for index, size_item in enumerate(value.reference_data.room_sizes):
         if not isinstance(size_item, RoomSizeReference):
             raise InputValidationError(
@@ -146,21 +149,37 @@ def validate_input(value: PreprocessingInput) -> None:
 def validate_policy(policy: PreprocessingPolicy) -> None:
     if not isinstance(policy, PreprocessingPolicy):
         raise InputValidationError("policy must be a PreprocessingPolicy")
-    minimum = _finite_number(policy.min_aspect_ratio, "min_aspect_ratio", positive=True)
-    maximum = _finite_number(policy.max_aspect_ratio, "max_aspect_ratio", positive=True)
+    minimum = _finite_number(
+        policy.min_aspect_ratio,
+        "min_aspect_ratio",
+        positive=True,
+    )
+    maximum = _finite_number(
+        policy.max_aspect_ratio,
+        "max_aspect_ratio",
+        positive=True,
+    )
     if minimum > maximum:
         raise InputValidationError("min_aspect_ratio cannot exceed max_aspect_ratio")
     _finite_number(policy.floor_area_buffer, "floor_area_buffer")
     if policy.floor_area_buffer < 0:
         raise InputValidationError("floor_area_buffer cannot be negative")
     _finite_number(policy.hallway_area_buffer, "hallway_area_buffer", positive=True)
-    if (
-        isinstance(policy.hallway_count, bool)
-        or not isinstance(policy.hallway_count, int)
-        or policy.hallway_count < 0
-    ):
-        raise InputValidationError("hallway_count must be a non-negative integer")
+    _positive_integer(
+        policy.max_hallway_room_count,
+        "max_hallway_room_count",
+    )
     _finite_number(policy.hallway_min_width, "hallway_min_width", positive=True)
+
+    spacing = _positive_integer(
+        policy.candidate_search_grid_spacing,
+        "candidate_search_grid_spacing",
+    )
+    if spacing % 2 != 0:
+        raise InputValidationError(
+            "candidate_search_grid_spacing must be an even project-unit value"
+        )
+
     _finite_number(
         policy.max_aspect_residual_units,
         "max_aspect_residual_units",
@@ -172,7 +191,8 @@ def validate_policy(policy: PreprocessingPolicy) -> None:
 
 
 def validate_normalized_request(
-    request: NormalizedRequest, policy: PreprocessingPolicy
+    request: NormalizedRequest,
+    policy: PreprocessingPolicy,
 ) -> None:
     if not policy.min_aspect_ratio <= request.aspect_ratio <= policy.max_aspect_ratio:
         raise InputValidationError(
@@ -244,10 +264,57 @@ def validate_context(context: PreprocessingContext) -> None:
     if floor_area > context.maximum_target_area + 1e-9:
         raise ContextValidationError("Selected floor exceeds maximum target area")
 
+    floor_width = int(context.floor.width)
+    floor_length = int(context.floor.length)
+    space = context.candidate_search_space
+    spacing = space.grid_spacing
+    expected_width = floor_width - (floor_width % spacing)
+    expected_length = floor_length - (floor_length % spacing)
+    expected_origin_x = (floor_width - expected_width) / 2
+    expected_origin_y = (floor_length - expected_length) / 2
+
+    if space.width != expected_width or space.length != expected_length:
+        raise ContextValidationError(
+            "Candidate Search space does not use direct divisible shrinking"
+        )
+    if not math.isclose(
+        float(space.origin_x),
+        expected_origin_x,
+        rel_tol=0.0,
+        abs_tol=1e-9,
+    ) or not math.isclose(
+        float(space.origin_y),
+        expected_origin_y,
+        rel_tol=0.0,
+        abs_tol=1e-9,
+    ):
+        raise ContextValidationError(
+            "Candidate Search space is not centered inside the selected floor"
+        )
+    if float(space.origin_x) < 0 or float(space.origin_y) < 0:
+        raise ContextValidationError("Candidate Search origin cannot be negative")
+    if float(space.max_x) > floor_width or float(space.max_y) > floor_length:
+        raise ContextValidationError(
+            "Candidate Search space extends outside the selected floor"
+        )
+
+    hallway_count = sum(
+        room.room_type is RoomType.HALLWAY for room in context.rooms
+    )
+    if hallway_count != context.hallway_room_count_range.maximum:
+        raise ContextValidationError(
+            "Prepared hallway room identities do not match the hallway range maximum"
+        )
+
 
 def validate_output(
-    specification: FloorPlanGenerationSpec, policy: PreprocessingPolicy
+    prepared: PreparedGenerationInput,
+    policy: PreprocessingPolicy,
 ) -> None:
+    if not isinstance(prepared, PreparedGenerationInput):
+        raise OutputValidationError("Output must be a PreparedGenerationInput")
+    specification = prepared.generation_spec
+
     if specification.floor.width <= 0 or specification.floor.length <= 0:
         raise OutputValidationError("Final floor dimensions must be positive")
     if not float(specification.floor.width).is_integer() or not float(
@@ -258,6 +325,7 @@ def validate_output(
         )
     if not specification.rooms:
         raise OutputValidationError("Final specification must contain rooms")
+
     ids = [str(room.id) for room in specification.rooms]
     if len(ids) != len(set(ids)):
         raise OutputValidationError("Final room IDs must be unique")
@@ -269,8 +337,25 @@ def validate_output(
             "Final specification is missing required room types: "
             + ", ".join(sorted(item.value for item in missing))
         )
-    if room_types.count(RoomType.HALLWAY) < policy.hallway_count:
-        raise OutputValidationError("Final specification has too few hallways")
+
+    hallway_count = room_types.count(RoomType.HALLWAY)
+    if hallway_count != policy.max_hallway_room_count:
+        raise OutputValidationError(
+            "Final specification must contain exactly max_hallway_room_count "
+            "potential hallway rooms"
+        )
+    if prepared.hallway_room_count_range != policy.hallway_room_count_range:
+        raise OutputValidationError(
+            "Output hallway room-count range does not match preprocessing config"
+        )
+    if (
+        prepared.candidate_search_space.grid_spacing
+        != policy.candidate_search_grid_spacing
+    ):
+        raise OutputValidationError(
+            "Output Candidate Search spacing does not match preprocessing config"
+        )
+
     known_ids = set(ids)
     for room in specification.rooms:
         size = room.size
