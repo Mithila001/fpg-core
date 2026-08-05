@@ -3,7 +3,7 @@
 Floor Plan Preprocessing converts client room requests and configuration data into:
 
 1. a validated generation-specification template,
-2. a centered Candidate Search space,
+2. an exact centered candidate grid,
 3. the allowed hallway-room count range.
 
 The feature has no dependency on Candidate Search internals. It communicates through shared contracts from `fpg_core.domain`.
@@ -58,13 +58,13 @@ minimum = 1
 maximum = 3
 ```
 
-## Centered divisible search space
+## Centered divisible candidate grid
 
-After selecting the actual floor, preprocessing shrinks each search-space axis directly:
+After selecting the actual floor, preprocessing shrinks each grid axis directly:
 
 ```text
-search_extent = floor_extent - (floor_extent % grid_spacing)
-origin = (floor_extent - search_extent) / 2
+grid_extent = floor_extent - (floor_extent % grid_spacing)
+origin = (floor_extent - grid_extent) / 2
 ```
 
 Example:
@@ -73,8 +73,8 @@ Example:
 selected floor = 121 x 83
 spacing        = 6
 
-search width   = 121 - (121 % 6) = 120
-search length  = 83  - (83  % 6) = 78
+grid width     = 121 - (121 % 6) = 120
+grid length    = 83  - (83  % 6) = 78
 origin x       = (121 - 120) / 2 = 0.5
 origin y       = (83  - 78)  / 2 = 2.5
 ```
@@ -87,6 +87,21 @@ Y: 2.5, 8.5, 14.5, ..., 80.5
 ```
 
 This is an equal trim from opposite sides. The actual floor is not changed.
+
+Preprocessing resolves these positions into one `ResolvedCandidateGrid` and
+passes that exact object to downstream features. The full outer grid is kept,
+but Candidate Search only uses non-edge nodes for hint points:
+
+```text
+X X X X X
+X O O O X
+X O O O X
+X X X X X
+```
+
+`X` nodes are forbidden for hint points. `O` nodes are selectable. Because
+points are selected without replacement, `candidate_search_grid_spacing` is the
+minimum possible distance between two generated hint points.
 
 ## Hallway room identities
 
@@ -126,15 +141,18 @@ Production result fields:
 
 ```python
 prepared.generation_spec
-prepared.candidate_search_space
+prepared.candidate_grid
 prepared.hallway_room_count_range
 ```
+
+`prepared.candidate_search_space` remains as a compatibility view derived from
+the prepared grid.
 
 DEBUG additionally provides:
 
 ```python
 execution.details.floor_selection
-execution.details.candidate_search_space_selection
+execution.details.candidate_grid_selection
 execution.details.hallway_room_count_range
 ```
 
@@ -152,7 +170,7 @@ prepared = preprocessing_execution.result
 
 targets = build_candidate_search_targets(prepared.generation_spec)
 settings = CandidateSearchSettings(
-    search_space=prepared.candidate_search_space,
+    grid=prepared.candidate_grid,
     hallway_room_count_range=prepared.hallway_room_count_range,
     max_grid_node_count=250_000,
     trial_count=500,

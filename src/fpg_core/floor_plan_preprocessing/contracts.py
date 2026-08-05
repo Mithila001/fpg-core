@@ -9,6 +9,7 @@ from ..domain import (
     FeatureExecution,
     FloorPlanGenerationSpec,
     HallwayRoomCountRange,
+    ResolvedCandidateGrid,
     RoomRelationSpec,
     RoomType,
 )
@@ -102,36 +103,56 @@ class FloorSelection:
 
 
 @dataclass(frozen=True, slots=True)
-class CandidateSearchSpaceSelection:
-    """DEBUG explanation of the centered Candidate Search rectangle."""
+class CandidateGridSelection:
+    """DEBUG explanation of the grid prepared for downstream features."""
 
     floor_width: int
     floor_length: int
-    search_space: CandidateSearchSpace
+    grid: ResolvedCandidateGrid
 
     @property
-    def removed_width(self) -> int:
-        return self.floor_width - self.search_space.width
+    def removed_width(self) -> float:
+        return self.floor_width - float(self.grid.width)
 
     @property
-    def removed_length(self) -> int:
-        return self.floor_length - self.search_space.length
+    def removed_length(self) -> float:
+        return self.floor_length - float(self.grid.length)
 
     @property
     def left_trim(self) -> float:
-        return float(self.search_space.origin_x)
+        return float(self.grid.origin_x)
 
     @property
     def right_trim(self) -> float:
-        return self.floor_width - float(self.search_space.max_x)
+        return self.floor_width - float(self.grid.max_x)
 
     @property
     def front_trim(self) -> float:
-        return float(self.search_space.origin_y)
+        return float(self.grid.origin_y)
 
     @property
     def back_trim(self) -> float:
-        return self.floor_length - float(self.search_space.max_y)
+        return self.floor_length - float(self.grid.max_y)
+
+    @property
+    def edge_node_count(self) -> int:
+        return self.grid.node_count - self.grid.interior_node_count
+
+    @property
+    def search_space(self) -> CandidateSearchSpace:
+        """Compatibility view of the rectangle used to prepare ``grid``."""
+
+        return CandidateSearchSpace(
+            origin_x=self.grid.origin_x,
+            origin_y=self.grid.origin_y,
+            width=int(self.grid.width),
+            length=int(self.grid.length),
+            grid_spacing=int(self.grid.grid_spacing),
+        )
+
+
+# Backward-compatible name for callers that only need the selection report.
+CandidateSearchSpaceSelection = CandidateGridSelection
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,10 +164,14 @@ class PreprocessingReport:
     relation_decisions: tuple[RelationDecision, ...]
     selected_room_size: str
     floor_selection: FloorSelection
-    candidate_search_space_selection: CandidateSearchSpaceSelection
+    candidate_search_space_selection: CandidateGridSelection
     hallway_room_count_range: HallwayRoomCountRange
     applied_defaults: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
+
+    @property
+    def candidate_grid_selection(self) -> CandidateGridSelection:
+        return self.candidate_search_space_selection
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,8 +185,20 @@ class PreparedGenerationInput:
     """
 
     generation_spec: FloorPlanGenerationSpec
-    candidate_search_space: CandidateSearchSpace
+    candidate_grid: ResolvedCandidateGrid
     hallway_room_count_range: HallwayRoomCountRange
+
+    @property
+    def candidate_search_space(self) -> CandidateSearchSpace:
+        """Compatibility view derived from the prepared candidate grid."""
+
+        return CandidateSearchSpace(
+            origin_x=self.candidate_grid.origin_x,
+            origin_y=self.candidate_grid.origin_y,
+            width=int(self.candidate_grid.width),
+            length=int(self.candidate_grid.length),
+            grid_spacing=int(self.candidate_grid.grid_spacing),
+        )
 
     def generation_spec_for_candidate(
         self,
@@ -171,13 +208,9 @@ class PreparedGenerationInput:
 
         if not isinstance(candidate, CandidateMap):
             raise TypeError("candidate must be a CandidateMap instance.")
-        if (
-            candidate.grid.x_positions != self.candidate_search_space.x_positions()
-            or candidate.grid.y_positions != self.candidate_search_space.y_positions()
-        ):
+        if candidate.grid != self.candidate_grid:
             raise ValueError(
-                "Candidate grid does not match the search space prepared by "
-                "preprocessing."
+                "Candidate grid does not match the grid prepared by preprocessing."
             )
 
         prepared_rooms = {str(room.id): room for room in self.generation_spec.rooms}

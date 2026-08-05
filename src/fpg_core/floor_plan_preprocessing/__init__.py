@@ -11,6 +11,7 @@ from .config import (
     canonical_aspect_ratio,
 )
 from .contracts import (
+    CandidateGridSelection,
     CandidateSearchSpaceSelection,
     FloorLimits,
     FloorSelection,
@@ -43,6 +44,7 @@ from .exceptions import (
 __all__ = [
     "AspectRatioRule",
     "BusinessRuleError",
+    "CandidateGridSelection",
     "CandidateSearchSpaceSelection",
     "ContextValidationError",
     "ExcessAttachedBathroomPolicy",

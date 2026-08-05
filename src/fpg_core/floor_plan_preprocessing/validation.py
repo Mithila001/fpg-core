@@ -266,36 +266,45 @@ def validate_context(context: PreprocessingContext) -> None:
 
     floor_width = int(context.floor.width)
     floor_length = int(context.floor.length)
-    space = context.candidate_search_space
-    spacing = space.grid_spacing
+    grid = context.candidate_grid
+    spacing = int(grid.grid_spacing)
     expected_width = floor_width - (floor_width % spacing)
     expected_length = floor_length - (floor_length % spacing)
     expected_origin_x = (floor_width - expected_width) / 2
     expected_origin_y = (floor_length - expected_length) / 2
 
-    if space.width != expected_width or space.length != expected_length:
+    if int(grid.width) != expected_width or int(grid.length) != expected_length:
         raise ContextValidationError(
-            "Candidate Search space does not use direct divisible shrinking"
+            "Candidate grid does not use direct divisible shrinking"
         )
     if not math.isclose(
-        float(space.origin_x),
+        float(grid.origin_x),
         expected_origin_x,
         rel_tol=0.0,
         abs_tol=1e-9,
     ) or not math.isclose(
-        float(space.origin_y),
+        float(grid.origin_y),
         expected_origin_y,
         rel_tol=0.0,
         abs_tol=1e-9,
     ):
         raise ContextValidationError(
-            "Candidate Search space is not centered inside the selected floor"
+            "Candidate grid is not centered inside the selected floor"
         )
-    if float(space.origin_x) < 0 or float(space.origin_y) < 0:
-        raise ContextValidationError("Candidate Search origin cannot be negative")
-    if float(space.max_x) > floor_width or float(space.max_y) > floor_length:
+    if float(grid.origin_x) < 0 or float(grid.origin_y) < 0:
+        raise ContextValidationError("Candidate grid origin cannot be negative")
+    if float(grid.max_x) > floor_width or float(grid.max_y) > floor_length:
         raise ContextValidationError(
-            "Candidate Search space extends outside the selected floor"
+            "Candidate grid extends outside the selected floor"
+        )
+    if grid.interior_node_count < 1:
+        raise ContextValidationError(
+            "Candidate grid must contain at least one non-edge hint-point node"
+        )
+    if grid.interior_node_count < len(context.rooms):
+        raise ContextValidationError(
+            "Candidate grid does not contain enough non-edge nodes for all "
+            "prepared room identities"
         )
 
     hallway_count = sum(
@@ -349,7 +358,7 @@ def validate_output(
             "Output hallway room-count range does not match preprocessing config"
         )
     if (
-        prepared.candidate_search_space.grid_spacing
+        prepared.candidate_grid.grid_spacing
         != policy.candidate_search_grid_spacing
     ):
         raise OutputValidationError(

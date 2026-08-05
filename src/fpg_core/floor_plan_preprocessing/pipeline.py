@@ -3,7 +3,7 @@ from __future__ import annotations
 from ..domain import FloorPlanGenerationSpec
 from .business_rules import apply_business_rules
 from .contracts import (
-    CandidateSearchSpaceSelection,
+    CandidateGridSelection,
     FloorSelection,
     PreparedGenerationInput,
     PreprocessingInput,
@@ -54,7 +54,7 @@ def run_pipeline(
     )
     result = PreparedGenerationInput(
         generation_spec=specification,
-        candidate_search_space=context.candidate_search_space,
+        candidate_grid=context.candidate_grid,
         hallway_room_count_range=context.hallway_room_count_range,
     )
     validate_output(result, value.policy)
@@ -87,10 +87,10 @@ def run_pipeline(
                 - context.floor.width * context.floor.length
             ),
         ),
-        candidate_search_space_selection=CandidateSearchSpaceSelection(
+        candidate_search_space_selection=CandidateGridSelection(
             floor_width=int(context.floor.width),
             floor_length=int(context.floor.length),
-            search_space=context.candidate_search_space,
+            grid=context.candidate_grid,
         ),
         hallway_room_count_range=context.hallway_room_count_range,
         applied_defaults=context.request.applied_defaults,

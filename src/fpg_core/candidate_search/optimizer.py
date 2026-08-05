@@ -39,7 +39,7 @@ class CandidateSearchSession:
 
         self._input = search_input
         self._grid = build_candidate_grid(
-            search_space=search_input.settings.search_space,
+            grid=search_input.settings.grid,
             max_grid_node_count=search_input.settings.max_grid_node_count,
         )
         self._study = optuna.create_study(
@@ -238,7 +238,7 @@ def _sample_candidate_map(
         targets=targets,
         hallway_room_count=hallway_room_count,
     )
-    available_flat_node_indexes = list(range(grid.node_count))
+    available_flat_node_indexes = list(grid.interior_flat_node_indexes())
     points: list[CandidatePoint] = []
 
     for target_index, target in active_targets:
@@ -291,7 +291,7 @@ def _candidate_from_trial_parameters(
         targets=targets,
         hallway_room_count=hallway_room_count,
     )
-    available_flat_node_indexes = list(range(grid.node_count))
+    available_flat_node_indexes = list(grid.interior_flat_node_indexes())
     points: list[CandidatePoint] = []
 
     for target_index, target in active_targets:

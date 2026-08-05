@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from ..domain import CandidateSearchSpace, ResolvedCandidateGrid
+from ..domain import ResolvedCandidateGrid
 
 
 def build_candidate_grid(
     *,
-    search_space: CandidateSearchSpace,
+    grid: ResolvedCandidateGrid,
     max_grid_node_count: int,
 ) -> ResolvedCandidateGrid:
-    """Build the exact centered grid prepared by preprocessing."""
+    """Validate and return the exact grid prepared by preprocessing.
 
-    if not isinstance(search_space, CandidateSearchSpace):
-        raise TypeError("search_space must be a CandidateSearchSpace instance.")
+    The historical function name is retained for API stability. Candidate Search
+    no longer creates X/Y positions from dimensions or spacing.
+    """
+
+    if not isinstance(grid, ResolvedCandidateGrid):
+        raise TypeError("grid must be a ResolvedCandidateGrid instance.")
     if isinstance(max_grid_node_count, bool) or not isinstance(
         max_grid_node_count, int
     ):
@@ -19,14 +23,15 @@ def build_candidate_grid(
     if max_grid_node_count < 9:
         raise ValueError("max_grid_node_count must be at least 9.")
 
-    grid = ResolvedCandidateGrid(
-        x_positions=search_space.x_positions(),
-        y_positions=search_space.y_positions(),
-    )
     if grid.node_count > max_grid_node_count:
         raise ValueError(
-            "Resolved candidate grid contains "
+            "Prepared candidate grid contains "
             f"{grid.node_count} nodes, exceeding max_grid_node_count="
             f"{max_grid_node_count}."
+        )
+    if grid.interior_node_count < 1:
+        raise ValueError(
+            "Prepared candidate grid must contain at least one non-edge "
+            "hint-point node."
         )
     return grid

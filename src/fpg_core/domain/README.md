@@ -6,7 +6,8 @@
 
 ### `CandidateSearchSpace`
 
-Describes the exact centered search rectangle prepared from a selected floor:
+Describes the centered divisible rectangle used while preprocessing prepares the
+exact grid:
 
 ```python
 CandidateSearchSpace(
@@ -20,6 +21,9 @@ CandidateSearchSpace(
 
 Width and length are exact spacing multiples. Origins may use half project units when an odd-sized floor is trimmed equally from both sides.
 
+New feature-to-feature flow should pass the resulting `ResolvedCandidateGrid`
+instead of asking Candidate Search to resolve this rectangle again.
+
 ### `HallwayRoomCountRange`
 
 Defines the number of distinct hallway rooms Candidate Search may activate in one trial:
@@ -32,7 +36,9 @@ The minimum is always `1`.
 
 ### `ResolvedCandidateGrid`
 
-Contains exact X/Y nodes, uniform spacing, coordinate/index conversion, and row-major flat-node conversion.
+Contains the exact X/Y nodes prepared by Floor Plan Preprocessing, uniform
+spacing, coordinate/index conversion, row-major flat-node conversion, edge-node
+checks, and non-edge hint-node indexes.
 
 ### `CandidatePoint`
 
@@ -40,7 +46,8 @@ Represents one room hint coordinate. Current Candidate Search creates one point 
 
 ### `CandidateMap`
 
-Couples candidate points to the resolved grid and rejects off-grid or overlapping points.
+Couples candidate points to the resolved grid and rejects off-grid, overlapping,
+or outer-edge hint points.
 
 ## Other contract groups
 

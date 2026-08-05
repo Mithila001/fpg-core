@@ -230,6 +230,24 @@ class ResolvedCandidateGrid:
         return self.x_node_count * self.y_node_count
 
     @property
+    def interior_x_node_count(self) -> int:
+        """Number of non-edge nodes on the X axis."""
+
+        return max(0, self.x_node_count - 2)
+
+    @property
+    def interior_y_node_count(self) -> int:
+        """Number of non-edge nodes on the Y axis."""
+
+        return max(0, self.y_node_count - 2)
+
+    @property
+    def interior_node_count(self) -> int:
+        """Number of grid nodes that may be used as room hint points."""
+
+        return self.interior_x_node_count * self.interior_y_node_count
+
+    @property
     def minimum_x_gap(self) -> Coordinate:
         return self.grid_spacing
 
@@ -265,6 +283,27 @@ class ResolvedCandidateGrid:
         self._validate_x_index(x_index)
         self._validate_y_index(y_index)
         return (y_index * self.x_node_count) + x_index
+
+    def is_edge_node(self, x_index: int, y_index: int) -> bool:
+        """Return whether a node lies on the outer grid boundary."""
+
+        self._validate_x_index(x_index)
+        self._validate_y_index(y_index)
+        return (
+            x_index == 0
+            or x_index == self.x_node_count - 1
+            or y_index == 0
+            or y_index == self.y_node_count - 1
+        )
+
+    def interior_flat_node_indexes(self) -> tuple[int, ...]:
+        """Return row-major indexes for all non-edge hint-point nodes."""
+
+        return tuple(
+            self.flat_node_index(x_index, y_index)
+            for y_index in range(1, self.y_node_count - 1)
+            for x_index in range(1, self.x_node_count - 1)
+        )
 
     def indexes_from_flat_node_index(self, flat_node_index: int) -> tuple[int, int]:
         """Return ``(x_index, y_index)`` for a row-major flat node index."""
@@ -343,6 +382,11 @@ class CandidateMap:
                     f"Candidate point '{point.point_key}' is not aligned with the "
                     "resolved grid."
                 ) from exc
+            if self.grid.is_edge_node(*node):
+                raise ValueError(
+                    f"Candidate point '{point.point_key}' cannot use an outer "
+                    "grid-edge node."
+                )
             previous = occupied.get(node)
             if previous is not None:
                 raise ValueError(

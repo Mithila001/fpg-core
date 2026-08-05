@@ -206,23 +206,15 @@ def _validate_routing(
 ) -> _ValidatedRouting:
     if not isinstance(grid, ResolvedCandidateGrid):
         raise TypeError("Candidate scoring requires a ResolvedCandidateGrid.")
-    if not math.isclose(
-        float(grid.width),
-        data.floor_width,
-        rel_tol=0.0,
-        abs_tol=1e-9,
+    tolerance = 1e-9
+    if (
+        float(grid.origin_x) < -tolerance
+        or float(grid.origin_y) < -tolerance
+        or float(grid.max_x) > data.floor_width + tolerance
+        or float(grid.max_y) > data.floor_length + tolerance
     ):
         raise ValueError(
-            "Candidate grid width must match the specification floor width."
-        )
-    if not math.isclose(
-        float(grid.length),
-        data.floor_length,
-        rel_tol=0.0,
-        abs_tol=1e-9,
-    ):
-        raise ValueError(
-            "Candidate grid length must match the specification floor length."
+            "Candidate grid must be contained within the specification floor."
         )
     if grid.node_count > _MAX_GRID_NODE_COUNT:
         raise ValueError(

@@ -272,7 +272,7 @@
       "hallway_area_buffer": 900.0,
       "max_hallway_room_count": 3,
       "hallway_min_width": 10.0,
-      "candidate_search_grid_spacing": 6,
+      "candidate_search_grid_spacing": 20,
       "default_room_size": "medium",
       "max_aspect_residual_units": 6.0,
       "min_aspect_ratio": 0.5,

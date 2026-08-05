@@ -7,6 +7,7 @@ from dataclasses import replace
 from ..domain import (
     CandidateSearchSpace,
     FloorSpec,
+    ResolvedCandidateGrid,
     RoomId,
     RoomRelationSpec,
     RoomSizeSpec,
@@ -146,10 +147,10 @@ def _select_floor(
 
 
 
-def _build_candidate_search_space(
+def _build_candidate_grid(
     floor: FloorSpec,
     policy: PreprocessingPolicy,
-) -> CandidateSearchSpace:
+) -> ResolvedCandidateGrid:
     floor_width = int(floor.width)
     floor_length = int(floor.length)
     spacing = policy.candidate_search_grid_spacing
@@ -160,12 +161,16 @@ def _build_candidate_search_space(
     origin_y = (floor_length - search_length) / 2
 
     try:
-        return CandidateSearchSpace(
+        search_space = CandidateSearchSpace(
             origin_x=origin_x,
             origin_y=origin_y,
             width=search_width,
             length=search_length,
             grid_spacing=spacing,
+        )
+        return ResolvedCandidateGrid(
+            x_positions=search_space.x_positions(),
+            y_positions=search_space.y_positions(),
         )
     except (TypeError, ValueError) as exc:
         raise FloorPreparationError(
@@ -302,7 +307,7 @@ def build_preprocessing_context(
     )
     floor, minimum, maximum = _select_floor(final_request, non_hallways, policy)
     rooms = _add_hallways(final_request, non_hallways, floor, policy)
-    candidate_search_space = _build_candidate_search_space(floor, policy)
+    candidate_grid = _build_candidate_grid(floor, policy)
     relations, relation_decisions = _prepare_relations(
         rooms,
         reference_data,
@@ -317,6 +322,6 @@ def build_preprocessing_context(
         relation_decisions=relation_decisions,
         minimum_required_area=minimum,
         maximum_target_area=maximum,
-        candidate_search_space=candidate_search_space,
+        candidate_grid=candidate_grid,
         hallway_room_count_range=policy.hallway_room_count_range,
     )

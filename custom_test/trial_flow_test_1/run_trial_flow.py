@@ -369,7 +369,7 @@ def run() -> dict[str, Any]:
         CandidateSearchInput(
             targets=build_candidate_search_targets(specification_template),
             settings=CandidateSearchSettings(
-                search_space=prepared.candidate_search_space,
+                grid=prepared.candidate_grid,
                 hallway_room_count_range=prepared.hallway_room_count_range,
                 max_grid_node_count=search_data["max_grid_node_count"],
                 trial_count=search_data["trial_count"],
@@ -416,7 +416,7 @@ def run() -> dict[str, Any]:
         "summary": {
             "floor_width": specification_template.floor.width,
             "floor_length": specification_template.floor.length,
-            "candidate_grid_spacing": prepared.candidate_search_space.grid_spacing,
+            "candidate_grid_spacing": prepared.candidate_grid.grid_spacing,
             "candidate_grid_node_count": search.result.candidate.grid.node_count,
             "hallway_room_count_range": prepared.hallway_room_count_range,
             "template_room_count": len(specification_template.rooms),

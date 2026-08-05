@@ -1,4 +1,4 @@
-from ..domain import CandidateSearchSpace, HallwayRoomCountRange
+from ..domain import CandidateSearchSpace, HallwayRoomCountRange, ResolvedCandidateGrid
 from .api import (
     CandidateSearchSession,
     build_candidate_grid,
@@ -33,6 +33,7 @@ __all__ = [
     "CandidateSuggestion",
     "CandidateTrialResult",
     "HallwayRoomCountRange",
+    "ResolvedCandidateGrid",
     "build_candidate_grid",
     "build_candidate_search_targets",
     "search_candidates",

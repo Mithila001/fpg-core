@@ -9,27 +9,26 @@ Candidate Search uses Optuna to place one hint point per active room on the exac
 - Every trial has between `1` and the prepared maximum number of hallway rooms.
 - The hallway count is sampled once globally per trial.
 - Points are sampled without replacement, so overlap cannot occur.
+- Outer grid nodes are never used as hint points.
+- `grid_spacing` is the minimum possible distance between two hint points.
 
 ## Required preprocessing data
 
 Candidate Search receives shared domain contracts:
 
 ```python
-CandidateSearchSpace
+ResolvedCandidateGrid
 HallwayRoomCountRange
 ```
 
-The search space includes:
+The grid already contains:
 
 ```python
-origin_x
-origin_y
-width
-length
-grid_spacing
+x_positions
+y_positions
 ```
 
-Candidate Search does not shrink or reposition the floor. That work belongs to Floor Plan Preprocessing.
+Candidate Search does not create or resolve the grid. That work belongs to Floor Plan Preprocessing.
 
 ## Complete usage
 
@@ -46,7 +45,7 @@ prepared = preprocessing_execution.result
 
 targets = build_candidate_search_targets(prepared.generation_spec)
 settings = CandidateSearchSettings(
-    search_space=prepared.candidate_search_space,
+    grid=prepared.candidate_grid,
     hallway_room_count_range=prepared.hallway_room_count_range,
     max_grid_node_count=250_000,
     trial_count=500,
@@ -114,7 +113,7 @@ execution.result.hallway_room_count
 
 For each trial Candidate Search:
 
-1. creates the complete available-node list,
+1. creates the available-node list from non-edge grid nodes,
 2. samples one remaining-node rank for each active room,
 3. removes the selected node,
 4. continues with the smaller remaining-node pool.
@@ -127,7 +126,7 @@ Therefore all completed candidates are non-overlapping by construction. `Candida
 
 - unique room IDs,
 - exactly `hallway_room_count_range.maximum` hallway targets,
-- enough grid nodes for all non-hallway rooms plus the maximum hallway count.
+- enough non-edge grid nodes for all non-hallway rooms plus the maximum hallway count.
 
 Use the helper to avoid manual target mistakes:
 
@@ -146,12 +145,19 @@ search length    = 78
 grid spacing     = 6
 ```
 
-Candidate Search creates:
+Floor Plan Preprocessing creates:
 
 ```text
 X nodes: 0.5, 6.5, ..., 120.5  -> 21 nodes
 Y nodes: 2.5, 8.5, ..., 80.5   -> 14 nodes
 Total: 294 nodes
+```
+
+Candidate Search ignores the first and last X/Y node rows. In this example the
+selectable hint-point count is:
+
+```text
+(21 - 2) x (14 - 2) = 228 non-edge nodes
 ```
 
 ## Incremental session API
@@ -205,21 +211,18 @@ Use `candidate_spec` for the solver or later room-generation stages.
 
 ## Migration
 
-Remove these old Candidate Search settings:
-
-```python
-search_space_width
-search_space_length
-grid_spacing
-min_hallway_hint_count
-max_hallway_hint_count
-```
-
-Replace them with:
+Replace the old prepared rectangle input:
 
 ```python
 search_space=prepared.candidate_search_space
+```
+
+with the exact prepared grid:
+
+```python
+grid=prepared.candidate_grid
 hallway_room_count_range=prepared.hallway_room_count_range
 ```
 
-The old behavior where one hallway target produced multiple indexed hint points has been removed.
+`build_candidate_grid()` remains available but now only validates and returns an
+already prepared grid. It no longer generates X/Y positions.
