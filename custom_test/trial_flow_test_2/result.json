@@ -1,0 +1,2214 @@
+{
+  "run": {
+    "input_file": "input.json",
+    "started_at_utc": "2026-08-07T18:18:06.665010+00:00",
+    "completed_at_utc": "2026-08-07T18:18:19.020272+00:00",
+    "duration_seconds": 12.35526690000006
+  },
+  "summary": {
+    "initial_status": "feasible",
+    "refinement_a_status": "feasible",
+    "refinement_b_status": "optimal",
+    "post_processing_status": "success",
+    "opening_status": "optimal",
+    "room_count": 8,
+    "opening_count": 6,
+    "total_score": 100.0,
+    "passed_critical": true
+  },
+  "generation_specification": {
+    "floor": {
+      "width": 80.0,
+      "length": 60.0
+    },
+    "rooms": [
+      {
+        "id": "veranda",
+        "room_type": "veranda",
+        "name": "Front Veranda",
+        "size": {
+          "min_width": 8.0,
+          "max_width": 25.0,
+          "min_area": 80.0,
+          "max_area": 400.0,
+          "width_axis": "any"
+        }
+      },
+      {
+        "id": "living",
+        "room_type": "living_room",
+        "name": "Living Room",
+        "size": {
+          "min_width": 15.0,
+          "max_width": 40.0,
+          "min_area": 300.0,
+          "max_area": 1200.0,
+          "width_axis": "any"
+        }
+      },
+      {
+        "id": "kitchen",
+        "room_type": "kitchen",
+        "name": "Kitchen",
+        "size": {
+          "min_width": 10.0,
+          "max_width": 30.0,
+          "min_area": 150.0,
+          "max_area": 600.0,
+          "width_axis": "any"
+        }
+      },
+      {
+        "id": "dining",
+        "room_type": "dining_room",
+        "name": "Dining Room",
+        "size": {
+          "min_width": 10.0,
+          "max_width": 30.0,
+          "min_area": 150.0,
+          "max_area": 600.0,
+          "width_axis": "any"
+        }
+      },
+      {
+        "id": "bedroom_1",
+        "room_type": "bedroom",
+        "name": "Bedroom 1",
+        "size": {
+          "min_width": 10.0,
+          "max_width": 28.0,
+          "min_area": 150.0,
+          "max_area": 600.0,
+          "width_axis": "any"
+        }
+      },
+      {
+        "id": "bedroom_2",
+        "room_type": "bedroom",
+        "name": "Bedroom 2",
+        "size": {
+          "min_width": 10.0,
+          "max_width": 28.0,
+          "min_area": 150.0,
+          "max_area": 600.0,
+          "width_axis": "any"
+        }
+      },
+      {
+        "id": "bathroom",
+        "room_type": "bathroom",
+        "name": "Bathroom",
+        "size": {
+          "min_width": 8.0,
+          "max_width": 18.0,
+          "min_area": 80.0,
+          "max_area": 250.0,
+          "width_axis": "any"
+        }
+      },
+      {
+        "id": "hallway",
+        "room_type": "hallway",
+        "name": "Hallway",
+        "size": {
+          "min_width": 8.0,
+          "max_width": 10.0,
+          "min_area": 80.0,
+          "max_area": 500.0,
+          "width_axis": "any"
+        }
+      }
+    ],
+    "room_relations": [
+      {
+        "source_room_id": "kitchen",
+        "target_room_ids": [
+          "dining"
+        ],
+        "match_policy": "and",
+        "strength": "hard"
+      },
+      {
+        "source_room_id": "living",
+        "target_room_ids": [
+          "veranda"
+        ],
+        "match_policy": "and",
+        "strength": "hard"
+      },
+      {
+        "source_room_id": "bedroom_1",
+        "target_room_ids": [
+          "bathroom"
+        ],
+        "match_policy": "or",
+        "strength": "soft"
+      }
+    ]
+  },
+  "initial_solve": {
+    "result": {
+      "status": "feasible",
+      "floor_plan": {
+        "boundary": {
+          "points": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 60.0
+            },
+            {
+              "x": 0.0,
+              "y": 60.0
+            }
+          ]
+        },
+        "rooms": [
+          {
+            "id": "veranda",
+            "room_type": "veranda",
+            "name": "Front Veranda",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "living",
+            "room_type": "living_room",
+            "name": "Living Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "kitchen",
+            "room_type": "kitchen",
+            "name": "Kitchen",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "dining",
+            "room_type": "dining_room",
+            "name": "Dining Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_1",
+            "room_type": "bedroom",
+            "name": "Bedroom 1",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_2",
+            "room_type": "bedroom",
+            "name": "Bedroom 2",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bathroom",
+            "room_type": "bathroom",
+            "name": "Bathroom",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "hallway",
+            "room_type": "hallway",
+            "name": "Hallway",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          }
+        ],
+        "openings": [],
+        "identity_redirects": {},
+        "applied_transformations": []
+      },
+      "profile_name": "initial_generation",
+      "message": "CP-SAT found a feasible floor plan"
+    },
+    "details": {
+      "raw_status": "FEASIBLE",
+      "wall_time_seconds": 8.0015123,
+      "objective_value": 26.0,
+      "best_objective_bound": 16.0,
+      "conflicts": 42187,
+      "branches": 141987,
+      "applied_hard_constraints": [
+        "aspect_ratio",
+        "room_relations",
+        "attached_bathroom_pairing",
+        "minimum_coverage",
+        "hallway_connectivity",
+        "hallway_dimensions",
+        "front_anchor",
+        "back_exposure",
+        "garage_placement",
+        "boundary_placement"
+      ],
+      "applied_soft_constraints": [
+        "room_relations",
+        "floor_cluster_position",
+        "dead_space",
+        "bathroom_depth",
+        "kitchen_back_exposure"
+      ],
+      "penalty_terms": [
+        "soft_relation:bedroom_1->any",
+        "floor_cluster_position:horizontal_center",
+        "floor_cluster_position:front",
+        "dead_space",
+        "bathroom_depth:bathroom",
+        "kitchen_back_exposure"
+      ]
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 8.008143400000336
+    }
+  },
+  "refinement_a": {
+    "result": {
+      "status": "feasible",
+      "floor_plan": {
+        "boundary": {
+          "points": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 60.0
+            },
+            {
+              "x": 0.0,
+              "y": 60.0
+            }
+          ]
+        },
+        "rooms": [
+          {
+            "id": "veranda",
+            "room_type": "veranda",
+            "name": "Front Veranda",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "living",
+            "room_type": "living_room",
+            "name": "Living Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "kitchen",
+            "room_type": "kitchen",
+            "name": "Kitchen",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "dining",
+            "room_type": "dining_room",
+            "name": "Dining Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_1",
+            "room_type": "bedroom",
+            "name": "Bedroom 1",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_2",
+            "room_type": "bedroom",
+            "name": "Bedroom 2",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bathroom",
+            "room_type": "bathroom",
+            "name": "Bathroom",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "hallway",
+            "room_type": "hallway",
+            "name": "Hallway",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          }
+        ],
+        "openings": [],
+        "identity_redirects": {},
+        "applied_transformations": []
+      },
+      "profile_name": "refinement_a",
+      "message": "CP-SAT found a feasible floor plan"
+    },
+    "details": {
+      "raw_status": "FEASIBLE",
+      "wall_time_seconds": 4.0006358,
+      "objective_value": 84.0,
+      "best_objective_bound": 34.0,
+      "conflicts": 15081,
+      "branches": 39949,
+      "applied_hard_constraints": [
+        "aspect_ratio",
+        "room_relations",
+        "attached_bathroom_pairing",
+        "minimum_coverage",
+        "hallway_connectivity",
+        "hallway_dimensions",
+        "front_anchor",
+        "back_exposure",
+        "garage_placement",
+        "boundary_placement"
+      ],
+      "applied_soft_constraints": [
+        "room_relations",
+        "seed_stability",
+        "floor_cluster_position",
+        "dead_space",
+        "bathroom_depth",
+        "kitchen_back_exposure"
+      ],
+      "penalty_terms": [
+        "soft_relation:bedroom_1->any",
+        "seed_stability:veranda",
+        "seed_stability:living",
+        "seed_stability:kitchen",
+        "seed_stability:dining",
+        "seed_stability:bedroom_1",
+        "seed_stability:bedroom_2",
+        "seed_stability:bathroom",
+        "seed_stability:hallway",
+        "floor_cluster_position:horizontal_center",
+        "floor_cluster_position:front",
+        "dead_space",
+        "bathroom_depth:bathroom",
+        "kitchen_back_exposure"
+      ]
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 4.00689919999968
+    }
+  },
+  "refinement_b": {
+    "result": {
+      "status": "optimal",
+      "floor_plan": {
+        "boundary": {
+          "points": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 60.0
+            },
+            {
+              "x": 0.0,
+              "y": 60.0
+            }
+          ]
+        },
+        "rooms": [
+          {
+            "id": "veranda",
+            "room_type": "veranda",
+            "name": "Front Veranda",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "living",
+            "room_type": "living_room",
+            "name": "Living Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "kitchen",
+            "room_type": "kitchen",
+            "name": "Kitchen",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "dining",
+            "room_type": "dining_room",
+            "name": "Dining Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_1",
+            "room_type": "bedroom",
+            "name": "Bedroom 1",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_2",
+            "room_type": "bedroom",
+            "name": "Bedroom 2",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bathroom",
+            "room_type": "bathroom",
+            "name": "Bathroom",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "hallway",
+            "room_type": "hallway",
+            "name": "Hallway",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          }
+        ],
+        "openings": [],
+        "identity_redirects": {},
+        "applied_transformations": [
+          "wall_extension:v1"
+        ]
+      },
+      "profile_name": "refinement_b",
+      "message": "CP-SAT found an optimal floor plan"
+    },
+    "details": {
+      "raw_status": "OPTIMAL",
+      "wall_time_seconds": 0.0204678,
+      "objective_value": 42.0,
+      "best_objective_bound": 42.0,
+      "conflicts": 0,
+      "branches": 337,
+      "applied_hard_constraints": [
+        "aspect_ratio",
+        "room_relations",
+        "attached_bathroom_pairing",
+        "minimum_coverage",
+        "hallway_connectivity",
+        "hallway_dimensions",
+        "front_anchor",
+        "back_exposure",
+        "garage_placement",
+        "boundary_placement"
+      ],
+      "applied_soft_constraints": [
+        "room_relations",
+        "seed_stability",
+        "dead_space",
+        "bathroom_depth",
+        "kitchen_back_exposure"
+      ],
+      "penalty_terms": [
+        "soft_relation:bedroom_1->any",
+        "seed_stability:veranda",
+        "seed_stability:living",
+        "seed_stability:kitchen",
+        "seed_stability:dining",
+        "seed_stability:bedroom_1",
+        "seed_stability:bedroom_2",
+        "seed_stability:bathroom",
+        "seed_stability:hallway",
+        "dead_space",
+        "bathroom_depth:bathroom",
+        "kitchen_back_exposure"
+      ]
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 0.026354199999332195
+    }
+  },
+  "post_processing": {
+    "result": {
+      "status": "success",
+      "floor_plan": {
+        "boundary": {
+          "points": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 60.0
+            },
+            {
+              "x": 0.0,
+              "y": 60.0
+            }
+          ]
+        },
+        "rooms": [
+          {
+            "id": "veranda",
+            "room_type": "veranda",
+            "name": "Front Veranda",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "living",
+            "room_type": "living_room",
+            "name": "Living Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "kitchen",
+            "room_type": "kitchen",
+            "name": "Kitchen",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "dining",
+            "room_type": "dining_room",
+            "name": "Dining Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_1",
+            "room_type": "bedroom",
+            "name": "Bedroom 1",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_2",
+            "room_type": "bedroom",
+            "name": "Bedroom 2",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bathroom",
+            "room_type": "bathroom",
+            "name": "Bathroom",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "hallway",
+            "room_type": "hallway",
+            "name": "Hallway",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          }
+        ],
+        "openings": [],
+        "identity_redirects": {},
+        "applied_transformations": [
+          "wall_extension:v1"
+        ]
+      },
+      "failure": null
+    },
+    "details": {
+      "executions": [
+        {
+          "processor_id": "veranda_adjustment",
+          "status": "not_applicable",
+          "duration_ms": 0.0,
+          "rolled_back": false,
+          "outcome": {
+            "status": "not_applicable",
+            "message": "no veranda placeholder association exists",
+            "affected_room_ids": [],
+            "identity_redirects": {},
+            "metrics": {}
+          },
+          "failure": null
+        },
+        {
+          "processor_id": "wall_extension",
+          "status": "no_change",
+          "duration_ms": 1.909200000227429,
+          "rolled_back": false,
+          "outcome": {
+            "status": "no_change",
+            "message": "no eligible wall could be extended",
+            "affected_room_ids": [],
+            "identity_redirects": {},
+            "metrics": {}
+          },
+          "failure": null
+        },
+        {
+          "processor_id": "remove_placeholder_rooms",
+          "status": "not_applicable",
+          "duration_ms": 0.0,
+          "rolled_back": false,
+          "outcome": {
+            "status": "not_applicable",
+            "message": "no placeholder rooms exist",
+            "affected_room_ids": [],
+            "identity_redirects": {},
+            "metrics": {}
+          },
+          "failure": null
+        },
+        {
+          "processor_id": "hallway_merge",
+          "status": "not_applicable",
+          "duration_ms": 0.0,
+          "rolled_back": false,
+          "outcome": {
+            "status": "not_applicable",
+            "message": "fewer than two hallways exist",
+            "affected_room_ids": [],
+            "identity_redirects": {},
+            "metrics": {}
+          },
+          "failure": null
+        },
+        {
+          "processor_id": "grid_snap",
+          "status": "no_change",
+          "duration_ms": 5.191200001718244,
+          "rolled_back": false,
+          "outcome": {
+            "status": "no_change",
+            "message": "geometry was already grid-aligned",
+            "affected_room_ids": [],
+            "identity_redirects": {},
+            "metrics": {}
+          },
+          "failure": null
+        },
+        {
+          "processor_id": "rectilinear_simplification",
+          "status": "no_change",
+          "duration_ms": 0.032300000384566374,
+          "rolled_back": false,
+          "outcome": {
+            "status": "no_change",
+            "message": "no redundant rectilinear vertices were found",
+            "affected_room_ids": [],
+            "identity_redirects": {},
+            "metrics": {
+              "non_rectilinear_rooms": 0
+            }
+          },
+          "failure": null
+        }
+      ]
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 0.013599300000350922
+    }
+  },
+  "opening_generation": {
+    "result": {
+      "status": "optimal",
+      "floor_plan": {
+        "boundary": {
+          "points": [
+            {
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 0.0
+            },
+            {
+              "x": 80.0,
+              "y": 60.0
+            },
+            {
+              "x": 0.0,
+              "y": 60.0
+            }
+          ]
+        },
+        "rooms": [
+          {
+            "id": "veranda",
+            "room_type": "veranda",
+            "name": "Front Veranda",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "living",
+            "room_type": "living_room",
+            "name": "Living Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 36.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 13.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "kitchen",
+            "room_type": "kitchen",
+            "name": "Kitchen",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "dining",
+            "room_type": "dining_room",
+            "name": "Dining Room",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_1",
+            "room_type": "bedroom",
+            "name": "Bedroom 1",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 34.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bedroom_2",
+            "room_type": "bedroom",
+            "name": "Bedroom 2",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 0.0
+                },
+                {
+                  "x": 36.0,
+                  "y": 18.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 18.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "bathroom",
+            "room_type": "bathroom",
+            "name": "Bathroom",
+            "boundary": {
+              "points": [
+                {
+                  "x": 14.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 14.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          },
+          {
+            "id": "hallway",
+            "room_type": "hallway",
+            "name": "Hallway",
+            "boundary": {
+              "points": [
+                {
+                  "x": 24.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 52.0
+                },
+                {
+                  "x": 66.0,
+                  "y": 60.0
+                },
+                {
+                  "x": 24.0,
+                  "y": 60.0
+                }
+              ]
+            },
+            "role": "standard",
+            "parent_room_id": null,
+            "metadata": {
+              "source_room_ids": [],
+              "applied_transformations": []
+            }
+          }
+        ],
+        "openings": [
+          {
+            "id": "opening_0098df7a23d3ff70e0fb",
+            "opening_type": "window",
+            "purpose": "daylight",
+            "start": {
+              "x": 17.0,
+              "y": 0.0
+            },
+            "end": {
+              "x": 33.0,
+              "y": 0.0
+            },
+            "connected_room_ids": [
+              "bedroom_2"
+            ]
+          },
+          {
+            "id": "opening_5ebe8690da94524417c9",
+            "opening_type": "door",
+            "purpose": "room_connection",
+            "start": {
+              "x": 26.0,
+              "y": 52.0
+            },
+            "end": {
+              "x": 34.0,
+              "y": 52.0
+            },
+            "connected_room_ids": [
+              "bedroom_1",
+              "hallway"
+            ]
+          },
+          {
+            "id": "opening_6dcb95a52b4a7025c72e",
+            "opening_type": "door",
+            "purpose": "main_entrance",
+            "start": {
+              "x": 47.0,
+              "y": 13.0
+            },
+            "end": {
+              "x": 55.0,
+              "y": 13.0
+            },
+            "connected_room_ids": [
+              "living",
+              "veranda"
+            ]
+          },
+          {
+            "id": "opening_8debc141c3e8a7732a61",
+            "opening_type": "door",
+            "purpose": "room_connection",
+            "start": {
+              "x": 47.0,
+              "y": 52.0
+            },
+            "end": {
+              "x": 55.0,
+              "y": 52.0
+            },
+            "connected_room_ids": [
+              "hallway",
+              "living"
+            ]
+          },
+          {
+            "id": "opening_b1a6acfee4431c8900fd",
+            "opening_type": "door",
+            "purpose": "room_connection",
+            "start": {
+              "x": 36.0,
+              "y": 22.0
+            },
+            "end": {
+              "x": 36.0,
+              "y": 30.0
+            },
+            "connected_room_ids": [
+              "kitchen",
+              "living"
+            ]
+          },
+          {
+            "id": "opening_c2686a3ca093fabe2ec1",
+            "opening_type": "door",
+            "purpose": "secondary_entrance",
+            "start": {
+              "x": 41.0,
+              "y": 60.0
+            },
+            "end": {
+              "x": 49.0,
+              "y": 60.0
+            },
+            "connected_room_ids": [
+              "hallway"
+            ]
+          }
+        ],
+        "identity_redirects": {},
+        "applied_transformations": [
+          "wall_extension:v1"
+        ]
+      },
+      "profile_name": "default_openings",
+      "message": "CP-SAT found an optimal opening layout"
+    },
+    "details": {
+      "raw_status": "OPTIMAL",
+      "wall_time_seconds": 0.2915955,
+      "objective_value": 1087599583.0,
+      "best_objective_bound": 1087599583.0,
+      "conflicts": 67,
+      "branches": 9033,
+      "analyzed_wall_count": 18,
+      "demand_counts": {
+        "interior_doors": 5,
+        "exterior_doors": 1,
+        "windows": 5
+      },
+      "candidate_counts": {
+        "interior_doors": 5,
+        "exterior_doors": 1,
+        "windows": 1
+      },
+      "selected_counts": {
+        "interior_doors": 4,
+        "exterior_doors": 1,
+        "windows": 1
+      },
+      "applied_constraints": [
+        "shared_placement",
+        "room_door_limits"
+      ],
+      "objective_terms": [
+        "select:interior:0:shared:horizontal:130:360:660:living-veranda:main_entrance",
+        "select:interior:1:shared:horizontal:520:240:360:bedroom_1-hallway:preferred_hallway",
+        "select:interior:2:shared:horizontal:520:360:660:hallway-living:other_interior",
+        "select:interior:3:shared:vertical:360:180:340:kitchen-living:other_interior",
+        "select:interior:4:shared:vertical:360:340:520:bedroom_1-living:other_interior",
+        "select:secondary_entrance:secondary_entrance",
+        "select:window:bedroom_2:window",
+        "wall_preference_and_centering"
+      ],
+      "issues": [
+        {
+          "code": "not_selected",
+          "message": "The shared model omitted this optional opening",
+          "feature_id": "interior_doors",
+          "demand_id": "interior:4:shared:vertical:360:340:520:bedroom_1-living",
+          "wall_id": null
+        },
+        {
+          "code": "no_candidate",
+          "message": "No valid wall candidate was available for this optional opening",
+          "feature_id": "windows",
+          "demand_id": "window:bedroom_1",
+          "wall_id": null
+        },
+        {
+          "code": "no_candidate",
+          "message": "No valid wall candidate was available for this optional opening",
+          "feature_id": "windows",
+          "demand_id": "window:dining",
+          "wall_id": null
+        },
+        {
+          "code": "no_candidate",
+          "message": "No valid wall candidate was available for this optional opening",
+          "feature_id": "windows",
+          "demand_id": "window:kitchen",
+          "wall_id": null
+        },
+        {
+          "code": "no_candidate",
+          "message": "No valid wall candidate was available for this optional opening",
+          "feature_id": "windows",
+          "demand_id": "window:living",
+          "wall_id": null
+        }
+      ]
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 0.29675329999918176
+    }
+  },
+  "floor_plan_scoring": {
+    "result": {
+      "total_score": 100.0,
+      "passed_critical": true,
+      "critical_failure": null
+    },
+    "details": {
+      "group_results": [
+        {
+          "group_key": "critical",
+          "status": "completed",
+          "normalized_maximum": 50.0,
+          "raw_score": 100.0,
+          "contribution": 50.0
+        },
+        {
+          "group_key": "functional",
+          "status": "completed",
+          "normalized_maximum": 50.0,
+          "raw_score": 99.99999999999999,
+          "contribution": 49.99999999999999
+        }
+      ],
+      "evaluator_results": [
+        {
+          "evaluator_key": "geometry_integrity",
+          "group_key": "critical",
+          "status": "completed",
+          "raw_score": 100.0,
+          "configured_weight": 1.0,
+          "normalized_weight": 0.25,
+          "contribution": 12.5,
+          "threshold": 100.0,
+          "passed_threshold": true,
+          "findings": [],
+          "metrics": [
+            {
+              "name": "invalid_polygon_count",
+              "value": 0,
+              "unit": null
+            },
+            {
+              "name": "diagonal_polygon_count",
+              "value": 0,
+              "unit": null
+            },
+            {
+              "name": "containment_failure_count",
+              "value": 0,
+              "unit": null
+            },
+            {
+              "name": "overlap_count",
+              "value": 0,
+              "unit": null
+            }
+          ],
+          "visualization_payload": null
+        },
+        {
+          "evaluator_key": "required_adjacency",
+          "group_key": "critical",
+          "status": "completed",
+          "raw_score": 100.0,
+          "configured_weight": 1.0,
+          "normalized_weight": 0.25,
+          "contribution": 12.5,
+          "threshold": 100.0,
+          "passed_threshold": true,
+          "findings": [],
+          "metrics": [
+            {
+              "name": "evaluated_relation_count",
+              "value": 2,
+              "unit": null
+            },
+            {
+              "name": "failed_relation_count",
+              "value": 0,
+              "unit": null
+            }
+          ],
+          "visualization_payload": null
+        },
+        {
+          "evaluator_key": "enclosed_voids",
+          "group_key": "critical",
+          "status": "completed",
+          "raw_score": 100.0,
+          "configured_weight": 1.0,
+          "normalized_weight": 0.25,
+          "contribution": 12.5,
+          "threshold": 100.0,
+          "passed_threshold": true,
+          "findings": [],
+          "metrics": [
+            {
+              "name": "enclosed_void_count",
+              "value": 0,
+              "unit": null
+            },
+            {
+              "name": "enclosed_void_area",
+              "value": 0,
+              "unit": "square_units"
+            }
+          ],
+          "visualization_payload": {
+            "area_tolerance": 1e-06,
+            "voids": []
+          }
+        },
+        {
+          "evaluator_key": "inward_recess",
+          "group_key": "critical",
+          "status": "completed",
+          "raw_score": 100.0,
+          "configured_weight": 1.0,
+          "normalized_weight": 0.25,
+          "contribution": 12.5,
+          "threshold": 100.0,
+          "passed_threshold": true,
+          "findings": [],
+          "metrics": [
+            {
+              "name": "pocket_count",
+              "value": 0,
+              "unit": null
+            },
+            {
+              "name": "violating_recess_count",
+              "value": 0,
+              "unit": null
+            },
+            {
+              "name": "maximum_recess_length",
+              "value": 0.0,
+              "unit": "units"
+            }
+          ],
+          "visualization_payload": {
+            "maximum_length": 20.0,
+            "tolerance": 1e-06,
+            "pockets": []
+          }
+        },
+        {
+          "evaluator_key": "living_room_balance",
+          "group_key": "functional",
+          "status": "completed",
+          "raw_score": 100.0,
+          "configured_weight": 1.0,
+          "normalized_weight": 0.3333333333333333,
+          "contribution": 16.666666666666664,
+          "threshold": null,
+          "passed_threshold": null,
+          "findings": [],
+          "metrics": [
+            {
+              "name": "living_area",
+              "value": 1170.0,
+              "unit": "square_units"
+            },
+            {
+              "name": "other_room_area",
+              "value": 1950.0,
+              "unit": "square_units"
+            },
+            {
+              "name": "living_to_other_ratio",
+              "value": 0.6,
+              "unit": null
+            }
+          ],
+          "visualization_payload": null
+        },
+        {
+          "evaluator_key": "bedroom_quality",
+          "group_key": "functional",
+          "status": "completed",
+          "raw_score": 100.0,
+          "configured_weight": 1.0,
+          "normalized_weight": 0.3333333333333333,
+          "contribution": 16.666666666666664,
+          "threshold": null,
+          "passed_threshold": null,
+          "findings": [],
+          "metrics": [
+            {
+              "name": "bedroom_count",
+              "value": 2,
+              "unit": null
+            },
+            {
+              "name": "area_compliance_score",
+              "value": 100.0,
+              "unit": null
+            },
+            {
+              "name": "consistency_score",
+              "value": 100.0,
+              "unit": null
+            },
+            {
+              "name": "relative_area_spread",
+              "value": 0.0,
+              "unit": null
+            }
+          ],
+          "visualization_payload": null
+        },
+        {
+          "evaluator_key": "kitchen_dining_proximity",
+          "group_key": "functional",
+          "status": "completed",
+          "raw_score": 100.0,
+          "configured_weight": 1.0,
+          "normalized_weight": 0.3333333333333333,
+          "contribution": 16.666666666666664,
+          "threshold": null,
+          "passed_threshold": null,
+          "findings": [],
+          "metrics": [
+            {
+              "name": "maximum_shared_boundary",
+              "value": 16.0,
+              "unit": "units"
+            },
+            {
+              "name": "minimum_centroid_distance",
+              "value": 11.0,
+              "unit": "units"
+            }
+          ],
+          "visualization_payload": null
+        }
+      ],
+      "findings": []
+    },
+    "metadata": {
+      "mode": "debug",
+      "duration_seconds": 0.003006400000231224
+    }
+  }
+}

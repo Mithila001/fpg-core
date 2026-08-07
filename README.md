@@ -2,25 +2,15 @@
 
 Reusable Python domain contracts and algorithms for automated residential floor-plan generation.
 
-## Version 0.2.0 grid model
+## Documentation
 
-Candidate Search now creates an adaptive, whole-project-unit grid that covers the exact preprocessed floor boundary. The resulting `CandidateMap` carries both the selected hint points and the `ResolvedCandidateGrid` used by Candidate Search, Candidate Circulation, and Relationship Quality.
-
-Key rules:
-
-- `10` project units = `1` metre; `1` project unit = `10` centimetres.
-- Preprocessing floors maximum floor limits to whole project units.
-- Candidate Search is configured by `long_axis_node_count`, not a physical `grid_resolution`.
-- Candidate points are always selected from the resolved grid.
-- Overlapping points are rejected inside Candidate Search before downstream features run.
-- Candidate Circulation and Relationship Quality consume the same grid from `CandidateMap`.
-- Zone Suitability and Spatial Distribution remain independent analysis overlays.
-
-See:
-
-- `docs/INSTALL_AND_VERIFY.md`
-- `docs/ADAPTIVE_CANDIDATE_GRID.md`
-- `docs/MIGRATION_0.1_TO_0.2.md`
+- [Consumer feature reference](docs/PACKAGE_FEATURE_REFERENCE.md) documents every
+  feature independently, including public APIs, contracts, configuration, outputs,
+  errors, and examples.
+- [Install and verify](docs/INSTALL_AND_VERIFY.md) covers local installation and
+  package checks.
+- [Trial flow test 2](custom_test/trial_flow_test_2/README.md) demonstrates the
+  solver profiles, post-processing, openings, and final scoring with realistic JSON.
 
 ## Install
 
@@ -41,10 +31,14 @@ python -m mypy src/fpg_core
 Use feature-level public modules:
 
 ```python
-from fpg_core.floor_plan_preprocessing.api import prepare_generation_input
-from fpg_core.candidate_search.api import search_candidates
-from fpg_core.candidate_circulation.api import refine_candidate_circulation
-from fpg_core.candidate_scoring.api import evaluate_candidate
+from fpg_core.floor_plan_preprocessing import prepare_generation_input
+from fpg_core.candidate_search import search_candidates
+from fpg_core.candidate_circulation import refine_candidate_circulation
+from fpg_core.candidate_scoring import evaluate_candidate
+from fpg_core.floor_plan_solver import generate_floor_plan
+from fpg_core.floor_plan_post_processing import post_process_floor_plan
+from fpg_core.floor_plan_openings import generate_openings
+from fpg_core.floor_plan_scoring import score_floor_plan
 ```
 
 Shared contracts are available from `fpg_core.domain`.
