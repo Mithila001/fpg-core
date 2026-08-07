@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...domain import RoomType
+from ....domain import RoomType
 from ...model import ModelContext
 from ..base import ConstraintSettings, require_room_types
 from ..geometry import adjacency_literal

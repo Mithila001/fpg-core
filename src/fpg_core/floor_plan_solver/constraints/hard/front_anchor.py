@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...domain import RoomType
+from ....domain import RoomType
 from ...model import ModelContext, RoomVariables
 from ..base import ConstraintSettings, require_room_types
 

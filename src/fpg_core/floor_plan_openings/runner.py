@@ -83,7 +83,9 @@ def solve_opening_model(
     source: FloorPlan,
     built: BuiltOpeningModel,
     profile: OpeningGenerationProfile,
-) -> OpeningGenerationResult:
+    *,
+    collect_details: bool,
+) -> tuple[OpeningGenerationResult, OpeningDiagnostics | None]:
     solver: Any = cp_model.CpSolver()
     config = profile.solver
     solver.parameters.max_time_in_seconds = float(config.max_time_seconds)
@@ -112,6 +114,15 @@ def solve_opening_model(
             extraction_issue = None
     else:
         extraction_issue = None
+
+    result = OpeningGenerationResult(
+        status=status,
+        floor_plan=floor_plan,
+        profile_name=profile.name,
+        message=_message(status),
+    )
+    if not collect_details:
+        return result, None
 
     try:
         raw_status = solver.StatusName(status_code)
@@ -152,10 +163,4 @@ def solve_opening_model(
         objective_terms=tuple(built.context.objective_terms),
         issues=tuple(issues),
     )
-    return OpeningGenerationResult(
-        status=status,
-        floor_plan=floor_plan,
-        profile_name=profile.name,
-        message=_message(status),
-        diagnostics=diagnostics,
-    )
+    return result, diagnostics

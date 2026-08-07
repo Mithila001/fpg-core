@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import TypeAlias
 
-from .domain import FloorPlan, FloorPlanGenerationSpec, RoomId
+from ..domain import FeatureExecution, FloorPlan, FloorPlanGenerationSpec, RoomId
 from .profiles import GenerationProfile
 
 
@@ -63,8 +64,13 @@ class FloorPlanSolveResult:
     floor_plan: FloorPlan | None
     profile_name: str
     message: str
-    diagnostics: SolverDiagnostics
 
     @property
     def solved(self) -> bool:
         return self.status.has_solution and self.floor_plan is not None
+
+
+FloorPlanSolveExecution: TypeAlias = FeatureExecution[
+    FloorPlanSolveResult,
+    SolverDiagnostics,
+]

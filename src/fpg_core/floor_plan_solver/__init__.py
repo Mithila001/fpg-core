@@ -11,7 +11,9 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .api import FloorPlanSolver, generate_floor_plan
+    from .config import PreparationConfig, SolverConfig
     from .contracts import (
+        FloorPlanSolveExecution,
         FloorPlanSolveRequest,
         FloorPlanSolveResult,
         RoomPlacementHint,
@@ -33,7 +35,10 @@ if TYPE_CHECKING:
 _EXPORTS: dict[str, tuple[str, str]] = {
     "FloorPlanSolver": (".api", "FloorPlanSolver"),
     "generate_floor_plan": (".api", "generate_floor_plan"),
+    "PreparationConfig": (".config", "PreparationConfig"),
+    "SolverConfig": (".config", "SolverConfig"),
     "FloorPlanSolveRequest": (".contracts", "FloorPlanSolveRequest"),
+    "FloorPlanSolveExecution": (".contracts", "FloorPlanSolveExecution"),
     "FloorPlanSolveResult": (".contracts", "FloorPlanSolveResult"),
     "RoomPlacementHint": (".contracts", "RoomPlacementHint"),
     "SolverDiagnostics": (".contracts", "SolverDiagnostics"),
@@ -52,7 +57,10 @@ _EXPORTS: dict[str, tuple[str, str]] = {
 __all__ = [
     "FloorPlanSolver",
     "generate_floor_plan",
+    "PreparationConfig",
+    "SolverConfig",
     "FloorPlanSolveRequest",
+    "FloorPlanSolveExecution",
     "FloorPlanSolveResult",
     "RoomPlacementHint",
     "SolverDiagnostics",

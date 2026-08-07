@@ -5,8 +5,8 @@ from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Any
 
+from ..domain import RoomType
 from .config import PreparationConfig, SeedPolicy, SeedSource, SolverConfig
-from .domain import RoomType
 from .exceptions import InvalidProfileError
 
 

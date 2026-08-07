@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     )
     from .contracts import (
         OpeningDiagnostics,
+        OpeningGenerationExecution,
         OpeningGenerationRequest,
         OpeningGenerationResult,
         OpeningGenerationStatus,
@@ -36,6 +37,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "ObjectiveConfig": (".config", "ObjectiveConfig"),
     "SolverConfig": (".config", "SolverConfig"),
     "OpeningDiagnostics": (".contracts", "OpeningDiagnostics"),
+    "OpeningGenerationExecution": (".contracts", "OpeningGenerationExecution"),
     "OpeningGenerationRequest": (".contracts", "OpeningGenerationRequest"),
     "OpeningGenerationResult": (".contracts", "OpeningGenerationResult"),
     "OpeningGenerationStatus": (".contracts", "OpeningGenerationStatus"),
@@ -55,6 +57,7 @@ __all__ = [
     "ObjectiveConfig",
     "SolverConfig",
     "OpeningDiagnostics",
+    "OpeningGenerationExecution",
     "OpeningGenerationRequest",
     "OpeningGenerationResult",
     "OpeningGenerationStatus",

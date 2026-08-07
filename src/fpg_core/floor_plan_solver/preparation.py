@@ -6,9 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from .config import SeedSource
-from .contracts import FloorPlanSolveRequest, RoomPlacementHint
-from .domain import (
+from ..domain import (
     FloorPlan,
     Polygon,
     RoomId,
@@ -17,6 +15,8 @@ from .domain import (
     RoomType,
     RoomWidthAxis,
 )
+from .config import SeedSource
+from .contracts import FloorPlanSolveRequest, RoomPlacementHint
 from .exceptions import InvalidSpecificationError, MissingSeedError
 
 

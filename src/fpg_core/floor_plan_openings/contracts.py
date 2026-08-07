@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TypeAlias
 
-from ..domain import FloorPlan
+from ..domain import FeatureExecution, FloorPlan
 from .profiles import OpeningGenerationProfile
 
 
@@ -62,8 +63,13 @@ class OpeningGenerationResult:
     floor_plan: FloorPlan | None
     profile_name: str
     message: str
-    diagnostics: OpeningDiagnostics
 
     @property
     def solved(self) -> bool:
         return self.status.has_solution and self.floor_plan is not None
+
+
+OpeningGenerationExecution: TypeAlias = FeatureExecution[
+    OpeningGenerationResult,
+    OpeningDiagnostics,
+]

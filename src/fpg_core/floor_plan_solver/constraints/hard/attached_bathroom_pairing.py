@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from ...domain import RoomType
+from ....domain import RoomType
 from ...exceptions import InvalidProfileError
 from ...model import ModelContext, RoomVariables
 from ..base import ConstraintSettings, require_room_types

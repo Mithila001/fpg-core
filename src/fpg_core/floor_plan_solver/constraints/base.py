@@ -4,7 +4,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
 
-from ..domain import RoomType
+from ...domain import RoomType
 from ..exceptions import InvalidProfileError
 
 if TYPE_CHECKING:

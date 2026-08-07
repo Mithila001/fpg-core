@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- Floor-plan solver, scoring, post-processing, and openings entry points now return mode-aware `FeatureExecution` values; normal results are available through `execution.result`.
+- Solver and opening diagnostics, scoring evaluator/group analysis, and post-processing execution records are now DEBUG-only `execution.details`.
+- `score_floor_plan` now accepts one `FloorPlanScoringInput` instead of separate floor plan, specification, and profile arguments.
+
+### Added
+
+- Shared `ExecutionMode` support and execution metadata for all four final floor-plan features.
+- Typed execution aliases and feature-specific DEBUG details contracts.
+- Server integration guidance for the new execution contracts.
+
 ## 0.2.0 - 2026-08-04
 
 ### Breaking

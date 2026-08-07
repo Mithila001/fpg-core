@@ -3,8 +3,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from ...domain import RoomType
 from ..context import ScoringContext, shared_boundary_length
-from ..domain import RoomType
 from ..types import EvaluationStatus, EvaluatorKey, EvaluatorResult, ScoreMetric
 from .base import FloorPlanEvaluator
 from .common import clamp_score, require_non_negative, require_positive, typed_settings

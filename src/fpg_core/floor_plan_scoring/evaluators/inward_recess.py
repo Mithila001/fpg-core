@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from shapely.geometry import LineString, MultiPolygon, Polygon
 
+from ...domain import ExecutionMode
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,
@@ -68,10 +69,14 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
                         severity=FindingSeverity.ERROR,
                     ),
                 ),
-                visualization_payload=InwardRecessVisualizationData(
-                    maximum_length=config.maximum_length,
-                    tolerance=config.tolerance,
-                    pockets=(),
+                visualization_payload=(
+                    InwardRecessVisualizationData(
+                        maximum_length=config.maximum_length,
+                        tolerance=config.tolerance,
+                        pockets=(),
+                    )
+                    if context.mode is ExecutionMode.DEBUG
+                    else None
                 ),
             )
 
@@ -117,16 +122,17 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
             pocket_maximum = max(lengths, default=0.0)
             maximum_observed = max(maximum_observed, pocket_maximum)
             violates = pocket_maximum > config.maximum_length + config.tolerance
-            visualized_pockets.append(
-                InwardPocketVisualization(
-                    pocket_index=pocket_index,
-                    points=tuple(
-                        (float(x), float(y)) for x, y in pocket.exterior.coords
-                    ),
-                    measured_length=pocket_maximum,
-                    violates_maximum=violates,
+            if context.mode is ExecutionMode.DEBUG:
+                visualized_pockets.append(
+                    InwardPocketVisualization(
+                        pocket_index=pocket_index,
+                        points=tuple(
+                            (float(x), float(y)) for x, y in pocket.exterior.coords
+                        ),
+                        measured_length=pocket_maximum,
+                        violates_maximum=violates,
+                    )
                 )
-            )
             if violates:
                 violating.append((pocket_index, pocket_maximum))
 
@@ -152,10 +158,14 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
                 ScoreMetric("violating_recess_count", len(violating)),
                 ScoreMetric("maximum_recess_length", maximum_observed, "units"),
             ),
-            visualization_payload=InwardRecessVisualizationData(
-                maximum_length=config.maximum_length,
-                tolerance=config.tolerance,
-                pockets=tuple(visualized_pockets),
+            visualization_payload=(
+                InwardRecessVisualizationData(
+                    maximum_length=config.maximum_length,
+                    tolerance=config.tolerance,
+                    pockets=tuple(visualized_pockets),
+                )
+                if context.mode is ExecutionMode.DEBUG
+                else None
             ),
         )
 

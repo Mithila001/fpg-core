@@ -12,7 +12,7 @@ from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 
-from .domain import FloorPlan, FloorPlanGenerationSpec, RoomType
+from ..domain import ExecutionMode, FloorPlan, FloorPlanGenerationSpec, RoomType
 from .exceptions import ScoringInputError
 
 
@@ -53,6 +53,7 @@ class NormalizedRoom:
 
 @dataclass(frozen=True, slots=True)
 class ScoringContext:
+    mode: ExecutionMode
     floor_width: float
     floor_length: float
     floor_points: tuple[tuple[float, float], ...]
@@ -75,6 +76,8 @@ class ScoringContextFactory:
         self,
         floor_plan: FloorPlan,
         specification: FloorPlanGenerationSpec,
+        *,
+        mode: ExecutionMode,
     ) -> ScoringContext:
         if floor_plan is None:
             raise ScoringInputError("floor_plan cannot be None.")
@@ -150,6 +153,7 @@ class ScoringContextFactory:
             geometry_error = str(exc)
 
         return ScoringContext(
+            mode=mode,
             floor_width=floor_width,
             floor_length=floor_length,
             floor_points=floor_points,

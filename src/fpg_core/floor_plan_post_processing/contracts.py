@@ -4,9 +4,16 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, TypeAlias
 
-from ..domain import FloorPlan, FloorPlanGenerationSpec, Polygon, RoomId
+from ..domain import (
+    ExecutionMode,
+    FeatureExecution,
+    FloorPlan,
+    FloorPlanGenerationSpec,
+    Polygon,
+    RoomId,
+)
 
 
 class PipelineStatus(str, Enum):
@@ -79,6 +86,7 @@ class PostProcessingRequest:
 
 @dataclass(frozen=True)
 class PostProcessingContext:
+    mode: ExecutionMode
     specification: FloorPlanGenerationSpec | None
     floor_boundary: Polygon
     numeric: NumericPolicy
@@ -89,8 +97,18 @@ class PostProcessingContext:
 class PostProcessingResult:
     status: PipelineStatus
     floor_plan: FloorPlan
-    executions: tuple[ProcessorExecution, ...]
     failure: ProcessingFailure | None = None
+
+
+@dataclass(frozen=True)
+class PostProcessingDetails:
+    executions: tuple[ProcessorExecution, ...]
+
+
+PostProcessingExecution: TypeAlias = FeatureExecution[
+    PostProcessingResult,
+    PostProcessingDetails,
+]
 
 
 class FloorPlanProcessor(ABC):

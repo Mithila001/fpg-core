@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ...domain import RoomType
+from ....domain import RoomType
 from ...exceptions import InvalidProfileError
 from ...model import ModelContext
 from ..base import ConstraintSettings, require_room_type_keys, require_room_types

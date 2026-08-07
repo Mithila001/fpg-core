@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import copy
-import time
+from time import perf_counter
 
-from ..domain import FloorPlan
+from ..domain import ExecutionMode, FloorPlan
 from .config import GridSnapConfig, HallwayMergeConfig, WallExtensionConfig
 from .contracts import (
     PipelineStatus,
     PostProcessingContext,
+    PostProcessingDetails,
     PostProcessingRequest,
     PostProcessingResult,
     ProcessingFailure,
@@ -78,9 +79,13 @@ def _validate_processor_config(config: object) -> None:
 
 
 def run_pipeline(
-    request: PostProcessingRequest, registry: ProcessorRegistry
-) -> PostProcessingResult:
+    request: PostProcessingRequest,
+    registry: ProcessorRegistry,
+    *,
+    mode: ExecutionMode,
+) -> tuple[PostProcessingResult, PostProcessingDetails | None]:
     plan = request.floor_plan
+    collect_details = mode is ExecutionMode.DEBUG
     executions: list[ProcessorExecution] = []
     try:
         _preflight(request, registry)
@@ -91,14 +96,14 @@ def run_pipeline(
         )
     except Exception as exc:  # noqa: BLE001
         code = exc.code if isinstance(exc, PostProcessingError) else "invalid_request"
-        return PostProcessingResult(
-            PipelineStatus.FAILED,
-            plan,
-            (),
-            ProcessingFailure(code, str(exc)),
+        failure = ProcessingFailure(code, str(exc))
+        return (
+            PostProcessingResult(PipelineStatus.FAILED, plan, failure),
+            PostProcessingDetails(()) if collect_details else None,
         )
 
     context = PostProcessingContext(
+        mode=mode,
         specification=request.specification,
         floor_boundary=plan.boundary,
         numeric=request.profile.numeric,
@@ -117,29 +122,34 @@ def run_pipeline(
                 f"prerequisites did not succeed: {', '.join(failed_dependencies)}",
                 use.processor_id,
             )
-            executions.append(
-                ProcessorExecution(
-                    use.processor_id, ProcessorStatus.SKIPPED, 0.0, failure=failure
+            if collect_details:
+                executions.append(
+                    ProcessorExecution(
+                        use.processor_id,
+                        ProcessorStatus.SKIPPED,
+                        0.0,
+                        failure=failure,
+                    )
                 )
-            )
             unsuccessful.add(use.processor_id)
             continue
 
         applicable, reason = processor.is_applicable(plan, context, use.config)
         if not applicable:
             outcome = ProcessorOutcome(ProcessorStatus.NOT_APPLICABLE, reason)
-            executions.append(
-                ProcessorExecution(
-                    use.processor_id,
-                    ProcessorStatus.NOT_APPLICABLE,
-                    0.0,
-                    outcome=outcome,
+            if collect_details:
+                executions.append(
+                    ProcessorExecution(
+                        use.processor_id,
+                        ProcessorStatus.NOT_APPLICABLE,
+                        0.0,
+                        outcome=outcome,
+                    )
                 )
-            )
             continue
 
         snapshot = copy.deepcopy(plan)
-        started = time.perf_counter()
+        started = perf_counter() if collect_details else None
         try:
             outcome = processor.process(plan, context, use.config)
             if outcome.status not in {
@@ -157,30 +167,39 @@ def run_pipeline(
                     require_no_placeholders=use.processor_id
                     == "remove_placeholder_rooms",
                 )
-            duration = (time.perf_counter() - started) * 1000
-            executions.append(
-                ProcessorExecution(
-                    use.processor_id, outcome.status, duration, outcome=outcome
+            if collect_details:
+                assert started is not None
+                duration = (perf_counter() - started) * 1000
+                executions.append(
+                    ProcessorExecution(
+                        use.processor_id, outcome.status, duration, outcome=outcome
+                    )
                 )
-            )
         except Exception as exc:  # noqa: BLE001
-            duration = (time.perf_counter() - started) * 1000
+            duration = 0.0
+            if collect_details:
+                assert started is not None
+                duration = (perf_counter() - started) * 1000
             try:
                 _restore(plan, snapshot)
             except RollbackError as rollback_exc:
                 failure = ProcessingFailure(
                     rollback_exc.code, str(rollback_exc), use.processor_id
                 )
-                executions.append(
-                    ProcessorExecution(
-                        use.processor_id,
-                        ProcessorStatus.FAILED,
-                        duration,
-                        failure=failure,
+                if collect_details:
+                    executions.append(
+                        ProcessorExecution(
+                            use.processor_id,
+                            ProcessorStatus.FAILED,
+                            duration,
+                            failure=failure,
+                        )
                     )
-                )
-                return PostProcessingResult(
-                    PipelineStatus.FAILED, plan, tuple(executions), failure
+                return (
+                    PostProcessingResult(PipelineStatus.FAILED, plan, failure),
+                    PostProcessingDetails(tuple(executions))
+                    if collect_details
+                    else None,
                 )
             code = (
                 exc.code
@@ -188,19 +207,23 @@ def run_pipeline(
                 else "unexpected_processor_error"
             )
             failure = ProcessingFailure(code, str(exc), use.processor_id)
-            executions.append(
-                ProcessorExecution(
-                    use.processor_id,
-                    ProcessorStatus.FAILED,
-                    duration,
-                    rolled_back=True,
-                    failure=failure,
+            if collect_details:
+                executions.append(
+                    ProcessorExecution(
+                        use.processor_id,
+                        ProcessorStatus.FAILED,
+                        duration,
+                        rolled_back=True,
+                        failure=failure,
+                    )
                 )
-            )
             unsuccessful.add(use.processor_id)
             if use.required:
-                return PostProcessingResult(
-                    PipelineStatus.FAILED, plan, tuple(executions), failure
+                return (
+                    PostProcessingResult(PipelineStatus.FAILED, plan, failure),
+                    PostProcessingDetails(tuple(executions))
+                    if collect_details
+                    else None,
                 )
 
     try:
@@ -211,7 +234,11 @@ def run_pipeline(
         )
     except PostProcessingError as exc:
         failure = ProcessingFailure(exc.code, str(exc))
-        return PostProcessingResult(
-            PipelineStatus.FAILED, plan, tuple(executions), failure
+        return (
+            PostProcessingResult(PipelineStatus.FAILED, plan, failure),
+            PostProcessingDetails(tuple(executions)) if collect_details else None,
         )
-    return PostProcessingResult(PipelineStatus.SUCCESS, plan, tuple(executions))
+    return (
+        PostProcessingResult(PipelineStatus.SUCCESS, plan),
+        PostProcessingDetails(tuple(executions)) if collect_details else None,
+    )

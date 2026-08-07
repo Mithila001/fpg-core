@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ...domain import RoomType
 from ..context import ScoringContext
-from ..domain import RoomType
 from ..types import EvaluationStatus, EvaluatorKey, EvaluatorResult, ScoreMetric
 from .base import FloorPlanEvaluator
 from .common import clamp_score, require_positive, typed_settings

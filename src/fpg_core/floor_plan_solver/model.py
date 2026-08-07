@@ -5,7 +5,7 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from .domain import RoomWidthAxis
+from ..domain import RoomWidthAxis
 from .preparation import PreparedProblem, PreparedRoom
 from .profiles import GenerationProfile
 

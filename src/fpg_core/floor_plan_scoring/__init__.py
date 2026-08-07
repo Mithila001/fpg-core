@@ -1,6 +1,11 @@
 from .api import score_floor_plan
 from .config import EvaluatorRule, ScoringGroupRule, ScoringProfile
-from .context import ScoringContext, ScoringContextFactory
+from .context import ScoringContext
+from .contracts import (
+    FloorPlanScoringDetails,
+    FloorPlanScoringExecution,
+    FloorPlanScoringInput,
+)
 from .defaults import (
     DEFAULT_SCORING_PROFILE,
     create_default_profile,
@@ -38,7 +43,6 @@ from .exceptions import (
     ScoringConfigurationError,
     ScoringInputError,
 )
-from .manager import FloorPlanScoreManager
 from .registry import EvaluatorRegistry
 from .types import (
     AESTHETIC_GROUP,
@@ -85,7 +89,9 @@ __all__ = [
     "EvaluatorResult",
     "EvaluatorRule",
     "FindingSeverity",
-    "FloorPlanScoreManager",
+    "FloorPlanScoringDetails",
+    "FloorPlanScoringExecution",
+    "FloorPlanScoringInput",
     "FloorPlanScoringError",
     "FloorPlanScoringResult",
     "FloorPlanEvaluator",
@@ -105,7 +111,6 @@ __all__ = [
     "ScoreMetric",
     "ScoringConfigurationError",
     "ScoringContext",
-    "ScoringContextFactory",
     "ScoringGroupResult",
     "ScoringGroupRule",
     "ScoringInputError",
