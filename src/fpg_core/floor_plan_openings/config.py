@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..domain import RoomType
 from .exceptions import OpeningConfigurationError
@@ -126,3 +126,36 @@ class ObjectiveConfig:
     def __post_init__(self) -> None:
         if len(self.tier_order) != len(set(self.tier_order)):
             raise OpeningConfigurationError("objective tiers must be unique")
+
+
+@dataclass(frozen=True, slots=True)
+class FloorPlanOpeningsConfig:
+    """Reusable configuration controlling opening generation behavior."""
+
+    name: str
+    enabled_features: tuple[str, ...] = (
+        "interior_doors",
+        "exterior_doors",
+        "windows",
+    )
+    enabled_constraints: tuple[str, ...] = (
+        "shared_placement",
+        "room_door_limits",
+    )
+    geometry: GeometryConfig = field(default_factory=GeometryConfig)
+    dimensions: DimensionConfig = field(default_factory=DimensionConfig)
+    policy: FeaturePolicy = field(default_factory=FeaturePolicy)
+    objective: ObjectiveConfig = field(default_factory=ObjectiveConfig)
+    solver: SolverConfig = field(default_factory=SolverConfig)
+
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise OpeningConfigurationError("configuration name cannot be empty")
+        if len(self.enabled_features) != len(set(self.enabled_features)):
+            raise OpeningConfigurationError("enabled feature IDs must be unique")
+        if len(self.enabled_constraints) != len(set(self.enabled_constraints)):
+            raise OpeningConfigurationError("enabled constraint IDs must be unique")
+        if "shared_placement" not in self.enabled_constraints:
+            raise OpeningConfigurationError(
+                "shared_placement is a structural opening-model invariant"
+            )

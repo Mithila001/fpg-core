@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from ..domain import ExecutionMode, FloorPlan, FloorPlanGenerationSpec
-from .config import EvaluatorRule, ScoringGroupRule, ScoringProfile
+from .config import EvaluatorRule, FloorPlanScoringConfig, ScoringGroupRule
 from .context import ScoringContext, ScoringContextFactory
 from .contracts import FloorPlanScoringDetails
 from .exceptions import (
@@ -23,20 +23,20 @@ from .types import (
     ScoreMetric,
     ScoringGroupResult,
 )
-from .validation import validate_evaluator_result, validate_profile
+from .validation import validate_config, validate_evaluator_result
 
 
 class FloorPlanScoreManager:
     def __init__(
         self,
         registry: EvaluatorRegistry,
-        profile: ScoringProfile,
+        config: FloorPlanScoringConfig,
         context_factory: ScoringContextFactory | None = None,
     ) -> None:
         self._registry = registry
-        self._profile = profile
+        self._config = config
         self._context_factory = context_factory or ScoringContextFactory()
-        validate_profile(profile, registry)
+        validate_config(config, registry)
 
     def score(
         self,
@@ -294,7 +294,7 @@ class FloorPlanScoreManager:
 
     def _ordered_groups(self) -> list[ScoringGroupRule]:
         return sorted(
-            (group for group in self._profile.groups if group.enabled),
+            (group for group in self._config.groups if group.enabled),
             key=lambda group: (group.order, str(group.key)),
         )
 
@@ -302,7 +302,7 @@ class FloorPlanScoreManager:
         return sorted(
             (
                 rule
-                for rule in self._profile.evaluators
+                for rule in self._config.evaluators
                 if rule.enabled and rule.group_key == group.key
             ),
             key=lambda rule: (rule.order, str(rule.key)),

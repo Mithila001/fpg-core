@@ -13,9 +13,17 @@ def _positive_int(field_name: str, value: object, *, minimum: int = 1) -> int:
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchConfig:
-    """Reusable Candidate Search safety limits."""
+    """Reusable controls for how Candidate Search performs a search."""
 
-    max_grid_node_count: int
+    trial_count: int = 500
+    max_grid_node_count: int = 250_000
+    random_seed: int | None = None
 
     def __post_init__(self) -> None:
+        _positive_int("trial_count", self.trial_count)
         _positive_int("max_grid_node_count", self.max_grid_node_count, minimum=9)
+        if self.random_seed is not None and (
+            isinstance(self.random_seed, bool)
+            or not isinstance(self.random_seed, int)
+        ):
+            raise TypeError("random_seed must be an integer or None.")

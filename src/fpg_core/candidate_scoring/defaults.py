@@ -9,7 +9,6 @@ from .config import (
 )
 from .evaluators import (
     EXTERIOR_CLEARANCE_KEY,
-    RELATIONSHIP_QUALITY_KEY,
     SPATIAL_DISTRIBUTION_KEY,
     ZONE_SUITABILITY_KEY,
     ExteriorClearanceEvaluator,

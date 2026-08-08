@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from ...domain import OpeningPurpose, OpeningType, RoomType
+from ..config import FloorPlanOpeningsConfig
 from ..domain import OpeningDemand, PlacementOption, PreparedFloorPlan, WallKind
-from ..profiles import OpeningGenerationProfile
 
 
 class ExteriorDoorFeature:
@@ -11,10 +11,10 @@ class ExteriorDoorFeature:
     def build_demands(
         self,
         prepared: PreparedFloorPlan,
-        profile: OpeningGenerationProfile,
+        config: FloorPlanOpeningsConfig,
     ) -> tuple[OpeningDemand, ...]:
-        clearance = round(profile.geometry.corner_clearance * prepared.scale)
-        preferred_width = round(profile.dimensions.door_width * prepared.scale)
+        clearance = round(config.geometry.corner_clearance * prepared.scale)
+        preferred_width = round(config.dimensions.door_width * prepared.scale)
         exterior = [wall for wall in prepared.walls if wall.kind is WallKind.EXTERIOR]
         demands: list[OpeningDemand] = []
 
@@ -22,7 +22,7 @@ class ExteriorDoorFeature:
             room.room_type is RoomType.VERANDA for room in prepared.rooms_by_id.values()
         )
         if has_veranda:
-            minimum = round(profile.dimensions.minimum_shared_wall * prepared.scale)
+            minimum = round(config.dimensions.minimum_shared_wall * prepared.scale)
             has_veranda_connection = any(
                 wall.kind is WallKind.SHARED
                 and wall.length >= minimum
@@ -47,7 +47,7 @@ class ExteriorDoorFeature:
                 )
         if not has_veranda and prepared.rooms_by_id:
             side_priority = {
-                side: index for index, side in enumerate(profile.policy.main_side_priority)
+                side: index for index, side in enumerate(config.policy.main_side_priority)
             }
             options: list[PlacementOption] = []
             for index, wall in enumerate(exterior):
@@ -85,16 +85,16 @@ class ExteriorDoorFeature:
         eligible_rooms = {
             room.id
             for room in prepared.rooms_by_id.values()
-            if room.room_type in profile.policy.secondary_room_priority
+            if room.room_type in config.policy.secondary_room_priority
         }
         if eligible_rooms:
             room_priority = {
                 room_type: index
-                for index, room_type in enumerate(profile.policy.secondary_room_priority)
+                for index, room_type in enumerate(config.policy.secondary_room_priority)
             }
             side_priority = {
                 side: index
-                for index, side in enumerate(profile.policy.secondary_side_priority)
+                for index, side in enumerate(config.policy.secondary_side_priority)
             }
             options = []
             for index, wall in enumerate(exterior):

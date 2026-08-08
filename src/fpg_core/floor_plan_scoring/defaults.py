@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from .config import EvaluatorRule, ScoringGroupRule, ScoringProfile
+from .config import (
+    EvaluatorRule,
+    FloorPlanScoringConfig,
+    ScoringGroupRule,
+    ScoringProfile,
+)
 from .evaluators import (
     BEDROOM_QUALITY_KEY,
     ENCLOSED_VOIDS_KEY,
@@ -47,7 +52,7 @@ def create_default_registry() -> EvaluatorRegistry:
     )
 
 
-DEFAULT_SCORING_PROFILE = ScoringProfile(
+DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
     groups=(
         ScoringGroupRule(CRITICAL_GROUP, order=10, weight=1.0),
         ScoringGroupRule(FUNCTIONAL_GROUP, order=20, weight=1.0),
@@ -118,5 +123,16 @@ DEFAULT_SCORING_PROFILE = ScoringProfile(
 )
 
 
+
+# Compatibility constant retained for existing consumers.
+DEFAULT_SCORING_PROFILE = DEFAULT_FLOOR_PLAN_SCORING_CONFIG
+
+
+def create_default_config() -> FloorPlanScoringConfig:
+    return DEFAULT_FLOOR_PLAN_SCORING_CONFIG
+
+
 def create_default_profile() -> ScoringProfile:
-    return DEFAULT_SCORING_PROFILE
+    """Compatibility alias for create_default_config()."""
+
+    return DEFAULT_FLOOR_PLAN_SCORING_CONFIG

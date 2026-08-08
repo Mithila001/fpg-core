@@ -1,37 +1,37 @@
 from __future__ import annotations
 
 from ...domain import OpeningPurpose, OpeningType, RoomId, RoomType
+from ..config import FloorPlanOpeningsConfig
 from ..domain import OpeningDemand, PlacementOption, PreparedFloorPlan, WallKind
-from ..profiles import OpeningGenerationProfile
 
 
 class InteriorDoorFeature:
     feature_id = "interior_doors"
 
     @staticmethod
-    def _allowed(left: RoomType, right: RoomType, profile: OpeningGenerationProfile) -> bool:
+    def _allowed(left: RoomType, right: RoomType, config: FloorPlanOpeningsConfig) -> bool:
         pair = frozenset((left, right))
         if RoomType.ATTACHED_BATHROOM in pair:
             return pair == frozenset((RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM))
         if RoomType.HALLWAY in pair:
             return True
-        return any(pair == frozenset(configured) for configured in profile.policy.allowed_room_pairs)
+        return any(pair == frozenset(configured) for configured in config.policy.allowed_room_pairs)
 
     def build_demands(
         self,
         prepared: PreparedFloorPlan,
-        profile: OpeningGenerationProfile,
+        config: FloorPlanOpeningsConfig,
     ) -> tuple[OpeningDemand, ...]:
-        minimum = round(profile.dimensions.minimum_shared_wall * prepared.scale)
-        width = round(profile.dimensions.door_width * prepared.scale)
-        clearance = round(profile.geometry.corner_clearance * prepared.scale)
+        minimum = round(config.dimensions.minimum_shared_wall * prepared.scale)
+        width = round(config.dimensions.door_width * prepared.scale)
+        clearance = round(config.geometry.corner_clearance * prepared.scale)
         candidates = []
         for wall in prepared.walls:
             if wall.kind is not WallKind.SHARED or wall.length < minimum:
                 continue
             left = prepared.rooms_by_id[wall.room_ids[0]]
             right = prepared.rooms_by_id[wall.room_ids[1]]
-            if self._allowed(left.room_type, right.room_type, profile):
+            if self._allowed(left.room_type, right.room_type, config):
                 candidates.append((wall, left, right))
 
         connection_types: dict[RoomId, set[RoomType]] = {}

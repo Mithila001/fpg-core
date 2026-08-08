@@ -16,9 +16,9 @@ from ..domain import (
     RoomRole,
     RoomType,
 )
+from .config import FloorPlanOpeningsConfig
 from .domain import AnalyzedWall, PreparedFloorPlan, WallKind, WallOrientation
 from .exceptions import OpeningExtractionError, OpeningInputError
-from .profiles import OpeningGenerationProfile
 
 
 def _shape(points: tuple[Point, ...]) -> ShapelyPolygon:
@@ -74,10 +74,10 @@ def _validate_scaled(
 
 def validate_request_floor_plan(
     floor_plan: FloorPlan,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
 ) -> None:
-    tolerance = profile.geometry.tolerance
-    scale = profile.geometry.coordinate_scale
+    tolerance = config.geometry.tolerance
+    scale = config.geometry.coordinate_scale
     if floor_plan.openings:
         raise OpeningInputError("opening generation requires a plan without existing openings")
     try:
@@ -145,7 +145,7 @@ def validate_generated_floor_plan(
     source: FloorPlan,
     generated: FloorPlan,
     prepared: PreparedFloorPlan,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
 ) -> None:
     if (
         source.boundary != generated.boundary
@@ -196,8 +196,8 @@ def validate_generated_floor_plan(
         if match is None:
             raise OpeningExtractionError(f"opening {opening.id!s} does not lie on its connected wall")
         length = match[1][1] - match[1][0]
-        door_width = round(profile.dimensions.door_width * prepared.scale)
-        window_width = round(profile.dimensions.window_width * prepared.scale)
+        door_width = round(config.dimensions.door_width * prepared.scale)
+        window_width = round(config.dimensions.window_width * prepared.scale)
         if opening.opening_type is OpeningType.WINDOW and length != window_width:
             raise OpeningExtractionError(f"opening {opening.id!s} has an invalid window width")
         if opening.opening_type is OpeningType.DOOR:
@@ -207,7 +207,7 @@ def validate_generated_floor_plan(
                 raise OpeningExtractionError(f"opening {opening.id!s} has an invalid exterior door width")
         placements.append((opening, match[0], match[1]))
 
-    spacing = round(profile.geometry.window_spacing * prepared.scale)
+    spacing = round(config.geometry.window_spacing * prepared.scale)
     for index, (left, left_wall, left_interval) in enumerate(placements):
         for right, right_wall, right_interval in placements[index + 1 :]:
             if left_wall.id != right_wall.id:

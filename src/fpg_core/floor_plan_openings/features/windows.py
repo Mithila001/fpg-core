@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ...domain import OpeningPurpose, OpeningType, RoomId
+from ..config import FloorPlanOpeningsConfig
 from ..domain import (
     AnalyzedWall,
     OpeningDemand,
@@ -8,7 +9,6 @@ from ..domain import (
     PreparedFloorPlan,
     WallKind,
 )
-from ..profiles import OpeningGenerationProfile
 
 
 class WindowFeature:
@@ -17,12 +17,12 @@ class WindowFeature:
     def build_demands(
         self,
         prepared: PreparedFloorPlan,
-        profile: OpeningGenerationProfile,
+        config: FloorPlanOpeningsConfig,
     ) -> tuple[OpeningDemand, ...]:
-        width = round(profile.dimensions.window_width * prepared.scale)
-        clearance = round(profile.geometry.corner_clearance * prepared.scale)
+        width = round(config.dimensions.window_width * prepared.scale)
+        clearance = round(config.geometry.corner_clearance * prepared.scale)
         side_priority = {
-            side: index for index, side in enumerate(profile.policy.window_side_priority)
+            side: index for index, side in enumerate(config.policy.window_side_priority)
         }
         exterior_by_room: dict[RoomId, list[AnalyzedWall]] = {}
         for wall in prepared.walls:
@@ -34,7 +34,7 @@ class WindowFeature:
             (
                 room
                 for room in prepared.rooms_by_id.values()
-                if room.room_type in profile.policy.window_room_types
+                if room.room_type in config.policy.window_room_types
             ),
             key=lambda room: str(room.id),
         )

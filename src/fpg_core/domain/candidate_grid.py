@@ -131,7 +131,7 @@ def _validated_positions(
         raise ValueError(f"{axis_name}_positions must contain at least two nodes.")
     if any(
         float(current) <= float(previous)
-        for previous, current in zip(positions, positions[1:])
+        for previous, current in zip(positions, positions[1:], strict=False)
     ):
         raise ValueError(f"{axis_name}_positions must be strictly increasing.")
     return positions
@@ -143,7 +143,7 @@ def _uniform_axis_spacing(
 ) -> Coordinate:
     gaps = tuple(
         float(current) - float(previous)
-        for previous, current in zip(positions, positions[1:])
+        for previous, current in zip(positions, positions[1:], strict=False)
     )
     spacing = gaps[0]
     if any(

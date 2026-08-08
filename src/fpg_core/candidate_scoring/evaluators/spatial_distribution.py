@@ -63,7 +63,7 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
             raise ValueError("gap_zero_score_ratio must be greater than 1.0.")
 
         if not data.points:
-            details = (
+            empty_details = (
                 SpatialDistributionDetails(
                     floor_width=data.floor_width,
                     floor_length=data.floor_length,
@@ -89,7 +89,7 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
                     ),
                 ),
                 metrics={"point_count": 0.0} if debug_enabled else {},
-                details=details,
+                details=empty_details,
             )
 
         nnd_score, nnd_metrics = _nnd_score(

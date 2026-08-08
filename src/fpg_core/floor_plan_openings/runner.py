@@ -6,6 +6,7 @@ from typing import Any
 from ortools.sat.python import cp_model
 
 from ..domain import FloorPlan
+from .config import FloorPlanOpeningsConfig
 from .contracts import (
     OpeningDiagnostics,
     OpeningGenerationResult,
@@ -14,7 +15,6 @@ from .contracts import (
 )
 from .extractor import extract_floor_plan
 from .model import BuiltOpeningModel
-from .profiles import OpeningGenerationProfile
 from .validation import validate_generated_floor_plan
 
 
@@ -34,7 +34,7 @@ def _message(status: OpeningGenerationStatus) -> str:
     return {
         OpeningGenerationStatus.OPTIMAL: "CP-SAT found an optimal opening layout",
         OpeningGenerationStatus.FEASIBLE: "CP-SAT found a feasible opening layout",
-        OpeningGenerationStatus.INFEASIBLE: "The opening profile produced an infeasible model",
+        OpeningGenerationStatus.INFEASIBLE: "The opening configuration produced an infeasible model",
         OpeningGenerationStatus.MODEL_INVALID: "OR-Tools rejected the opening model",
         OpeningGenerationStatus.UNKNOWN: "The solver stopped without an opening solution",
         OpeningGenerationStatus.INVALID_INPUT: "The floor plan is invalid for opening generation",
@@ -82,17 +82,17 @@ def _issues(built: BuiltOpeningModel, solver: Any, solved: bool) -> tuple[Openin
 def solve_opening_model(
     source: FloorPlan,
     built: BuiltOpeningModel,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
     *,
     collect_details: bool,
 ) -> tuple[OpeningGenerationResult, OpeningDiagnostics | None]:
     solver: Any = cp_model.CpSolver()
-    config = profile.solver
-    solver.parameters.max_time_in_seconds = float(config.max_time_seconds)
-    solver.parameters.num_search_workers = int(config.num_search_workers)
-    solver.parameters.random_seed = int(config.random_seed)
-    solver.parameters.cp_model_presolve = bool(config.cp_model_presolve)
-    solver.parameters.log_search_progress = bool(config.log_search_progress)
+    solver_config = config.solver
+    solver.parameters.max_time_in_seconds = float(solver_config.max_time_seconds)
+    solver.parameters.num_search_workers = int(solver_config.num_search_workers)
+    solver.parameters.random_seed = int(solver_config.random_seed)
+    solver.parameters.cp_model_presolve = bool(solver_config.cp_model_presolve)
+    solver.parameters.log_search_progress = bool(solver_config.log_search_progress)
 
     status_code = solver.Solve(built.context.model)
     status = _map_status(status_code)
@@ -103,7 +103,7 @@ def solve_opening_model(
         try:
             floor_plan = extract_floor_plan(source, solver, built)
             validate_generated_floor_plan(
-                source, floor_plan, built.context.prepared, profile
+                source, floor_plan, built.context.prepared, config
             )
         except Exception as exc:  # noqa: BLE001
             status = OpeningGenerationStatus.MODEL_INVALID
@@ -118,7 +118,7 @@ def solve_opening_model(
     result = OpeningGenerationResult(
         status=status,
         floor_plan=floor_plan,
-        profile_name=profile.name,
+        profile_name=config.name,
         message=_message(status),
     )
     if not collect_details:

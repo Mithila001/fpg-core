@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from ..config import FloorPlanOpeningsConfig
 from ..domain import OpeningDemand, PreparedFloorPlan
-from ..profiles import OpeningGenerationProfile
 
 
 class OpeningFeature(Protocol):
@@ -12,5 +12,5 @@ class OpeningFeature(Protocol):
     def build_demands(
         self,
         prepared: PreparedFloorPlan,
-        profile: OpeningGenerationProfile,
+        config: FloorPlanOpeningsConfig,
     ) -> tuple[OpeningDemand, ...]: ...

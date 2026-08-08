@@ -160,8 +160,8 @@ execution.details.hallway_room_count_range
 
 ```python
 from fpg_core.candidate_search import (
+    CandidateSearchConfig,
     CandidateSearchInput,
-    CandidateSearchSettings,
     build_candidate_search_targets,
     search_candidates,
 )
@@ -169,9 +169,7 @@ from fpg_core.candidate_search import (
 prepared = preprocessing_execution.result
 
 targets = build_candidate_search_targets(prepared.generation_spec)
-settings = CandidateSearchSettings(
-    grid=prepared.candidate_grid,
-    hallway_room_count_range=prepared.hallway_room_count_range,
+config = CandidateSearchConfig(
     max_grid_node_count=250_000,
     trial_count=500,
     random_seed=42,
@@ -179,8 +177,10 @@ settings = CandidateSearchSettings(
 
 search_input = CandidateSearchInput(
     targets=targets,
-    settings=settings,
+    grid=prepared.candidate_grid,
+    hallway_room_count_range=prepared.hallway_room_count_range,
     evaluator=evaluator,
+    config=config,
 )
 
 search_execution = search_candidates(search_input)

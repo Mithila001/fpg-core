@@ -5,7 +5,7 @@ from enum import Enum
 from typing import TypeAlias
 
 from ..domain import FeatureExecution, FloorPlan, FloorPlanGenerationSpec, RoomId
-from .profiles import GenerationProfile
+from .config import FloorPlanSolverConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,8 +27,15 @@ class RoomPlacementHint:
 
 @dataclass(frozen=True, slots=True)
 class FloorPlanSolveRequest:
+    """Processing input for one floor-plan solve.
+
+    ``specification``, ``candidate_hints``, and ``existing_floor_plan`` describe
+    what is being processed. ``config`` controls how the solver performs that
+    processing.
+    """
+
     specification: FloorPlanGenerationSpec
-    profile: GenerationProfile
+    config: FloorPlanSolverConfig
     candidate_hints: tuple[RoomPlacementHint, ...] = ()
     existing_floor_plan: FloorPlan | None = None
 

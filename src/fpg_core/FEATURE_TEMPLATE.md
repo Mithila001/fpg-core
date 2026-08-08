@@ -12,7 +12,7 @@ This template keeps features recognizable without forcing every algorithm into t
    - another feature's public `api.py`, when invoking that feature; or
    - canonical shared contracts from `fpg_core.domain`.
 6. Shared types belong in `fpg_core.domain`. Do not duplicate shared domain models inside features.
-7. Feature-specific contracts, context objects, settings, results, and R&D detail types stay inside that feature.
+7. Feature-specific input contracts, configuration, context objects, results, and R&D detail types stay inside that feature. Processing input and configuration must remain clearly distinguishable in the public contract.
 8. `fpg_core.__init__` is for package metadata and carefully selected package-wide conveniences. Do not create a giant root `api.py`.
 9. `fpg_core.config` is only for package-wide configuration aggregation and validation. Feature-only settings stay in the feature's `config.py`.
 10. Preserve public APIs and serialized enum values unless a breaking change is intentional and documented.
@@ -80,6 +80,28 @@ FeatureExecution[TResult, TDetails]
   - `DEBUG`: collect feature-specific analysis, visualization, and diagnostic data for debugging and R&D.
 - Optional inputs such as seeds, profiles, limits, and callbacks should be explicit and typed.
 - Do not force every feature to accept inputs it does not need.
+
+#### Input vs Configuration Separation
+
+Feature APIs must clearly distinguish **processing input** from **configuration**.
+
+- **Processing input** is data describing the specific operation being processed, such as a candidate map, floor plan, land geometry, room requirements, prepared grid, or other request-specific domain data.
+- **Configuration** controls how the feature performs that operation, such as thresholds, weights, costs, limits, profiles, routing policies, search settings, tolerances, and algorithm options.
+- Do not place processing data and configuration fields together inside a generically named `Settings`, `Options`, or similar object.
+- When a feature has substantial configuration, prefer an explicit structure such as:
+
+```python
+FeatureInput(
+    request=...,   # operation-specific processing data
+    config=...,    # reusable feature configuration
+)
+```
+
+Equivalent typed structures are allowed when more appropriate to the feature.
+
+- Profiles, seeds, execution limits, and algorithm parameters are configuration unless their value is inherently part of the domain request.
+- A caller should be able to inspect the public API and determine which values describe **what is being processed** and which values control **how it is processed**, without reading the feature implementation.
+
 
 ### Outputs
 

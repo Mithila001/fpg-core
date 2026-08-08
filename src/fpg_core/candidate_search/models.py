@@ -13,6 +13,7 @@ from ..domain import (
     RoomId,
     RoomType,
 )
+from .config import CandidateSearchConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,60 +38,25 @@ class CandidateSearchTarget:
         return self.room_type is RoomType.HALLWAY
 
 
-@dataclass(frozen=True, slots=True)
-class CandidateSearchSettings:
-    """Prepared geometry plus runtime controls for one search."""
-
-    grid: ResolvedCandidateGrid
-    hallway_room_count_range: HallwayRoomCountRange
-    max_grid_node_count: int
-    trial_count: int
-    random_seed: int | None = None
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.grid, ResolvedCandidateGrid):
-            raise TypeError("grid must be a ResolvedCandidateGrid instance.")
-        if not isinstance(self.hallway_room_count_range, HallwayRoomCountRange):
-            raise TypeError(
-                "hallway_room_count_range must be a HallwayRoomCountRange instance."
-            )
-        _validate_positive_integer(
-            "max_grid_node_count", self.max_grid_node_count, minimum=9
-        )
-        _validate_positive_integer("trial_count", self.trial_count)
-        if self.random_seed is not None and (
-            isinstance(self.random_seed, bool)
-            or not isinstance(self.random_seed, int)
-        ):
-            raise TypeError("random_seed must be an integer or None.")
-        if self.grid.node_count > self.max_grid_node_count:
-            raise ValueError(
-                "Prepared candidate grid contains "
-                f"{self.grid.node_count} nodes, exceeding "
-                f"max_grid_node_count={self.max_grid_node_count}."
-            )
-        if self.grid.interior_node_count < 1:
-            raise ValueError(
-                "Prepared candidate grid must contain at least one non-edge "
-                "hint-point node."
-            )
-
-
 CandidateEvaluator: TypeAlias = Callable[[CandidateMap], float]
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchInput:
-    """Complete input contract for one Candidate Search operation or session.
+    """Processing input and execution dependency for one Candidate Search.
 
+    ``grid`` and ``hallway_room_count_range`` describe the prepared floor-plan
+    operation. ``config`` controls how Candidate Search performs that operation.
     All possible hallway room targets must be supplied. Each trial selects one
     global hallway count and activates that many hallway targets. Every active
     target receives exactly one point.
     """
 
     targets: tuple[CandidateSearchTarget, ...]
-    settings: CandidateSearchSettings
+    grid: ResolvedCandidateGrid
+    hallway_room_count_range: HallwayRoomCountRange
     evaluator: CandidateEvaluator
+    config: CandidateSearchConfig
 
     def __post_init__(self) -> None:
         normalized_targets = tuple(self.targets)
@@ -109,18 +75,34 @@ class CandidateSearchInput:
             raise ValueError(
                 f"Candidate search target room IDs must be unique: {formatted_ids}"
             )
-        if not isinstance(self.settings, CandidateSearchSettings):
-            raise TypeError("settings must be a CandidateSearchSettings instance.")
+        if not isinstance(self.grid, ResolvedCandidateGrid):
+            raise TypeError("grid must be a ResolvedCandidateGrid instance.")
+        if not isinstance(self.hallway_room_count_range, HallwayRoomCountRange):
+            raise TypeError(
+                "hallway_room_count_range must be a HallwayRoomCountRange instance."
+            )
         if not callable(self.evaluator):
             raise TypeError("evaluator must be callable.")
+        if not isinstance(self.config, CandidateSearchConfig):
+            raise TypeError("config must be a CandidateSearchConfig instance.")
+
+        if self.grid.node_count > self.config.max_grid_node_count:
+            raise ValueError(
+                "Prepared candidate grid contains "
+                f"{self.grid.node_count} nodes, exceeding "
+                f"max_grid_node_count={self.config.max_grid_node_count}."
+            )
+        if self.grid.interior_node_count < 1:
+            raise ValueError(
+                "Prepared candidate grid must contain at least one non-edge "
+                "hint-point node."
+            )
 
         hallway_target_count = sum(target.is_hallway for target in normalized_targets)
-        expected_hallway_target_count = (
-            self.settings.hallway_room_count_range.maximum
-        )
+        expected_hallway_target_count = self.hallway_room_count_range.maximum
         if hallway_target_count != expected_hallway_target_count:
             raise ValueError(
-                "The number of hallway targets must equal the configured maximum "
+                "The number of hallway targets must equal the prepared maximum "
                 "hallway room count: "
                 f"expected {expected_hallway_target_count}, received "
                 f"{hallway_target_count}."
@@ -128,11 +110,11 @@ class CandidateSearchInput:
 
         non_hallway_count = len(normalized_targets) - hallway_target_count
         maximum_point_count = non_hallway_count + expected_hallway_target_count
-        if maximum_point_count > self.settings.grid.interior_node_count:
+        if maximum_point_count > self.grid.interior_node_count:
             raise ValueError(
                 "Candidate search may request up to "
                 f"{maximum_point_count} room points but the prepared grid contains "
-                f"only {self.settings.grid.interior_node_count} non-edge nodes."
+                f"only {self.grid.interior_node_count} non-edge nodes."
             )
         object.__setattr__(self, "targets", normalized_targets)
 

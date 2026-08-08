@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .config import (
         DimensionConfig,
         FeaturePolicy,
+        FloorPlanOpeningsConfig,
         GeometryConfig,
         ObjectiveConfig,
         SolverConfig,
@@ -25,14 +26,19 @@ if TYPE_CHECKING:
         OpeningGenerationStatus,
         OpeningIssue,
     )
-    from .exceptions import OpeningGenerationError
-    from .profiles import DEFAULT_OPENING_PROFILE, OpeningGenerationProfile
+    from .exceptions import OpeningConfigurationError, OpeningGenerationError
+    from .profiles import (
+        DEFAULT_OPENING_CONFIG,
+        DEFAULT_OPENING_PROFILE,
+        OpeningGenerationProfile,
+    )
     from .registry import OpeningFeatureRegistry, create_default_registry
 
 _EXPORTS: dict[str, tuple[str, str]] = {
     "generate_openings": (".api", "generate_openings"),
     "DimensionConfig": (".config", "DimensionConfig"),
     "FeaturePolicy": (".config", "FeaturePolicy"),
+    "FloorPlanOpeningsConfig": (".config", "FloorPlanOpeningsConfig"),
     "GeometryConfig": (".config", "GeometryConfig"),
     "ObjectiveConfig": (".config", "ObjectiveConfig"),
     "SolverConfig": (".config", "SolverConfig"),
@@ -42,10 +48,12 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "OpeningGenerationResult": (".contracts", "OpeningGenerationResult"),
     "OpeningGenerationStatus": (".contracts", "OpeningGenerationStatus"),
     "OpeningIssue": (".contracts", "OpeningIssue"),
+    "DEFAULT_OPENING_CONFIG": (".profiles", "DEFAULT_OPENING_CONFIG"),
     "DEFAULT_OPENING_PROFILE": (".profiles", "DEFAULT_OPENING_PROFILE"),
     "OpeningGenerationProfile": (".profiles", "OpeningGenerationProfile"),
     "OpeningFeatureRegistry": (".registry", "OpeningFeatureRegistry"),
     "create_default_registry": (".registry", "create_default_registry"),
+    "OpeningConfigurationError": (".exceptions", "OpeningConfigurationError"),
     "OpeningGenerationError": (".exceptions", "OpeningGenerationError"),
 }
 
@@ -53,6 +61,7 @@ __all__ = [
     "generate_openings",
     "DimensionConfig",
     "FeaturePolicy",
+    "FloorPlanOpeningsConfig",
     "GeometryConfig",
     "ObjectiveConfig",
     "SolverConfig",
@@ -62,10 +71,12 @@ __all__ = [
     "OpeningGenerationResult",
     "OpeningGenerationStatus",
     "OpeningIssue",
+    "DEFAULT_OPENING_CONFIG",
     "DEFAULT_OPENING_PROFILE",
     "OpeningGenerationProfile",
     "OpeningFeatureRegistry",
     "create_default_registry",
+    "OpeningConfigurationError",
     "OpeningGenerationError",
 ]
 

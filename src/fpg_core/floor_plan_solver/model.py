@@ -6,8 +6,8 @@ from typing import Any
 from ortools.sat.python import cp_model
 
 from ..domain import RoomWidthAxis
+from .config import FloorPlanSolverConfig
 from .preparation import PreparedProblem, PreparedRoom
-from .profiles import GenerationProfile
 
 
 @dataclass(slots=True)
@@ -29,7 +29,7 @@ class RoomVariables:
 class ModelContext:
     model: Any
     problem: PreparedProblem
-    profile: GenerationProfile
+    config: FloorPlanSolverConfig
     room_variables: dict[str, RoomVariables]
     adjacency_cache: dict[tuple[str, str, int], Any] = field(default_factory=dict)
     _name_counter: int = 0
@@ -122,12 +122,12 @@ def _create_room_variables(
 
 def create_model_context(
     problem: PreparedProblem,
-    profile: GenerationProfile,
+    config: FloorPlanSolverConfig,
 ) -> ModelContext:
     """Create variables and mandatory model invariants.
 
     Containment, room size/area ranges, required-room presence, and non-overlap
-    are structural invariants. Profiles cannot disable them.
+    are structural invariants. Configurations cannot disable them.
     """
 
     model: Any = cp_model.CpModel()
@@ -144,7 +144,7 @@ def create_model_context(
     return ModelContext(
         model=model,
         problem=problem,
-        profile=profile,
+        config=config,
         room_variables=room_variables,
     )
 
@@ -161,7 +161,7 @@ def _bounded_constraint(
 
 def apply_seed_policy(context: ModelContext) -> None:
     seed = context.problem.seed
-    policy = context.profile.seed
+    policy = context.config.seed
     if seed is None:
         return
 

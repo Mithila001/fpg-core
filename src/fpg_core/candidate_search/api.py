@@ -1,13 +1,13 @@
 """Public entry points and contracts for Candidate Search."""
 
 from ..domain import FloorPlanGenerationSpec
+from .config import CandidateSearchConfig
 from .grid import build_candidate_grid
 from .models import (
     CandidateEvaluator,
     CandidateSearchDetails,
     CandidateSearchInput,
     CandidateSearchResult,
-    CandidateSearchSettings,
     CandidateSearchTarget,
     CandidateSuggestion,
     CandidateTrialResult,
@@ -17,10 +17,10 @@ from .optimizer import CandidateSearchSession, search_candidates
 __all__ = [
     "CandidateEvaluator",
     "CandidateSearchDetails",
+    "CandidateSearchConfig",
     "CandidateSearchInput",
     "CandidateSearchResult",
     "CandidateSearchSession",
-    "CandidateSearchSettings",
     "CandidateSearchTarget",
     "CandidateSuggestion",
     "CandidateTrialResult",

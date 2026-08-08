@@ -19,6 +19,7 @@ if SOURCE_ROOT.is_dir():
 from fpg_core.domain import (  # noqa: E402
     ConstraintStrength,
     ExecutionMode,
+    FloorPlan,
     FloorPlanGenerationSpec,
     FloorSpec,
     MatchPolicy,
@@ -128,12 +129,16 @@ def configured_profile(profile: Any, settings: dict[str, Any]) -> Any:
     return replace(profile, solver=solver)
 
 
-def require_solved(stage: str, execution: Any) -> None:
+def require_solved(stage: str, execution: Any) -> FloorPlan:
     if execution.result.status not in {SolverStatus.OPTIMAL, SolverStatus.FEASIBLE}:
         raise RuntimeError(
             f"{stage} did not produce a floor plan: "
             f"{execution.result.status.value}: {execution.result.message}"
         )
+    floor_plan = execution.result.floor_plan
+    if floor_plan is None:
+        raise RuntimeError(f"{stage} returned a solved status without a floor plan")
+    return floor_plan
 
 
 def make_json_safe(value: Any) -> Any:
@@ -171,40 +176,40 @@ def run() -> dict[str, Any]:
     initial = generate_floor_plan(
         FloorPlanSolveRequest(
             specification=specification,
-            profile=configured_profile(INITIAL_GENERATION_PROFILE, solver_settings),
+            config=configured_profile(INITIAL_GENERATION_PROFILE, solver_settings),
             candidate_hints=hints,
         ),
         mode=ExecutionMode.DEBUG,
     )
-    require_solved("initial_generation", initial)
+    initial_plan = require_solved("initial_generation", initial)
 
     print("2/6 Refining with profile A...")
     refinement_a = generate_floor_plan(
         FloorPlanSolveRequest(
             specification=specification,
-            profile=configured_profile(REFINEMENT_A_PROFILE, solver_settings),
-            existing_floor_plan=initial.result.floor_plan,
+            config=configured_profile(REFINEMENT_A_PROFILE, solver_settings),
+            existing_floor_plan=initial_plan,
         ),
         mode=ExecutionMode.DEBUG,
     )
-    require_solved("refinement_a", refinement_a)
+    refinement_a_plan = require_solved("refinement_a", refinement_a)
 
     print("3/6 Refining with profile B...")
     refinement_b = generate_floor_plan(
         FloorPlanSolveRequest(
             specification=specification,
-            profile=configured_profile(REFINEMENT_B_PROFILE, solver_settings),
-            existing_floor_plan=refinement_a.result.floor_plan,
+            config=configured_profile(REFINEMENT_B_PROFILE, solver_settings),
+            existing_floor_plan=refinement_a_plan,
         ),
         mode=ExecutionMode.DEBUG,
     )
-    require_solved("refinement_b", refinement_b)
+    refinement_b_plan = require_solved("refinement_b", refinement_b)
 
     print("4/6 Post-processing solved geometry...")
     post_processing = post_process_floor_plan(
         PostProcessingRequest(
-            floor_plan=refinement_b.result.floor_plan,
-            profile=POST_PROCESSING_PROFILE,
+            floor_plan=refinement_b_plan,
+            config=POST_PROCESSING_PROFILE,
             specification=specification,
         ),
         mode=ExecutionMode.DEBUG,
@@ -218,7 +223,7 @@ def run() -> dict[str, Any]:
     openings = generate_openings(
         OpeningGenerationRequest(
             floor_plan=post_processing.result.floor_plan,
-            profile=DEFAULT_OPENING_PROFILE,
+            config=DEFAULT_OPENING_PROFILE,
         ),
         mode=ExecutionMode.DEBUG,
     )
@@ -227,19 +232,21 @@ def run() -> dict[str, Any]:
             "opening generation did not produce a plan: "
             f"{openings.result.status.value}: {openings.result.message}"
         )
+    final_plan = openings.result.floor_plan
+    if final_plan is None:
+        raise RuntimeError("opening generation returned solved without a floor plan")
 
     print("6/6 Scoring the completed floor plan...")
     scoring = score_floor_plan(
         FloorPlanScoringInput(
-            floor_plan=openings.result.floor_plan,
+            floor_plan=final_plan,
             specification=specification,
-            profile=create_default_profile(),
+            config=create_default_profile(),
         ),
         mode=ExecutionMode.DEBUG,
     )
 
     completed_at = datetime.now(UTC)
-    final_plan = openings.result.floor_plan
     payload = {
         "run": {
             "input_file": INPUT_PATH.name,

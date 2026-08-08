@@ -2,15 +2,20 @@ from __future__ import annotations
 
 import math
 
-from .config import ScoringProfile
+from .config import FloorPlanScoringConfig, ScoringProfile
 from .exceptions import EvaluatorContractError, ScoringConfigurationError
 from .registry import EvaluatorRegistry
 from .types import CRITICAL_GROUP, EvaluationStatus, EvaluatorResult
 
 
-def validate_profile(profile: ScoringProfile, registry: EvaluatorRegistry) -> None:
-    if not isinstance(profile, ScoringProfile):
-        raise ScoringConfigurationError("profile must be a ScoringProfile instance.")
+def validate_config(
+    config: FloorPlanScoringConfig, registry: EvaluatorRegistry
+) -> None:
+    if not isinstance(config, FloorPlanScoringConfig):
+        raise ScoringConfigurationError(
+            "config must be a FloorPlanScoringConfig instance."
+        )
+    profile = config
     if not profile.groups:
         raise ScoringConfigurationError("At least one scoring group is required.")
 
@@ -174,3 +179,9 @@ def _score_value(value: float, label: str, error_type: type[Exception]) -> None:
         valid = False
     if not valid:
         raise error_type(f"The {label} must be finite and between 0 and 100.")
+
+
+def validate_profile(profile: ScoringProfile, registry: EvaluatorRegistry) -> None:
+    """Compatibility alias for the former internal validator name."""
+
+    validate_config(profile, registry)

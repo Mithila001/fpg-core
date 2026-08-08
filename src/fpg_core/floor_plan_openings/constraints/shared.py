@@ -80,7 +80,7 @@ class RoomDoorLimitConstraint:
                 for room_id in demand.room_ids:
                     attached_by_room.setdefault(room_id, []).append(selected)
 
-        caps = context.profile.policy.cap_by_room_type
+        caps = context.config.policy.cap_by_room_type
         for room_id, terms in room_incident.items():
             room = context.prepared.rooms_by_id[room_id]
             if room.room_type is RoomType.BEDROOM:

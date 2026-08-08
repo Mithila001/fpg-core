@@ -4,7 +4,6 @@ import math
 
 from shapely.geometry import Polygon as ShapelyPolygon
 
-from ..config import BuildableSpaceConfig
 from ..domain import (
     BuildableSpaceErrorCode,
     BuildableSpaceRequestData,
@@ -13,19 +12,20 @@ from ..domain import (
     Polygon,
     Segment,
 )
+from .config import BuildableLandConfig
 from .exceptions import BuildableLandError
 from .geometry import geometry_tolerance, signed_area
 
 
 def normalize_land_request(
     request: BuildableSpaceRequestData,
-    reference_data: BuildableSpaceConfig,
+    config: BuildableLandConfig,
 ) -> NormalizedLand:
     points = list(request.land_boundary.points)
     if len(points) > 1 and points[0] == points[-1]:
         points.pop()
 
-    limits = reference_data.validation_limits
+    limits = config.validation_limits
     if not limits.minimum_vertex_count <= len(points) <= limits.maximum_vertex_count:
         raise BuildableLandError(
             BuildableSpaceErrorCode.INVALID_LAND_BOUNDARY,
@@ -54,15 +54,15 @@ def normalize_land_request(
             "Exactly one main-entry road attachment is required.",
         )
     road = request.roads[0]
-    if road.boundary_edge_index >= len(points):
+    if road.boundary_edge_index < 0 or road.boundary_edge_index >= len(points):
         raise BuildableLandError(
             BuildableSpaceErrorCode.INVALID_ROAD_ATTACHMENT,
             "The road attachment references an unknown boundary edge.",
         )
-    if road.road_type not in reference_data.active_profile.road_adjustments:
+    if road.road_type not in config.setback_profile.road_adjustments:
         raise BuildableLandError(
             BuildableSpaceErrorCode.UNSUPPORTED_ROAD_TYPE,
-            "The road type is not configured in the active reference profile.",
+            "The road type is not configured in the setback profile.",
         )
 
     polygon = Polygon(tuple(points))

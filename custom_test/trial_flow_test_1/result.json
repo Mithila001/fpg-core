@@ -1,9 +1,9 @@
 {
   "run": {
     "input_file": "input.json",
-    "started_at_utc": "2026-08-05T05:38:31.032640+00:00",
-    "completed_at_utc": "2026-08-05T05:38:32.120073+00:00",
-    "duration_seconds": 1.087450880000688
+    "started_at_utc": "2026-08-08T06:09:42.592445+00:00",
+    "completed_at_utc": "2026-08-08T06:09:43.364445+00:00",
+    "duration_seconds": 0.7720174999994924
   },
   "summary": {
     "floor_width": 150,
@@ -430,7 +430,7 @@
     },
     "metadata": {
       "mode": "debug",
-      "duration_seconds": 0.0012683959994319594
+      "duration_seconds": 0.0006616999999096151
     }
   },
   "candidate_search": {
@@ -574,7 +574,7 @@
     },
     "metadata": {
       "mode": "debug",
-      "duration_seconds": 1.0502125689999957
+      "duration_seconds": 0.7477426000004925
     }
   },
   "candidate_circulation": {
@@ -2367,7 +2367,7 @@
     },
     "metadata": {
       "mode": "debug",
-      "duration_seconds": 0.01909739099937724
+      "duration_seconds": 0.013944899999842164
     }
   },
   "candidate_specific_generation_spec": {

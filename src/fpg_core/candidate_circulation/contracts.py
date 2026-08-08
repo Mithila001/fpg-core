@@ -9,7 +9,11 @@ from ..domain import (
     ResolvedCandidateGrid,
 )
 from .config import CandidateCirculationConfig
-from .domain import HallwayTrafficDetails, RemovedHallwayPointDetails, RoutingPassDetails
+from .domain import (
+    HallwayTrafficDetails,
+    RemovedHallwayPointDetails,
+    RoutingPassDetails,
+)
 
 
 @dataclass(frozen=True, slots=True)

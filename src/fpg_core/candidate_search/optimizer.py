@@ -13,6 +13,7 @@ from ..domain import (
     ExecutionMetadata,
     ExecutionMode,
     FeatureExecution,
+    HallwayRoomCountRange,
     ResolvedCandidateGrid,
 )
 from .exceptions import CandidateSearchStateError
@@ -21,7 +22,6 @@ from .models import (
     CandidateSearchDetails,
     CandidateSearchInput,
     CandidateSearchResult,
-    CandidateSearchSettings,
     CandidateSearchTarget,
     CandidateSuggestion,
     CandidateTrialResult,
@@ -39,13 +39,13 @@ class CandidateSearchSession:
 
         self._input = search_input
         self._grid = build_candidate_grid(
-            grid=search_input.settings.grid,
-            max_grid_node_count=search_input.settings.max_grid_node_count,
+            grid=search_input.grid,
+            max_grid_node_count=search_input.config.max_grid_node_count,
         )
         self._study = optuna.create_study(
             direction="maximize",
             sampler=optuna.samplers.TPESampler(
-                seed=search_input.settings.random_seed,
+                seed=search_input.config.random_seed,
             ),
         )
         self._completed_trials = 0
@@ -66,7 +66,7 @@ class CandidateSearchSession:
 
     @property
     def remaining_trials(self) -> int:
-        return self._input.settings.trial_count - self._completed_trials
+        return self._input.config.trial_count - self._completed_trials
 
     @property
     def has_remaining_trials(self) -> bool:
@@ -98,7 +98,7 @@ class CandidateSearchSession:
             candidate = _sample_candidate_map(
                 trial=trial,
                 targets=self._input.targets,
-                settings=self._input.settings,
+                hallway_room_count_range=self._input.hallway_room_count_range,
                 grid=self._grid,
             )
         except Exception:
@@ -181,7 +181,7 @@ class CandidateSearchSession:
         return CandidateSearchResult(
             candidate=_candidate_from_trial_parameters(
                 targets=self._input.targets,
-                settings=self._input.settings,
+                hallway_room_count_range=self._input.hallway_room_count_range,
                 parameters=best_trial.params,
                 grid=self._grid,
             ),
@@ -226,13 +226,13 @@ def _sample_candidate_map(
     *,
     trial: optuna.Trial,
     targets: tuple[CandidateSearchTarget, ...],
-    settings: CandidateSearchSettings,
+    hallway_room_count_range: HallwayRoomCountRange,
     grid: ResolvedCandidateGrid,
 ) -> CandidateMap:
     hallway_room_count = trial.suggest_int(
         name=_HALLWAY_ROOM_COUNT_PARAMETER,
-        low=settings.hallway_room_count_range.minimum,
-        high=settings.hallway_room_count_range.maximum,
+        low=hallway_room_count_range.minimum,
+        high=hallway_room_count_range.maximum,
     )
     active_targets = _active_targets(
         targets=targets,
@@ -266,7 +266,7 @@ def _sample_candidate_map(
 def _candidate_from_trial_parameters(
     *,
     targets: tuple[CandidateSearchTarget, ...],
-    settings: CandidateSearchSettings,
+    hallway_room_count_range: HallwayRoomCountRange,
     parameters: Mapping[str, int | float],
     grid: ResolvedCandidateGrid,
 ) -> CandidateMap:
@@ -279,12 +279,12 @@ def _candidate_from_trial_parameters(
         value=parameters[_HALLWAY_ROOM_COUNT_PARAMETER],
     )
     if not (
-        settings.hallway_room_count_range.minimum
+        hallway_room_count_range.minimum
         <= hallway_room_count
-        <= settings.hallway_room_count_range.maximum
+        <= hallway_room_count_range.maximum
     ):
         raise CandidateSearchStateError(
-            "The best trial hallway room count is outside the configured range."
+            "The best trial hallway room count is outside the prepared range."
         )
 
     active_targets = _active_targets(

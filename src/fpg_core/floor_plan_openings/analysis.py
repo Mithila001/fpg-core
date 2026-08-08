@@ -6,6 +6,7 @@ from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry import Polygon as ShapelyPolygon
 
 from ..domain import FloorPlan, Point, RoomId
+from .config import FloorPlanOpeningsConfig
 from .domain import (
     AnalyzedWall,
     PreparedFloorPlan,
@@ -14,7 +15,6 @@ from .domain import (
     WallSide,
 )
 from .exceptions import OpeningInputError
-from .profiles import OpeningGenerationProfile
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,9 +115,9 @@ def _wall_id(wall: _AtomicWall) -> str:
 
 def analyze_floor_plan(
     floor_plan: FloorPlan,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
 ) -> PreparedFloorPlan:
-    scale = profile.geometry.coordinate_scale
+    scale = config.geometry.coordinate_scale
     raw: list[_RawSegment] = _segments(floor_plan.boundary.points, scale, None)
     room_shapes: dict[RoomId, ShapelyPolygon] = {}
     for room in floor_plan.rooms:

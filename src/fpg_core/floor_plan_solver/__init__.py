@@ -11,7 +11,16 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .api import FloorPlanSolver, generate_floor_plan
-    from .config import PreparationConfig, SolverConfig
+    from .config import (
+        FloorPlanSolverConfig,
+        HardConstraintUse,
+        PreparationConfig,
+        SeedPolicy,
+        SeedSource,
+        SoftConstraintUse,
+        SolverConfig,
+    )
+    from .constraints.registry import ConstraintRegistry
     from .contracts import (
         FloorPlanSolveExecution,
         FloorPlanSolveRequest,
@@ -26,16 +35,22 @@ if TYPE_CHECKING:
         INITIAL_GENERATION_PROFILE,
         REFINEMENT_A_PROFILE,
         REFINEMENT_B_PROFILE,
+        DefaultProfileSettings,
         GenerationProfile,
-        HardConstraintUse,
-        SoftConstraintUse,
+        ProfileCatalog,
         build_default_profiles,
     )
 
 _EXPORTS: dict[str, tuple[str, str]] = {
     "FloorPlanSolver": (".api", "FloorPlanSolver"),
     "generate_floor_plan": (".api", "generate_floor_plan"),
+    "ConstraintRegistry": (".constraints.registry", "ConstraintRegistry"),
+    "FloorPlanSolverConfig": (".config", "FloorPlanSolverConfig"),
+    "HardConstraintUse": (".config", "HardConstraintUse"),
     "PreparationConfig": (".config", "PreparationConfig"),
+    "SeedPolicy": (".config", "SeedPolicy"),
+    "SeedSource": (".config", "SeedSource"),
+    "SoftConstraintUse": (".config", "SoftConstraintUse"),
     "SolverConfig": (".config", "SolverConfig"),
     "FloorPlanSolveRequest": (".contracts", "FloorPlanSolveRequest"),
     "FloorPlanSolveExecution": (".contracts", "FloorPlanSolveExecution"),
@@ -47,33 +62,39 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "INITIAL_GENERATION_PROFILE": (".profiles", "INITIAL_GENERATION_PROFILE"),
     "REFINEMENT_A_PROFILE": (".profiles", "REFINEMENT_A_PROFILE"),
     "REFINEMENT_B_PROFILE": (".profiles", "REFINEMENT_B_PROFILE"),
+    "DefaultProfileSettings": (".profiles", "DefaultProfileSettings"),
     "GenerationProfile": (".profiles", "GenerationProfile"),
-    "HardConstraintUse": (".profiles", "HardConstraintUse"),
-    "SoftConstraintUse": (".profiles", "SoftConstraintUse"),
+    "ProfileCatalog": (".profiles", "ProfileCatalog"),
     "build_default_profiles": (".profiles", "build_default_profiles"),
     "FloorPlanSolverError": (".exceptions", "FloorPlanSolverError"),
 }
 
 __all__ = [
-    "FloorPlanSolver",
-    "generate_floor_plan",
-    "PreparationConfig",
-    "SolverConfig",
-    "FloorPlanSolveRequest",
-    "FloorPlanSolveExecution",
-    "FloorPlanSolveResult",
-    "RoomPlacementHint",
-    "SolverDiagnostics",
-    "SolverStatus",
     "DEFAULT_PROFILES",
-    "INITIAL_GENERATION_PROFILE",
-    "REFINEMENT_A_PROFILE",
-    "REFINEMENT_B_PROFILE",
+    "DefaultProfileSettings",
+    "ConstraintRegistry",
+    "FloorPlanSolveExecution",
+    "FloorPlanSolveRequest",
+    "FloorPlanSolveResult",
+    "FloorPlanSolver",
+    "FloorPlanSolverConfig",
+    "FloorPlanSolverError",
     "GenerationProfile",
     "HardConstraintUse",
+    "INITIAL_GENERATION_PROFILE",
+    "PreparationConfig",
+    "ProfileCatalog",
+    "REFINEMENT_A_PROFILE",
+    "REFINEMENT_B_PROFILE",
+    "RoomPlacementHint",
+    "SeedPolicy",
+    "SeedSource",
     "SoftConstraintUse",
+    "SolverConfig",
+    "SolverDiagnostics",
+    "SolverStatus",
     "build_default_profiles",
-    "FloorPlanSolverError",
+    "generate_floor_plan",
 ]
 
 

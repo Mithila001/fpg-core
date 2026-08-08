@@ -6,11 +6,11 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
+from .config import FloorPlanOpeningsConfig
 from .constraints import RoomDoorLimitConstraint, SharedPlacementConstraint
 from .constraints.base import OpeningConstraint
 from .domain import AnalyzedWall, OpeningDemand, PlacementOption, PreparedFloorPlan
 from .exceptions import OpeningConfigurationError
-from .profiles import OpeningGenerationProfile
 from .registry import OpeningFeatureRegistry
 
 
@@ -31,7 +31,7 @@ class PlacementVariables:
 class OpeningModelContext:
     model: Any
     prepared: PreparedFloorPlan
-    profile: OpeningGenerationProfile
+    config: FloorPlanOpeningsConfig
     demands: tuple[OpeningDemand, ...]
     all_variables: list[PlacementVariables] = field(default_factory=list)
     variables_by_demand: dict[str, list[PlacementVariables]] = field(
@@ -46,7 +46,7 @@ class OpeningModelContext:
 
     @property
     def window_spacing(self) -> int:
-        return round(self.profile.geometry.window_spacing * self.prepared.scale)
+        return round(self.config.geometry.window_spacing * self.prepared.scale)
 
     def new_name(self, prefix: str, *parts: object) -> str:
         self._counter += 1
@@ -62,12 +62,12 @@ class BuiltOpeningModel:
 
 def _build_demands(
     prepared: PreparedFloorPlan,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
     registry: OpeningFeatureRegistry,
 ) -> tuple[OpeningDemand, ...]:
     demands: list[OpeningDemand] = []
-    for feature_id in profile.enabled_features:
-        demands.extend(registry.resolve(feature_id).build_demands(prepared, profile))
+    for feature_id in config.enabled_features:
+        demands.extend(registry.resolve(feature_id).build_demands(prepared, config))
     ids = [demand.id for demand in demands]
     if len(ids) != len(set(ids)):
         raise OpeningConfigurationError("opening demand IDs must be unique")
@@ -77,7 +77,7 @@ def _build_demands(
 def _create_variables(context: OpeningModelContext) -> None:
     walls = context.prepared.wall_by_id()
     clearance = round(
-        context.profile.geometry.corner_clearance * context.prepared.scale
+        context.config.geometry.corner_clearance * context.prepared.scale
     )
     for demand in context.demands:
         for option_index, option in enumerate(demand.options):
@@ -141,7 +141,7 @@ def _apply_constraints(context: OpeningModelContext) -> None:
         "shared_placement": SharedPlacementConstraint(),
         "room_door_limits": RoomDoorLimitConstraint(),
     }
-    for constraint_id in context.profile.enabled_constraints:
+    for constraint_id in context.config.enabled_constraints:
         try:
             constraint = constraints[constraint_id]
         except KeyError as exc:
@@ -179,7 +179,7 @@ def _apply_objective(context: OpeningModelContext) -> bool:
     }
     coefficient_by_tier: dict[str, int] = {}
     lower_maximum = maximum_preference
-    for tier in context.profile.objective.tier_order:
+    for tier in context.config.objective.tier_order:
         coefficient_by_tier[tier] = lower_maximum + 1
         tier_count = sum(
             1 for demand in context.demands if demand.objective_tier == tier
@@ -211,14 +211,14 @@ def _apply_objective(context: OpeningModelContext) -> bool:
 
 def build_opening_model(
     prepared: PreparedFloorPlan,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
     registry: OpeningFeatureRegistry,
 ) -> BuiltOpeningModel:
-    demands = _build_demands(prepared, profile, registry)
+    demands = _build_demands(prepared, config, registry)
     context = OpeningModelContext(
         model=cp_model.CpModel(),
         prepared=prepared,
-        profile=profile,
+        config=config,
         demands=demands,
     )
     _create_variables(context)

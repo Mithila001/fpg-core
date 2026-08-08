@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .geometry import unit_inward_normal
 from ..domain import NormalizedLand, Point, Polygon
+from .geometry import unit_inward_normal
 
 
 @dataclass(frozen=True, slots=True)

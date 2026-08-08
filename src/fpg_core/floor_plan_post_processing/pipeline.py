@@ -18,7 +18,7 @@ from .contracts import (
 )
 from .exceptions import ConfigurationError, PostProcessingError, RollbackError
 from .registry import ProcessorRegistry
-from .validation import validate_floor_plan, validate_profile
+from .validation import validate_config, validate_floor_plan
 
 
 def _restore(target: FloorPlan, snapshot: FloorPlan) -> None:
@@ -35,9 +35,9 @@ def _restore(target: FloorPlan, snapshot: FloorPlan) -> None:
 
 
 def _preflight(request: PostProcessingRequest, registry: ProcessorRegistry) -> None:
-    validate_profile(request.profile)
+    validate_config(request.config)
     seen: set[str] = set()
-    for use in request.profile.processors:
+    for use in request.config.processors:
         processor = registry.resolve(use.processor_id)
         if not isinstance(use.config, processor.config_type):
             raise ConfigurationError(
@@ -91,8 +91,8 @@ def run_pipeline(
         _preflight(request, registry)
         validate_floor_plan(
             plan,
-            tolerance=request.profile.numeric.tolerance,
-            reject_openings=request.profile.reject_existing_openings,
+            tolerance=request.config.numeric.tolerance,
+            reject_openings=request.config.reject_existing_openings,
         )
     except Exception as exc:  # noqa: BLE001
         code = exc.code if isinstance(exc, PostProcessingError) else "invalid_request"
@@ -106,12 +106,12 @@ def run_pipeline(
         mode=mode,
         specification=request.specification,
         floor_boundary=plan.boundary,
-        numeric=request.profile.numeric,
-        profile_name=request.profile.name,
+        numeric=request.config.numeric,
+        profile_name=request.config.name,
     )
     unsuccessful: set[str] = set()
 
-    for use in request.profile.processors:
+    for use in request.config.processors:
         processor = registry.resolve(use.processor_id)
         failed_dependencies = [
             item for item in processor.prerequisites if item in unsuccessful

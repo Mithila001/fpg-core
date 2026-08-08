@@ -16,32 +16,21 @@ change the result contract.
 ### Purpose
 
 Validates and normalizes one convex parcel with one entry-road attachment, classifies
-its sides relative to that road, applies a setback profile, and returns the remaining
-convex buildable polygon. Use it when a consumer already has parcel coordinates and
-setback reference data and needs the legal/build-policy envelope.
+its sides relative to that road, applies setbacks, and returns the legal/build-policy
+envelope. Processing data and reusable policy are separated in `BuildableLandInput`.
 
 ### Public API
 
 ```python
-from fpg_core.buildable_land import (
-    BuildableLandError,
-    calculate_buildable_land,
-    normalize_land_request,
-)
-
-normalize_land_request(
-    request: BuildableSpaceRequestData,
-    reference_data: BuildableSpaceConfig,
-) -> NormalizedLand
-
 calculate_buildable_land(
-    land: NormalizedLand,
-    profile: SetbackProfile,
-) -> BuildableLand
+    buildable_input: BuildableLandInput,
+    *, mode: ExecutionMode = ExecutionMode.PRODUCTION,
+) -> FeatureExecution[BuildableLandResult, BuildableLandDetails]
 ```
 
-The input and output contracts are imported from `fpg_core.domain`;
-`BuildableSpaceConfig` is imported from `fpg_core`.
+Import `BuildableLandInput`, `BuildableLandConfig`, result/detail contracts,
+`BuildableLandError`, and the operation from `fpg_core.buildable_land`. Shared land
+contracts and `ExecutionMode` come from `fpg_core.domain`.
 
 ### Inputs
 
@@ -54,8 +43,8 @@ The input and output contracts are imported from `fpg_core.domain`;
   `boundary_edge_index` refers to the original boundary edge; its `road_type` must
   exist in the active profile's adjustments. Current `RoadRole` supports
   `MAIN_ENTRY`.
-- `BuildableSpaceConfig` contains `active_profile: SetbackProfile`,
-  `usable_land_constraints` (unused by these two calls), and `validation_limits`.
+- `BuildableLandInput(request, config)` requires exact
+  `BuildableSpaceRequestData` and `BuildableLandConfig` instances.
 - `SetbackProfile` contains `name`, `status`, `description`, calculation mode,
   `base_setbacks: Mapping[LandSide, int]`, and nested road adjustments. Current
   calculation mode is `BASE_PLUS_ROAD_ADJUSTMENT`. Setbacks are lengths in project
@@ -63,7 +52,8 @@ The input and output contracts are imported from `fpg_core.domain`;
 
 ### Configuration
 
-- `ValidationLimits.minimum_vertex_count`, `maximum_vertex_count`, and
+- `BuildableLandConfig(setback_profile, validation_limits)` contains only reusable
+  behavior controls. `ValidationLimits.minimum_vertex_count`, `maximum_vertex_count`, and
   `maximum_absolute_coordinate` control accepted parcel complexity and coordinate
   bounds.
 - `base_setbacks` sets the inward distance for front/back/left/right edges.
@@ -77,28 +67,30 @@ each accepted `RoadType` need mapping entries.
 
 ### Outputs
 
-`NormalizedLand` contains a counter-clockwise boundary, normalized `LandEdge`s that
-retain `source_edge_index`, and `main_entry_road`. `BuildableLand` contains
-`boundary: Polygon`, `area: float`, and one `EdgeSetback` per source edge with side,
-base, road adjustment, final setback, and optional road type.
+The return envelope always contains `BuildableLandResult(buildable_land,
+normalized_land)`. `NormalizedLand` has a counter-clockwise boundary, normalized
+`LandEdge`s retaining `source_edge_index`, and `main_entry_road`. `BuildableLand`
+has `boundary`, `area`, and one `EdgeSetback` per source edge. DEBUG adds
+`BuildableLandDetails(edge_classifications)`; PRODUCTION sets `details=None`.
 
 ### Errors / failure conditions
 
-Both calls raise `BuildableLandError`; inspect `.code: BuildableSpaceErrorCode` and
+Invalid contract types raise `TypeError`/`ValueError`. Geometry/domain failures raise
+`BuildableLandError`; inspect `.code: BuildableSpaceErrorCode` and
 `.message`. Codes cover invalid/non-convex/self-intersecting boundaries, bad or
 unsupported road attachments, setbacks that eliminate the parcel, and final geometry
-failure. A negative road edge index is not explicitly rejected by normalization;
-consumers should supply indexes in `0..vertex_count-1`.
+failure. Road edge indexes must be in `0..vertex_count-1`.
 
 ### Usage example
 
 ```python
-from fpg_core import BuildableSpaceConfig
-from fpg_core.buildable_land import calculate_buildable_land, normalize_land_request
+from fpg_core.buildable_land import (
+    BuildableLandConfig, BuildableLandInput, calculate_buildable_land,
+)
 from fpg_core.domain import (
-    BuildableSpaceRequestData, LandSide, Point, Polygon, RoadAttachment,
+    BuildableSpaceRequestData, ExecutionMode, LandSide, Point, Polygon, RoadAttachment,
     RoadRole, RoadType, SetbackCalculationMode, SetbackProfile,
-    UsableLandConstraints, ValidationLimits,
+    ValidationLimits,
 )
 
 profile = SetbackProfile(
@@ -107,24 +99,27 @@ profile = SetbackProfile(
     base_setbacks={side: 5 for side in LandSide},
     road_adjustments={RoadType.MAIN_ROAD: {side: 0 for side in LandSide}},
 )
-config = BuildableSpaceConfig(
-    active_profile=profile,
-    usable_land_constraints=UsableLandConstraints(20, 20, 1, 1000),
+config = BuildableLandConfig(
+    setback_profile=profile,
     validation_limits=ValidationLimits(4, 12, 100_000),
 )
 request = BuildableSpaceRequestData(
     land_boundary=Polygon((Point(0, 0), Point(100, 0), Point(100, 80), Point(0, 80))),
     roads=(RoadAttachment(0, RoadRole.MAIN_ENTRY, RoadType.MAIN_ROAD),),
 )
-land = normalize_land_request(request, config)
-result = calculate_buildable_land(land, profile)
+execution = calculate_buildable_land(
+    BuildableLandInput(request=request, config=config),
+    mode=ExecutionMode.DEBUG,
+)
+buildable_land = execution.result.buildable_land
+normalized_land = execution.result.normalized_land
 ```
 
 ### Important behavioral notes
 
-Inputs are not mutated. Boundary orientation may change during normalization while
-source edge identity is preserved. Side meaning is road-relative, not a global
-compass direction.
+Inputs are not mutated. The normalized boundary may reverse orientation while source
+edge identity remains stable. Side meaning is road-relative, not a global compass
+direction. The operation is deterministic for fixed input/configuration.
 
 ## Usable Land
 
@@ -141,18 +136,19 @@ buildable polygon.
 from fpg_core.usable_land import UsableLandError, find_usable_land
 
 find_usable_land(
-    buildable_land: BuildableLand,
-    land: NormalizedLand,
-    constraints: UsableLandConstraints,
-) -> UsableLand
+    usable_input: UsableLandInput,
+    *, mode: ExecutionMode = ExecutionMode.PRODUCTION,
+) -> FeatureExecution[UsableLand, UsableLandDetails]
 ```
 
 ### Inputs
 
-- `buildable_land` supplies the polygon to search.
-- `land` supplies the normalized main-road edge and its orientation.
-- `UsableLandConstraints(minimum_width, minimum_length, search_resolution,
-  maximum_sweep_lines)` uses positive integer project units/counts. Width is defined
+- `UsableLandInput(buildable_land, land, config)` requires a `BuildableLand`, its
+  corresponding `NormalizedLand`, and `UsableLandConfig`.
+- `UsableLandConfig(minimum_width, minimum_length, search_resolution,
+  maximum_sweep_lines)` requires positive integers. Distances use project units.
+  `UsableLandConfig.from_constraints(UsableLandConstraints(...))` is the supported
+  compatibility conversion. Width is defined
   relative to the selected road alignment; both parallel and perpendicular
   alignments are considered.
 
@@ -172,29 +168,31 @@ coarsest resolution acceptable for the project's coordinate precision and size
 
 ### Outputs
 
-`UsableLand` contains world-coordinate `boundary: Polygon`, integer `width`, `length`,
-and `area`, `floor_width_alignment` (`PARALLEL_TO_ENTRY_ROAD` or
-`PERPENDICULAR_TO_ENTRY_ROAD`), and the original `entry_road_edge_index`.
+The result is `UsableLand` with world-coordinate `boundary`, integer `width`,
+`length`, and `area`, alignment (`PARALLEL_TO_ENTRY_ROAD` or
+`PERPENDICULAR_TO_ENTRY_ROAD`), and original `entry_road_edge_index`. DEBUG adds
+`UsableLandDetails`: evaluated pair count, local buildable/selected boundaries, and
+the road-aligned transform origin and axes. PRODUCTION sets `details=None`.
 
 ### Errors / failure conditions
 
-`UsableLandError` exposes `.code`, `.message`, and `.details`. Handle
+Invalid input/config types raise `TypeError`/`ValueError`. `UsableLandError` exposes
+`.code`, `.message`, and `.details`. Handle
 `NO_USABLE_LAND_FOUND`, `SEARCH_LIMIT_EXCEEDED`, and
-`USABLE_LAND_CALCULATION_FAILED`. Non-positive configuration is rejected by
-package-wide configuration validation but the standalone function expects a valid
-contract.
+`USABLE_LAND_CALCULATION_FAILED`.
 
 ### Usage example
 
 ```python
-from fpg_core.domain import UsableLandConstraints
-from fpg_core.usable_land import find_usable_land
+from fpg_core.domain import ExecutionMode
+from fpg_core.usable_land import UsableLandConfig, UsableLandInput, find_usable_land
 
-usable = find_usable_land(
+execution = find_usable_land(UsableLandInput(
     buildable_land=buildable_land,
     land=normalized_land,
-    constraints=UsableLandConstraints(30, 40, 1, 1000),
-)
+    config=UsableLandConfig(30, 40, 1, 1000),
+), mode=ExecutionMode.DEBUG)
+usable = execution.result
 ```
 
 ### Important behavioral notes
@@ -345,12 +343,13 @@ All are exported from `fpg_core.candidate_search`. The session exposes
 
 ### Inputs
 
-- `CandidateSearchInput(targets, settings, evaluator)` requires unique targets and a
-  callable `CandidateMap -> float` returning a finite score.
+- `CandidateSearchInput(targets, grid, hallway_room_count_range, evaluator, config)`
+  requires unique targets and a callable `CandidateMap -> float` returning a finite
+  score. The grid and hallway range are processing input; `config` controls search.
 - `CandidateSearchTarget(room_id, room_type=None)` uses a non-empty string ID.
-- `CandidateSearchSettings(grid, hallway_room_count_range, max_grid_node_count,
-  trial_count, random_seed=None)`: counts are positive integers; max nodes is at least
-  9; the prepared node count may not exceed it; at least one interior node is needed.
+- `CandidateSearchConfig(trial_count=500, max_grid_node_count=250_000,
+  random_seed=None)`: counts are positive integers; max nodes is at least 9; the
+  prepared node count may not exceed it; at least one interior node is needed.
 - Exactly `hallway_room_count_range.maximum` targets must be hallways, and the grid
   must have enough interior nodes for all non-hallways plus that maximum. The shared
   range always has `minimum=1`.
@@ -387,15 +386,15 @@ exceptions propagate.
 
 ```python
 from fpg_core.candidate_search import (
-    CandidateSearchInput, CandidateSearchSettings,
+    CandidateSearchConfig, CandidateSearchInput,
     build_candidate_search_targets, search_candidates,
 )
 
 execution = search_candidates(CandidateSearchInput(
     targets=build_candidate_search_targets(specification),
-    settings=CandidateSearchSettings(
-        grid=resolved_grid,
-        hallway_room_count_range=hallway_range,
+    grid=resolved_grid,
+    hallway_room_count_range=hallway_range,
+    config=CandidateSearchConfig(
         max_grid_node_count=250_000,
         trial_count=100,
         random_seed=42,
@@ -625,18 +624,16 @@ FloorPlanSolver.solve(request, *, mode=ExecutionMode.PRODUCTION)
 ```
 
 Preferred imports are from `fpg_core.floor_plan_solver`. It exports request/result and
-diagnostic contracts; `GenerationProfile`, `HardConstraintUse`, `SoftConstraintUse`;
-`SolverConfig`, `PreparationConfig`; built-ins `INITIAL_GENERATION_PROFILE`,
+diagnostic contracts; `FloorPlanSolverConfig` (with compatibility alias
+`GenerationProfile`), `HardConstraintUse`, `SoftConstraintUse`, `SolverConfig`,
+`PreparationConfig`, `SeedPolicy`, `SeedSource`, `DefaultProfileSettings`,
+`ProfileCatalog`, and `ConstraintRegistry`; built-ins `INITIAL_GENERATION_PROFILE`,
 `REFINEMENT_A_PROFILE`, `REFINEMENT_B_PROFILE`, `DEFAULT_PROFILES`; and
-`build_default_profiles()`. Custom-registry consumers may import `ConstraintRegistry`
-from the public `fpg_core.floor_plan_solver.api` module. Advanced profile construction
-also exposes `SeedPolicy`/`SeedSource` from `fpg_core.floor_plan_solver.config` and
-`DefaultProfileSettings`/`ProfileCatalog` from
-`fpg_core.floor_plan_solver.profiles`.
+`build_default_profiles()`.
 
 ### Inputs
 
-- `FloorPlanSolveRequest(specification, profile, candidate_hints=(),
+- `FloorPlanSolveRequest(specification, config, candidate_hints=(),
   existing_floor_plan=None)`.
 - The specification requires a positive finite floor; unique non-empty room IDs;
   `RoomType` values; positive compatible width/area ranges; and relations referencing
@@ -704,7 +701,7 @@ from fpg_core.floor_plan_solver import (
 execution = generate_floor_plan(
     FloorPlanSolveRequest(
         specification=specification,
-        profile=INITIAL_GENERATION_PROFILE,
+        config=INITIAL_GENERATION_PROFILE,
         candidate_hints=(RoomPlacementHint(RoomId("living"), 20, 10),),
     ),
     mode=ExecutionMode.DEBUG,
@@ -739,15 +736,14 @@ post_process_floor_plan(
 ) -> PostProcessingExecution
 ```
 
-The feature root exports the request/profile/result/execution/detail contracts,
+The feature root exports the request/config/result/execution/detail contracts,
 processor extension contracts and registry, statuses, `NumericPolicy`,
 `INITIAL_GENERATION_PROFILE`, and `create_default_registry()`.
-Configuration classes for the built-in processors are importable from
-`fpg_core.floor_plan_post_processing.config`.
+It also exports every built-in processor configuration class.
 
 ### Inputs
 
-`PostProcessingRequest(floor_plan, profile, specification=None)`. The plan boundary
+`PostProcessingRequest(floor_plan, config, specification=None)`. The plan boundary
 and room polygons must be canonical, rooms must have unique IDs and names, standard
 rooms may not overlap or leave the floor, parent/redirect/opening references must be
 valid, and identity redirects must be acyclic. The specification is optional context
@@ -755,8 +751,8 @@ for processors.
 
 ### Configuration
 
-- `PostProcessingProfile(name, processors, numeric=NumericPolicy(),
-  reject_existing_openings=True)`.
+- `FloorPlanPostProcessingConfig(name, processors, numeric=NumericPolicy(),
+  reject_existing_openings=True)`. `PostProcessingProfile` is a compatibility alias.
 - `NumericPolicy(tolerance=1e-6, grid_size=1.0)` requires positive values. Tolerance
   controls geometric comparisons/validation; grid size is the default snap interval.
 - Each `ProcessorUse(processor_id, config, required=False,
@@ -813,7 +809,7 @@ from fpg_core.floor_plan_post_processing import (
 
 execution = post_process_floor_plan(PostProcessingRequest(
     floor_plan=solved_plan,
-    profile=INITIAL_GENERATION_PROFILE,
+    config=INITIAL_GENERATION_PROFILE,
     specification=specification,
 ))
 if execution.result.status is not PipelineStatus.SUCCESS:
@@ -852,17 +848,18 @@ The feature root exports profile/config contracts, request/result/diagnostics/st
 
 ### Inputs
 
-`OpeningGenerationRequest(floor_plan, profile)` requires finite canonical rectilinear
+`OpeningGenerationRequest(floor_plan, config)` requires finite canonical rectilinear
 floor/room polygons; positive area; unique room IDs; standard rooms inside the floor
 without area overlap; and no existing openings. Adjacent/shared and
 exterior walls must be long enough for configured openings and clearances.
 
 ### Configuration
 
-- `OpeningGenerationProfile(name, enabled_features=('interior_doors',
+- `FloorPlanOpeningsConfig(name, enabled_features=('interior_doors',
   'exterior_doors', 'windows'), enabled_constraints=('shared_placement',
   'room_door_limits'), geometry=..., dimensions=..., policy=..., objective=...,
-  solver=...)`. IDs must be unique; `shared_placement` is mandatory.
+  solver=...)`. `OpeningGenerationProfile` is a compatibility alias. IDs must be
+  unique; `shared_placement` is mandatory.
 - `GeometryConfig(coordinate_scale=10, tolerance=1e-6, corner_clearance=0,
   window_spacing=5)`: integer precision, geometry tolerance, distance from wall
   corners, and minimum gap involving windows.
@@ -909,7 +906,7 @@ from fpg_core.floor_plan_openings import (
 
 execution = generate_openings(OpeningGenerationRequest(
     floor_plan=finalized_plan,
-    profile=DEFAULT_OPENING_PROFILE,
+    config=DEFAULT_OPENING_PROFILE,
 ))
 if not execution.result.solved:
     raise RuntimeError(execution.result.message)
@@ -950,16 +947,17 @@ contracts, statuses, default profile, and all scoring exception classes.
 
 ### Inputs
 
-`FloorPlanScoringInput(floor_plan, specification, profile)` requires a typed plan and
+`FloorPlanScoringInput(floor_plan, specification, config)` requires a typed plan and
 the specification that defines room IDs, size ranges, and relations. Plan rooms need
 valid finite polygon geometry and IDs consistent with specification or valid identity
 redirects.
 
 ### Configuration
 
-- `ScoringProfile(groups, evaluators)` requires at least one group, unique keys,
+- `FloorPlanScoringConfig(groups, evaluators)` requires at least one group, unique keys,
   finite positive weights, and exactly one enabled `critical` gate that executes no
   later than other groups. Every enabled group needs an enabled evaluator.
+  `ScoringProfile` is a compatibility alias.
 - `ScoringGroupRule(key, enabled=True, order=0, weight=1)` controls execution order and
   allocation of the 100-point total.
 - `EvaluatorRule(key, group_key, settings, enabled=True, order=0, weight=1,
@@ -1009,7 +1007,7 @@ execution = score_floor_plan(
     FloorPlanScoringInput(
         floor_plan=completed_plan,
         specification=specification,
-        profile=create_default_profile(),
+        config=create_default_profile(),
     ),
     mode=ExecutionMode.DEBUG,
 )
@@ -1021,3 +1019,196 @@ score = execution.result.total_score
 Scoring never mutates the plan. Openings do not affect the current built-in scores.
 In PRODUCTION, result findings remain consumer-safe while evaluator metrics and
 visualization payloads are omitted with `details=None`.
+
+## Shared Domain Contract Reference
+
+All contracts in this section are public from `fpg_core.domain`. `RoomId`,
+`OpeningId`, `EvaluatorKey`, and `GroupKey`-style identifiers are string-based typed
+aliases; construct them from non-empty strings where the owning feature requires it.
+
+### Execution contracts
+
+```python
+ExecutionMode.PRODUCTION  # "production"
+ExecutionMode.DEBUG       # "debug"
+
+ExecutionMetadata(mode: ExecutionMode, duration_seconds: float)
+FeatureExecution[TResult, TDetails](
+    result: TResult,
+    details: TDetails | None,
+    metadata: ExecutionMetadata,
+)
+```
+
+Duration is finite, non-negative, and measured in seconds. Except for Candidate
+Scoring's documented direct `ScoringResult`, feature operations in this reference
+return this envelope. DEBUG changes only `details` collection; it does not change the
+normal result type.
+
+### Geometry contracts
+
+```python
+Point(x: float, y: float)
+Segment(start: Point, end: Point)
+Polygon(points: tuple[Point, ...])
+```
+
+Coordinates and lengths use consumer project units; areas use square project units.
+`Polygon` stores an ordered boundary without an implied coordinate conversion.
+Feature-specific validation determines whether closing duplicates, orientation,
+convexity, or rectilinearity are accepted.
+
+### Land contracts
+
+```python
+BuildableSpaceRequestData(
+    land_boundary: Polygon,
+    roads: tuple[RoadAttachment, ...],
+)
+RoadAttachment(
+    boundary_edge_index: int,
+    role: RoadRole,
+    road_type: RoadType,
+)
+ValidationLimits(
+    minimum_vertex_count: int,
+    maximum_vertex_count: int,
+    maximum_absolute_coordinate: int,
+)
+SetbackProfile(
+    name: str,
+    status: str,
+    description: str,
+    calculation_mode: SetbackCalculationMode,
+    base_setbacks: Mapping[LandSide, int],
+    road_adjustments: Mapping[RoadType, Mapping[LandSide, int]],
+)
+```
+
+`LandSide` values are `front`, `back`, `left`, and `right`. Current setback
+calculation uses `SetbackCalculationMode.BASE_PLUS_ROAD_ADJUSTMENT`. `NormalizedLand`
+contains `boundary`, ordered `LandEdge(index, source_edge_index, segment)` values,
+and `main_entry_road`. `BuildableLand(boundary, area, edge_setbacks)` stores
+`EdgeSetback(edge_index, side, base_setback, road_adjustment, final_setback,
+road_type=None)`. `UsableLand(boundary, width, length, area,
+floor_width_alignment, entry_road_edge_index)` uses `FloorWidthAlignment` values
+`parallel_to_entry_road` and `perpendicular_to_entry_road`.
+
+`UsableLandConstraints(minimum_width, minimum_length, search_resolution,
+maximum_sweep_lines)` remains a shared compatibility/reference-data contract;
+standalone Usable Land execution uses `UsableLandConfig`.
+
+### Candidate and grid contracts
+
+```python
+ResolvedCandidateGrid(
+    x_positions: tuple[int | float, ...],
+    y_positions: tuple[int | float, ...],
+)
+CandidatePoint(
+    room_id: RoomId,
+    x: float,
+    y: float,
+    room_type: RoomType | None = None,
+    hint_index: int = 1,
+)
+CandidateMap(
+    grid: ResolvedCandidateGrid,
+    points: tuple[CandidatePoint, ...],
+)
+HallwayRoomCountRange(maximum: int, minimum: int = 1)
+```
+
+Grid positions must describe strictly increasing, uniformly spaced axes. Derived
+properties provide spacing, dimensions, node counts, coordinate/index conversion,
+and interior-node iteration. Candidate points must use unique `(room_id,
+hint_index)` identities; individual features impose grid-alignment and capacity
+rules. `CandidateSearchSpace(origin_x, origin_y, width, length, grid_spacing)` is a
+legacy/derived grid description; use `ResolvedCandidateGrid` for exact execution.
+
+Shared circulation contracts are
+`CirculationRouteRule(id, name, source_room_type, destination_room_type,
+destination_selection, traffic_class, allowed_transit_room_types,
+importance_weight)`, `GridRoutingCostProfile(empty_node_cost,
+traversable_hint_node_cost, turn_cost, perimeter_bias_max_cost)`, and
+`HallwayClassification(room_id, hint_index, traffic_class)`. Destination selection
+values are `all_matching` and `lowest_cost_match`; traffic classes are `public` and
+`private`; hallway classifications add `mixed`, `unclassified`, and `unused`.
+
+### Generation specification contracts
+
+```python
+FloorSpec(width: float, length: float)
+RoomSizeSpec(
+    min_width: float,
+    max_width: float,
+    min_area: float,
+    max_area: float,
+    width_axis: RoomWidthAxis = RoomWidthAxis.ANY,
+)
+RoomSpec(id: RoomId, room_type: RoomType, name: str, size: RoomSizeSpec)
+RoomRelationSpec(
+    source_room_id: RoomId,
+    target_room_ids: tuple[RoomId, ...],
+    match_policy: MatchPolicy,
+    strength: ConstraintStrength,
+)
+FloorPlanGenerationSpec(
+    floor: FloorSpec,
+    rooms: tuple[RoomSpec, ...],
+    room_relations: tuple[RoomRelationSpec, ...],
+)
+```
+
+`MatchPolicy` values are `and` and `or`; `ConstraintStrength` values are `hard` and
+`soft`; `RoomWidthAxis` values are `any`, `x`, and `y`. `RoomType` serialized values
+include `bedroom`, `living_room`, `kitchen`, `bathroom`, `attached_bathroom`,
+`hallway`, `veranda`, `garage`, and `dining_room`. Features validate positive finite
+floor/room dimensions, unique IDs, relation references, and domain-specific count or
+fit requirements.
+
+### Floor-plan contracts
+
+```python
+FloorPlanRoom(
+    id: RoomId,
+    room_type: RoomType,
+    name: str,
+    boundary: Polygon,
+    role: RoomRole = RoomRole.STANDARD,
+    parent_room_id: RoomId | None = None,
+    metadata: RoomMetadata = RoomMetadata(),
+)
+FloorPlanOpening(
+    id: OpeningId,
+    opening_type: OpeningType,
+    purpose: OpeningPurpose,
+    start: Point,
+    end: Point,
+    connected_room_ids: tuple[RoomId, ...] = (),
+)
+FloorPlan(
+    boundary: Polygon,
+    rooms: list[FloorPlanRoom],
+    openings: list[FloorPlanOpening] = [],
+    identity_redirects: dict[RoomId, RoomId] = {},
+    applied_transformations: set[str] = set(),
+)
+```
+
+The displayed mutable defaults are created per instance by factories. `RoomRole`
+values are `standard` and `solver_placeholder`.
+`RoomMetadata(source_room_ids=(), applied_transformations=())` records provenance.
+Opening types are `door` and `window`; purposes are `room_connection`,
+`main_entrance`, `secondary_entrance`, and `daylight`. Geometry-changing post-processing
+mutates the supplied `FloorPlan`; opening generation and both scoring features do not.
+
+## Document verification checklist
+
+- Preferred imports and public names were compared with every feature root
+  `__all__` and `api.py.__all__`.
+- Constructor fields/defaults were read from current source contracts and config.
+- Validation, exceptions, returned statuses, built-in presets, and mode behavior were
+  checked against current pipelines/managers.
+- Examples use supported public imports and current `config=` request fields.
+- No multi-feature orchestration is prescribed as a required package pipeline.

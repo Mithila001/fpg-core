@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..config import FloorPlanSolverConfig
 from ..exceptions import InvalidProfileError, UnknownConstraintError
-from ..profiles import GenerationProfile
 from .base import HardConstraint, SoftConstraint
 
 
@@ -46,8 +46,13 @@ class ConstraintRegistry:
                 f"Unknown soft constraint '{key}'"
             ) from exc
 
-    def validate_profile(self, profile: GenerationProfile) -> None:
-        for hard_use in profile.hard_constraints:
+    def validate_config(self, config: FloorPlanSolverConfig) -> None:
+        for hard_use in config.hard_constraints:
             self.get_hard(hard_use.key)
-        for soft_use in profile.soft_constraints:
+        for soft_use in config.soft_constraints:
             self.get_soft(soft_use.key)
+
+    def validate_profile(self, profile: FloorPlanSolverConfig) -> None:
+        """Backward-compatible alias for validate_config()."""
+
+        self.validate_config(profile)

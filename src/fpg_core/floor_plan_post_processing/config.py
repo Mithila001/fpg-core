@@ -1,8 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..domain import RoomType
+
+
+@dataclass(frozen=True)
+class NumericPolicy:
+    """Numerical tolerances and grid settings used by the pipeline."""
+
+    tolerance: float = 1e-6
+    grid_size: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -51,3 +59,29 @@ class GridSnapConfig:
 @dataclass(frozen=True)
 class RectilinearSimplificationConfig:
     pass
+
+
+@dataclass(frozen=True)
+class ProcessorUse:
+    """Configuration for one processor in the ordered pipeline."""
+
+    processor_id: str
+    config: object
+    required: bool = False
+    validate_after: bool = False
+
+
+@dataclass(frozen=True)
+class FloorPlanPostProcessingConfig:
+    """Complete reusable configuration for floor-plan post-processing."""
+
+    name: str
+    processors: tuple[ProcessorUse, ...]
+    numeric: NumericPolicy = field(default_factory=NumericPolicy)
+    reject_existing_openings: bool = True
+
+
+# Backward-compatible type name. New code should prefer
+# ``FloorPlanPostProcessingConfig`` because this object is configuration, while
+# named profiles are presets built from this configuration type.
+PostProcessingProfile = FloorPlanPostProcessingConfig

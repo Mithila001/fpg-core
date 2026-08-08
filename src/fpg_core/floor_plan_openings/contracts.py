@@ -6,7 +6,7 @@ from enum import Enum
 from typing import TypeAlias
 
 from ..domain import FeatureExecution, FloorPlan
-from .profiles import OpeningGenerationProfile
+from .config import FloorPlanOpeningsConfig
 
 
 class OpeningGenerationStatus(str, Enum):
@@ -54,7 +54,7 @@ class OpeningDiagnostics:
 @dataclass(frozen=True, slots=True)
 class OpeningGenerationRequest:
     floor_plan: FloorPlan
-    profile: OpeningGenerationProfile
+    config: FloorPlanOpeningsConfig
 
 
 @dataclass(frozen=True, slots=True)

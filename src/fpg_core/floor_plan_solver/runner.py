@@ -4,6 +4,7 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
+from .config import FloorPlanSolverConfig
 from .contracts import (
     FloorPlanSolveResult,
     SolverDiagnostics,
@@ -11,7 +12,6 @@ from .contracts import (
 )
 from .extractor import extract_floor_plan
 from .model import BuiltModel
-from .profiles import GenerationProfile
 
 
 def _map_status(status_code: int) -> SolverStatus:
@@ -30,7 +30,7 @@ def _status_message(status: SolverStatus) -> str:
     messages = {
         SolverStatus.OPTIMAL: "CP-SAT found an optimal floor plan",
         SolverStatus.FEASIBLE: "CP-SAT found a feasible floor plan",
-        SolverStatus.INFEASIBLE: "The selected profile produced an infeasible model",
+        SolverStatus.INFEASIBLE: "The selected configuration produced an infeasible model",
         SolverStatus.MODEL_INVALID: "OR-Tools rejected the generated CP-SAT model",
         SolverStatus.UNKNOWN: "The solver stopped without finding a feasible solution",
     }
@@ -39,20 +39,20 @@ def _status_message(status: SolverStatus) -> str:
 
 def solve_built_model(
     built: BuiltModel,
-    profile: GenerationProfile,
+    config: FloorPlanSolverConfig,
     *,
     collect_details: bool,
 ) -> tuple[FloorPlanSolveResult, SolverDiagnostics | None]:
     solver: Any = cp_model.CpSolver()
-    config = profile.solver
-    solver.parameters.max_time_in_seconds = float(config.max_time_seconds)
-    solver.parameters.num_search_workers = int(config.num_search_workers)
-    solver.parameters.log_search_progress = bool(config.log_search_progress)
-    solver.parameters.cp_model_presolve = bool(config.cp_model_presolve)
-    if config.random_seed is not None:
-        solver.parameters.random_seed = int(config.random_seed)
-    if config.relative_gap_limit is not None:
-        solver.parameters.relative_gap_limit = float(config.relative_gap_limit)
+    solver_config = config.solver
+    solver.parameters.max_time_in_seconds = float(solver_config.max_time_seconds)
+    solver.parameters.num_search_workers = int(solver_config.num_search_workers)
+    solver.parameters.log_search_progress = bool(solver_config.log_search_progress)
+    solver.parameters.cp_model_presolve = bool(solver_config.cp_model_presolve)
+    if solver_config.random_seed is not None:
+        solver.parameters.random_seed = int(solver_config.random_seed)
+    if solver_config.relative_gap_limit is not None:
+        solver.parameters.relative_gap_limit = float(solver_config.relative_gap_limit)
 
     status_code = solver.Solve(built.context.model)
     status = _map_status(status_code)
@@ -62,7 +62,7 @@ def solve_built_model(
     result = FloorPlanSolveResult(
         status=status,
         floor_plan=floor_plan,
-        profile_name=profile.name,
+        profile_name=config.name,
         message=_status_message(status),
     )
     if not collect_details:

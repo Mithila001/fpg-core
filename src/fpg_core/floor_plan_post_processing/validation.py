@@ -3,21 +3,29 @@ from __future__ import annotations
 from shapely.geometry import Polygon as ShapelyPolygon
 
 from ..domain import FloorPlan, RoomId, RoomRole
-from .contracts import PostProcessingProfile
+from .config import FloorPlanPostProcessingConfig, PostProcessingProfile
 from .exceptions import ConfigurationError, ValidationError
 from .geometry import normalize_polygon, to_shapely
 
 
-def validate_profile(profile: PostProcessingProfile) -> None:
-    if not profile.name.strip():
-        raise ConfigurationError("profile name cannot be empty")
-    if profile.numeric.tolerance <= 0:
+def validate_config(config: FloorPlanPostProcessingConfig) -> None:
+    if not config.name.strip():
+        raise ConfigurationError("configuration name cannot be empty")
+    if config.numeric.tolerance <= 0:
         raise ConfigurationError("geometry tolerance must be positive")
-    if profile.numeric.grid_size <= 0:
+    if config.numeric.grid_size <= 0:
         raise ConfigurationError("grid size must be positive")
-    ids = [use.processor_id for use in profile.processors]
+    ids = [use.processor_id for use in config.processors]
     if len(ids) != len(set(ids)):
-        raise ConfigurationError("a profile cannot contain a processor more than once")
+        raise ConfigurationError(
+            "a configuration cannot contain a processor more than once"
+        )
+
+
+def validate_profile(profile: PostProcessingProfile) -> None:
+    """Backward-compatible alias for callers using the old profile terminology."""
+
+    validate_config(profile)
 
 
 def validate_floor_plan(

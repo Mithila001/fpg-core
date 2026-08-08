@@ -39,8 +39,8 @@ from fpg_core.candidate_scoring import (  # noqa: E402
     evaluate_candidate,
 )
 from fpg_core.candidate_search import (  # noqa: E402
+    CandidateSearchConfig,
     CandidateSearchInput,
-    CandidateSearchSettings,
     build_candidate_search_targets,
     search_candidates,
 )
@@ -368,9 +368,9 @@ def run() -> dict[str, Any]:
     search = search_candidates(
         CandidateSearchInput(
             targets=build_candidate_search_targets(specification_template),
-            settings=CandidateSearchSettings(
-                grid=prepared.candidate_grid,
-                hallway_room_count_range=prepared.hallway_room_count_range,
+            grid=prepared.candidate_grid,
+            hallway_room_count_range=prepared.hallway_room_count_range,
+            config=CandidateSearchConfig(
                 max_grid_node_count=search_data["max_grid_node_count"],
                 trial_count=search_data["trial_count"],
                 random_seed=search_data.get("random_seed"),

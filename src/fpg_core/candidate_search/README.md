@@ -2,40 +2,55 @@
 
 Candidate Search uses Optuna to place one hint point per active room on the exact grid prepared by Floor Plan Preprocessing.
 
-## Core rules
+## Guide
 
-- Every active room receives exactly one point.
-- One hallway point represents one hallway room.
-- Every trial has between `1` and the prepared maximum number of hallway rooms.
-- The hallway count is sampled once globally per trial.
-- Points are sampled without replacement, so overlap cannot occur.
-- Outer grid nodes are never used as hint points.
-- `grid_spacing` is the minimum possible distance between two hint points.
+### Public API
 
-## Required preprocessing data
-
-Candidate Search receives shared domain contracts:
-
-```python
-ResolvedCandidateGrid
-HallwayRoomCountRange
-```
-
-The grid already contains:
-
-```python
-x_positions
-y_positions
-```
-
-Candidate Search does not create or resolve the grid. That work belongs to Floor Plan Preprocessing.
-
-## Complete usage
+Use imports from `fpg_core.candidate_search`:
 
 ```python
 from fpg_core.candidate_search import (
+    CandidateSearchConfig,
     CandidateSearchInput,
-    CandidateSearchSettings,
+    CandidateSearchSession,
+    build_candidate_search_targets,
+    search_candidates,
+)
+```
+
+`search_candidates()` is the normal complete-search entry point. `CandidateSearchSession` is available when the caller needs to evaluate trials incrementally.
+
+### Inputs
+
+Candidate Search now keeps processing input separate from configuration.
+
+Processing input:
+
+- `targets`: concrete room targets for this floor-plan operation.
+- `grid`: the exact `ResolvedCandidateGrid` prepared by preprocessing.
+- `hallway_room_count_range`: the `HallwayRoomCountRange` prepared for this floor plan.
+- `evaluator`: callback that scores one generated `CandidateMap`.
+
+Configuration:
+
+```python
+CandidateSearchConfig(
+    trial_count=500,
+    max_grid_node_count=250_000,
+    random_seed=42,
+)
+```
+
+- `trial_count`: number of Optuna trials to run. Defaults to `500` and must be at least `1`.
+- `max_grid_node_count`: safety limit for the supplied grid. Defaults to `250_000` and must be at least `9`.
+- `random_seed`: optional deterministic Optuna sampler seed.
+
+Complete usage:
+
+```python
+from fpg_core.candidate_search import (
+    CandidateSearchConfig,
+    CandidateSearchInput,
     build_candidate_search_targets,
     search_candidates,
 )
@@ -44,11 +59,10 @@ from fpg_core.domain import ExecutionMode
 prepared = preprocessing_execution.result
 
 targets = build_candidate_search_targets(prepared.generation_spec)
-settings = CandidateSearchSettings(
-    grid=prepared.candidate_grid,
-    hallway_room_count_range=prepared.hallway_room_count_range,
-    max_grid_node_count=250_000,
+
+config = CandidateSearchConfig(
     trial_count=500,
+    max_grid_node_count=250_000,
     random_seed=42,
 )
 
@@ -59,8 +73,10 @@ def evaluator(candidate):
 
 search_input = CandidateSearchInput(
     targets=targets,
-    settings=settings,
+    grid=prepared.candidate_grid,
+    hallway_room_count_range=prepared.hallway_room_count_range,
     evaluator=evaluator,
+    config=config,
 )
 
 execution = search_candidates(
@@ -71,115 +87,36 @@ execution = search_candidates(
 best = execution.result
 ```
 
-## Hallway behavior
+Candidate Search does not create or resolve a grid. The supplied `ResolvedCandidateGrid` is the source of truth.
 
-Assume preprocessing supplies:
+Every active room receives exactly one point. One hallway target represents one hallway room. Each trial selects one global hallway count within the prepared range and activates that many hallway targets.
 
-```text
-HallwayRoomCountRange(minimum=1, maximum=3)
-```
-
-and the targets include:
-
-```text
-hallway_1
-hallway_2
-hallway_3
-```
-
-A trial samples one value:
-
-```text
-hallway_room_count = 2
-```
-
-That trial activates:
-
-```text
-hallway_1 -> one point
-hallway_2 -> one point
-hallway_3 -> inactive
-```
-
-It does not create multiple indexed points under one hallway ID.
-
-The selected count is available as:
-
-```python
-execution.result.hallway_room_count
-```
-
-## Sampling without replacement
-
-For each trial Candidate Search:
-
-1. creates the available-node list from non-edge grid nodes,
-2. samples one remaining-node rank for each active room,
-3. removes the selected node,
-4. continues with the smaller remaining-node pool.
-
-Therefore all completed candidates are non-overlapping by construction. `CandidateMap` also validates uniqueness defensively.
-
-## Target validation
+Outer grid nodes are not used as hint points. Points are sampled without replacement, so generated room points do not overlap.
 
 `CandidateSearchInput` requires:
 
 - unique room IDs,
 - exactly `hallway_room_count_range.maximum` hallway targets,
+- a grid within `config.max_grid_node_count`,
 - enough non-edge grid nodes for all non-hallway rooms plus the maximum hallway count.
 
-Use the helper to avoid manual target mistakes:
+Use:
 
 ```python
 targets = build_candidate_search_targets(prepared.generation_spec)
 ```
 
-## Grid example
+to create targets from the prepared generation specification.
 
-For:
+### Outputs
 
-```text
-origin           = (0.5, 2.5)
-search width     = 120
-search length    = 78
-grid spacing     = 6
-```
-
-Floor Plan Preprocessing creates:
-
-```text
-X nodes: 0.5, 6.5, ..., 120.5  -> 21 nodes
-Y nodes: 2.5, 8.5, ..., 80.5   -> 14 nodes
-Total: 294 nodes
-```
-
-Candidate Search ignores the first and last X/Y node rows. In this example the
-selectable hint-point count is:
-
-```text
-(21 - 2) x (14 - 2) = 228 non-edge nodes
-```
-
-## Incremental session API
+`search_candidates()` returns:
 
 ```python
-from fpg_core.candidate_search import CandidateSearchSession
-
-session = CandidateSearchSession(search_input)
-
-while session.has_remaining_trials:
-    suggestion = session.ask_next_trial()
-    score = evaluator(suggestion.candidate)
-    result = session.record_score(suggestion, score)
-
-best = session.best_result()
+FeatureExecution[CandidateSearchResult, CandidateSearchDetails]
 ```
 
-Only one trial may be pending at a time.
-
-## Returned data
-
-Production:
+Production result:
 
 ```python
 execution.result.candidate
@@ -189,7 +126,7 @@ execution.result.hallway_room_count
 execution.metadata
 ```
 
-DEBUG additionally returns:
+In `ExecutionMode.DEBUG`, `execution.details` additionally contains:
 
 ```python
 execution.details.grid
@@ -197,9 +134,7 @@ execution.details.optuna_trial_count
 execution.details.completed_trial_count
 ```
 
-## Candidate-specific generation specification
-
-The preprocessing generation template contains all possible hallway room IDs. After Candidate Search, create the exact specification for the selected candidate:
+After Candidate Search, the selected candidate can be converted into the exact solver specification through preprocessing:
 
 ```python
 candidate_spec = prepared.generation_spec_for_candidate(
@@ -207,22 +142,76 @@ candidate_spec = prepared.generation_spec_for_candidate(
 )
 ```
 
-Use `candidate_spec` for the solver or later room-generation stages.
+### Errors and Expected Behaviour
+
+- Invalid input types or values raise `TypeError` or `ValueError` during contract validation.
+- Invalid session state raises `CandidateSearchStateError`.
+- A fixed `random_seed` makes the Optuna sampler reproducible for the same compatible inputs and environment.
+- Candidate Search does not mutate the supplied targets, grid, hallway range, or configuration.
+
+Incremental execution allows only one pending trial at a time:
+
+```python
+session = CandidateSearchSession(search_input)
+
+while session.has_remaining_trials:
+    suggestion = session.ask_next_trial()
+    score = evaluator(suggestion.candidate)
+    session.record_score(suggestion, score)
+
+best = session.best_result()
+```
+
+### Extension Points
+
+The evaluator callback is the intended scoring extension point. Candidate Search generates candidates; the caller decides how those candidates are scored.
 
 ## Migration
 
-Replace the old prepared rectangle input:
+`CandidateSearchSettings` has been removed because it mixed floor-plan processing data with search configuration.
+
+Old:
 
 ```python
-search_space=prepared.candidate_search_space
+settings = CandidateSearchSettings(
+    grid=prepared.candidate_grid,
+    hallway_room_count_range=prepared.hallway_room_count_range,
+    max_grid_node_count=250_000,
+    trial_count=500,
+    random_seed=42,
+)
+
+search_input = CandidateSearchInput(
+    targets=targets,
+    settings=settings,
+    evaluator=evaluator,
+)
 ```
 
-with the exact prepared grid:
+New:
 
 ```python
-grid=prepared.candidate_grid
-hallway_room_count_range=prepared.hallway_room_count_range
+config = CandidateSearchConfig(
+    trial_count=500,
+    max_grid_node_count=250_000,
+    random_seed=42,
+)
+
+search_input = CandidateSearchInput(
+    targets=targets,
+    grid=prepared.candidate_grid,
+    hallway_room_count_range=prepared.hallway_room_count_range,
+    evaluator=evaluator,
+    config=config,
+)
 ```
 
-`build_candidate_grid()` remains available but now only validates and returns an
-already prepared grid. It no longer generates X/Y positions.
+`build_candidate_grid()` remains available for API compatibility, but it only validates and returns an already prepared grid. It does not generate X/Y positions.
+
+## AI Instructions
+
+- Keep this README synchronized with public behaviour.
+- Keep processing input and reusable search configuration clearly separated.
+- Update examples when public contracts change.
+- Do not document private optimizer implementation as supported API.
+- Do not import another feature's internal modules.

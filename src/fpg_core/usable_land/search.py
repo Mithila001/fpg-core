@@ -3,15 +3,10 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .geometry import geometry_tolerance
-from ..domain import (
-    BuildableSpaceErrorCode,
-    FloorWidthAlignment,
-    Point,
-    Polygon,
-    UsableLandConstraints,
-)
+from ..domain import BuildableSpaceErrorCode, FloorWidthAlignment, Point, Polygon
+from .config import UsableLandConfig
 from .exceptions import UsableLandError
+from .geometry import geometry_tolerance
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,29 +71,27 @@ def _horizontal_interval(
 
 def find_best_local_rectangle(
     polygon: Polygon,
-    constraints: UsableLandConstraints,
+    config: UsableLandConfig,
 ) -> tuple[RectangleCandidate, int]:
     tolerance = geometry_tolerance(polygon.points)
     minimum_y = min(point.y for point in polygon.points)
     maximum_y = max(point.y for point in polygon.points)
-    resolution = constraints.search_resolution
+    resolution = config.search_resolution
     first = math.ceil((minimum_y - tolerance) / resolution)
     last = math.floor((maximum_y + tolerance) / resolution)
     rows = tuple(index * resolution for index in range(first, last + 1))
-    if len(rows) > constraints.maximum_sweep_lines:
+    if len(rows) > config.maximum_sweep_lines:
         raise UsableLandError(
             BuildableSpaceErrorCode.SEARCH_LIMIT_EXCEEDED,
             "The usable-land search exceeds the configured synchronous limit.",
             details={
                 "estimated_sweep_lines": len(rows),
-                "maximum_sweep_lines": constraints.maximum_sweep_lines,
+                "maximum_sweep_lines": config.maximum_sweep_lines,
                 "search_resolution": resolution,
             },
         )
 
-    intervals = tuple(
-        _horizontal_interval(polygon, row, tolerance) for row in rows
-    )
+    intervals = tuple(_horizontal_interval(polygon, row, tolerance) for row in rows)
     best: RectangleCandidate | None = None
     evaluated = 0
     for lower_index, bottom in enumerate(rows):
@@ -135,10 +128,7 @@ def find_best_local_rectangle(
                 ),
             )
             for alignment, width, length in assignments:
-                if (
-                    width < constraints.minimum_width
-                    or length < constraints.minimum_length
-                ):
+                if width < config.minimum_width or length < config.minimum_length:
                     continue
                 candidate = RectangleCandidate(
                     left=left,
@@ -158,8 +148,8 @@ def find_best_local_rectangle(
             BuildableSpaceErrorCode.NO_USABLE_LAND_FOUND,
             "No usable rectangle satisfies the configured minimum dimensions.",
             details={
-                "minimum_width": constraints.minimum_width,
-                "minimum_length": constraints.minimum_length,
+                "minimum_width": config.minimum_width,
+                "minimum_length": config.minimum_length,
             },
         )
     return best, evaluated
