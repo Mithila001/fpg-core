@@ -7,4 +7,4 @@ installation, or historical design notes and may apply only to the version named
 their title.
 
 When a public feature changes, update the canonical reference by following
-`src/fpg_core/Package_Documentation_Template.md`.
+[Package_Documentation_Template.md](Package_Documentation_Template.md).
