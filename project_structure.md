@@ -26,27 +26,12 @@ fpg-core/
     ├── dist/
     │   ├── fpg_core-0.1.0-py3-none-any.whl
     │   └── fpg_core-0.1.0.tar.gz
-    ├── docs/
-    │   ├── Package_Documentation_Template.md
-    │   ├── PACKAGE_FEATURE_REFERENCE.md
-    │   └── README.md
     ├── src/
     │   ├── fpg_core/
     │   │   ├── __pycache__/
     │   │   │   ├── __init__.cpython-313.pyc
     │   │   │   └── config.cpython-313.pyc
     │   │   ├── buildable_land/
-    │   │   │   ├── __pycache__/
-    │   │   │   │   ├── __init__.cpython-313.pyc
-    │   │   │   │   ├── api.cpython-313.pyc
-    │   │   │   │   ├── classification.cpython-313.pyc
-    │   │   │   │   ├── config.cpython-313.pyc
-    │   │   │   │   ├── contracts.cpython-313.pyc
-    │   │   │   │   ├── exceptions.cpython-313.pyc
-    │   │   │   │   ├── geometry.cpython-313.pyc
-    │   │   │   │   ├── pipeline.cpython-313.pyc
-    │   │   │   │   ├── setbacks.cpython-313.pyc
-    │   │   │   │   └── validation.cpython-313.pyc
     │   │   │   ├── __init__.py
     │   │   │   ├── api.py
     │   │   │   ├── classification.py
@@ -63,6 +48,7 @@ fpg-core/
     │   │   │   │   ├── __init__.cpython-313.pyc
     │   │   │   │   ├── api.cpython-313.pyc
     │   │   │   │   ├── config.cpython-313.pyc
+    │   │   │   │   ├── consolidation.cpython-313.pyc
     │   │   │   │   ├── contracts.cpython-313.pyc
     │   │   │   │   ├── domain.cpython-313.pyc
     │   │   │   │   ├── exceptions.cpython-313.pyc
@@ -72,6 +58,7 @@ fpg-core/
     │   │   │   ├── __init__.py
     │   │   │   ├── api.py
     │   │   │   ├── config.py
+    │   │   │   ├── consolidation.py
     │   │   │   ├── contracts.py
     │   │   │   ├── domain.py
     │   │   │   ├── exceptions.py
@@ -396,16 +383,6 @@ fpg-core/
     │   │   │   ├── README.md
     │   │   │   └── runner.py
     │   │   ├── usable_land/
-    │   │   │   ├── __pycache__/
-    │   │   │   │   ├── __init__.cpython-313.pyc
-    │   │   │   │   ├── api.cpython-313.pyc
-    │   │   │   │   ├── config.cpython-313.pyc
-    │   │   │   │   ├── contracts.cpython-313.pyc
-    │   │   │   │   ├── exceptions.cpython-313.pyc
-    │   │   │   │   ├── geometry.cpython-313.pyc
-    │   │   │   │   ├── pipeline.cpython-313.pyc
-    │   │   │   │   ├── search.cpython-313.pyc
-    │   │   │   │   └── transform.cpython-313.pyc
     │   │   │   ├── __init__.py
     │   │   │   ├── api.py
     │   │   │   ├── config.py
