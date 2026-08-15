@@ -5,7 +5,7 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from ..domain import FloorPlan
+from ..domain import FloorPlan, OpeningPurpose, OpeningType
 from .config import FloorPlanOpeningsConfig
 from .contracts import (
     OpeningDiagnostics,
@@ -43,39 +43,76 @@ def _message(status: OpeningGenerationStatus) -> str:
 
 def _issues(built: BuiltOpeningModel, solver: Any, solved: bool) -> tuple[OpeningIssue, ...]:
     result: list[OpeningIssue] = []
+
+    main_candidates = [
+        item
+        for item in built.context.all_variables
+        if item.demand.opening_type is OpeningType.DOOR
+        and item.demand.purpose is OpeningPurpose.MAIN_ENTRANCE
+    ]
+    if built.context.prepared.rooms_by_id and not main_candidates:
+        result.append(
+            OpeningIssue(
+                "no_main_entrance_candidate",
+                "No valid main-entrance candidate is available, so required room access cannot be satisfied",
+            )
+        )
+
+    required_types = set(built.context.config.policy.required_access_room_types)
+    incident_candidate_rooms = set()
+    for item in built.context.all_variables:
+        if item.demand.opening_type is not OpeningType.DOOR:
+            continue
+        incident_candidate_rooms.update(item.wall.room_ids)
+        incident_candidate_rooms.update(item.demand.room_ids)
+    for room_id, room in built.context.prepared.rooms_by_id.items():
+        if room.room_type in required_types and room_id not in incident_candidate_rooms:
+            result.append(
+                OpeningIssue(
+                    "required_room_has_no_door_candidate",
+                    f"Required-access room {room_id!s} has no valid door candidate",
+                )
+            )
+
     for demand in built.context.demands:
         variables = built.context.variables_by_demand.get(demand.id, ())
         if not variables:
+            required = demand.purpose is OpeningPurpose.MAIN_ENTRANCE
             result.append(
                 OpeningIssue(
-                    "no_candidate",
-                    "No valid wall candidate was available for this optional opening",
+                    "no_required_candidate" if required else "no_candidate",
+                    (
+                        "No valid wall candidate was available for this required opening"
+                        if required
+                        else "No valid wall candidate was available for this optional opening"
+                    ),
                     demand.feature_id,
                     demand.id,
                 )
             )
             continue
-        selected = [item for item in variables if solved and solver.BooleanValue(item.selected)]
-        if not selected:
-            result.append(
-                OpeningIssue(
-                    "not_selected",
-                    "The shared model omitted this optional opening",
-                    demand.feature_id,
-                    demand.id,
-                )
-            )
-        for item in selected:
-            if item.option.undersized:
+        if solved:
+            selected = [item for item in variables if solver.BooleanValue(item.selected)]
+            if not selected:
                 result.append(
                     OpeningIssue(
-                        "undersized_exterior_door",
-                        "Exterior door was reduced to fit the available legacy wall span",
+                        "not_selected",
+                        "The shared model did not select this optional opening candidate",
                         demand.feature_id,
                         demand.id,
-                        item.wall.id,
                     )
                 )
+            for item in selected:
+                if item.option.undersized:
+                    result.append(
+                        OpeningIssue(
+                            "undersized_exterior_door",
+                            "Exterior door was reduced to fit the available legacy wall span",
+                            demand.feature_id,
+                            demand.id,
+                            item.wall.id,
+                        )
+                    )
     return tuple(result)
 
 

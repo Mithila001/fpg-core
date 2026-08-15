@@ -5,3 +5,5 @@ Feature Updated + Domain Section
 
 ## Floor plan Scoring 
 Updated
+
+## Updated Floor Plan Opening

@@ -9,13 +9,16 @@ class InteriorDoorFeature:
     feature_id = "interior_doors"
 
     @staticmethod
-    def _allowed(left: RoomType, right: RoomType, config: FloorPlanOpeningsConfig) -> bool:
+    def _allowed(
+        left: RoomType,
+        right: RoomType,
+        config: FloorPlanOpeningsConfig,
+    ) -> bool:
         pair = frozenset((left, right))
-        if RoomType.ATTACHED_BATHROOM in pair:
-            return pair == frozenset((RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM))
-        if RoomType.HALLWAY in pair:
-            return True
-        return any(pair == frozenset(configured) for configured in config.policy.allowed_room_pairs)
+        return any(
+            pair == frozenset(configured)
+            for configured in config.policy.allowed_room_pairs
+        )
 
     def build_demands(
         self,
