@@ -1,7 +1,12 @@
 """Public API for candidate circulation refinement."""
 
 from ..domain import HallwayClassification
-from .config import CandidateCirculationConfig, CirculationRouteRule, RoutingCostProfile
+from .config import (
+    CandidateCirculationConfig,
+    CirculationRouteRule,
+    HallwayConsolidationConfig,
+    RoutingCostProfile,
+)
 from .contracts import (
     CandidateCirculationDetails,
     CandidateCirculationInput,
@@ -12,6 +17,9 @@ from .domain import (
     CirculationTrafficClass,
     DestinationSelection,
     GridNode,
+    HallwayConsolidationAttemptDetails,
+    HallwayConsolidationDecision,
+    HallwayRemovalReason,
     HallwayTrafficClass,
     HallwayTrafficDetails,
     RemovedHallwayPointDetails,
@@ -32,6 +40,10 @@ __all__ = [
     "DestinationSelection",
     "GridNode",
     "HallwayClassification",
+    "HallwayConsolidationAttemptDetails",
+    "HallwayConsolidationConfig",
+    "HallwayConsolidationDecision",
+    "HallwayRemovalReason",
     "HallwayTrafficClass",
     "HallwayTrafficDetails",
     "RemovedHallwayPointDetails",

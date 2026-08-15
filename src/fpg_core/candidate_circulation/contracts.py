@@ -10,6 +10,7 @@ from ..domain import (
 )
 from .config import CandidateCirculationConfig
 from .domain import (
+    HallwayConsolidationAttemptDetails,
     HallwayTrafficDetails,
     RemovedHallwayPointDetails,
     RoutingPassDetails,
@@ -81,3 +82,4 @@ class CandidateCirculationDetails:
     passes: tuple[RoutingPassDetails, ...]
     final_hallway_traffic: tuple[HallwayTrafficDetails, ...]
     removed_hallway_points: tuple[RemovedHallwayPointDetails, ...]
+    hallway_consolidation_attempts: tuple[HallwayConsolidationAttemptDetails, ...]

@@ -145,6 +145,7 @@ class CirculationRouteRule:
     traffic_class: CirculationTrafficClass
     allowed_transit_room_types: tuple[RoomType, ...]
     importance_weight: float
+    required_transit_room_types: tuple[RoomType, ...] = ()
 
     def __post_init__(self) -> None:
         if isinstance(self.id, bool) or not isinstance(self.id, int):
@@ -183,6 +184,22 @@ class CirculationRouteRule:
         if len(allowed_types) != len(set(allowed_types)):
             raise ValueError("allowed_transit_room_types must be unique.")
 
+        required_types = tuple(self.required_transit_room_types)
+        if any(not isinstance(room_type, RoomType) for room_type in required_types):
+            raise TypeError(
+                "Every required_transit_room_type must be a RoomType member."
+            )
+        if len(required_types) != len(set(required_types)):
+            raise ValueError("required_transit_room_types must be unique.")
+        if self.source_room_type in required_types:
+            raise ValueError(
+                "source_room_type cannot also be a required transit room type."
+            )
+        if self.destination_room_type in required_types:
+            raise ValueError(
+                "destination_room_type cannot also be a required transit room type."
+            )
+
         importance_weight = _positive_cost(
             "importance_weight",
             self.importance_weight,
@@ -190,6 +207,7 @@ class CirculationRouteRule:
 
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "allowed_transit_room_types", allowed_types)
+        object.__setattr__(self, "required_transit_room_types", required_types)
         object.__setattr__(self, "importance_weight", importance_weight)
 
 

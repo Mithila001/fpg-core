@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from ..domain import (
     CirculationGridNode,
@@ -16,6 +17,22 @@ TrafficClass = CirculationTrafficClass
 GridNode = CirculationGridNode
 
 
+class HallwayRemovalReason(StrEnum):
+    """Why a hallway hint was removed from the production candidate."""
+
+    UNUSED = "unused"
+    CONSOLIDATED = "consolidated"
+
+
+class HallwayConsolidationDecision(StrEnum):
+    """DEBUG result of testing one nearby hallway for safe removal."""
+
+    REMOVED = "removed"
+    KEPT_ROUTE_UNAVAILABLE = "kept_route_unavailable"
+    KEPT_ROUTE_COVERAGE_CHANGED = "kept_route_coverage_changed"
+    KEPT_ROUTE_COST_INCREASE = "kept_route_cost_increase"
+
+
 @dataclass(frozen=True, slots=True)
 class CirculationPathDetails:
     """DEBUG data for one expanded and resolved route."""
@@ -25,6 +42,8 @@ class CirculationPathDetails:
     traffic_class: CirculationTrafficClass
     destination_selection: DestinationSelection
     allowed_transit_room_types: tuple[RoomType, ...]
+    required_transit_room_types: tuple[RoomType, ...]
+    required_transit_point_keys: tuple[str, ...]
     importance_weight: float
     source_point_key: str
     source_room_id: str
@@ -57,6 +76,7 @@ class HallwayTrafficDetails:
     private_importance_weight: float
     traffic_class: HallwayTrafficClass
     removed: bool
+    removal_reason: HallwayRemovalReason | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,3 +98,14 @@ class RemovedHallwayPointDetails:
     hint_index: int
     x: float
     y: float
+    reason: HallwayRemovalReason
+
+
+@dataclass(frozen=True, slots=True)
+class HallwayConsolidationAttemptDetails:
+    """DEBUG record of one route-verified hallway consolidation attempt."""
+
+    point_key: str
+    nearby_point_keys: tuple[str, ...]
+    decision: HallwayConsolidationDecision
+    max_route_cost_increase_ratio: float | None

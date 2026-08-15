@@ -1,11 +1,63 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..domain import CirculationRouteRule, GridRoutingCostProfile, RoomType
 
 _MAX_ROUTING_PASSES = 10
+
+
+@dataclass(frozen=True, slots=True)
+class HallwayConsolidationConfig:
+    """Controls conservative removal of redundant nearby hallway hints."""
+
+    enabled: bool = True
+    minimum_separation_grid_steps: float = 2.0
+    max_route_cost_increase_ratio: float = 0.15
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise TypeError("enabled must be a boolean.")
+
+        if isinstance(self.minimum_separation_grid_steps, bool):
+            raise TypeError(
+                "minimum_separation_grid_steps must be numeric, not boolean."
+            )
+        try:
+            separation = float(self.minimum_separation_grid_steps)
+        except (TypeError, ValueError) as exc:
+            raise TypeError(
+                "minimum_separation_grid_steps must be numeric."
+            ) from exc
+        if not math.isfinite(separation):
+            raise ValueError("minimum_separation_grid_steps must be finite.")
+        if separation <= 0:
+            raise ValueError(
+                "minimum_separation_grid_steps must be greater than zero."
+            )
+        if separation > 10.0:
+            raise ValueError(
+                "minimum_separation_grid_steps cannot exceed 10 grid steps."
+            )
+
+        if isinstance(self.max_route_cost_increase_ratio, bool):
+            raise TypeError(
+                "max_route_cost_increase_ratio must be numeric, not boolean."
+            )
+        try:
+            cost_ratio = float(self.max_route_cost_increase_ratio)
+        except (TypeError, ValueError) as exc:
+            raise TypeError("max_route_cost_increase_ratio must be numeric.") from exc
+        if not math.isfinite(cost_ratio):
+            raise ValueError("max_route_cost_increase_ratio must be finite.")
+        if not 0.0 <= cost_ratio <= 1.0:
+            raise ValueError(
+                "max_route_cost_increase_ratio must be between 0.0 and 1.0."
+            )
+
+        object.__setattr__(self, "minimum_separation_grid_steps", separation)
+        object.__setattr__(self, "max_route_cost_increase_ratio", cost_ratio)
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +93,9 @@ class CandidateCirculationConfig:
     route_rules: tuple[CirculationRouteRule, ...]
     always_traversable_room_types: tuple[RoomType, ...]
     max_routing_passes: int = 3
+    hallway_consolidation: HallwayConsolidationConfig = field(
+        default_factory=HallwayConsolidationConfig
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(self.costs, RoutingCostProfile):
@@ -74,6 +129,11 @@ class CandidateCirculationConfig:
                 f"max_routing_passes cannot exceed {_MAX_ROUTING_PASSES}."
             )
 
+        if not isinstance(self.hallway_consolidation, HallwayConsolidationConfig):
+            raise TypeError(
+                "hallway_consolidation must be a HallwayConsolidationConfig instance."
+            )
+
         object.__setattr__(self, "route_rules", route_rules)
         object.__setattr__(
             self,
@@ -85,5 +145,6 @@ class CandidateCirculationConfig:
 __all__ = [
     "CandidateCirculationConfig",
     "CirculationRouteRule",
+    "HallwayConsolidationConfig",
     "RoutingCostProfile",
 ]

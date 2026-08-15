@@ -119,6 +119,18 @@ def _validate_route_matches(
                 f"Route rule {rule.id} ('{rule.name}') has no matching destination "
                 f"point of type {rule.destination_room_type.value}."
             )
+        if rule.required_transit_room_types and not any(
+            required_type in present_types
+            for required_type in rule.required_transit_room_types
+        ):
+            required_names = ", ".join(
+                room_type.value for room_type in rule.required_transit_room_types
+            )
+            raise CandidateCirculationInputError(
+                f"Route rule {rule.id} ('{rule.name}') requires transit through at "
+                f"least one of [{required_names}], but no matching candidate point "
+                "exists."
+            )
 
     hallway_points = [
         point for point in points if point.point.room_type is RoomType.HALLWAY

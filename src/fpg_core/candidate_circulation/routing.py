@@ -19,7 +19,7 @@ from .validation import IndexedCandidatePoint, ValidatedCirculationInput
 
 _Node: TypeAlias = tuple[int, int]
 _Direction: TypeAlias = int
-_State: TypeAlias = tuple[int, int, int]
+_State: TypeAlias = tuple[int, int, int, int]
 
 _NONE_DIRECTION = -1
 _DIRECTIONS: tuple[tuple[int, int], ...] = (
@@ -43,6 +43,7 @@ class ResolvedRoute:
     total_cost: float
     turn_count: int
     manhattan_reference_cost: float
+    required_transit_point_keys: tuple[str, ...]
 
     @property
     def step_count(self) -> int:
@@ -184,7 +185,9 @@ def _route_between(
 ) -> ResolvedRoute | None:
     start = (source.x_index, source.y_index)
     target = (destination.x_index, destination.y_index)
-    start_state: _State = (start[0], start[1], _NONE_DIRECTION)
+    required_types = set(rule.required_transit_room_types)
+    required_transit_needed = bool(required_types)
+    start_state: _State = (start[0], start[1], _NONE_DIRECTION, 0)
 
     distances: dict[_State, float] = {start_state: 0.0}
     tie_values: dict[_State, tuple[int, int]] = {start_state: (0, 0)}
@@ -210,8 +213,10 @@ def _route_between(
 
         node = (state[0], state[1])
         if node == target:
-            final_state = state
-            break
+            if not required_transit_needed or state[3] == 1:
+                final_state = state
+                break
+            continue
 
         previous_direction = state[2]
         for direction, (dx, dy) in enumerate(_DIRECTIONS):
@@ -241,7 +246,20 @@ def _route_between(
                 and previous_direction != direction
             )
             new_steps = steps + 1
-            next_state = (next_node[0], next_node[1], direction)
+            required_transit_satisfied = state[3]
+            if next_node != target:
+                occupant = validated.occupied_nodes.get(next_node)
+                if (
+                    occupant is not None
+                    and occupant.point.room_type in required_types
+                ):
+                    required_transit_satisfied = 1
+            next_state = (
+                next_node[0],
+                next_node[1],
+                direction,
+                required_transit_satisfied,
+            )
             existing_cost = distances.get(next_state)
             existing_tie = tie_values.get(next_state)
             candidate_tie = (new_turns, new_steps)
@@ -317,6 +335,12 @@ def _route_between(
             * validated.source.config.costs.empty_node_cost
             + validated.source.config.costs.traversable_hint_node_cost
         ),
+        required_transit_point_keys=_required_transit_point_keys(
+            validated,
+            rule,
+            nodes,
+            target,
+        ),
     )
     return resolved
 
@@ -346,7 +370,32 @@ def _can_enter(
     return (
         room_type in validated.source.config.always_traversable_room_types
         or room_type in rule.allowed_transit_room_types
+        or room_type in rule.required_transit_room_types
     )
+
+
+def _required_transit_point_keys(
+    validated: ValidatedCirculationInput,
+    rule: CirculationRouteRule,
+    nodes: tuple[_Node, ...],
+    target: _Node,
+) -> tuple[str, ...]:
+    required_types = set(rule.required_transit_room_types)
+    if not required_types:
+        return ()
+    point_keys: list[str] = []
+    seen: set[str] = set()
+    for node in nodes:
+        if node == target:
+            continue
+        occupant = validated.occupied_nodes.get(node)
+        if occupant is None or occupant.point.room_type not in required_types:
+            continue
+        if occupant.point_key in seen:
+            continue
+        seen.add(occupant.point_key)
+        point_keys.append(occupant.point_key)
+    return tuple(point_keys)
 
 
 def _transition_costs(
