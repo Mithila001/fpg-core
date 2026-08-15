@@ -636,72 +636,249 @@ incremental suggestion may be pending.
 
 ### Purpose
 
-Checks configured room-type routes over a candidate's exact grid, classifies hallway
-traffic, and removes unused hallway points. Use it to assess and clean circulation
-hint geometry without generating rooms or walls.
+Checks configured room-type routes over the exact `CandidateMap.grid`, classifies
+hallway traffic, removes unused hallway hints, and can conservatively consolidate
+nearby retained hallway hints. It does not generate a second grid and does not mutate
+the supplied `CandidateMap`.
 
 ### Public API
 
 ```python
 refine_candidate_circulation(
     circulation_input: CandidateCirculationInput,
-    *, mode: ExecutionMode = ExecutionMode.PRODUCTION,
+    *,
+    mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> FeatureExecution[CandidateCirculationResult, CandidateCirculationDetails]
 ```
 
-The feature root exports input/config/cost/rule contracts, route/hallway enums,
-production result, DEBUG detail contracts, and
-`CandidateCirculationError` subclasses.
+Preferred imports are from `fpg_core.candidate_circulation`. The feature root exports
+the input/config/result contracts, routing cost and route-rule contracts, traffic
+enums, hallway cleanup configuration and DEBUG contracts, compatibility aliases
+`TrafficClass` and `GridNode`, and the documented exception family.
 
 ### Inputs
 
-- `CandidateCirculationInput(candidate: CandidateMap, config)`.
-- `RoutingCostProfile(empty_node_cost, traversable_hint_node_cost, turn_cost,
-  perimeter_bias_max_cost, traffic_conflict_cost)`. Movement costs are per entered
-  node; positive costs must be finite and at most `1e12`; turn/perimeter costs may be
-  zero; conflict cost must be positive.
-- Each `CirculationRouteRule(id, name, source_room_type, destination_room_type,
-  destination_selection, traffic_class, allowed_transit_room_types,
-  importance_weight)` needs a unique non-negative integer ID, different source and
-  destination types, unique transit types, and positive finite importance.
-- `CandidateCirculationConfig` requires at least one route, unique IDs, unique
-  always-traversable types, and `max_routing_passes=3` by default (allowed 2..10).
+```python
+CandidateCirculationInput(
+    candidate: CandidateMap,
+    config: CandidateCirculationConfig,
+)
+```
+
+`candidate.grid` is the exact routing grid. Candidate points must be unique, aligned
+to that grid, and located on valid interior nodes. The feature supports at most
+250,000 grid nodes. Route source and destination room types referenced by configured
+rules must exist in the candidate.
 
 ### Configuration
 
-`ALL_MATCHING` routes every source to every matching destination;
-`LOWEST_COST_MATCH` selects one lowest-cost match. Public/private traffic affects
-hallway classification and conflict penalties. Lower routing costs make a node/path
-property more attractive. `traffic_conflict_cost` discourages traffic-class conflicts
-between passes. `importance_weight` weights route efficiency. Increasing passes can
-allow classifications to stabilize, with a maximum of 10.
+```python
+RoutingCostProfile(
+    empty_node_cost: float,
+    traversable_hint_node_cost: float,
+    turn_cost: float,
+    perimeter_bias_max_cost: float,
+    traffic_conflict_cost: float,
+)
+
+CirculationRouteRule(
+    id: int,
+    name: str,
+    source_room_type: RoomType,
+    destination_room_type: RoomType,
+    destination_selection: DestinationSelection,
+    traffic_class: CirculationTrafficClass,
+    allowed_transit_room_types: tuple[RoomType, ...],
+    importance_weight: float,
+    required_transit_room_types: tuple[RoomType, ...] = (),
+)
+
+HallwayConsolidationConfig(
+    enabled: bool = True,
+    minimum_separation_grid_steps: float = 2.0,
+    max_route_cost_increase_ratio: float = 0.15,
+)
+
+CandidateCirculationConfig(
+    costs: RoutingCostProfile,
+    route_rules: tuple[CirculationRouteRule, ...],
+    always_traversable_room_types: tuple[RoomType, ...],
+    max_routing_passes: int = 3,
+    hallway_consolidation: HallwayConsolidationConfig = HallwayConsolidationConfig(),
+)
+```
+
+Validation and meaning:
+
+- `RoutingCostProfile.empty_node_cost` and `traversable_hint_node_cost` must be
+  positive finite values. `turn_cost` and `perimeter_bias_max_cost` must be finite and
+  non-negative. `traffic_conflict_cost` must be positive and finite. Routing cost
+  values are capped by the implementation's numerical safety limit of `1e12`.
+- `CirculationRouteRule.id` must be a unique non-negative integer in the config;
+  `name` must be non-empty; source and destination room types must be different;
+  `importance_weight` must be positive and finite.
+- `allowed_transit_room_types` and `required_transit_room_types` must each contain
+  unique `RoomType` values. A required-transit type cannot be the route's source or
+  destination type.
+- `DestinationSelection.ALL_MATCHING` resolves one route from each source to every
+  matching destination. `LOWEST_COST_MATCH` selects one lowest-cost reachable
+  destination per source.
+- `CirculationTrafficClass` values are `PUBLIC='public'` and `PRIVATE='private'`.
+- `always_traversable_room_types` must contain unique `RoomType` members.
+- `max_routing_passes` defaults to `3` and must be between `2` and `10` inclusive.
+
+#### Required transit / “must cross”
+
+When `required_transit_room_types` is non-empty, a resolved route must cross at least
+one intermediate candidate point whose room type is one of those configured types
+before reaching the destination. This is an **any-of** requirement: a tuple containing
+multiple room types does not require the path to cross every listed type.
+
+Required-transit types are automatically traversable for that route; consumers do not
+also need to repeat them in `allowed_transit_room_types` or
+`always_traversable_room_types`.
+
+Example:
+
+```python
+CirculationRouteRule(
+    id=7,
+    name="living-to-bathroom-via-hallway",
+    source_room_type=RoomType.LIVING_ROOM,
+    destination_room_type=RoomType.BATHROOM,
+    destination_selection=DestinationSelection.LOWEST_COST_MATCH,
+    traffic_class=CirculationTrafficClass.PUBLIC,
+    allowed_transit_room_types=(),
+    importance_weight=1.0,
+    required_transit_room_types=(RoomType.HALLWAY,),
+)
+```
+
+#### Hallway consolidation
+
+Unused hallway hints are removed first. If `hallway_consolidation.enabled=True`, the
+feature then evaluates retained hallway hints that are close to another hallway hint.
+A hallway is removed only after rerouting confirms that configured route coverage is
+preserved and route cost degradation stays within the configured limit.
+
+`minimum_separation_grid_steps` is measured as Euclidean distance in grid-index space,
+not project-unit distance. A candidate is considered “nearby” when its distance is
+strictly less than the configured value. With the default `2.0`, orthogonally adjacent
+and diagonally adjacent hallway hints are eligible; points exactly two grid steps
+apart are not.
+
+`max_route_cost_increase_ratio` is the maximum allowed relative increase in route cost
+compared with the baseline after unused hallway removal. It must be finite and in
+`0.0..1.0`; the default `0.15` allows at most a 15% increase. Setting
+`HallwayConsolidationConfig(enabled=False)` preserves the previous unused-only cleanup
+behavior.
+
+The consolidation decision values exposed in DEBUG are:
+
+- `HallwayConsolidationDecision.REMOVED = 'removed'`
+- `HallwayConsolidationDecision.KEPT_ROUTE_UNAVAILABLE = 'kept_route_unavailable'`
+- `HallwayConsolidationDecision.KEPT_ROUTE_COVERAGE_CHANGED = 'kept_route_coverage_changed'`
+- `HallwayConsolidationDecision.KEPT_ROUTE_COST_INCREASE = 'kept_route_cost_increase'`
+
+Removal reasons are:
+
+- `HallwayRemovalReason.UNUSED = 'unused'`
+- `HallwayRemovalReason.CONSOLIDATED = 'consolidated'`
 
 ### Recommended values
 
-The code recommends `max_routing_passes=3` through its default. Cost values are
-relative and require project calibration; keep all movement/conflict costs positive.
+**Package defaults:** `max_routing_passes=3`, hallway consolidation enabled,
+`minimum_separation_grid_steps=2.0`, and `max_route_cost_increase_ratio=0.15`.
+Routing costs are relative and need project calibration. If preserving every retained
+hallway hint is more important than compactness, disable consolidation rather than
+raising the route-cost tolerance arbitrarily.
 
 ### Outputs
 
-Production `result.candidate` preserves the original grid but excludes unused hallway
-points. `hallway_classifications` identifies retained hallway room/hint pairs as
-public/private/mixed/unclassified. DEBUG details contain a 0..100 circulation
-efficiency score, pass and grid counts, per-pass paths/cost breakdowns, final hallway
-traffic, and removed points.
+Production result:
+
+```python
+CandidateCirculationResult(
+    candidate: CandidateMap,
+    hallway_classifications: tuple[HallwayClassification, ...] = (),
+)
+```
+
+`result.candidate` preserves the original `ResolvedCandidateGrid` and removes hallway
+points classified as unused or safely consolidated. `hallway_classifications`
+contains the classifications for hallway hints retained in the production candidate.
+
+In `ExecutionMode.PRODUCTION`, `execution.details is None`.
+
+In `ExecutionMode.DEBUG`, details are:
+
+```python
+CandidateCirculationDetails(
+    circulation_efficiency_score: float,
+    routing_pass_count: int,
+    grid_node_count: int,
+    passes: tuple[RoutingPassDetails, ...],
+    final_hallway_traffic: tuple[HallwayTrafficDetails, ...],
+    removed_hallway_points: tuple[RemovedHallwayPointDetails, ...],
+    hallway_consolidation_attempts: tuple[HallwayConsolidationAttemptDetails, ...],
+)
+```
+
+Each `CirculationPathDetails` includes all previous path/cost fields plus:
+
+```python
+required_transit_room_types: tuple[RoomType, ...]
+required_transit_point_keys: tuple[str, ...]
+```
+
+Each `HallwayTrafficDetails` now also contains:
+
+```python
+removal_reason: HallwayRemovalReason | None
+```
+
+Each removed point is reported as:
+
+```python
+RemovedHallwayPointDetails(
+    point_key: str,
+    room_id: str,
+    hint_index: int,
+    x: float,
+    y: float,
+    reason: HallwayRemovalReason,
+)
+```
+
+Each consolidation attempt is reported as:
+
+```python
+HallwayConsolidationAttemptDetails(
+    point_key: str,
+    nearby_point_keys: tuple[str, ...],
+    decision: HallwayConsolidationDecision,
+    max_route_cost_increase_ratio: float | None,
+)
+```
 
 ### Errors / failure conditions
 
-Bad input/config raises `TypeError`, `ValueError`, or
-`CandidateCirculationInputError`. All candidate points must be unique interior nodes
-on a uniform grid of at most 250,000 nodes. Every route's source and destination type
-must be present. Unresolvable configured routes raise
-`CirculationPathNotFoundError`; coordinate mismatch raises `GridAlignmentError`.
+Bad input/configuration can raise `TypeError`, `ValueError`, or
+`CandidateCirculationInputError`. Off-grid or grid-consistency problems raise
+`GridAlignmentError`. A configured route that cannot satisfy reachability, including
+a required-transit rule, raises `CirculationPathNotFoundError`.
+
+A rejected consolidation attempt is not a feature failure; the hallway is simply kept
+and the reason is available in DEBUG details.
 
 ### Usage example
 
 ```python
 from fpg_core.candidate_circulation import (
-    CandidateCirculationConfig, CandidateCirculationInput, RoutingCostProfile,
+    CandidateCirculationConfig,
+    CandidateCirculationInput,
+    HallwayConsolidationConfig,
+    RoutingCostProfile,
     refine_candidate_circulation,
 )
 
@@ -709,6 +886,11 @@ config = CandidateCirculationConfig(
     costs=RoutingCostProfile(2.0, 0.75, 0.35, 1.5, 8.0),
     route_rules=(example_route_rule,),
     always_traversable_room_types=(RoomType.HALLWAY,),
+    hallway_consolidation=HallwayConsolidationConfig(
+        enabled=True,
+        minimum_separation_grid_steps=2.0,
+        max_route_cost_increase_ratio=0.15,
+    ),
 )
 execution = refine_candidate_circulation(
     CandidateCirculationInput(example_candidate, config)
@@ -718,9 +900,10 @@ cleaned = execution.result.candidate
 
 ### Important behavioral notes
 
-Routing is orthogonal between adjacent grid indexes. It does not create a separate
-grid or mutate the input `CandidateMap`. Removed hallway identities must also be
-removed from any room specification used later by the consumer.
+Routing moves orthogonally between adjacent grid indexes. Required transit is checked
+against intermediate **candidate points**, not arbitrary empty grid cells. The input
+candidate is not mutated. If hallway hints are removed, the consumer must keep later
+room specifications/solver inputs consistent with the returned candidate identities.
 
 ## Candidate Scoring
 
@@ -844,119 +1027,313 @@ routing alone uses `candidate.grid`.
 
 ### Purpose
 
-Generates non-overlapping rectangular room geometry that satisfies a canonical
-generation specification and a selected generation profile. Optional candidate hints
-guide initial generation; existing floor-plan geometry seeds refinement profiles.
+Builds and solves a CP-SAT floor-plan model from request-specific generation data and
+an explicit reusable solver configuration. Every room supplied by the generation
+specification remains mandatory; the solver may move/resize a hallway but does not
+remove a hallway room that upstream stages supplied.
 
 ### Public API
 
 ```python
 generate_floor_plan(
     request: FloorPlanSolveRequest,
-    *, registry: ConstraintRegistry | None = None,
+    *,
+    registry: ConstraintRegistry | None = None,
     mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> FloorPlanSolveExecution
 
 FloorPlanSolver(registry: ConstraintRegistry | None = None)
-FloorPlanSolver.solve(request, *, mode=ExecutionMode.PRODUCTION)
+FloorPlanSolver.solve(
+    request: FloorPlanSolveRequest,
+    *,
+    mode: ExecutionMode = ExecutionMode.PRODUCTION,
+) -> FloorPlanSolveExecution
 ```
 
-Preferred imports are from `fpg_core.floor_plan_solver`. It exports request/result and
-diagnostic contracts; `FloorPlanSolverConfig` (with compatibility alias
-`GenerationProfile`), `HardConstraintUse`, `SoftConstraintUse`, `SolverConfig`,
-`PreparationConfig`, `SeedPolicy`, `SeedSource`, `DefaultProfileSettings`,
-`ProfileCatalog`, and `ConstraintRegistry`; built-ins `INITIAL_GENERATION_PROFILE`,
-`REFINEMENT_A_PROFILE`, `REFINEMENT_B_PROFILE`, `DEFAULT_PROFILES`; and
-`build_default_profiles()`.
+Preferred imports are from `fpg_core.floor_plan_solver`. `GenerationProfile` remains
+a compatibility alias of `FloorPlanSolverConfig`.
 
 ### Inputs
 
-- `FloorPlanSolveRequest(specification, config, candidate_hints=(),
-  existing_floor_plan=None)`.
-- The specification requires a positive finite floor; unique non-empty room IDs;
-  `RoomType` values; positive compatible width/area ranges; and relations referencing
-  known rooms with supported match policy/strength.
-- `RoomPlacementHint(room_id, x, y, width=None, length=None)` uses project units;
-  optional sizes must be positive. Unknown/duplicate hint room IDs are invalid.
-  Out-of-bound hint values and sizes are clamped to feasible room/floor bounds.
-- Existing-plan seed rooms with IDs absent from the specification are ignored.
+```python
+FloorPlanSolveRequest(
+    specification: FloorPlanGenerationSpec,
+    config: FloorPlanSolverConfig,
+    candidate_hints: tuple[RoomPlacementHint, ...] = (),
+    existing_floor_plan: FloorPlan | None = None,
+)
+
+RoomPlacementHint(
+    room_id: RoomId,
+    x: float,
+    y: float,
+    width: float | None = None,
+    length: float | None = None,
+)
+```
+
+`specification` defines the floor and every room that must be placed. Candidate hints
+are optional seed geometry. `existing_floor_plan` is optional unless the selected seed
+policy requires it. Unknown/duplicate hint room IDs are invalid; hint sizes, when
+provided, must be positive. Prepared hints are clamped to feasible floor/room bounds.
+Existing-plan rooms absent from the specification are ignored as seed inputs.
+
+### Structural rules that are always active
+
+These are solver-model invariants rather than selectable registry constraints:
+
+- every `FloorPlanGenerationSpec.rooms` entry is present in the result;
+- every room stays inside the floor boundary;
+- every room satisfies its prepared dimension and area bounds;
+- rooms do not overlap.
+
+Therefore hallway-count/removal decisions belong upstream. The solver cannot label a
+supplied hallway “unnecessary” and delete it.
 
 ### Configuration
 
-- `SolverConfig(max_time_seconds=30, num_search_workers=0, random_seed=None,
-  log_search_progress=False, relative_gap_limit=None, cp_model_presolve=True)`.
-  Worker count 0 lets OR-Tools choose; gap is non-negative; times are seconds.
-- `PreparationConfig(coordinate_scale=10)` controls integer precision. A scale of 10
-  represents tenths of one project unit and increases model size.
-- `FloorPlanSolverConfig` names unique hard/soft constraint uses. Soft weights are
-  positive integers. `without_constraints`, `with_hard_constraints`, and
-  `with_soft_constraints` return modified immutable profiles.
-- `SeedPolicy(source=NONE, require_source=False, apply_hints=True,
-  position_tolerance=None, size_tolerance=None)` selects no seed, candidate hints, or
-  an existing plan. `None` tolerance leaves that dimension unbounded, zero fixes it,
-  and positive values bound movement/size in project units.
-- Built-in profiles share hard rules for aspect ratios, hard relations, attached
-  bathrooms, 60% coverage, hallway connectivity/8..10 width, front anchoring, back
-  exposure, garage placement, and veranda front boundary. The initial profile uses
-  optional candidate hints and a 5-second limit. Refinement A/B require existing-plan
-  seeds, use 2-second limits and progressively tighter seed stability.
+```python
+HardConstraintUse(
+    key: str,
+    settings: Mapping[str, Any] = {},
+)
 
-Exact common hard-constraint uses in all three profiles are:
+SoftConstraintUse(
+    key: str,
+    weight: int,
+    settings: Mapping[str, Any] = {},
+)
 
-| Key | Exact built-in settings |
+SolverConfig(
+    max_time_seconds: float = 30.0,
+    num_search_workers: int = 0,
+    random_seed: int | None = None,
+    log_search_progress: bool = False,
+    relative_gap_limit: float | None = None,
+    cp_model_presolve: bool = True,
+)
+
+PreparationConfig(
+    coordinate_scale: int = 10,
+)
+
+SeedPolicy(
+    source: SeedSource = SeedSource.NONE,
+    require_source: bool = False,
+    apply_hints: bool = True,
+    position_tolerance: float | None = None,
+    size_tolerance: float | None = None,
+)
+
+FloorPlanSolverConfig(
+    name: str,
+    hard_constraints: tuple[HardConstraintUse, ...],
+    soft_constraints: tuple[SoftConstraintUse, ...],
+    solver: SolverConfig = SolverConfig(),
+    preparation: PreparationConfig = PreparationConfig(),
+    seed: SeedPolicy = SeedPolicy(),
+)
+```
+
+`SeedSource` values are `NONE='none'`, `CANDIDATE_HINTS='candidate_hints'`, and
+`EXISTING_FLOOR_PLAN='existing_floor_plan'`. Seed tolerances use project units;
+`None` leaves that dimension unbounded and uses hints only, `0` fixes the seeded
+value, and positive values bound movement or size.
+
+`FloorPlanSolverConfig` requires a non-empty name and unique hard/soft constraint keys.
+`SoftConstraintUse.weight` must be positive. `SolverConfig.max_time_seconds` must be
+positive; workers, random seed, and relative gap cannot be negative.
+`PreparationConfig.coordinate_scale` must be at least `1`.
+
+Immutable helper methods return modified configs:
+
+```python
+config.without_constraints(*keys)
+config.with_hard_constraints(*uses)
+config.with_soft_constraints(*uses)
+```
+
+### Built-in hard constraints
+
+The shipped default profiles enable:
+
+| Key | Exact built-in settings / behavior |
 |---|---|
-| `aspect_ratio` | min `0.60`, max `1.80`, hallway excluded; garage override `0.45..0.70`; veranda override `1.20..3.50` |
-| `room_relations` | `minimum_overlap=10` |
-| `attached_bathroom_pairing` | minimum shared wall `10`; attached-bathroom type to bedroom type |
+| `aspect_ratio` | min `0.60`, max `1.80`; hallways excluded from this rule; garage override `0.45..0.70`; veranda override `1.20..3.50` |
+| `room_relations` | enforces `HARD` specification relations; `minimum_overlap=10` |
+| `attached_bathroom_pairing` | minimum shared wall `10`; attached-bathroom type paired with bedroom type |
 | `minimum_coverage` | `ratio=0.6` |
-| `hallway_connectivity` | minimum overlap `10`; hallway type anchored to living-room type |
-| `hallway_dimensions` | hallway width `8..10` |
+| `hallway_connectivity` | `minimum_overlap=10`; hallway type must touch an anchor type and a non-hallway/non-anchor destination; default anchor is living room |
+| `hallway_dimensions` | hallway corridor width is constrained to `8..10`; the other dimension may extend as needed |
 | `front_anchor` | veranda, living room, bedroom, garage |
 | `back_exposure` | hallway and kitchen; minimum exposure `10.0` |
 | `garage_placement` | garage type |
 | `boundary_placement` | veranda on `front` with offset `0.0` |
 
-| Profile | Exact soft uses (`key: weight`; settings) | Runtime/seed |
-|---|---|---|
-| `initial_generation` | `room_relations:40` (overlap 10), `floor_cluster_position:1` (horizontal 1/front 2), `dead_space:3`, `bathroom_depth:2`, `kitchen_back_exposure:10` (exposure 10) | 5 s; candidate hints optional; no movement/size bounds |
-| `refinement_a` | `room_relations:50`, `seed_stability:20` (position 2/size 1), `floor_cluster_position:1` (horizontal 1/front 2), `dead_space:4`, `bathroom_depth:3`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 10 |
-| `refinement_b` | `room_relations:60`, `seed_stability:35` (position 2/size 2), `dead_space:6`, `bathroom_depth:4`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 5 |
+`room_size_hierarchy` is registered for custom configurations but is not enabled by
+the built-in profiles.
 
-All use `coordinate_scale=1`; otherwise the `SolverConfig` defaults apply: workers
-`0`, random seed `None`, logging off, no relative-gap limit, and presolve enabled.
+### Built-in soft constraints
+
+The default registry provides:
+
+- `room_relations`
+- `floor_cluster_position`
+- `dead_space`
+- `hallway_efficiency`
+- `bathroom_depth`
+- `kitchen_back_exposure`
+- `seed_stability`
+
+The solver minimizes the weighted sum of enabled soft-constraint penalties. Hard
+constraints always determine feasibility.
+
+#### Hallway efficiency
+
+`hallway_efficiency` treats all configured hallway rooms as one circulation-geometry
+cost. It does not decide whether an individual hallway is semantically necessary.
+
+The objective components are:
+
+```text
+hallway efficiency cost =
+    total hallway area * area_penalty_multiplier
+  + total excess hallway length * excess_length_penalty_multiplier
+```
+
+The complete penalty is then multiplied by the ordinary `SoftConstraintUse.weight`.
+
+For each hallway:
+
+```text
+longest_side = max(width, length)
+excess_length = max(0, longest_side - preferred_max_length)
+```
+
+`preferred_max_length` is a soft threshold, not a hard maximum. A longer hallway is
+still legal when hard constraints require it; it simply contributes more objective
+cost. Penalizing total hallway area also encourages the solver to shrink hallway
+geometry toward the smallest dimensions compatible with hard constraints and the
+other objective terms. It never removes the hallway room.
+
+Supported settings:
+
+| Setting | Type | Default | Validation / meaning |
+|---|---|---:|---|
+| `hallway_room_types` | iterable of `RoomType` | `(RoomType.HALLWAY,)` | room types included in the hallway-efficiency objective |
+| `area_penalty_multiplier` | `int` | `1` | must be `>= 0`; `0` disables the area component |
+| `preferred_max_length` | `float | None` | `40.0` | positive finite project-unit length; `None` disables excess-length threshold calculation |
+| `excess_length_penalty_multiplier` | `int` | `5` | must be `>= 0`; `0` disables the excess-length component |
+| `SoftConstraintUse.weight` | `int` | profile-defined | must be `> 0`; weights the whole hallway-efficiency penalty |
+
+With the project convention `10` units = `1 m`, the built-in
+`preferred_max_length=40.0` corresponds to `4 m`.
+
+To disable hallway efficiency completely:
+
+```python
+config = INITIAL_GENERATION_PROFILE.without_constraints("hallway_efficiency")
+```
+
+### Built-in profile construction
+
+```python
+DefaultProfileSettings(
+    coordinate_scale: int = 1,
+    minimum_coverage_ratio: float = 0.6,
+    minimum_adjacency_overlap: float = 10,
+    attached_bathroom_minimum_shared_wall: float = 10.0,
+    initial_max_time_seconds: float = 5.0,
+    refinement_max_time_seconds: float = 2.0,
+    refinement_position_tolerance: float = 10,
+    refinement_size_tolerance: float = 10,
+    hallway_efficiency_weight: int = 1,
+    hallway_area_penalty_multiplier: int = 1,
+    hallway_preferred_max_length: float | None = 40.0,
+    hallway_excess_length_penalty_multiplier: int = 5,
+)
+
+build_default_profiles(
+    settings: DefaultProfileSettings | None = None,
+) -> ProfileCatalog
+```
+
+The returned `ProfileCatalog` contains `initial`, `refinement_a`, and `refinement_b`.
+The public constants `DEFAULT_PROFILES`, `INITIAL_GENERATION_PROFILE`,
+`REFINEMENT_A_PROFILE`, and `REFINEMENT_B_PROFILE` are created from the default
+settings above.
+
+Exact built-in soft uses:
+
+| Profile | Exact soft uses (`key: weight`; important settings) | Runtime / seed |
+|---|---|---|
+| `initial_generation` | `room_relations:40` (overlap 10), `floor_cluster_position:1` (horizontal 1/front 2), `dead_space:3`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:2`, `kitchen_back_exposure:10` (exposure 10) | 5 s; candidate hints optional; coordinate scale 1 |
+| `refinement_a` | `room_relations:50`, `seed_stability:20` (position 2/size 1), `floor_cluster_position:1` (horizontal 1/front 2), `dead_space:4`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:3`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 10; coordinate scale 1 |
+| `refinement_b` | `room_relations:60`, `seed_stability:35` (position 2/size 2), `dead_space:6`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:4`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 5; coordinate scale 1 |
 
 ### Recommended values
 
-The built-in profile catalog is the supported starter configuration. Its coordinate
-scale is 1 for performance, minimum coverage is 0.6, adjacency/shared-wall baseline
-is 10 units, and refinement tolerances start at 10 units (B halves them). Use
-`build_default_profiles()` and calibrate only against domain/test evidence. For
-repeatable tests set `random_seed` and `num_search_workers=1` on a copied profile.
+**Built-in profile values** are starter settings, not universal architectural
+standards. For hallway efficiency, begin with the shipped weight/multipliers and tune
+them against actual generated plans rather than adding a hallway-count penalty. For
+repeatable solver tests, set a fixed `random_seed` and use
+`num_search_workers=1`.
 
 ### Outputs
 
+```python
+FloorPlanSolveResult(
+    status: SolverStatus,
+    floor_plan: FloorPlan | None,
+    profile_name: str,
+    message: str,
+)
+```
+
+`SolverStatus` values are `OPTIMAL='optimal'`, `FEASIBLE='feasible'`,
+`INFEASIBLE='infeasible'`, `MODEL_INVALID='model_invalid'`, and
+`UNKNOWN='unknown'`. `.solved` is true only when the status has a solution and
+`floor_plan` is not `None`.
+
 `FloorPlanSolveExecution` is
-`FeatureExecution[FloorPlanSolveResult, SolverDiagnostics]`. Result status is
-`OPTIMAL`, `FEASIBLE`, `INFEASIBLE`, `MODEL_INVALID`, or `UNKNOWN`; `.solved` is true
-only when a successful status also has a `FloorPlan`. The result also provides
-`profile_name` and message. DEBUG diagnostics contain raw status, solver wall time,
-objective/bound, conflicts, branches, applied constraints, and penalty terms.
+`FeatureExecution[FloorPlanSolveResult, SolverDiagnostics]`. In PRODUCTION,
+`details=None`. DEBUG diagnostics are:
+
+```python
+SolverDiagnostics(
+    raw_status: str,
+    wall_time_seconds: float,
+    objective_value: float | None,
+    best_objective_bound: float | None,
+    conflicts: int,
+    branches: int,
+    applied_hard_constraints: tuple[str, ...],
+    applied_soft_constraints: tuple[str, ...],
+    penalty_terms: tuple[str, ...],
+)
+```
+
+With hallway efficiency enabled, `penalty_terms` can contain
+`'hallway_efficiency:total_area'` and `'hallway_efficiency:excess_length'`.
+`FloorPlanSolveResult.profile_name` is retained for serialized/public compatibility
+even though the request field is named `config`.
 
 ### Errors / failure conditions
 
-Invalid specification/profile/constraint IDs or a required missing seed raise
-`FloorPlanSolverError` subclasses before solving. The base is exported at the feature
-root; specific classes are importable from `fpg_core.floor_plan_solver.exceptions`.
-Infeasibility, model invalidity,
-and timeout/unknown outcomes are returned statuses and normally do not raise. Always
-check `execution.result.solved` before reading the plan.
+Invalid specifications, configs, constraint IDs, or required seed data raise the
+`FloorPlanSolverError` family before or during model construction. Specific subclasses
+remain available from `fpg_core.floor_plan_solver.exceptions`.
+`INFEASIBLE`, `MODEL_INVALID`, and `UNKNOWN` are normal result statuses, not
+exceptions merely because solving did not produce a plan.
 
 ### Usage example
 
 ```python
 from fpg_core.domain import ExecutionMode, RoomId
 from fpg_core.floor_plan_solver import (
-    INITIAL_GENERATION_PROFILE, FloorPlanSolveRequest, RoomPlacementHint,
+    INITIAL_GENERATION_PROFILE,
+    FloorPlanSolveRequest,
+    RoomPlacementHint,
     generate_floor_plan,
 )
 
@@ -975,9 +1352,11 @@ floor_plan = execution.result.floor_plan
 
 ### Important behavioral notes
 
-Hints guide a solve; unless profile tolerances fix/bound them, they are not guaranteed
-positions. `PRODUCTION` has `details=None`. Reuse `FloorPlanSolver` only when a custom
-constraint registry is needed; it does not retain a solved-plan session.
+Upstream search/circulation decides which hallway rooms reach the solver. The solver
+keeps every supplied hallway and can make its geometry smaller through the soft
+hallway-efficiency objective while still satisfying hard width/connectivity rules.
+Connected hallways may later be merged by `floor_plan_post_processing`; that is a
+separate responsibility from solver-side compaction.
 
 ## Floor Plan Post-Processing
 
@@ -1092,87 +1471,304 @@ and preserves existing openings.
 
 ### Purpose
 
-Analyzes finalized rectilinear room walls and places interior doors, exterior doors,
-and windows according to an opening profile. Use it to obtain a new completed
-`FloorPlan` with typed opening segments and room connections.
+Analyzes a finalized floor plan and uses CP-SAT to place interior doors, exterior
+doors, and windows without mutating the source plan. Interior room-type compatibility,
+required door-network access, and door placement priorities are consumer-configurable.
 
 ### Public API
 
 ```python
 generate_openings(
     request: OpeningGenerationRequest,
-    *, registry: OpeningFeatureRegistry | None = None,
+    *,
+    registry: OpeningFeatureRegistry | None = None,
     mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> OpeningGenerationExecution
 ```
 
-The feature root exports profile/config contracts, request/result/diagnostics/status,
-`DEFAULT_OPENING_PROFILE`, registry creation/extension contracts, and base
-`OpeningGenerationError`.
+Preferred imports are from `fpg_core.floor_plan_openings` or its public `api` module.
+`OpeningGenerationProfile` and `DEFAULT_OPENING_PROFILE` remain compatibility names
+for `FloorPlanOpeningsConfig` and `DEFAULT_OPENING_CONFIG`.
 
 ### Inputs
 
-`OpeningGenerationRequest(floor_plan, config)` requires finite canonical rectilinear
-floor/room polygons; positive area; unique room IDs; standard rooms inside the floor
-without area overlap; and no existing openings. Adjacent/shared and
-exterior walls must be long enough for configured openings and clearances.
+```python
+OpeningGenerationRequest(
+    floor_plan: FloorPlan,
+    config: FloorPlanOpeningsConfig,
+)
+```
+
+The source plan must have valid finite rectilinear floor/room geometry, positive room
+area, unique room IDs, standard rooms inside the floor without area overlap, and **no
+existing openings**. The source plan is never mutated.
 
 ### Configuration
 
-- `FloorPlanOpeningsConfig(name, enabled_features=('interior_doors',
-  'exterior_doors', 'windows'), enabled_constraints=('shared_placement',
-  'room_door_limits'), geometry=GeometryConfig(), dimensions=DimensionConfig(),
-  policy=FeaturePolicy(), objective=ObjectiveConfig(), solver=SolverConfig())`.
-  `OpeningGenerationProfile` is a compatibility alias. IDs must be
-  unique; `shared_placement` is mandatory.
-- `GeometryConfig(coordinate_scale=10, tolerance=1e-6, corner_clearance=0,
-  window_spacing=5)`: integer precision, geometry tolerance, distance from wall
-  corners, and minimum gap involving windows.
-- `DimensionConfig(door_width=8, window_width=16,
-  minimum_shared_wall=10)` uses positive project-unit lengths.
-- `FeaturePolicy` controls allowed interior room-type pairs, positive per-type door
-  caps, secondary entrance preference, window-eligible types, and complete cardinal
-  side priorities. Each priority must contain south/east/north/west exactly once.
-- `ObjectiveConfig.tier_order` sets unique lexicographic preference tiers.
-- Opening `SolverConfig(max_time_seconds=10, num_search_workers=1, random_seed=0,
-  cp_model_presolve=True, log_search_progress=False)`.
+```python
+GeometryConfig(
+    coordinate_scale: int = 10,
+    tolerance: float = 1e-6,
+    corner_clearance: float = 0.0,
+    window_spacing: float = 5.0,
+)
+
+DimensionConfig(
+    door_width: float = 8.0,
+    window_width: float = 16.0,
+    minimum_shared_wall: float = 10.0,
+)
+
+SolverConfig(
+    max_time_seconds: float = 10.0,
+    num_search_workers: int = 1,
+    random_seed: int = 0,
+    cp_model_presolve: bool = True,
+    log_search_progress: bool = False,
+)
+```
+
+`coordinate_scale` must be at least `1`; geometry tolerance and dimensions must be
+positive; corner/window clearances cannot be negative. Solver time and workers must
+be positive and the random seed cannot be negative.
+
+#### FeaturePolicy
+
+```python
+FeaturePolicy(
+    allowed_room_pairs: tuple[tuple[RoomType, RoomType], ...] = DEFAULT_PAIRS,
+    room_door_caps: tuple[tuple[RoomType, int], ...] = DEFAULT_CAPS,
+    secondary_room_priority: tuple[RoomType, ...] = (
+        RoomType.KITCHEN,
+        RoomType.HALLWAY,
+    ),
+    window_room_types: tuple[RoomType, ...] = (
+        RoomType.BEDROOM,
+        RoomType.LIVING_ROOM,
+        RoomType.KITCHEN,
+        RoomType.DINING_ROOM,
+    ),
+    main_side_priority: tuple[str, ...] = ("south", "east", "north", "west"),
+    secondary_side_priority: tuple[str, ...] = ("north", "west", "east", "south"),
+    window_side_priority: tuple[str, ...] = ("east", "north", "south", "west"),
+    required_access_room_types: tuple[RoomType, ...] = DEFAULT_REQUIRED_ACCESS,
+    door_placement_priority: tuple[tuple[RoomType, int], ...] = DEFAULT_DOOR_PRIORITY,
+)
+```
+
+Exact default `allowed_room_pairs`:
+
+```python
+(
+    (RoomType.BEDROOM, RoomType.LIVING_ROOM),
+    (RoomType.KITCHEN, RoomType.LIVING_ROOM),
+    (RoomType.BATHROOM, RoomType.LIVING_ROOM),
+    (RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM),
+    (RoomType.VERANDA, RoomType.LIVING_ROOM),
+    (RoomType.GARAGE, RoomType.LIVING_ROOM),
+    (RoomType.DINING_ROOM, RoomType.LIVING_ROOM),
+    (RoomType.BEDROOM, RoomType.HALLWAY),
+    (RoomType.BATHROOM, RoomType.HALLWAY),
+    (RoomType.LIVING_ROOM, RoomType.HALLWAY),
+    (RoomType.KITCHEN, RoomType.HALLWAY),
+    (RoomType.DINING_ROOM, RoomType.HALLWAY),
+    (RoomType.VERANDA, RoomType.HALLWAY),
+    (RoomType.GARAGE, RoomType.HALLWAY),
+    (RoomType.HALLWAY, RoomType.HALLWAY),
+)
+```
+
+This tuple is authoritative. Pair order does not matter, duplicate logical pairs are
+rejected, and the implementation no longer silently adds hallway connections or a
+special attached-bathroom pairing rule. If a consumer wants
+`ATTACHED_BATHROOM <-> HALLWAY`, it must explicitly add that pair.
+
+Exact default door caps:
+
+```python
+(
+    (RoomType.BEDROOM, 2),
+    (RoomType.BATHROOM, 1),
+    (RoomType.LIVING_ROOM, 10),
+    (RoomType.HALLWAY, 10),
+    (RoomType.KITCHEN, 1),
+    (RoomType.ATTACHED_BATHROOM, 1),
+    (RoomType.VERANDA, 1),
+    (RoomType.GARAGE, 1),
+    (RoomType.DINING_ROOM, 2),
+)
+```
+
+Caps must be positive and each room type may appear only once. The same cap mechanism
+is applied uniformly; there is no Bedroom/Attached-Bathroom-specific cap behavior.
+
+Exact default required-access room types:
+
+```python
+(
+    RoomType.BEDROOM,
+    RoomType.BATHROOM,
+    RoomType.ATTACHED_BATHROOM,
+    RoomType.LIVING_ROOM,
+    RoomType.KITCHEN,
+    RoomType.DINING_ROOM,
+    RoomType.HALLWAY,
+    RoomType.VERANDA,
+    RoomType.GARAGE,
+)
+```
+
+The tuple must contain unique room types.
+
+Exact default door-placement priorities:
+
+```python
+(
+    (RoomType.BEDROOM, 100),
+    (RoomType.BATHROOM, 100),
+    (RoomType.ATTACHED_BATHROOM, 100),
+    (RoomType.KITCHEN, 80),
+    (RoomType.DINING_ROOM, 60),
+    (RoomType.GARAGE, 60),
+    (RoomType.VERANDA, 40),
+    (RoomType.LIVING_ROOM, 20),
+    (RoomType.HALLWAY, 10),
+)
+```
+
+Priorities must be non-negative and each room type may appear only once. Higher values
+mean that room's nearest usable corner/wall end dominates the choice of which end of a
+shared wall the door should favor. If the higher-priority room is tied, the other room
+acts as the tie-breaker. The selected door is then optimized as close as possible to
+that preferred end while still satisfying corner clearance, width, wall bounds,
+non-overlap, window spacing, and other hard constraints. This applies to **doors**;
+windows retain center-oriented placement behavior.
+
+Every side-priority tuple must contain exactly `south`, `east`, `north`, and `west`
+once each.
+
+#### FloorPlanOpeningsConfig
+
+```python
+FloorPlanOpeningsConfig(
+    name: str,
+    enabled_features: tuple[str, ...] = (
+        "interior_doors",
+        "exterior_doors",
+        "windows",
+    ),
+    enabled_constraints: tuple[str, ...] = (
+        "shared_placement",
+        "room_door_limits",
+        "required_room_access",
+    ),
+    geometry: GeometryConfig = GeometryConfig(),
+    dimensions: DimensionConfig = DimensionConfig(),
+    policy: FeaturePolicy = FeaturePolicy(),
+    objective: ObjectiveConfig = ObjectiveConfig(),
+    solver: SolverConfig = SolverConfig(),
+)
+```
+
+The config name must be non-empty; feature and constraint IDs must be unique.
+`shared_placement` **and** `required_room_access` are structural constraints and cannot
+be disabled. `room_door_limits` remains selectable.
+
+`ObjectiveConfig.tier_order` defaults to:
+
+```python
+(
+    "window",
+    "secondary_entrance",
+    "other_interior",
+    "preferred_hallway",
+    "bathroom_hallway",
+    "attached_bathroom",
+    "main_entrance",
+)
+```
+
+Tier IDs must be unique.
+
+### Required room access behavior
+
+For a non-empty floor plan, `required_room_access` enforces exactly one selected main
+entrance. Every room whose type is in `required_access_room_types` must be reachable
+from that entrance through selected doors. A local isolated pair of rooms does not
+satisfy this rule merely because those two rooms have a door between them.
+
+This is a **hard feasibility condition**, not an objective preference. If the
+combination of `allowed_room_pairs`, door caps, room geometry, available walls, or
+other hard constraints cannot produce a connected required-access network, the solve
+returns `INFEASIBLE`.
+
+Windows and other non-required optional opening demands may still remain unselected.
 
 ### Recommended values
 
-Start with `DEFAULT_OPENING_PROFILE`; all numeric defaults above are package-backed
-starter values. Preserve one worker and seed 0 for deterministic tests. Widths and
-room-pair policies require project/domain calibration if the default units or access
-rules do not fit the consumer.
+Start with `DEFAULT_OPENING_CONFIG` unless the project's access policy requires
+different room pairs/caps. Keep the built-in `required_room_access` constraint enabled.
+For reproducible tests, the shipped opening solver already uses one worker and seed
+`0`.
 
 ### Outputs
 
+```python
+OpeningGenerationResult(
+    status: OpeningGenerationStatus,
+    floor_plan: FloorPlan | None,
+    profile_name: str,
+    message: str,
+)
+```
+
+Status values are:
+
+- `OPTIMAL='optimal'`
+- `FEASIBLE='feasible'`
+- `INFEASIBLE='infeasible'`
+- `MODEL_INVALID='model_invalid'`
+- `UNKNOWN='unknown'`
+- `INVALID_INPUT='invalid_input'`
+
+`.solved` requires a solution status and a non-`None` floor plan.
+
 `OpeningGenerationExecution` is
-`FeatureExecution[OpeningGenerationResult, OpeningDiagnostics]`. Status includes
-`OPTIMAL`, `FEASIBLE`, `INFEASIBLE`, `MODEL_INVALID`, `UNKNOWN`, and `INVALID_INPUT`;
-`.solved` additionally requires a plan. The returned plan contains
-`FloorPlanOpening(id, opening_type, purpose, start, end, connected_room_ids)`.
-DEBUG diagnostics include solver statistics, analyzed wall/demand/candidate/selection
-counts, applied constraints/objective terms, and structured issues.
+`FeatureExecution[OpeningGenerationResult, OpeningDiagnostics]`. `details=None` in
+PRODUCTION. DEBUG diagnostics include raw solver status/timing/objective statistics,
+wall count, demand/candidate/selected counts, applied constraint IDs, objective terms,
+and structured `OpeningIssue` values.
+
+DEBUG issues can identify conditions such as no main-entrance candidate, a
+required-access room with no door candidate, an optional demand with no candidate, an
+unselected optional demand, or an undersized exterior door.
+
+The solved result contains a **copy** of the source floor plan with generated
+`FloorPlanOpening` objects.
 
 ### Errors / failure conditions
 
-Invalid floor geometry is returned as `INVALID_INPUT` with no plan and, in DEBUG, an
-`invalid_input` issue. Infeasibility/model/timeout are statuses. Invalid profiles,
-unknown registry IDs, and extraction invariants raise `OpeningGenerationError`
-subclasses (specific classes are importable from
-`fpg_core.floor_plan_openings.exceptions`). Always check `.solved`.
+Invalid source floor geometry is returned as `INVALID_INPUT`, with no plan and, in
+DEBUG, an `invalid_input` issue. Infeasibility/model/unknown outcomes are returned
+statuses. Invalid configurations, duplicate/unknown feature registrations, unknown
+constraint IDs, and other generation contract failures raise the
+`OpeningGenerationError` family. `OpeningConfigurationError` is exported directly.
 
 ### Usage example
 
 ```python
 from fpg_core.floor_plan_openings import (
-    DEFAULT_OPENING_PROFILE, OpeningGenerationRequest, generate_openings,
+    DEFAULT_OPENING_CONFIG,
+    OpeningGenerationRequest,
+    generate_openings,
 )
 
-execution = generate_openings(OpeningGenerationRequest(
-    floor_plan=example_floor_plan,
-    config=DEFAULT_OPENING_PROFILE,
-))
+execution = generate_openings(
+    OpeningGenerationRequest(
+        floor_plan=example_floor_plan,
+        config=DEFAULT_OPENING_CONFIG,
+    )
+)
 if not execution.result.solved:
     raise RuntimeError(execution.result.message)
 plan_with_openings = execution.result.floor_plan
@@ -1180,99 +1776,321 @@ plan_with_openings = execution.result.floor_plan
 
 ### Important behavioral notes
 
-The source plan is never mutated. Opening IDs and selected placements are generated
-for the returned copy. `PRODUCTION` omits diagnostics. Side priorities use global
-south/east/north/west coordinates.
+The source plan is never mutated. `allowed_room_pairs` fully owns interior connection
+compatibility. Required door access is now mandatory in valid configurations. Door
+placement is corner/wall-end oriented using room-type priority; windows remain
+center-oriented. Run opening generation after geometry-changing post-processing if the
+openings must remain aligned with the final room boundaries.
 
 ## Floor Plan Scoring
 
 ### Purpose
 
-Scores completed room geometry against its generation specification. Built-ins check
-critical geometry integrity, required adjacency, enclosed voids, and inward recesses,
-then functional living-room balance, bedroom area/consistency, and kitchen-dining
-proximity. Use it for a final 0..100 quality assessment and structured findings.
+Scores completed room geometry against its generation specification and returns a
+0..100 quality score plus structured findings. Critical geometry checks remain hard
+gates. The default functional scoring now uses the generic `room_size_consistency`
+evaluator instead of the former default `living_room_balance` and `bedroom_quality`
+evaluators.
 
 ### Public API
 
 ```python
 score_floor_plan(
     scoring_input: FloorPlanScoringInput,
-    *, registry: EvaluatorRegistry | None = None,
+    *,
+    registry: EvaluatorRegistry | None = None,
     mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> FloorPlanScoringExecution
 
-create_default_profile() -> ScoringProfile
+create_default_config() -> FloorPlanScoringConfig
 create_default_registry() -> EvaluatorRegistry
+
+# Compatibility names:
+create_default_profile() -> ScoringProfile
 ```
 
-The feature root exports group/evaluator keys, rule/profile contracts, evaluator and
-settings classes, registry/context extension contracts, result/detail/finding/metric
-contracts, statuses, default profile, and all scoring exception classes.
+`ScoringProfile` is an alias of `FloorPlanScoringConfig`.
+`DEFAULT_SCORING_PROFILE` is the same object as
+`DEFAULT_FLOOR_PLAN_SCORING_CONFIG`.
 
 ### Inputs
 
-`FloorPlanScoringInput(floor_plan, specification, config)` requires a typed plan and
-the specification that defines room IDs, size ranges, and relations. Plan rooms need
-valid finite polygon geometry and IDs consistent with specification or valid identity
-redirects.
+```python
+FloorPlanScoringInput(
+    floor_plan: FloorPlan,
+    specification: FloorPlanGenerationSpec,
+    config: FloorPlanScoringConfig,
+)
+```
+
+The specification is required because evaluators use room IDs, relations, and room
+size ranges. The room-size-consistency feasibility adjustment reads `RoomSizeSpec.min_area`
+and `max_area` directly from this specification; consumers do not supply a second copy
+of those ranges.
 
 ### Configuration
 
-- `FloorPlanScoringConfig(groups, evaluators)` requires at least one group, unique keys,
-  finite positive weights, and exactly one enabled `critical` gate that executes no
-  later than other groups. Every enabled group needs an enabled evaluator.
-  `ScoringProfile` is a compatibility alias.
-- `ScoringGroupRule(key, enabled=True, order=0, weight=1)` controls execution order and
-  allocation of the 100-point total.
-- `EvaluatorRule(key, group_key, settings, enabled=True, order=0, weight=1,
-  minimum_score=None)`: critical rules require a 0..100 minimum; non-critical rules
-  forbid it. Settings must exactly match the evaluator's settings class.
-- Default settings: geometry tolerance `1e-6`; required shared boundary `10`;
-  enclosed-void area tolerance `1e-6`; maximum inward recess `20`; living-room
-  maximum excess ratio `2`; bedroom area/consistency weights `3/1`, full-spread ratio
-  `0.5`, max penalty `40`; kitchen-dining shared boundary `10`, maximum centroid
-  distance `2000`, tolerance `1e-6`.
+```python
+ScoringGroupRule(
+    key: GroupKey,
+    enabled: bool = True,
+    order: int = 0,
+    weight: float = 1.0,
+)
+
+EvaluatorRule(
+    key: EvaluatorKey,
+    group_key: GroupKey,
+    settings: object,
+    enabled: bool = True,
+    order: int = 0,
+    weight: float = 1.0,
+    minimum_score: float | None = None,
+)
+
+FloorPlanScoringConfig(
+    groups: tuple[ScoringGroupRule, ...],
+    evaluators: tuple[EvaluatorRule, ...],
+)
+```
+
+An enabled critical evaluator requires a `minimum_score` in `0..100`; non-critical
+evaluators must not define one. Enabled group/evaluator weights must be finite and
+positive. Keys must be unique, each enabled group must have an enabled evaluator, and
+one enabled `critical` group acts as the gate before later groups.
+
+Built-in group keys are `critical`, `functional`, `aesthetic`, and `extra`.
+
+### Room-size consistency
+
+The public evaluator key is:
+
+```python
+ROOM_SIZE_CONSISTENCY_KEY = EvaluatorKey("room_size_consistency")
+```
+
+Public aggregation values:
+
+```python
+RoomAreaAggregation.MIN      # "min"
+RoomAreaAggregation.AVERAGE  # "average"
+RoomAreaAggregation.MAX      # "max"
+RoomAreaAggregation.TOTAL    # "total"
+```
+
+Cross-type relation rule:
+
+```python
+RoomSizeRelationRule(
+    reference_type: RoomType,
+    compared_type: RoomType,
+    min_ratio: float | None = None,
+    max_ratio: float | None = None,
+    reference_aggregation: RoomAreaAggregation = RoomAreaAggregation.MAX,
+    compared_aggregation: RoomAreaAggregation = RoomAreaAggregation.MAX,
+    weight: float = 1.0,
+    full_penalty_ratio_delta: float | None = None,
+)
+```
+
+The evaluated ratio is:
+
+```text
+compared area / reference area
+```
+
+`reference_type` and `compared_type` must differ. At least one of `min_ratio` or
+`max_ratio` is required. Configured ratios and rule weight must be positive; when both
+bounds are present, `min_ratio <= max_ratio`. A rule-specific
+`full_penalty_ratio_delta`, when supplied, must be positive.
+
+Same-type consistency rule:
+
+```python
+RoomTypeConsistencyRule(
+    room_type: RoomType,
+    maximum_spread_ratio: float,
+    weight: float = 1.0,
+    full_penalty_ratio_delta: float | None = None,
+)
+```
+
+`maximum_spread_ratio` is:
+
+```text
+largest room area / smallest room area - 1
+```
+
+It must be non-negative. Weight and any rule-specific full-penalty delta must be
+positive.
+
+Evaluator settings:
+
+```python
+RoomSizeConsistencySettings(
+    relation_rules: tuple[RoomSizeRelationRule, ...] = (),
+    consistency_rules: tuple[RoomTypeConsistencyRule, ...] = (),
+    default_full_penalty_ratio_delta: float = 0.5,
+)
+```
+
+At least one relation or consistency rule is required. Relation `(reference_type,
+compared_type)` pairs must be unique; same-type consistency rules may define each room
+type only once. `default_full_penalty_ratio_delta` must be positive.
+
+#### Feasibility adjustment
+
+The evaluator does not penalize a configured ratio that the generation specification
+makes impossible. It derives a feasible ratio range from the matching room specs'
+`min_area` and `max_area` values and relaxes an impossible configured bound to the
+nearest feasible threshold for that project.
+
+Example:
+
+```text
+Living:  200..250
+Kitchen: 220..260
+Configured kitchen/living max ratio: 0.80
+Best feasible ratio: 220 / 250 = 0.88
+Effective max ratio: 0.88
+```
+
+The configured preference remains unchanged in the config; only scoring uses the
+effective threshold. The same principle applies to a same-type spread rule when the
+room-size ranges themselves force a minimum spread.
+
+#### Penalty behavior
+
+Violations are gradual. Once the violation exceeds the effective boundary,
+`full_penalty_ratio_delta` controls how much further ratio deviation produces a zero
+rule score. If the individual rule leaves it `None`,
+`default_full_penalty_ratio_delta` is used. Applicable rules are combined by their
+individual `weight` values.
+
+#### Exact default room-size rules
+
+The default config uses `RoomSizeConsistencySettings` with:
+
+```python
+relation_rules=(
+    RoomSizeRelationRule(
+        reference_type=RoomType.LIVING_ROOM,
+        compared_type=RoomType.KITCHEN,
+        max_ratio=0.80,
+        reference_aggregation=RoomAreaAggregation.MAX,
+        compared_aggregation=RoomAreaAggregation.MAX,
+    ),
+    RoomSizeRelationRule(
+        reference_type=RoomType.KITCHEN,
+        compared_type=RoomType.DINING_ROOM,
+        max_ratio=1.00,
+        reference_aggregation=RoomAreaAggregation.MAX,
+        compared_aggregation=RoomAreaAggregation.MAX,
+    ),
+    RoomSizeRelationRule(
+        reference_type=RoomType.LIVING_ROOM,
+        compared_type=RoomType.BEDROOM,
+        max_ratio=0.90,
+        reference_aggregation=RoomAreaAggregation.MAX,
+        compared_aggregation=RoomAreaAggregation.MAX,
+    ),
+)
+consistency_rules=(
+    RoomTypeConsistencyRule(
+        room_type=RoomType.BEDROOM,
+        maximum_spread_ratio=0.25,
+    ),
+)
+default_full_penalty_ratio_delta=0.50
+```
+
+These are **scoring preferences**, not solver constraints.
+
+### Exact default scoring config
+
+`DEFAULT_FLOOR_PLAN_SCORING_CONFIG` / `create_default_config()` contains two groups:
+
+```text
+critical   order=10, weight=1.0
+functional order=20, weight=1.0
+```
+
+Critical evaluators, all requiring score `100`:
+
+| Evaluator | Order | Exact settings |
+|---|---:|---|
+| `geometry_integrity` | 10 | tolerance `1e-6` |
+| `required_adjacency` | 20 | minimum shared boundary `10.0`, tolerance `1e-6` |
+| `enclosed_voids` | 30 | area tolerance `1e-6` |
+| `inward_recess` | 40 | maximum length `20.0`, tolerance `1e-6` |
+
+Functional evaluators:
+
+| Evaluator | Order | Weight | Exact settings |
+|---|---:|---:|---|
+| `room_size_consistency` | 10 | `2.0` | exact rules listed above |
+| `kitchen_dining` | 20 | `1.0` | minimum shared boundary `10.0`, maximum distance `2000.0`, tolerance `1e-6` |
+
+`LivingRoomBalanceEvaluator` and `BedroomQualityEvaluator` remain exported and are
+still registered by `create_default_registry()` for compatibility with custom
+configs. They are **not enabled by the default scoring config**.
 
 ### Recommended values
 
-Use `create_default_profile()`/`DEFAULT_SCORING_PROFILE` as the implementation-backed
-baseline. All four critical checks require 100 by default. The critical and functional
-groups each receive equal weight; applicable evaluator weights within a group are
-normalized. Calibrate length thresholds if project units differ from those assumed by
-the supplied defaults.
+Use `create_default_config()` as the canonical baseline. The four critical checks are
+strict 100-point gates. The default functional allocation gives
+`room_size_consistency` twice the configured weight of `kitchen_dining` before
+normalization. Treat the built-in room-size ratios as package preferences that can be
+replaced by project-specific values.
 
 ### Outputs
 
+```python
+FloorPlanScoringResult(
+    total_score: float,
+    passed_critical: bool,
+    critical_failure: ScoreFinding | None,
+)
+
+FloorPlanScoringDetails(
+    group_results: tuple[ScoringGroupResult, ...],
+    evaluator_results: tuple[EvaluatorExecutionResult, ...],
+    findings: tuple[ScoreFinding, ...] = (),
+)
+```
+
 `FloorPlanScoringExecution` is
-`FeatureExecution[FloorPlanScoringResult, FloorPlanScoringDetails]`. Result contains
-`total_score` (0..100), `passed_critical`, and optional `critical_failure`. DEBUG
-details contain group statuses/raw scores/contributions, evaluator status/raw score/
-normalized weight/contribution/threshold, findings, metrics with units, and optional
-visualization payloads.
+`FeatureExecution[FloorPlanScoringResult, FloorPlanScoringDetails]`.
+`details=None` in PRODUCTION. DEBUG details include group results, evaluator raw and
+normalized contributions, thresholds, findings, metrics, and optional visualization
+payloads.
+
+For `room_size_consistency`, DEBUG metrics/findings expose configured, feasible,
+effective, actual, and violation ratios/spreads where applicable.
 
 ### Errors / failure conditions
 
-`FloorPlanScoringError` subclasses cover structurally broken input, inconsistent
-profiles, registry errors, evaluator contract violations, and unexpected evaluator
-execution. A critical score below threshold is a normal result: `passed_critical` is
-false, later groups are `SKIPPED`, and total contains only earned critical
-contribution. `NOT_APPLICABLE` evaluators redistribute weight among applicable ones;
-if no critical evaluator applies, scoring raises `EvaluatorExecutionError`.
+`FloorPlanScoringError` subclasses cover invalid input, inconsistent scoring config,
+registry errors, evaluator contract violations, and unexpected evaluator execution.
+A critical score below threshold is a normal scoring result: `passed_critical=False`,
+later groups are skipped, and no exception is required solely for failing the gate.
+If no critical evaluator is applicable, the manager raises `EvaluatorExecutionError`.
 
 ### Usage example
 
 ```python
 from fpg_core.domain import ExecutionMode
 from fpg_core.floor_plan_scoring import (
-    FloorPlanScoringInput, create_default_profile, score_floor_plan,
+    FloorPlanScoringInput,
+    create_default_config,
+    score_floor_plan,
 )
 
 execution = score_floor_plan(
     FloorPlanScoringInput(
         floor_plan=example_floor_plan,
         specification=example_specification,
-        config=create_default_profile(),
+        config=create_default_config(),
     ),
     mode=ExecutionMode.DEBUG,
 )
@@ -1281,9 +2099,10 @@ score = execution.result.total_score
 
 ### Important behavioral notes
 
-Scoring never mutates the plan. Openings do not affect the current built-in scores.
-In PRODUCTION, result findings remain consumer-safe while evaluator metrics and
-visualization payloads are omitted with `details=None`.
+Scoring does not mutate the plan or generation specification. Openings do not affect
+the current built-in scoring results. The old `FloorPlanScoringInput(..., profile=...)`
+constructor form is no longer valid; use `config=`. Compatibility profile helper names
+remain available only as aliases for the configuration object/helper.
 
 ## Shared Domain Contract Reference
 
@@ -1394,9 +2213,11 @@ legacy/derived grid description; use `ResolvedCandidateGrid` for exact execution
 Shared circulation contracts are
 `CirculationRouteRule(id, name, source_room_type, destination_room_type,
 destination_selection, traffic_class, allowed_transit_room_types,
-importance_weight)`, `GridRoutingCostProfile(empty_node_cost,
-traversable_hint_node_cost, turn_cost, perimeter_bias_max_cost)`, and
-`HallwayClassification(room_id, hint_index, traffic_class)`. Destination selection
+importance_weight, required_transit_room_types=())`,
+`GridRoutingCostProfile(empty_node_cost, traversable_hint_node_cost, turn_cost,
+perimeter_bias_max_cost)`, and `HallwayClassification(room_id, hint_index,
+traffic_class)`. Required transit is an any-of intermediate-room-type requirement and
+the configured required types are traversable for that route. Destination selection
 values are `all_matching` and `lowest_cost_match`; traffic classes are `public` and
 `private`; hallway classifications add `mixed`, `unclassified`, and `unused`.
 
@@ -1477,7 +2298,7 @@ These are compatibility edges, not a package-mandated pipeline.
 | Buildable Land | `BuildableLandResult.buildable_land`, `.normalized_land` | Usable Land | pass both objects from the same buildable-land execution; normalized edge/source indexes identify the same parcel |
 | Preprocessing | `PreparedGenerationInput.candidate_grid`, `.hallway_room_count_range`, `.generation_spec` | Candidate Search | targets must represent the same specification; hallway target count equals the prepared maximum; use the exact resolved grid |
 | Candidate Search | `CandidateMap` | Candidate Circulation / Candidate Scoring | preserve the exact `ResolvedCandidateGrid`; room IDs/types and hallway hint identities must remain consistent |
-| Candidate Circulation | refined `CandidateMap`, classifications | Floor Plan Solver hints / later scoring | removed hallway points are absent from the returned map; consumers must keep room/spec identities consistent |
+| Candidate Circulation | refined `CandidateMap`, classifications | Floor Plan Solver hints / later scoring | unused and safely consolidated hallway points are absent from the returned map; required-transit routing is already enforced; consumers must keep room/spec identities consistent |
 | Floor Plan Solver | `FloorPlan` | Post-Processing | use the same `FloorPlanGenerationSpec` where processors need specification identity |
 | Post-Processing | mutable `FloorPlan` result | Openings / Floor Plan Scoring | consume the returned/mutated plan and its `identity_redirects`; do not retain stale pre-transformation room identities |
 | Openings | copied `FloorPlan` with generated openings | Floor Plan Scoring | scoring accepts openings but does not mutate them; run openings after geometry-changing post-processing if openings are to remain aligned |
@@ -1530,10 +2351,10 @@ surfaces; consumers may catch the documented feature-root base class.
 | Feature | Public default/profile | Exact role and important values |
 |---|---|---|
 | Candidate Scoring | `create_default_config()` | enables zone suitability (weight 20/order 10), exterior clearance (20/20), spatial distribution (25/40); relationship quality is registered but not enabled |
-| Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1 and the hard rules/soft weights described in the solver section |
+| Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1 and enable `hallway_efficiency` with weight 1, area multiplier 1, preferred max length 40, excess-length multiplier 5 |
 | Post-Processing | `INITIAL_GENERATION_PROFILE` | order: veranda adjustment, wall extension, required placeholder removal+validation, hallway merge, required grid snap+validation, rectilinear simplification; tolerance `1e-6`, grid 1, rejects existing openings |
-| Openings | `DEFAULT_OPENING_CONFIG` / `DEFAULT_OPENING_PROFILE` | name `default_openings`; features `interior_doors`, `exterior_doors`, `windows`; constraints `shared_placement`, `room_door_limits`; 10 s, one worker, seed 0 |
-| Floor Plan Scoring | `DEFAULT_FLOOR_PLAN_SCORING_CONFIG` / `DEFAULT_SCORING_PROFILE` | critical group: geometry integrity, required adjacency, enclosed voids, inward recess, each threshold 100; functional group: living balance, bedroom quality, kitchen/dining proximity |
+| Openings | `DEFAULT_OPENING_CONFIG` / `DEFAULT_OPENING_PROFILE` | name `default_openings`; features `interior_doors`, `exterior_doors`, `windows`; constraints `shared_placement`, `room_door_limits`, `required_room_access`; explicit allowed-room pairs; all built-in room types required for access; corner-oriented door priorities; 10 s, one worker, seed 0 |
+| Floor Plan Scoring | `DEFAULT_FLOOR_PLAN_SCORING_CONFIG` / `DEFAULT_SCORING_PROFILE` | critical group: geometry integrity, required adjacency, enclosed voids, inward recess, each threshold 100; functional group: `room_size_consistency` weight 2 and `kitchen_dining` weight 1. Legacy living/bedroom evaluators remain registered but are not enabled by default |
 
 Buildable Land, Usable Land, Preprocessing, Candidate Search, and Candidate
 Circulation intentionally ship no universal jurisdiction/project profile. Their
@@ -1562,6 +2383,18 @@ These names are active compatibility exports; source does not mark them deprecat
 The current migration-relevant breaking change is the floor-plan solver request field
 rename from `profile=` to `config=`. The serialized/result field
 `FloorPlanSolveResult.profile_name` remains unchanged.
+
+## Consumer Migration Notes — 2026-08-15
+
+The current source contains these migration-relevant behavior/contract changes from
+the previously documented version:
+
+| Area | Previous documented behavior | Current behavior / consumer action |
+|---|---|---|
+| Candidate Circulation | route rules had no required-transit field; cleanup removed only unused hallways | `CirculationRouteRule.required_transit_room_types=()` is available; default circulation config now also performs conservative hallway consolidation. Set `HallwayConsolidationConfig(enabled=False)` to retain unused-only cleanup. |
+| Floor Plan Scoring | default functional scoring used `living_room_balance` and `bedroom_quality` | default functional scoring now uses `room_size_consistency` plus `kitchen_dining`. Custom configs may still use the legacy evaluator classes/keys. `FloorPlanScoringInput` uses `config=`, not the removed `profile=` field. |
+| Floor Plan Openings | hallway/attached-bathroom compatibility included hidden implementation behavior; room access was not a mandatory graph constraint; door placement was center-oriented | `FeaturePolicy.allowed_room_pairs` is authoritative; `required_room_access` is structurally mandatory; required room types must connect to exactly one main entrance; doors prefer wall ends according to `door_placement_priority`. Consumers constructing custom `enabled_constraints` or `FeaturePolicy` must update them. |
+| Floor Plan Solver | supplied hallways had hard dimensions/connectivity but no dedicated compactness objective | all built-in profiles enable `hallway_efficiency`, which penalizes total hallway area and excessive length. The solver still cannot remove supplied hallway rooms. Tune via `DefaultProfileSettings` or replace/remove the soft constraint. |
 
 ## Consumer Integration Checklist
 
@@ -1612,7 +2445,7 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 | `CandidateSearchSpace` | dataclass/contract | `(origin_x: 'Coordinate', origin_y: 'Coordinate', width: 'int', length: 'int', grid_spacing: 'int') -> None` | Centered, divisible Candidate Search rectangle in floor coordinates. |
 | `CirculationGrid` | dataclass/contract | `(width: 'float', length: 'float', scale: 'float', origin_x: 'float' = 0.0, origin_y: 'float' = 0.0) -> None` | Axis-aligned routing grid expressed in project units. |
 | `CirculationGridNode` | dataclass/contract | `(x_index: 'int', y_index: 'int', x: 'float', y: 'float') -> None` | One grid node used by an orthogonal circulation path. |
-| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float') -> None` | Shared typed request for room-type circulation routing. |
+| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float', required_transit_room_types: 'tuple[RoomType, ...]' = ()) -> None` | Shared typed request for room-type circulation routing, including optional required intermediate room types. |
 | `CirculationTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
 | `ConstraintStrength` | enum | `HARD='hard'; SOFT='soft'` | Documented in the corresponding feature/shared section. |
 | `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'` | Determines which matching destinations a route rule selects. |
@@ -1744,32 +2577,36 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 | `build_candidate_search_targets` | function | `build_candidate_search_targets(specification: fpg_core.domain.floor_plan_spec.FloorPlanGenerationSpec) -> tuple[fpg_core.candidate_search.models.CandidateSearchTarget, ...]` | Create one concrete Candidate Search target for every prepared room. |
 | `search_candidates` | function | `search_candidates(search_input: 'CandidateSearchInput', *, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FeatureExecution[CandidateSearchResult, CandidateSearchDetails]'` | Run the complete uniform-grid candidate search. |
 
-### `fpg_core.candidate_circulation` exports (22)
+### `fpg_core.candidate_circulation` exports (26)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
-| `CandidateCirculationConfig` | dataclass/contract | `(costs: 'RoutingCostProfile', route_rules: 'tuple[CirculationRouteRule, ...]', always_traversable_room_types: 'tuple[RoomType, ...]', max_routing_passes: 'int' = 3) -> None` | Reusable routing policy; request-specific grid comes from CandidateMap. |
-| `CandidateCirculationDetails` | dataclass/contract | `(circulation_efficiency_score: 'float', routing_pass_count: 'int', grid_node_count: 'int', passes: 'tuple[RoutingPassDetails, ...]', final_hallway_traffic: 'tuple[HallwayTrafficDetails, ...]', removed_hallway_points: 'tuple[RemovedHallwayPointDetails, ...]') -> None` | DEBUG-only route efficiency, hallway traffic, and removal data. |
+| `CandidateCirculationConfig` | dataclass/contract | `(costs: 'RoutingCostProfile', route_rules: 'tuple[CirculationRouteRule, ...]', always_traversable_room_types: 'tuple[RoomType, ...]', max_routing_passes: 'int' = 3, hallway_consolidation: 'HallwayConsolidationConfig' = <factory>) -> None` | Reusable routing policy; request-specific grid comes from `CandidateMap`. |
+| `CandidateCirculationDetails` | dataclass/contract | `(circulation_efficiency_score: 'float', routing_pass_count: 'int', grid_node_count: 'int', passes: 'tuple[RoutingPassDetails, ...]', final_hallway_traffic: 'tuple[HallwayTrafficDetails, ...]', removed_hallway_points: 'tuple[RemovedHallwayPointDetails, ...]', hallway_consolidation_attempts: 'tuple[HallwayConsolidationAttemptDetails, ...]') -> None` | DEBUG-only route efficiency, hallway traffic, removals, and route-verified consolidation attempts. |
 | `CandidateCirculationError` | exception | `constructor has no separately inspectable signature` | Base exception for candidate circulation failures. |
 | `CandidateCirculationInput` | dataclass/contract | `(candidate: 'CandidateMap', config: 'CandidateCirculationConfig') -> None` | Candidate map and reusable circulation policy. |
 | `CandidateCirculationInputError` | exception | `constructor has no separately inspectable signature` | Raised when the circulation input or configuration is invalid. |
-| `CandidateCirculationResult` | dataclass/contract | `(candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = ()) -> None` | Production result with cleaned candidate and hallway traffic tags. |
-| `CirculationPathDetails` | dataclass/contract | `(rule_id: 'int', rule_name: 'str', traffic_class: 'CirculationTrafficClass', destination_selection: 'DestinationSelection', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float', source_point_key: 'str', source_room_id: 'str', source_room_type: 'RoomType', destination_point_key: 'str', destination_room_id: 'str', destination_room_type: 'RoomType', nodes: 'tuple[CirculationGridNode, ...]', step_count: 'int', manhattan_step_count: 'int', detour_step_count: 'int', turn_count: 'int', manhattan_reference_cost: 'float', costs: 'RouteCostBreakdown', path_efficiency_score: 'float') -> None` | DEBUG data for one expanded and resolved route. |
+| `CandidateCirculationResult` | dataclass/contract | `(candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = ()) -> None` | Production result with cleaned candidate and retained hallway traffic tags. |
+| `CirculationPathDetails` | dataclass/contract | `(rule_id: 'int', rule_name: 'str', traffic_class: 'CirculationTrafficClass', destination_selection: 'DestinationSelection', allowed_transit_room_types: 'tuple[RoomType, ...]', required_transit_room_types: 'tuple[RoomType, ...]', required_transit_point_keys: 'tuple[str, ...]', importance_weight: 'float', source_point_key: 'str', source_room_id: 'str', source_room_type: 'RoomType', destination_point_key: 'str', destination_room_id: 'str', destination_room_type: 'RoomType', nodes: 'tuple[CirculationGridNode, ...]', step_count: 'int', manhattan_step_count: 'int', detour_step_count: 'int', turn_count: 'int', manhattan_reference_cost: 'float', costs: 'RouteCostBreakdown', path_efficiency_score: 'float') -> None` | DEBUG data for one expanded and resolved route, including required-transit evidence. |
 | `CirculationTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
 | `CirculationPathNotFoundError` | exception | `constructor has no separately inspectable signature` | Raised when a configured route cannot be resolved on the grid. |
-| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float') -> None` | Shared typed request for room-type circulation routing. |
+| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float', required_transit_room_types: 'tuple[RoomType, ...]' = ()) -> None` | Shared typed request for room-type circulation routing; required types constrain the intermediate path. |
 | `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'` | Determines which matching destinations a route rule selects. |
 | `GridAlignmentError` | exception | `constructor has no separately inspectable signature` | Raised when a hint point does not align with the configured grid. |
 | `GridNode` | dataclass/contract | `(x_index: 'int', y_index: 'int', x: 'float', y: 'float') -> None` | One grid node used by an orthogonal circulation path. |
-| `HallwayClassification` | dataclass/contract | `(room_id: 'RoomId', hint_index: 'int', traffic_class: 'HallwayTrafficClass') -> None` | Production-safe traffic classification for one hallway hint point. |
+| `HallwayClassification` | dataclass/contract | `(room_id: 'RoomId', hint_index: 'int', traffic_class: 'HallwayTrafficClass') -> None` | Production-safe traffic classification for one retained hallway hint point. |
+| `HallwayConsolidationAttemptDetails` | dataclass/contract | `(point_key: 'str', nearby_point_keys: 'tuple[str, ...]', decision: 'HallwayConsolidationDecision', max_route_cost_increase_ratio: 'float | None') -> None` | DEBUG record of one route-verified nearby-hallway removal attempt. |
+| `HallwayConsolidationConfig` | dataclass/contract | `(enabled: 'bool' = True, minimum_separation_grid_steps: 'float' = 2.0, max_route_cost_increase_ratio: 'float' = 0.15) -> None` | Controls conservative removal of redundant nearby hallway hints. |
+| `HallwayConsolidationDecision` | enum | `REMOVED='removed'; KEPT_ROUTE_UNAVAILABLE='kept_route_unavailable'; KEPT_ROUTE_COVERAGE_CHANGED='kept_route_coverage_changed'; KEPT_ROUTE_COST_INCREASE='kept_route_cost_increase'` | DEBUG outcome of testing one hallway for consolidation. |
+| `HallwayRemovalReason` | enum | `UNUSED='unused'; CONSOLIDATED='consolidated'` | Why a hallway hint was removed from the production candidate. |
 | `HallwayTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'; MIXED='mixed'; UNCLASSIFIED='unclassified'; UNUSED='unused'` | Traffic role assigned to one hallway hint point. |
-| `HallwayTrafficDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', public_route_count: 'int', private_route_count: 'int', public_importance_weight: 'float', private_importance_weight: 'float', traffic_class: 'HallwayTrafficClass', removed: 'bool') -> None` | Traffic totals and final role for one hallway hint point. |
-| `RemovedHallwayPointDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float') -> None` | Identity and position of one hallway hint removed from the candidate. |
+| `HallwayTrafficDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', public_route_count: 'int', private_route_count: 'int', public_importance_weight: 'float', private_importance_weight: 'float', traffic_class: 'HallwayTrafficClass', removed: 'bool', removal_reason: 'HallwayRemovalReason | None') -> None` | Traffic totals, final role, and optional removal reason for one hallway hint. |
+| `RemovedHallwayPointDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', reason: 'HallwayRemovalReason') -> None` | Identity, position, and removal reason for one removed hallway hint. |
 | `RouteCostBreakdown` | dataclass/contract | `(movement_cost: 'float', perimeter_bias_cost: 'float', turn_cost: 'float', traffic_conflict_cost: 'float', total_cost: 'float') -> None` | Cost components accumulated by one resolved circulation route. |
 | `RoutingCostProfile` | dataclass/contract | `(empty_node_cost: 'float', traversable_hint_node_cost: 'float', turn_cost: 'float', perimeter_bias_max_cost: 'float', traffic_conflict_cost: 'float') -> None` | Routing costs including the multi-pass hallway conflict penalty. |
 | `RoutingPassDetails` | dataclass/contract | `(pass_number: 'int', classifications_changed_from_previous: 'bool', paths: 'tuple[CirculationPathDetails, ...]', hallway_traffic: 'tuple[HallwayTrafficDetails, ...]') -> None` | DEBUG snapshot of one routing and hallway-classification pass. |
-| `TrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
-| `refine_candidate_circulation` | function | `refine_candidate_circulation(circulation_input: 'CandidateCirculationInput', *, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FeatureExecution[CandidateCirculationResult, CandidateCirculationDetails]'` | Resolve routes, classify hallways, and remove unused hallway hints. |
+| `TrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Backward-compatible feature-boundary alias of `CirculationTrafficClass`. |
+| `refine_candidate_circulation` | function | `refine_candidate_circulation(circulation_input: 'CandidateCirculationInput', *, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FeatureExecution[CandidateCirculationResult, CandidateCirculationDetails]'` | Resolve routes, classify hallways, remove unused hallway hints, then optionally consolidate nearby redundant hallway hints. |
 
 ### `fpg_core.candidate_scoring` exports (44)
 
@@ -1825,7 +2662,7 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
 | `DEFAULT_PROFILES` | dataclass/contract | `constructor has no separately inspectable signature` | ProfileCatalog(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') |
-| `DefaultProfileSettings` | dataclass/contract | `(coordinate_scale: 'int' = 1, minimum_coverage_ratio: 'float' = 0.6, minimum_adjacency_overlap: 'float' = 10, attached_bathroom_minimum_shared_wall: 'float' = 10.0, initial_max_time_seconds: 'float' = 5.0, refinement_max_time_seconds: 'float' = 2.0, refinement_position_tolerance: 'float' = 10, refinement_size_tolerance: 'float' = 10) -> None` | Central tuning values used to construct the built-in profiles. |
+| `DefaultProfileSettings` | dataclass/contract | `(coordinate_scale: 'int' = 1, minimum_coverage_ratio: 'float' = 0.6, minimum_adjacency_overlap: 'float' = 10, attached_bathroom_minimum_shared_wall: 'float' = 10.0, initial_max_time_seconds: 'float' = 5.0, refinement_max_time_seconds: 'float' = 2.0, refinement_position_tolerance: 'float' = 10, refinement_size_tolerance: 'float' = 10, hallway_efficiency_weight: 'int' = 1, hallway_area_penalty_multiplier: 'int' = 1, hallway_preferred_max_length: 'float | None' = 40.0, hallway_excess_length_penalty_multiplier: 'int' = 5) -> None` | Central tuning values used to construct the built-in profiles, including hallway compactness weights. |
 | `ConstraintRegistry` | dataclass/contract | `(hard: 'dict[str, HardConstraint]' = <factory>, soft: 'dict[str, SoftConstraint]' = <factory>) -> None` | Runtime collection of available hard and soft constraints. |
 | `FloorPlanSolveExecution` | constant/type alias | `_GenericAlias instance` | Documented in the corresponding feature/shared section. |
 | `FloorPlanSolveRequest` | dataclass/contract | `(specification: 'FloorPlanGenerationSpec', config: 'FloorPlanSolverConfig', candidate_hints: 'tuple[RoomPlacementHint, ...]' = (), existing_floor_plan: 'FloorPlan \| None' = None) -> None` | Processing input for one floor-plan solve. |
@@ -1892,8 +2729,8 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 |---|---|---|---|
 | `generate_openings` | function | `generate_openings(request: 'OpeningGenerationRequest', *, registry: 'OpeningFeatureRegistry \| None' = None, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'OpeningGenerationExecution'` | Generate openings on a finalized floor plan without mutating it. |
 | `DimensionConfig` | dataclass/contract | `(door_width: 'float' = 8.0, window_width: 'float' = 16.0, minimum_shared_wall: 'float' = 10.0) -> None` | DimensionConfig(door_width: 'float' = 8.0, window_width: 'float' = 16.0, minimum_shared_wall: 'float' = 10.0) |
-| `FeaturePolicy` | dataclass/contract | `(allowed_room_pairs: 'tuple[tuple[RoomType, RoomType], ...]' = ((<RoomType.BEDROOM: 'bedroom'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.KITCHEN: 'kitchen'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.BATHROOM: 'bathroom'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.BEDROOM: 'bedroom'>, <RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>), (<RoomType.VERANDA: 'veranda'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.GARAGE: 'garage'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.GARAGE: 'garage'>, <RoomType.HALLWAY: 'hallway'>), (<RoomType.DINING_ROOM: 'dining_room'>, <RoomType.LIVING_ROOM: 'living_room'>)), room_door_caps: 'tuple[tuple[RoomType, int], ...]' = ((<RoomType.BEDROOM: 'bedroom'>, 2), (<RoomType.BATHROOM: 'bathroom'>, 1), (<RoomType.LIVING_ROOM: 'living_room'>, 10), (<RoomType.HALLWAY: 'hallway'>, 10), (<RoomType.KITCHEN: 'kitchen'>, 1), (<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, 1), (<RoomType.VERANDA: 'veranda'>, 1), (<RoomType.GARAGE: 'garage'>, 1), (<RoomType.DINING_ROOM: 'dining_room'>, 2)), secondary_room_priority: 'tuple[RoomType, ...]' = (<RoomType.KITCHEN: 'kitchen'>, <RoomType.HALLWAY: 'hallway'>), window_room_types: 'tuple[RoomType, ...]' = (<RoomType.BEDROOM: 'bedroom'>, <RoomType.LIVING_ROOM: 'living_room'>, <RoomType.KITCHEN: 'kitchen'>, <RoomType.DINING_ROOM: 'dining_room'>), main_side_priority: 'tuple[str, ...]' = ('south', 'east', 'north', 'west'), secondary_side_priority: 'tuple[str, ...]' = ('north', 'west', 'east', 'south'), window_side_priority: 'tuple[str, ...]' = ('east', 'north', 'south', 'west')) -> None` | FeaturePolicy(allowed_room_pairs: 'tuple[tuple[RoomType, RoomType], ...]' = ((<RoomType.BEDROOM: 'bedroom'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.KITCHEN: 'kitchen'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.BATHROOM: 'bathroom'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.BEDROOM: 'bedroom'>, <RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>), (<RoomType.VERANDA: 'veranda'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.GARAGE: 'garage'>, <RoomType.LIVING_ROOM: 'living_room'>), (<RoomType.GARAGE: 'garage'>, <RoomType.HALLWAY: 'hallway'>), (<RoomType.DINING_ROOM: 'dining_room'>, <RoomType.LIVING_ROOM: 'living_room'>)), room_door_caps: 'tuple[tuple[RoomType, int], ...]' = ((<RoomType.BEDROOM: 'bedroom'>, 2), (<RoomType.BATHROOM: 'bathroom'>, 1), (<RoomType.LIVING_ROOM: 'living_room'>, 10), (<RoomType.HALLWAY: 'hallway'>, 10), (<RoomType.KITCHEN: 'kitchen'>, 1), (<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, 1), (<RoomType.VERANDA: 'veranda'>, 1), (<RoomType.GARAGE: 'garage'>, 1), (<RoomType.DINING_ROOM: 'dining_room'>, 2)), secondary_room_priority: 'tuple[RoomType, ...]' = (<RoomType.KITCHEN: 'kitchen'>, <RoomType.HALLWAY: 'hallway'>), window_room_types: 'tuple[RoomType, ...]' = (<RoomType.BEDROOM: 'bedroom'>, <RoomType.LIVING_ROOM: 'living_room'>, <RoomType.KITCHEN: 'kitchen'>, <RoomType.DINING_ROOM: 'dining_room'>), main_side_priority: 'tuple[str, ...]' = ('south', 'east', 'north', 'west'), secondary_side_priority: 'tuple[str, ...]' = ('north', 'west', 'east', 'south'), window_side_priority: 'tuple[str, ...]' = ('east', 'north', 'south', 'west')) |
-| `FloorPlanOpeningsConfig` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
+| `FeaturePolicy` | dataclass/contract | `(allowed_room_pairs: 'tuple[tuple[RoomType, RoomType], ...]' = ((RoomType.BEDROOM, RoomType.LIVING_ROOM), (RoomType.KITCHEN, RoomType.LIVING_ROOM), (RoomType.BATHROOM, RoomType.LIVING_ROOM), (RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM), (RoomType.VERANDA, RoomType.LIVING_ROOM), (RoomType.GARAGE, RoomType.LIVING_ROOM), (RoomType.DINING_ROOM, RoomType.LIVING_ROOM), (RoomType.BEDROOM, RoomType.HALLWAY), (RoomType.BATHROOM, RoomType.HALLWAY), (RoomType.LIVING_ROOM, RoomType.HALLWAY), (RoomType.KITCHEN, RoomType.HALLWAY), (RoomType.DINING_ROOM, RoomType.HALLWAY), (RoomType.VERANDA, RoomType.HALLWAY), (RoomType.GARAGE, RoomType.HALLWAY), (RoomType.HALLWAY, RoomType.HALLWAY)), room_door_caps: 'tuple[tuple[RoomType, int], ...]' = ((RoomType.BEDROOM, 2), (RoomType.BATHROOM, 1), (RoomType.LIVING_ROOM, 10), (RoomType.HALLWAY, 10), (RoomType.KITCHEN, 1), (RoomType.ATTACHED_BATHROOM, 1), (RoomType.VERANDA, 1), (RoomType.GARAGE, 1), (RoomType.DINING_ROOM, 2)), secondary_room_priority: 'tuple[RoomType, ...]' = (RoomType.KITCHEN, RoomType.HALLWAY), window_room_types: 'tuple[RoomType, ...]' = (RoomType.BEDROOM, RoomType.LIVING_ROOM, RoomType.KITCHEN, RoomType.DINING_ROOM), main_side_priority: 'tuple[str, ...]' = ('south', 'east', 'north', 'west'), secondary_side_priority: 'tuple[str, ...]' = ('north', 'west', 'east', 'south'), window_side_priority: 'tuple[str, ...]' = ('east', 'north', 'south', 'west'), required_access_room_types: 'tuple[RoomType, ...]' = (RoomType.BEDROOM, RoomType.BATHROOM, RoomType.ATTACHED_BATHROOM, RoomType.LIVING_ROOM, RoomType.KITCHEN, RoomType.DINING_ROOM, RoomType.HALLWAY, RoomType.VERANDA, RoomType.GARAGE), door_placement_priority: 'tuple[tuple[RoomType, int], ...]' = ((RoomType.BEDROOM, 100), (RoomType.BATHROOM, 100), (RoomType.ATTACHED_BATHROOM, 100), (RoomType.KITCHEN, 80), (RoomType.DINING_ROOM, 60), (RoomType.GARAGE, 60), (RoomType.VERANDA, 40), (RoomType.LIVING_ROOM, 20), (RoomType.HALLWAY, 10))) -> None` | Consumer-owned authoritative room-pair, access, door-limit, side-priority, and door-end-placement policy. |
+| `FloorPlanOpeningsConfig` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits', 'required_room_access'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
 | `GeometryConfig` | dataclass/contract | `(coordinate_scale: 'int' = 10, tolerance: 'float' = 1e-06, corner_clearance: 'float' = 0.0, window_spacing: 'float' = 5.0) -> None` | GeometryConfig(coordinate_scale: 'int' = 10, tolerance: 'float' = 1e-06, corner_clearance: 'float' = 0.0, window_spacing: 'float' = 5.0) |
 | `ObjectiveConfig` | dataclass/contract | `(tier_order: 'tuple[str, ...]' = ('window', 'secondary_entrance', 'other_interior', 'preferred_hallway', 'bathroom_hallway', 'attached_bathroom', 'main_entrance')) -> None` | ObjectiveConfig(tier_order: 'tuple[str, ...]' = ('window', 'secondary_entrance', 'other_interior', 'preferred_hallway', 'bathroom_hallway', 'attached_bathroom', 'main_entrance')) |
 | `SolverConfig` | dataclass/contract | `(max_time_seconds: 'float' = 10.0, num_search_workers: 'int' = 1, random_seed: 'int' = 0, cp_model_presolve: 'bool' = True, log_search_progress: 'bool' = False) -> None` | SolverConfig(max_time_seconds: 'float' = 10.0, num_search_workers: 'int' = 1, random_seed: 'int' = 0, cp_model_presolve: 'bool' = True, log_search_progress: 'bool' = False) |
@@ -1905,13 +2742,13 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 | `OpeningIssue` | dataclass/contract | `(code: 'str', message: 'str', feature_id: 'str \| None' = None, demand_id: 'str \| None' = None, wall_id: 'str \| None' = None) -> None` | OpeningIssue(code: 'str', message: 'str', feature_id: 'str \| None' = None, demand_id: 'str \| None' = None, wall_id: 'str \| None' = None) |
 | `DEFAULT_OPENING_CONFIG` | dataclass/contract | `constructor has no separately inspectable signature` | Reusable configuration controlling opening generation behavior. |
 | `DEFAULT_OPENING_PROFILE` | dataclass/contract | `constructor has no separately inspectable signature` | Reusable configuration controlling opening generation behavior. |
-| `OpeningGenerationProfile` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
+| `OpeningGenerationProfile` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits', 'required_room_access'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
 | `OpeningFeatureRegistry` | class/interface/registry | `() -> 'None'` | Documented in the corresponding feature/shared section. |
 | `create_default_registry` | function | `create_default_registry() -> 'OpeningFeatureRegistry'` | Documented in the corresponding feature/shared section. |
 | `OpeningConfigurationError` | exception | `constructor has no separately inspectable signature` | Raised for programmer-facing configuration or registry errors. |
 | `OpeningGenerationError` | exception | `constructor has no separately inspectable signature` | Base class for opening-generation failures. |
 
-### `fpg_core.floor_plan_scoring` exports (58)
+### `fpg_core.floor_plan_scoring` exports (64)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
@@ -1927,6 +2764,7 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 | `INWARD_RECESS_KEY` | constant/type alias | `'inward_recess'` | Documented in the corresponding feature/shared section. |
 | `KITCHEN_DINING_KEY` | constant/type alias | `'kitchen_dining_proximity'` | Documented in the corresponding feature/shared section. |
 | `LIVING_ROOM_BALANCE_KEY` | constant/type alias | `'living_room_balance'` | Documented in the corresponding feature/shared section. |
+| `ROOM_SIZE_CONSISTENCY_KEY` | constant/type alias | `'room_size_consistency'` | Stable key for the configurable room-size consistency evaluator. |
 | `REQUIRED_ADJACENCY_KEY` | constant/type alias | `'required_adjacency'` | Documented in the corresponding feature/shared section. |
 | `BedroomQualityEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
 | `BedroomQualitySettings` | dataclass/contract | `(area_compliance_weight: 'float', consistency_weight: 'float', full_spread_penalty_ratio: 'float', maximum_spread_penalty: 'float') -> None` | BedroomQualitySettings(area_compliance_weight: 'float', consistency_weight: 'float', full_spread_penalty_ratio: 'float', maximum_spread_penalty: 'float') |
@@ -1959,6 +2797,11 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 | `KitchenDiningSettings` | dataclass/contract | `(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') -> None` | KitchenDiningSettings(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') |
 | `LivingRoomBalanceEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
 | `LivingRoomBalanceSettings` | dataclass/contract | `(maximum_excess_ratio: 'float') -> None` | LivingRoomBalanceSettings(maximum_excess_ratio: 'float') |
+| `RoomAreaAggregation` | enum | `MIN='min'; AVERAGE='average'; MAX='max'; TOTAL='total'` | Controls how multiple rooms of one type are reduced to one area for a relation rule. |
+| `RoomSizeConsistencyEvaluator` | class/interface/registry | `()` | Evaluates configurable inter-type area ratios and same-type area spread. |
+| `RoomSizeConsistencySettings` | dataclass/contract | `(relation_rules: 'tuple[RoomSizeRelationRule, ...]' = (), consistency_rules: 'tuple[RoomTypeConsistencyRule, ...]' = (), default_full_penalty_ratio_delta: 'float' = 0.5) -> None` | Settings container; requires at least one relation or consistency rule. |
+| `RoomSizeRelationRule` | dataclass/contract | `(reference_type: 'RoomType', compared_type: 'RoomType', min_ratio: 'float | None' = None, max_ratio: 'float | None' = None, reference_aggregation: 'RoomAreaAggregation' = MAX, compared_aggregation: 'RoomAreaAggregation' = MAX, weight: 'float' = 1.0, full_penalty_ratio_delta: 'float | None' = None) -> None` | Configures preferred `compared_area / reference_area` bounds. |
+| `RoomTypeConsistencyRule` | dataclass/contract | `(room_type: 'RoomType', maximum_spread_ratio: 'float', weight: 'float' = 1.0, full_penalty_ratio_delta: 'float | None' = None) -> None` | Configures preferred same-type area spread, `largest / smallest - 1`. |
 | `RequiredAdjacencyEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
 | `RequiredAdjacencySettings` | dataclass/contract | `(minimum_shared_boundary: 'float', tolerance: 'float') -> None` | RequiredAdjacencySettings(minimum_shared_boundary: 'float', tolerance: 'float') |
 | `ScoreFinding` | dataclass/contract | `(code: 'str', message: 'str', severity: 'FindingSeverity' = <FindingSeverity.INFO: 'info'>, subject_ids: 'tuple[str, ...]' = (), metrics: 'tuple[ScoreMetric, ...]' = ()) -> None` | ScoreFinding(code: 'str', message: 'str', severity: 'FindingSeverity' = <FindingSeverity.INFO: 'info'>, subject_ids: 'tuple[str, ...]' = (), metrics: 'tuple[ScoreMetric, ...]' = ()) |
@@ -1977,7 +2820,7 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 
 ## Documentation Verification Record
 
-Verified against the current supplied source:
+Verified against the current supplied source and packaging metadata:
 
 - [x] `pyproject.toml`
 - [x] `MANIFEST.in`
@@ -1991,17 +2834,17 @@ Verified against the current supplied source:
 - [x] exceptions and returned statuses
 - [x] defaults/profiles
 - [x] extension registries/interfaces
-- [x] relevant tests
-- [x] mutation/copy behavior
+- [ ] relevant automated tests — test files were not included in the supplied 2026-08-15 source/docs archive
+- [x] mutation/copy behavior from the supplied implementation
 - [x] execution-mode differences
 - [x] examples/import paths
 - [x] compatibility aliases
 - [x] public API coverage audit
+- [x] Python source syntax compilation (`compileall`)
 
 Known unverified areas:
 
-- None.
+- Automated behavior of the updated features was not re-run because the relevant test suite was not included in the supplied archive.
+- OR-Tools-backed runtime execution was not performed in this sandbox; the supplied implementation, contracts, validators, registrations, defaults, and syntax were verified statically.
 
-Documentation generated and verified on 2026-08-11 against commit
-`b74f94b9e6a28700630b80c6861ce2fd805e2912`. The coverage inventory accounts for
-all 330 names exported by `fpg_core`, `fpg_core.domain`, and the ten feature roots.
+Documentation updated and source-verified on 2026-08-15 against the supplied source archive. No repository commit hash was supplied with this update. The coverage inventory accounts for all 340 names exported by `fpg_core`, `fpg_core.domain`, and the ten feature roots.
