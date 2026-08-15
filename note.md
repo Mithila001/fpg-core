@@ -7,3 +7,7 @@ Feature Updated + Domain Section
 Updated
 
 ## Updated Floor Plan Opening
+Updated
+
+## Updated Floor Plan Solver
+Updated

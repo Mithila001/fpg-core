@@ -35,6 +35,10 @@ class DefaultProfileSettings:
     refinement_max_time_seconds: float = 2.0
     refinement_position_tolerance: float = 10
     refinement_size_tolerance: float = 10
+    hallway_efficiency_weight: int = 1
+    hallway_area_penalty_multiplier: int = 1
+    hallway_preferred_max_length: float | None = 40.0
+    hallway_excess_length_penalty_multiplier: int = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +158,21 @@ def _default_hard_constraints(
     )
 
 
+def _hallway_efficiency_use(settings: DefaultProfileSettings) -> SoftConstraintUse:
+    return SoftConstraintUse(
+        "hallway_efficiency",
+        weight=settings.hallway_efficiency_weight,
+        settings={
+            "hallway_room_types": (RoomType.HALLWAY,),
+            "area_penalty_multiplier": settings.hallway_area_penalty_multiplier,
+            "preferred_max_length": settings.hallway_preferred_max_length,
+            "excess_length_penalty_multiplier": (
+                settings.hallway_excess_length_penalty_multiplier
+            ),
+        },
+    )
+
+
 def build_default_profiles(
     settings: DefaultProfileSettings | None = None,
 ) -> ProfileCatalog:
@@ -179,6 +198,7 @@ def build_default_profiles(
                 },
             ),
             SoftConstraintUse("dead_space", weight=3),
+            _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=2),
             SoftConstraintUse(
                 "kitchen_back_exposure",
@@ -218,6 +238,7 @@ def build_default_profiles(
                 },
             ),
             SoftConstraintUse("dead_space", weight=4),
+            _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=3),
             SoftConstraintUse(
                 "kitchen_back_exposure",
@@ -251,6 +272,7 @@ def build_default_profiles(
                 settings={"position_multiplier": 2, "size_multiplier": 2},
             ),
             SoftConstraintUse("dead_space", weight=6),
+            _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=4),
             SoftConstraintUse(
                 "kitchen_back_exposure",
