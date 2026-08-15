@@ -29,6 +29,14 @@ from .living_room_balance import (
     LivingRoomBalanceEvaluator,
     LivingRoomBalanceSettings,
 )
+from .room_size_consistency import (
+    ROOM_SIZE_CONSISTENCY_KEY,
+    RoomAreaAggregation,
+    RoomSizeConsistencyEvaluator,
+    RoomSizeConsistencySettings,
+    RoomSizeRelationRule,
+    RoomTypeConsistencyRule,
+)
 from .required_adjacency import (
     REQUIRED_ADJACENCY_KEY,
     RequiredAdjacencyEvaluator,
@@ -42,6 +50,7 @@ __all__ = [
     "INWARD_RECESS_KEY",
     "KITCHEN_DINING_KEY",
     "LIVING_ROOM_BALANCE_KEY",
+    "ROOM_SIZE_CONSISTENCY_KEY",
     "REQUIRED_ADJACENCY_KEY",
     "BedroomQualityEvaluator",
     "BedroomQualitySettings",
@@ -56,6 +65,11 @@ __all__ = [
     "KitchenDiningSettings",
     "LivingRoomBalanceEvaluator",
     "LivingRoomBalanceSettings",
+    "RoomAreaAggregation",
+    "RoomSizeConsistencyEvaluator",
+    "RoomSizeConsistencySettings",
+    "RoomSizeRelationRule",
+    "RoomTypeConsistencyRule",
     "RequiredAdjacencyEvaluator",
     "RequiredAdjacencySettings",
 ]
