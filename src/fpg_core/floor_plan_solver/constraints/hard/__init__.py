@@ -6,6 +6,7 @@ from .front_anchor import FrontAnchorConstraint
 from .garage_placement import GaragePlacementConstraint
 from .hallway_connectivity import HallwayConnectivityConstraint
 from .hallway_dimensions import HallwayDimensionsConstraint
+from .hallway_shared_wall import HallwaySharedWallConstraint
 from .minimum_coverage import MinimumCoverageConstraint
 from .room_relations import HardRoomRelationsConstraint
 from .room_size_hierarchy import RoomSizeHierarchyConstraint
@@ -19,6 +20,7 @@ __all__ = [
     "GaragePlacementConstraint",
     "HallwayConnectivityConstraint",
     "HallwayDimensionsConstraint",
+    "HallwaySharedWallConstraint",
     "HardRoomRelationsConstraint",
     "MinimumCoverageConstraint",
     "RoomSizeHierarchyConstraint",

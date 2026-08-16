@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ..domain import RoomType
+from .constraints import (
+    OPENING_CONSTRAINT_IDS,
+    STRUCTURAL_OPENING_CONSTRAINT_IDS,
+)
 from .exceptions import OpeningConfigurationError
 
 
@@ -222,8 +226,17 @@ class FloorPlanOpeningsConfig:
             raise OpeningConfigurationError("enabled feature IDs must be unique")
         if len(self.enabled_constraints) != len(set(self.enabled_constraints)):
             raise OpeningConfigurationError("enabled constraint IDs must be unique")
-        structural_constraints = {"shared_placement", "required_room_access"}
-        missing = structural_constraints.difference(self.enabled_constraints)
+        unknown_constraints = set(self.enabled_constraints).difference(
+            OPENING_CONSTRAINT_IDS
+        )
+        if unknown_constraints:
+            raise OpeningConfigurationError(
+                "unknown opening constraint IDs: "
+                + ", ".join(sorted(unknown_constraints))
+            )
+        missing = STRUCTURAL_OPENING_CONSTRAINT_IDS.difference(
+            self.enabled_constraints
+        )
         if missing:
             raise OpeningConfigurationError(
                 "structural opening-model constraints cannot be disabled: "

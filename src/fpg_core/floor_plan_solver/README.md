@@ -80,6 +80,7 @@ The default profiles currently enable these hard constraints:
 | `minimum_coverage` | Requires total room area to cover at least the configured fraction of the floor. |
 | `hallway_connectivity` | Requires each hallway to touch at least one configured anchor room and at least one non-hallway/non-anchor destination room. |
 | `hallway_dimensions` | Forces one hallway dimension to stay inside the configured corridor-width range. The other dimension may extend as required. |
+| `hallway_shared_wall` | Caps the wall length shared by any two hallway rooms. The built-in default is `12` project units. |
 | `front_anchor` | Restricts the front-most floor edge to configured room types. |
 | `back_exposure` | Requires an eligible configured room type to provide sufficient back-boundary exposure. |
 | `garage_placement` | Places present garages at a front-left or front-right floor corner. |
@@ -129,9 +130,19 @@ HardConstraintUse(
         "maximum_width": 10,
     },
 )
+
+HardConstraintUse(
+    "hallway_shared_wall",
+    settings={
+        "hallway_room_types": (RoomType.HALLWAY,),
+        "maximum_shared_wall": 12.0,
+    },
+)
 ```
 
 `hallway_dimensions` constrains the corridor width, not the corridor length. Therefore a `9 x 20` hallway and a `9 x 70` hallway can both satisfy the hard dimension rule when other constraints allow them.
+
+`hallway_shared_wall` measures the actual collinear overlap of touching hallway walls. Two hallways may touch or connect, but the shared segment cannot exceed `maximum_shared_wall`. Corner-only contact has zero shared-wall length. The built-in maximum is `12` project units.
 
 ### Hallway efficiency objective
 
@@ -175,6 +186,7 @@ The built-in profiles are generated from these `DefaultProfileSettings` values:
 
 ```python
 DefaultProfileSettings(
+    max_hallway_shared_wall=12.0,
     hallway_efficiency_weight=1,
     hallway_area_penalty_multiplier=1,
     hallway_preferred_max_length=40.0,
@@ -195,6 +207,7 @@ from fpg_core.floor_plan_solver import DefaultProfileSettings, build_default_pro
 
 profiles = build_default_profiles(
     DefaultProfileSettings(
+        max_hallway_shared_wall=12.0,
         hallway_efficiency_weight=2,
         hallway_area_penalty_multiplier=1,
         hallway_preferred_max_length=50.0,

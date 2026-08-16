@@ -35,6 +35,7 @@ class DefaultProfileSettings:
     refinement_max_time_seconds: float = 2.0
     refinement_position_tolerance: float = 10
     refinement_size_tolerance: float = 10
+    max_hallway_shared_wall: float = 12.0
     hallway_efficiency_weight: int = 1
     hallway_area_penalty_multiplier: int = 1
     hallway_preferred_max_length: float | None = 40.0
@@ -114,6 +115,13 @@ def _default_hard_constraints(
                 "hallway_room_types": (RoomType.HALLWAY,),
                 "minimum_width": 8,
                 "maximum_width": 10,
+            },
+        ),
+        HardConstraintUse(
+            "hallway_shared_wall",
+            {
+                "hallway_room_types": (RoomType.HALLWAY,),
+                "maximum_shared_wall": settings.max_hallway_shared_wall,
             },
         ),
         HardConstraintUse(

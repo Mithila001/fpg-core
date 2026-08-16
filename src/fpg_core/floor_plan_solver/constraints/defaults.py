@@ -9,6 +9,7 @@ from .hard import (
     GaragePlacementConstraint,
     HallwayConnectivityConstraint,
     HallwayDimensionsConstraint,
+    HallwaySharedWallConstraint,
     HardRoomRelationsConstraint,
     MinimumCoverageConstraint,
     RoomSizeHierarchyConstraint,
@@ -35,6 +36,7 @@ def build_default_registry() -> ConstraintRegistry:
     registry.register_hard(MinimumCoverageConstraint())
     registry.register_hard(HallwayConnectivityConstraint())
     registry.register_hard(HallwayDimensionsConstraint())
+    registry.register_hard(HallwaySharedWallConstraint())
     registry.register_hard(FrontAnchorConstraint())
     registry.register_hard(GaragePlacementConstraint())
     registry.register_hard(BoundaryPlacementConstraint())

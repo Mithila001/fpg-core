@@ -108,6 +108,7 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
         create_default_registry as candidate_registry,
     )
     from .candidate_scoring.validation import validate_scoring_config
+    from .floor_plan_openings.constraints import OPENING_CONSTRAINT_IDS
     from .floor_plan_openings.registry import (
         create_default_registry as opening_registry,
     )
@@ -174,9 +175,14 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
     openings = opening_registry()
     for feature_id in config.openings.enabled_features:
         openings.resolve(feature_id)
-    known_opening_constraints = {"shared_placement", "room_door_limits"}
-    if not set(config.openings.enabled_constraints).issubset(known_opening_constraints):
-        raise FpgCoreConfigError("unknown opening constraint ID")
+    unknown_opening_constraints = set(config.openings.enabled_constraints).difference(
+        OPENING_CONSTRAINT_IDS
+    )
+    if unknown_opening_constraints:
+        raise FpgCoreConfigError(
+            "unknown opening constraint IDs: "
+            + ", ".join(sorted(unknown_opening_constraints))
+        )
     scoring = scoring_registry()
     group_keys = {group.key for group in config.floor_plan_scoring.groups}
     evaluator_keys: set[object] = set()

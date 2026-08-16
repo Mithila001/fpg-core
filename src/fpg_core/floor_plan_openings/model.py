@@ -8,11 +8,7 @@ from ortools.sat.python import cp_model
 
 from ..domain import OpeningType, RoomId
 from .config import FloorPlanOpeningsConfig
-from .constraints import (
-    RequiredRoomAccessConstraint,
-    RoomDoorLimitConstraint,
-    SharedPlacementConstraint,
-)
+from .constraints import OPENING_CONSTRAINT_TYPES
 from .constraints.base import OpeningConstraint
 from .domain import (
     AnalyzedWall,
@@ -278,9 +274,8 @@ def _create_variables(context: OpeningModelContext) -> None:
 
 def _apply_constraints(context: OpeningModelContext) -> None:
     constraints: dict[str, OpeningConstraint] = {
-        "shared_placement": SharedPlacementConstraint(),
-        "room_door_limits": RoomDoorLimitConstraint(),
-        "required_room_access": RequiredRoomAccessConstraint(),
+        constraint_type.constraint_id: constraint_type()
+        for constraint_type in OPENING_CONSTRAINT_TYPES
     }
     for constraint_id in context.config.enabled_constraints:
         try:
