@@ -9,29 +9,33 @@ Project root: `fpg-core`
 ```text
 fpg-core/
     ├── custom_test/
-    │   ├── trial_flow_test_1/
-    │   │   ├── __pycache__/
-    │   │   │   └── run_trial_flow.cpython-313.pyc
-    │   │   ├── input.json
-    │   │   ├── README.md
-    │   │   ├── result.json
-    │   │   └── run_trial_flow.py
-    │   └── trial_flow_test_2/
+    │   └── full_flow/
     │       ├── __pycache__/
-    │       │   └── run_trial_flow.cpython-313.pyc
-    │       ├── input.json
+    │       │   ├── run_full_flow.cpython-313.pyc
+    │       │   └── scenario.cpython-313.pyc
     │       ├── README.md
-    │       ├── result.json
-    │       └── run_trial_flow.py
+    │       ├── run_full_flow.py
+    │       ├── scenario.py
+    │       └── viewer.html
     ├── dist/
     │   ├── fpg_core-0.1.0-py3-none-any.whl
     │   └── fpg_core-0.1.0.tar.gz
     ├── src/
     │   ├── fpg_core/
     │   │   ├── __pycache__/
-    │   │   │   ├── __init__.cpython-313.pyc
-    │   │   │   └── config.cpython-313.pyc
+    │   │   │   └── __init__.cpython-313.pyc
     │   │   ├── buildable_land/
+    │   │   │   ├── __pycache__/
+    │   │   │   │   ├── __init__.cpython-313.pyc
+    │   │   │   │   ├── api.cpython-313.pyc
+    │   │   │   │   ├── classification.cpython-313.pyc
+    │   │   │   │   ├── config.cpython-313.pyc
+    │   │   │   │   ├── contracts.cpython-313.pyc
+    │   │   │   │   ├── exceptions.cpython-313.pyc
+    │   │   │   │   ├── geometry.cpython-313.pyc
+    │   │   │   │   ├── pipeline.cpython-313.pyc
+    │   │   │   │   ├── setbacks.cpython-313.pyc
+    │   │   │   │   └── validation.cpython-313.pyc
     │   │   │   ├── __init__.py
     │   │   │   ├── api.py
     │   │   │   ├── classification.py
@@ -280,7 +284,8 @@ fpg-core/
     │   │   │   │   │   ├── inward_recess.cpython-313.pyc
     │   │   │   │   │   ├── kitchen_dining.cpython-313.pyc
     │   │   │   │   │   ├── living_room_balance.cpython-313.pyc
-    │   │   │   │   │   └── required_adjacency.cpython-313.pyc
+    │   │   │   │   │   ├── required_adjacency.cpython-313.pyc
+    │   │   │   │   │   └── room_size_consistency.cpython-313.pyc
     │   │   │   │   ├── __init__.py
     │   │   │   │   ├── base.py
     │   │   │   │   ├── bedroom_quality.py
@@ -290,7 +295,8 @@ fpg-core/
     │   │   │   │   ├── inward_recess.py
     │   │   │   │   ├── kitchen_dining.py
     │   │   │   │   ├── living_room_balance.py
-    │   │   │   │   └── required_adjacency.py
+    │   │   │   │   ├── required_adjacency.py
+    │   │   │   │   └── room_size_consistency.py
     │   │   │   ├── __init__.py
     │   │   │   ├── api.py
     │   │   │   ├── config.py
@@ -334,6 +340,7 @@ fpg-core/
     │   │   │   │   │   │   ├── garage_placement.cpython-313.pyc
     │   │   │   │   │   │   ├── hallway_connectivity.cpython-313.pyc
     │   │   │   │   │   │   ├── hallway_dimensions.cpython-313.pyc
+    │   │   │   │   │   │   ├── hallway_shared_wall.cpython-313.pyc
     │   │   │   │   │   │   ├── minimum_coverage.cpython-313.pyc
     │   │   │   │   │   │   ├── room_relations.cpython-313.pyc
     │   │   │   │   │   │   └── room_size_hierarchy.cpython-313.pyc
@@ -346,6 +353,7 @@ fpg-core/
     │   │   │   │   │   ├── garage_placement.py
     │   │   │   │   │   ├── hallway_connectivity.py
     │   │   │   │   │   ├── hallway_dimensions.py
+    │   │   │   │   │   ├── hallway_shared_wall.py
     │   │   │   │   │   ├── minimum_coverage.py
     │   │   │   │   │   ├── room_relations.py
     │   │   │   │   │   └── room_size_hierarchy.py
@@ -355,6 +363,7 @@ fpg-core/
     │   │   │   │   │   │   ├── bathroom_depth.cpython-313.pyc
     │   │   │   │   │   │   ├── dead_space.cpython-313.pyc
     │   │   │   │   │   │   ├── floor_cluster_position.cpython-313.pyc
+    │   │   │   │   │   │   ├── hallway_efficiency.cpython-313.pyc
     │   │   │   │   │   │   ├── kitchen_back_exposure.cpython-313.pyc
     │   │   │   │   │   │   ├── room_relations.cpython-313.pyc
     │   │   │   │   │   │   └── seed_stability.cpython-313.pyc
@@ -362,6 +371,7 @@ fpg-core/
     │   │   │   │   │   ├── bathroom_depth.py
     │   │   │   │   │   ├── dead_space.py
     │   │   │   │   │   ├── floor_cluster_position.py
+    │   │   │   │   │   ├── hallway_efficiency.py
     │   │   │   │   │   ├── kitchen_back_exposure.py
     │   │   │   │   │   ├── room_relations.py
     │   │   │   │   │   └── seed_stability.py
@@ -383,6 +393,16 @@ fpg-core/
     │   │   │   ├── README.md
     │   │   │   └── runner.py
     │   │   ├── usable_land/
+    │   │   │   ├── __pycache__/
+    │   │   │   │   ├── __init__.cpython-313.pyc
+    │   │   │   │   ├── api.cpython-313.pyc
+    │   │   │   │   ├── config.cpython-313.pyc
+    │   │   │   │   ├── contracts.cpython-313.pyc
+    │   │   │   │   ├── exceptions.cpython-313.pyc
+    │   │   │   │   ├── geometry.cpython-313.pyc
+    │   │   │   │   ├── pipeline.cpython-313.pyc
+    │   │   │   │   ├── search.cpython-313.pyc
+    │   │   │   │   └── transform.cpython-313.pyc
     │   │   │   ├── __init__.py
     │   │   │   ├── api.py
     │   │   │   ├── config.py
@@ -409,7 +429,7 @@ fpg-core/
     ├── CHANGELOG.md
     ├── generate_project_context.py
     ├── MANIFEST.in
-    ├── project_structure.txt
+    ├── note.md
     ├── pyproject.toml
     └── README.md
 ```

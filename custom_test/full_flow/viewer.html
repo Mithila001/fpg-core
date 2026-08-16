@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FPG Core · Full Flow Verification</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+    :root {
+      --ink-0: #070b0f;
+      --ink-1: #0d1319;
+      --ink-2: #141c24;
+      --ink-3: #1c2731;
+      --line: #2a3945;
+      --line-soft: #1f2b34;
+      --text: #e6edf3;
+      --muted: #8ea0ad;
+      --faint: #566773;
+      --accent: #e9b949;
+      --accent-soft: rgba(233, 185, 73, .13);
+      --ok: #73d6a3;
+      --bad: #ff7b72;
+      --warn: #e9b949;
+      --route-public: #54d6d6;
+      --route-private: #d7a6ff;
+      --door: #f0b84b;
+      --window: #65d9ff;
+      --room-bedroom: #315d76;
+      --room-bathroom: #5c4d78;
+      --room-attached-bathroom: #6d5278;
+      --room-living-room: #375d4f;
+      --room-kitchen: #6a5536;
+      --room-dining-room: #695a3d;
+      --room-hallway: #4a5157;
+      --room-veranda: #3e6565;
+      --room-garage: #5a4a42;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .28);
+      --radius: 3px;
+      --mono: "IBM Plex Mono", "Cascadia Mono", monospace;
+      --display: "Space Grotesk", "Aptos", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--ink-0); color: var(--text); }
+    body {
+      font-family: var(--mono);
+      background-image:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    button, input, select { font: inherit; }
+    button, select, input[type="file"] { color: var(--text); }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .mast {
+      position: sticky; top: 0; z-index: 20;
+      min-height: 66px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; padding: 0 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(7, 11, 15, .94);
+      backdrop-filter: blur(12px);
+    }
+    .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .mark {
+      width: 36px; height: 36px; display: grid; place-items: center;
+      border: 1px solid var(--accent); color: var(--accent);
+      font-family: var(--display); font-weight: 700; letter-spacing: -.06em;
+      transform: rotate(-2deg);
+      box-shadow: inset 0 0 0 4px var(--ink-0), inset 0 0 0 5px rgba(233,185,73,.22);
+    }
+    .brand-copy { min-width: 0; }
+    .brand-title { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .02em; }
+    .brand-sub { color: var(--muted); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; margin-top: 2px; }
+    .run-pill { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .run-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--faint); box-shadow: 0 0 0 3px rgba(255,255,255,.03); }
+    .run-dot.ok { background: var(--ok); }
+    .run-dot.bad { background: var(--bad); }
+    .run-dot.warn { background: var(--warn); }
+
+    .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: calc(100vh - 66px); }
+    .rail {
+      border-right: 1px solid var(--line); background: rgba(13,19,25,.82);
+      padding: 18px 14px 28px; position: sticky; top: 66px; height: calc(100vh - 66px); overflow: auto;
+    }
+    .section-label { color: var(--faint); font-size: 9px; text-transform: uppercase; letter-spacing: .2em; margin: 12px 8px 8px; }
+    .file-box {
+      border: 1px dashed var(--line); background: var(--ink-1); padding: 13px; border-radius: var(--radius);
+      transition: border-color .15s ease, background .15s ease;
+    }
+    .file-box.drag { border-color: var(--accent); background: var(--accent-soft); }
+    .file-box strong { display: block; font-family: var(--display); font-size: 12px; margin-bottom: 6px; }
+    .file-box p { margin: 0 0 10px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .file-trigger {
+      display: inline-flex; align-items: center; justify-content: center; width: 100%;
+      min-height: 34px; border: 1px solid var(--line); background: var(--ink-2); cursor: pointer; border-radius: 2px;
+      font-weight: 600; font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .file-trigger:hover { border-color: var(--accent); }
+    #fileInput { position: absolute; opacity: 0; pointer-events: none; }
+
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); }
+    .meta-cell { background: var(--ink-1); padding: 9px; min-height: 56px; }
+    .meta-k { color: var(--faint); text-transform: uppercase; font-size: 8px; letter-spacing: .12em; }
+    .meta-v { margin-top: 5px; font-family: var(--display); font-weight: 600; font-size: 12px; overflow-wrap: anywhere; }
+
+    .stage-list { display: grid; gap: 4px; }
+    .stage-btn {
+      width: 100%; display: grid; grid-template-columns: 15px minmax(0,1fr) auto; align-items: center;
+      gap: 8px; padding: 8px 9px; border: 1px solid transparent; background: transparent;
+      text-align: left; cursor: pointer; border-radius: 2px;
+    }
+    .stage-btn:hover { background: var(--ink-2); }
+    .stage-btn.active { background: var(--accent-soft); border-color: rgba(233,185,73,.28); }
+    .stage-status { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+    .stage-status.completed { background: var(--ok); }
+    .stage-status.failed { background: var(--bad); }
+    .stage-name { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stage-time { color: var(--faint); font-size: 9px; }
+
+    .workspace { min-width: 0; padding: 22px; }
+    .empty {
+      min-height: calc(100vh - 110px); display: grid; place-items: center; text-align: center;
+    }
+    .empty-inner { max-width: 620px; }
+    .empty-kicker { color: var(--accent); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; }
+    .empty h1 { font: 700 clamp(34px, 6vw, 72px)/.94 var(--display); letter-spacing: -.055em; margin: 12px 0 18px; }
+    .empty p { max-width: 520px; margin: auto; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .empty-line { width: 120px; height: 1px; margin: 26px auto; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+
+    .loaded { display: none; }
+    .loaded.visible { display: block; animation: enter .24s ease-out both; }
+    @keyframes enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+    .headline { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
+    .headline h1 { font: 700 clamp(24px, 3.4vw, 44px)/1 var(--display); letter-spacing: -.04em; margin: 0; }
+    .headline p { color: var(--muted); font-size: 10px; margin: 7px 0 0; }
+    .score-readout { text-align: right; }
+    .score-num { font: 700 28px/1 var(--display); color: var(--accent); }
+    .score-lbl { color: var(--faint); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; margin-top: 5px; }
+
+    .visual-shell {
+      border: 1px solid var(--line); background: var(--ink-1); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .visual-top {
+      min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 9px 7px 13px;
+      border-bottom: 1px solid var(--line); background: var(--ink-2);
+    }
+    .visual-title { min-width: 0; }
+    .visual-title strong { font-family: var(--display); font-size: 12px; }
+    .visual-title span { color: var(--muted); font-size: 9px; margin-left: 8px; }
+    .visual-controls { display: flex; gap: 6px; align-items: center; }
+    select, .tool-btn {
+      height: 30px; border: 1px solid var(--line); background: var(--ink-1); border-radius: 2px; padding: 0 9px;
+      font-size: 9px; cursor: pointer;
+    }
+    .tool-btn:hover, select:hover { border-color: var(--accent); }
+    .blueprint {
+      position: relative; min-height: 540px; display: grid; place-items: center; overflow: hidden;
+      background:
+        linear-gradient(rgba(84,214,214,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(84,214,214,.025) 1px, transparent 1px),
+        radial-gradient(circle at 50% 35%, rgba(84,214,214,.035), transparent 48%),
+        var(--ink-0);
+      background-size: 20px 20px, 20px 20px, auto, auto;
+    }
+    #planSvg { width: 100%; height: 100%; min-height: 540px; display: block; }
+    .front-ribbon {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%); pointer-events: none;
+      color: var(--accent); font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      background: var(--ink-0); border: 1px solid rgba(233,185,73,.32); padding: 5px 9px;
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 13px; border-top: 1px solid var(--line); background: var(--ink-2); }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 9px; }
+    .legend-swatch { width: 12px; height: 6px; border: 1px solid rgba(255,255,255,.2); }
+
+    .diagnostics { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; margin-top: 14px; }
+    .panel { border: 1px solid var(--line); background: var(--ink-1); min-width: 0; }
+    .panel-head { min-height: 39px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--ink-2); }
+    .panel-head strong { font: 600 11px var(--display); }
+    .panel-head span { color: var(--faint); font-size: 9px; }
+    .panel-body { padding: 11px; }
+
+    .validation-list { display: grid; gap: 1px; background: var(--line-soft); }
+    .validation-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 42px; background: var(--ink-1); padding: 8px 10px; }
+    .check { width: 9px; height: 9px; border-radius: 50%; background: var(--faint); }
+    .check.passed { background: var(--ok); }
+    .check.failed { background: var(--bad); }
+    .validation-name { font-size: 10px; }
+    .validation-detail { color: var(--faint); font-size: 9px; text-align: right; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .trial-chart { height: 166px; position: relative; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 10px 5px 22px 31px; }
+    .trial-bars { position: absolute; inset: 0; display: flex; align-items: end; gap: 2px; padding-left: 2px; }
+    .trial-bar { flex: 1; min-width: 2px; max-width: 18px; background: var(--route-public); opacity: .68; position: relative; }
+    .trial-bar.best { background: var(--accent); opacity: 1; }
+    .trial-bar.rejected { background: var(--bad); opacity: .55; }
+    .trial-axis { position: absolute; left: -31px; color: var(--faint); font-size: 8px; }
+    .trial-axis.top { top: -4px; }
+    .trial-axis.mid { top: 48%; }
+    .trial-axis.bottom { bottom: -4px; }
+    .trial-caption { color: var(--muted); font-size: 9px; line-height: 1.6; }
+
+    .raw-wrap { margin-top: 14px; }
+    .raw-tools { display: flex; gap: 7px; }
+    .raw-tools input { width: 220px; height: 28px; border: 1px solid var(--line); background: var(--ink-0); color: var(--text); padding: 0 8px; font-size: 9px; }
+    pre { margin: 0; max-height: 360px; overflow: auto; padding: 13px; color: #b7c7d4; background: var(--ink-0); font: 10px/1.62 var(--mono); tab-size: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+    mark { background: var(--accent); color: var(--ink-0); }
+
+    .error-box { border: 1px solid rgba(255,123,114,.35); background: rgba(255,123,114,.08); padding: 11px; color: #ffc0bb; font-size: 10px; line-height: 1.55; margin-bottom: 14px; }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .diagnostics { grid-template-columns: 1fr; }
+      .stage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .mast { padding: 0 12px; }
+      .run-pill { display: none; }
+      .workspace { padding: 12px; }
+      .headline { align-items: start; flex-direction: column; }
+      .score-readout { text-align: left; }
+      .visual-top { align-items: stretch; flex-direction: column; }
+      .visual-controls { width: 100%; }
+      .visual-controls select { flex: 1; min-width: 0; }
+      .blueprint, #planSvg { min-height: 420px; }
+      .stage-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="mast">
+    <div class="brand">
+      <div class="mark">F</div>
+      <div class="brand-copy">
+        <div class="brand-title">FPG Core / Full Flow</div>
+        <div class="brand-sub">package verification instrument</div>
+      </div>
+    </div>
+    <div class="run-pill"><span id="headerDot" class="run-dot"></span><span id="headerStatus">NO RUN LOADED</span></div>
+  </header>
+
+  <div class="shell">
+    <aside class="rail">
+      <div class="section-label">Run source</div>
+      <div id="dropZone" class="file-box">
+        <strong>Load generated output</strong>
+        <p>Drop a <code>full_flow_*.json</code> file here or choose one manually.</p>
+        <label class="file-trigger" for="fileInput">Choose JSON</label>
+        <input id="fileInput" type="file" accept="application/json,.json" />
+      </div>
+
+      <div class="section-label">Run</div>
+      <div class="meta-grid">
+        <div class="meta-cell"><div class="meta-k">Round</div><div id="metaRound" class="meta-v">—</div></div>
+        <div class="meta-cell"><div class="meta-k">Core</div><div id="metaCore" class="meta-v">—</div></div>
+        <div class="meta-cell"><div class="meta-k">Trials</div><div id="metaTrials" class="meta-v">—</div></div>
+        <div class="meta-cell"><div class="meta-k">Validations</div><div id="metaValidations" class="meta-v">—</div></div>
+      </div>
+
+      <div class="section-label">Stages</div>
+      <div id="stageList" class="stage-list"><span style="color:var(--faint);font-size:10px;padding:6px 8px">Load a run to inspect stages.</span></div>
+    </aside>
+
+    <main class="workspace">
+      <section id="emptyState" class="empty">
+        <div class="empty-inner">
+          <div class="empty-kicker">offline / package-only</div>
+          <h1>See what the solver actually did.</h1>
+          <div class="empty-line"></div>
+          <p>This viewer reads the JSON produced by <code>run_full_flow.py</code>. It focuses on geometry, candidate routing, stage transitions, and validation failures rather than application/server behavior.</p>
+        </div>
+      </section>
+
+      <section id="loadedState" class="loaded">
+        <div id="errorBox"></div>
+        <div class="headline">
+          <div>
+            <h1 id="runTitle">Full Flow</h1>
+            <p id="runSubtitle">—</p>
+          </div>
+          <div class="score-readout">
+            <div id="scoreNum" class="score-num">—</div>
+            <div class="score-lbl">Final score</div>
+          </div>
+        </div>
+
+        <section class="visual-shell">
+          <div class="visual-top">
+            <div class="visual-title"><strong id="visualName">Floor plan</strong><span id="visualMeta"></span></div>
+            <div class="visual-controls">
+              <select id="visualMode" aria-label="Visualization mode">
+                <option value="floor">Floor plans</option>
+                <option value="candidate">Candidate + circulation</option>
+              </select>
+              <select id="floorStage" aria-label="Floor plan stage"></select>
+              <button id="fitBtn" class="tool-btn" type="button">Reset view</button>
+            </div>
+          </div>
+          <div class="blueprint">
+            <div class="front-ribbon">Front / −Y</div>
+            <svg id="planSvg" role="img" aria-label="Floor plan visualization"></svg>
+          </div>
+          <div id="legend" class="legend"></div>
+        </section>
+
+        <div class="diagnostics">
+          <section class="panel">
+            <div class="panel-head"><strong>Validations</strong><span id="validationSummary">—</span></div>
+            <div class="panel-body"><div id="validationList" class="validation-list"></div></div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><strong>Candidate trials</strong><span id="trialSummary">—</span></div>
+            <div class="panel-body">
+              <div class="trial-chart">
+                <span class="trial-axis top">100</span><span class="trial-axis mid">50</span><span class="trial-axis bottom">0</span>
+                <div id="trialBars" class="trial-bars"></div>
+              </div>
+              <div id="trialCaption" class="trial-caption">—</div>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel raw-wrap">
+          <div class="panel-head">
+            <strong>Raw inspection</strong>
+            <div class="raw-tools"><input id="rawSearch" type="search" placeholder="filter current JSON…" /></div>
+          </div>
+          <pre id="rawJson"></pre>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let state = { data: null, currentStage: null, zoom: null };
+
+    const ROOM_VAR = {
+      bedroom: '--room-bedroom', bathroom: '--room-bathroom', attached_bathroom: '--room-attached-bathroom',
+      living_room: '--room-living-room', kitchen: '--room-kitchen', dining_room: '--room-dining-room',
+      hallway: '--room-hallway', veranda: '--room-veranda', garage: '--room-garage'
+    };
+
+    function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function fmt(value, digits = 2) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '—';
+      return n.toLocaleString(undefined, { maximumFractionDigits: digits });
+    }
+    function statusClass(status) {
+      if (status === 'completed' || status === 'passed') return 'ok';
+      if (String(status).includes('validation')) return 'warn';
+      if (status === 'failed') return 'bad';
+      return '';
+    }
+    function setHeaderStatus(status) {
+      $('headerStatus').textContent = String(status || 'unknown').replaceAll('_', ' ').toUpperCase();
+      $('headerDot').className = 'run-dot ' + statusClass(status);
+    }
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { loadData(JSON.parse(reader.result)); }
+        catch (err) { alert(`Could not parse JSON: ${err.message}`); }
+      };
+      reader.readAsText(file);
+    }
+
+    $('fileInput').addEventListener('change', (event) => event.target.files?.[0] && readFile(event.target.files[0]));
+    ['dragenter','dragover'].forEach(type => $('dropZone').addEventListener(type, event => { event.preventDefault(); $('dropZone').classList.add('drag'); }));
+    ['dragleave','drop'].forEach(type => $('dropZone').addEventListener(type, event => { event.preventDefault(); $('dropZone').classList.remove('drag'); }));
+    $('dropZone').addEventListener('drop', event => event.dataTransfer.files?.[0] && readFile(event.dataTransfer.files[0]));
+
+    function loadData(data) {
+      state.data = data;
+      $('emptyState').style.display = 'none';
+      $('loadedState').classList.add('visible');
+      setHeaderStatus(data.status);
+      $('metaRound').textContent = data.test_round ?? '—';
+      $('metaCore').textContent = data.fpg_core_version ?? '—';
+      $('metaTrials').textContent = (data.candidate_trials || []).length;
+      const validations = data.validations || [];
+      const passed = validations.filter(v => v.status === 'passed').length;
+      $('metaValidations').textContent = `${passed}/${validations.length}`;
+      $('runTitle').textContent = `Full Flow / Round ${data.test_round ?? '?'}`;
+      $('runSubtitle').textContent = `${data.started_at_utc || 'unknown start'} · ${data.output_file || ''}`;
+
+      const scoringStep = findStep('final_scoring');
+      const score = scoringStep?.execution?.result?.total_score;
+      $('scoreNum').textContent = Number.isFinite(Number(score)) ? fmt(score, 1) : '—';
+
+      renderErrors();
+      renderStages();
+      renderValidations();
+      renderTrials();
+      populateFloorStages();
+      $('visualMode').value = Object.keys(data.visualization?.floor_plans || {}).length ? 'floor' : 'candidate';
+      updateVisualization();
+      updateRaw();
+    }
+
+    function findStep(name) { return (state.data?.steps || []).find(step => step.name === name); }
+
+    function renderErrors() {
+      const errors = state.data?.errors || [];
+      if (!errors.length) { $('errorBox').innerHTML = ''; return; }
+      const last = errors[errors.length - 1];
+      $('errorBox').innerHTML = `<div class="error-box"><strong>${esc(last.type || 'Error')}</strong><br>${esc(last.message || '')}</div>`;
+    }
+
+    function renderStages() {
+      const list = $('stageList'); list.innerHTML = '';
+      const steps = state.data?.steps || [];
+      if (!steps.length) { list.innerHTML = '<span style="color:var(--faint);font-size:10px;padding:6px 8px">No stages recorded.</span>'; return; }
+      steps.forEach((step, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'stage-btn';
+        btn.innerHTML = `<span class="stage-status ${esc(step.status)}"></span><span class="stage-name">${esc(step.name)}</span><span class="stage-time">${fmt(step.duration_seconds, 3)}s</span>`;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.stage-btn').forEach(x => x.classList.remove('active'));
+          btn.classList.add('active'); state.currentStage = index; updateRaw();
+        });
+        list.appendChild(btn);
+      });
+    }
+
+    function renderValidations() {
+      const rows = state.data?.validations || [];
+      const passed = rows.filter(x => x.status === 'passed').length;
+      $('validationSummary').textContent = `${passed} passed / ${rows.length - passed} failed`;
+      $('validationList').innerHTML = rows.length ? rows.map(item => {
+        const detail = summarizeDetails(item.details);
+        return `<div class="validation-row"><span class="check ${esc(item.status)}"></span><span class="validation-name">${esc(item.name)}</span><span class="validation-detail" title="${esc(JSON.stringify(item.details || {}))}">${esc(detail)}</span></div>`;
+      }).join('') : '<div class="validation-row"><span class="check"></span><span class="validation-name">No validations recorded</span><span></span></div>';
+    }
+
+    function summarizeDetails(details) {
+      if (!details) return '';
+      if ('total_score' in details) return `score ${fmt(details.total_score, 1)}`;
+      if ('opening_count' in details) return `${details.opening_count} openings`;
+      if ('maximum_shared_wall' in details) return `max ${fmt(details.maximum_shared_wall, 1)}`;
+      const keys = Object.keys(details);
+      if (!keys.length) return '';
+      const first = details[keys[0]];
+      if (Array.isArray(first)) return `${first.length} issue${first.length === 1 ? '' : 's'}`;
+      return `${keys[0]}: ${String(first)}`;
+    }
+
+    function renderTrials() {
+      const trials = state.data?.candidate_trials || [];
+      const scores = trials.map(t => Number(t.score)).filter(Number.isFinite);
+      const best = scores.length ? Math.max(...scores) : 0;
+      const bestIndex = trials.findIndex(t => Number(t.score) === best);
+      $('trialSummary').textContent = trials.length ? `best ${fmt(best, 1)} / ${trials.length} trials` : 'none';
+      $('trialBars').innerHTML = trials.map((trial, index) => {
+        const score = Math.max(0, Math.min(100, Number(trial.score) || 0));
+        const cls = [index === bestIndex ? 'best' : '', trial.status !== 'scored' ? 'rejected' : ''].filter(Boolean).join(' ');
+        return `<div class="trial-bar ${cls}" style="height:${score}%" title="Trial ${esc(trial.trial)} · score ${fmt(score,1)} · hallways ${esc(trial.input_hallway_count)}→${esc(trial.output_hallway_count ?? '?')}"></div>`;
+      }).join('');
+      const rejected = trials.filter(t => t.status !== 'scored').length;
+      $('trialCaption').textContent = trials.length ? `${trials.length - rejected} candidates scored successfully; ${rejected} evaluator rejections. Gold is the best scored trial.` : 'No candidate-trial data was written.';
+    }
+
+    function populateFloorStages() {
+      const select = $('floorStage'); select.innerHTML = '';
+      const plans = state.data?.visualization?.floor_plans || {};
+      const preferred = ['initial_generation','refinement_a','refinement_b','post_processing','openings','final'];
+      const keys = preferred.filter(k => plans[k]).concat(Object.keys(plans).filter(k => !preferred.includes(k)));
+      keys.forEach(key => {
+        const option = document.createElement('option'); option.value = key; option.textContent = key.replaceAll('_', ' '); select.appendChild(option);
+      });
+      if (keys.includes('final')) select.value = 'final'; else if (keys.length) select.value = keys[keys.length - 1];
+    }
+
+    $('visualMode').addEventListener('change', updateVisualization);
+    $('floorStage').addEventListener('change', updateVisualization);
+    $('fitBtn').addEventListener('click', updateVisualization);
+    $('rawSearch').addEventListener('input', updateRaw);
+
+    function updateVisualization() {
+      if (!state.data) return;
+      const mode = $('visualMode').value;
+      const floorSelect = $('floorStage');
+      floorSelect.disabled = mode !== 'floor';
+      if (mode === 'candidate') renderCandidate(); else renderFloorPlan();
+    }
+
+    function svgEl(name, attrs = {}, text = null) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+      Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
+      if (text !== null) el.textContent = text;
+      return el;
+    }
+
+    function setViewBox(svg, minX, minY, maxX, maxY) {
+      const width = Math.max(1, maxX - minX), height = Math.max(1, maxY - minY), pad = Math.max(width, height) * .075;
+      svg.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${width + pad * 2} ${height + pad * 2}`);
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    }
+
+    function addSvgDefs(svg, spacing = 10) {
+      const defs = svgEl('defs');
+      const pattern = svgEl('pattern', { id: 'microGrid', width: spacing, height: spacing, patternUnits: 'userSpaceOnUse' });
+      pattern.appendChild(svgEl('path', { d: `M ${spacing} 0 L 0 0 0 ${spacing}`, fill: 'none', stroke: cssVar('--line-soft'), 'stroke-width': .25, 'vector-effect': 'non-scaling-stroke' }));
+      defs.appendChild(pattern); svg.appendChild(defs);
+    }
+
+    function renderFloorPlan() {
+      const stage = $('floorStage').value;
+      const plan = state.data?.visualization?.floor_plans?.[stage];
+      const svg = $('planSvg'); svg.innerHTML = '';
+      $('visualName').textContent = stage ? stage.replaceAll('_', ' ') : 'Floor plan';
+      if (!plan?.boundary?.points?.length) {
+        $('visualMeta').textContent = 'No floor-plan snapshot for this run';
+        $('legend').innerHTML = ''; return;
+      }
+      const boundary = plan.boundary.points;
+      const xs = boundary.map(p => Number(p.x)), ys = boundary.map(p => Number(p.y));
+      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+      setViewBox(svg, minX, minY, maxX, maxY); addSvgDefs(svg, 10);
+      svg.appendChild(svgEl('rect', { x:minX, y:minY, width:maxX-minX, height:maxY-minY, fill:'url(#microGrid)', stroke:cssVar('--accent'), 'stroke-width':1.1, 'vector-effect':'non-scaling-stroke' }));
+
+      const rooms = plan.rooms || [];
+      rooms.forEach(room => {
+        const points = room.boundary?.points || [];
+        if (!points.length) return;
+        const type = room.room_type || 'unknown';
+        const fill = cssVar(ROOM_VAR[type] || '--room-hallway');
+        const poly = svgEl('polygon', {
+          points: points.map(p => `${p.x},${p.y}`).join(' '), fill, 'fill-opacity': .80,
+          stroke: '#d8e1e8', 'stroke-opacity': .68, 'stroke-width': .75, 'vector-effect': 'non-scaling-stroke'
+        });
+        const title = svgEl('title', {}, `${room.name || room.id} · ${type}`); poly.appendChild(title); svg.appendChild(poly);
+        const b = bounds(points), cx = (b.minX+b.maxX)/2, cy = (b.minY+b.maxY)/2;
+        const w = b.maxX-b.minX, h = b.maxY-b.minY, fontSize = Math.max(2.2, Math.min(4, Math.min(w,h) * .16));
+        const label = svgEl('text', { x:cx, y:cy-.5, 'text-anchor':'middle', fill:'#f3f7fa', 'font-size':fontSize, 'font-family':'IBM Plex Mono, monospace', 'font-weight':'600', 'pointer-events':'none' });
+        label.appendChild(svgEl('tspan', { x:cx, dy:0 }, room.name || room.id));
+        label.appendChild(svgEl('tspan', { x:cx, dy:fontSize*1.15, fill:'#c1cbd2', 'font-size':fontSize*.72 }, `${fmt(w,1)} × ${fmt(h,1)}`));
+        svg.appendChild(label);
+      });
+
+      (plan.openings || []).forEach(opening => {
+        const isDoor = opening.opening_type === 'door';
+        const line = svgEl('line', {
+          x1: opening.start.x, y1: opening.start.y, x2: opening.end.x, y2: opening.end.y,
+          stroke: isDoor ? cssVar('--door') : cssVar('--window'),
+          'stroke-width': isDoor ? 2.2 : 2.0, 'stroke-linecap':'round', 'vector-effect':'non-scaling-stroke'
+        });
+        line.appendChild(svgEl('title', {}, `${opening.opening_type}: ${opening.purpose} · ${(opening.connected_room_ids || []).join(' ↔ ')}`));
+        svg.appendChild(line);
+        if (isDoor) {
+          svg.appendChild(svgEl('circle', { cx:opening.start.x, cy:opening.start.y, r:.85, fill:cssVar('--door') }));
+        }
+      });
+
+      const floorW = maxX-minX, floorH = maxY-minY;
+      $('visualMeta').textContent = `${fmt(floorW,1)} × ${fmt(floorH,1)} units · ${rooms.length} rooms · ${(plan.openings || []).length} openings`;
+      renderFloorLegend(rooms, plan.openings || []);
+    }
+
+    function bounds(points) {
+      const xs = points.map(p => Number(p.x)), ys = points.map(p => Number(p.y));
+      return { minX:Math.min(...xs), maxX:Math.max(...xs), minY:Math.min(...ys), maxY:Math.max(...ys) };
+    }
+
+    function renderFloorLegend(rooms, openings) {
+      const types = [...new Set(rooms.map(r => r.room_type))];
+      const items = types.map(type => `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar(ROOM_VAR[type] || '--room-hallway')}"></span>${esc(type)}</span>`);
+      if (openings.some(o => o.opening_type === 'door')) items.push(`<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--door')}"></span>door</span>`);
+      if (openings.some(o => o.opening_type === 'window')) items.push(`<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--window')}"></span>window</span>`);
+      $('legend').innerHTML = items.join('');
+    }
+
+    function renderCandidate() {
+      const visual = state.data?.visualization?.candidate;
+      const candidate = visual?.candidate;
+      const grid = visual?.grid || candidate?.grid;
+      const svg = $('planSvg'); svg.innerHTML = '';
+      $('visualName').textContent = 'selected candidate + circulation';
+      if (!candidate?.points?.length || !grid?.x_positions?.length || !grid?.y_positions?.length) {
+        $('visualMeta').textContent = 'No selected candidate snapshot for this run'; $('legend').innerHTML = ''; return;
+      }
+      const pre = findStep('preprocessing')?.execution?.result?.generation_spec?.floor;
+      const minX = 0, minY = 0, maxX = Number(pre?.width ?? grid.x_positions.at(-1)), maxY = Number(pre?.length ?? grid.y_positions.at(-1));
+      setViewBox(svg, minX, minY, maxX, maxY); addSvgDefs(svg, Number(grid.grid_spacing || 10));
+      svg.appendChild(svgEl('rect', { x:minX, y:minY, width:maxX-minX, height:maxY-minY, fill:'url(#microGrid)', stroke:cssVar('--accent'), 'stroke-width':1.0, 'vector-effect':'non-scaling-stroke' }));
+
+      const x0 = Number(grid.x_positions[0]), x1 = Number(grid.x_positions.at(-1));
+      const y0 = Number(grid.y_positions[0]), y1 = Number(grid.y_positions.at(-1));
+      (grid.x_positions || []).forEach(x => svg.appendChild(svgEl('line', { x1:x, y1:y0, x2:x, y2:y1, stroke:cssVar('--line'), 'stroke-width':.35, 'vector-effect':'non-scaling-stroke' })));
+      (grid.y_positions || []).forEach(y => svg.appendChild(svgEl('line', { x1:x0, y1:y, x2:x1, y2:y, stroke:cssVar('--line'), 'stroke-width':.35, 'vector-effect':'non-scaling-stroke' })));
+      (grid.x_positions || []).forEach(x => (grid.y_positions || []).forEach(y => svg.appendChild(svgEl('circle', { cx:x, cy:y, r:.65, fill:cssVar('--faint'), opacity:.65 }))));
+
+      const passes = visual?.circulation_details?.passes || [];
+      const paths = passes.length ? (passes[passes.length - 1].paths || []) : [];
+      paths.forEach(path => {
+        const nodes = path.nodes || [];
+        if (nodes.length < 2) return;
+        const route = svgEl('polyline', {
+          points: nodes.map(n => `${n.x},${n.y}`).join(' '), fill:'none',
+          stroke: path.traffic_class === 'public' ? cssVar('--route-public') : cssVar('--route-private'),
+          'stroke-width': 1.35, 'stroke-linecap':'round', 'stroke-linejoin':'round', opacity:.72,
+          'vector-effect':'non-scaling-stroke'
+        });
+        route.appendChild(svgEl('title', {}, `${path.rule_name} · ${fmt(path.path_efficiency_score,1)}% efficient`)); svg.appendChild(route);
+      });
+
+      const hallwayClasses = new Map((visual.hallway_classifications || []).map(x => [`${x.room_id}[${x.hint_index}]`, x.traffic_class]));
+      candidate.points.forEach(point => {
+        const isHall = point.room_type === 'hallway';
+        const color = isHall ? cssVar('--accent') : cssVar(ROOM_VAR[point.room_type] || '--room-bedroom');
+        svg.appendChild(svgEl('circle', { cx:point.x, cy:point.y, r:isHall?3.0:2.6, fill:color, stroke:'#f0f4f7', 'stroke-width':.55, 'vector-effect':'non-scaling-stroke' }));
+        const text = svgEl('text', { x:point.x, y:Number(point.y)-4.3, 'text-anchor':'middle', fill:'#f3f7fa', 'font-size':2.7, 'font-family':'IBM Plex Mono, monospace', 'font-weight':'600', 'paint-order':'stroke', stroke:cssVar('--ink-0'), 'stroke-width':1.6, 'stroke-linejoin':'round' }, point.room_id);
+        svg.appendChild(text);
+        if (isHall) {
+          const cls = hallwayClasses.get(`${point.room_id}[${point.hint_index}]`) || 'unclassified';
+          svg.appendChild(svgEl('text', { x:point.x, y:Number(point.y)+5.1, 'text-anchor':'middle', fill:cssVar('--muted'), 'font-size':2.1, 'font-family':'IBM Plex Mono, monospace', 'paint-order':'stroke', stroke:cssVar('--ink-0'), 'stroke-width':1.3 }, cls));
+        }
+      });
+
+      $('visualMeta').textContent = `${candidate.points.length} room hints · ${paths.length} resolved routes · spacing ${fmt(grid.grid_spacing,1)}`;
+      $('legend').innerHTML = [
+        `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--accent')}"></span>hallway hint</span>`,
+        `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--route-public')}"></span>public route</span>`,
+        `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--route-private')}"></span>private route</span>`
+      ].join('');
+    }
+
+    function updateRaw() {
+      if (!state.data) return;
+      const selected = Number.isInteger(state.currentStage) ? state.data.steps?.[state.currentStage] : state.data;
+      const text = JSON.stringify(selected, null, 2);
+      const query = $('rawSearch').value.trim();
+      if (!query) { $('rawJson').textContent = text; return; }
+      const lower = query.toLowerCase();
+      const lines = text.split('\n').filter(line => line.toLowerCase().includes(lower));
+      $('rawJson').textContent = lines.length ? lines.join('\n') : 'No matching lines in the current JSON scope.';
+    }
+  </script>
+</body>
+</html>
