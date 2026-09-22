@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TypeAlias
 
-from ..types import FloorPlan
-from .profiles import OpeningGenerationProfile
+from ..domain import FeatureExecution, FloorPlan
+from .config import FloorPlanOpeningsConfig
 
 
 class OpeningGenerationStatus(str, Enum):
@@ -53,7 +54,7 @@ class OpeningDiagnostics:
 @dataclass(frozen=True, slots=True)
 class OpeningGenerationRequest:
     floor_plan: FloorPlan
-    profile: OpeningGenerationProfile
+    config: FloorPlanOpeningsConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,8 +63,13 @@ class OpeningGenerationResult:
     floor_plan: FloorPlan | None
     profile_name: str
     message: str
-    diagnostics: OpeningDiagnostics
 
     @property
     def solved(self) -> bool:
         return self.status.has_solution and self.floor_plan is not None
+
+
+OpeningGenerationExecution: TypeAlias = FeatureExecution[
+    OpeningGenerationResult,
+    OpeningDiagnostics,
+]

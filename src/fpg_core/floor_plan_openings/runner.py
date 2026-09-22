@@ -5,7 +5,8 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from ..types import FloorPlan
+from ..domain import FloorPlan, OpeningPurpose, OpeningType
+from .config import FloorPlanOpeningsConfig
 from .contracts import (
     OpeningDiagnostics,
     OpeningGenerationResult,
@@ -14,7 +15,6 @@ from .contracts import (
 )
 from .extractor import extract_floor_plan
 from .model import BuiltOpeningModel
-from .profiles import OpeningGenerationProfile
 from .validation import validate_generated_floor_plan
 
 
@@ -34,7 +34,7 @@ def _message(status: OpeningGenerationStatus) -> str:
     return {
         OpeningGenerationStatus.OPTIMAL: "CP-SAT found an optimal opening layout",
         OpeningGenerationStatus.FEASIBLE: "CP-SAT found a feasible opening layout",
-        OpeningGenerationStatus.INFEASIBLE: "The opening profile produced an infeasible model",
+        OpeningGenerationStatus.INFEASIBLE: "The opening configuration produced an infeasible model",
         OpeningGenerationStatus.MODEL_INVALID: "OR-Tools rejected the opening model",
         OpeningGenerationStatus.UNKNOWN: "The solver stopped without an opening solution",
         OpeningGenerationStatus.INVALID_INPUT: "The floor plan is invalid for opening generation",
@@ -43,54 +43,93 @@ def _message(status: OpeningGenerationStatus) -> str:
 
 def _issues(built: BuiltOpeningModel, solver: Any, solved: bool) -> tuple[OpeningIssue, ...]:
     result: list[OpeningIssue] = []
+
+    main_candidates = [
+        item
+        for item in built.context.all_variables
+        if item.demand.opening_type is OpeningType.DOOR
+        and item.demand.purpose is OpeningPurpose.MAIN_ENTRANCE
+    ]
+    if built.context.prepared.rooms_by_id and not main_candidates:
+        result.append(
+            OpeningIssue(
+                "no_main_entrance_candidate",
+                "No valid main-entrance candidate is available, so required room access cannot be satisfied",
+            )
+        )
+
+    required_types = set(built.context.config.policy.required_access_room_types)
+    incident_candidate_rooms = set()
+    for item in built.context.all_variables:
+        if item.demand.opening_type is not OpeningType.DOOR:
+            continue
+        incident_candidate_rooms.update(item.wall.room_ids)
+        incident_candidate_rooms.update(item.demand.room_ids)
+    for room_id, room in built.context.prepared.rooms_by_id.items():
+        if room.room_type in required_types and room_id not in incident_candidate_rooms:
+            result.append(
+                OpeningIssue(
+                    "required_room_has_no_door_candidate",
+                    f"Required-access room {room_id!s} has no valid door candidate",
+                )
+            )
+
     for demand in built.context.demands:
         variables = built.context.variables_by_demand.get(demand.id, ())
         if not variables:
+            required = demand.purpose is OpeningPurpose.MAIN_ENTRANCE
             result.append(
                 OpeningIssue(
-                    "no_candidate",
-                    "No valid wall candidate was available for this optional opening",
+                    "no_required_candidate" if required else "no_candidate",
+                    (
+                        "No valid wall candidate was available for this required opening"
+                        if required
+                        else "No valid wall candidate was available for this optional opening"
+                    ),
                     demand.feature_id,
                     demand.id,
                 )
             )
             continue
-        selected = [item for item in variables if solved and solver.BooleanValue(item.selected)]
-        if not selected:
-            result.append(
-                OpeningIssue(
-                    "not_selected",
-                    "The shared model omitted this optional opening",
-                    demand.feature_id,
-                    demand.id,
-                )
-            )
-        for item in selected:
-            if item.option.undersized:
+        if solved:
+            selected = [item for item in variables if solver.BooleanValue(item.selected)]
+            if not selected:
                 result.append(
                     OpeningIssue(
-                        "undersized_exterior_door",
-                        "Exterior door was reduced to fit the available legacy wall span",
+                        "not_selected",
+                        "The shared model did not select this optional opening candidate",
                         demand.feature_id,
                         demand.id,
-                        item.wall.id,
                     )
                 )
+            for item in selected:
+                if item.option.undersized:
+                    result.append(
+                        OpeningIssue(
+                            "undersized_exterior_door",
+                            "Exterior door was reduced to fit the available legacy wall span",
+                            demand.feature_id,
+                            demand.id,
+                            item.wall.id,
+                        )
+                    )
     return tuple(result)
 
 
 def solve_opening_model(
     source: FloorPlan,
     built: BuiltOpeningModel,
-    profile: OpeningGenerationProfile,
-) -> OpeningGenerationResult:
+    config: FloorPlanOpeningsConfig,
+    *,
+    collect_details: bool,
+) -> tuple[OpeningGenerationResult, OpeningDiagnostics | None]:
     solver: Any = cp_model.CpSolver()
-    config = profile.solver
-    solver.parameters.max_time_in_seconds = float(config.max_time_seconds)
-    solver.parameters.num_search_workers = int(config.num_search_workers)
-    solver.parameters.random_seed = int(config.random_seed)
-    solver.parameters.cp_model_presolve = bool(config.cp_model_presolve)
-    solver.parameters.log_search_progress = bool(config.log_search_progress)
+    solver_config = config.solver
+    solver.parameters.max_time_in_seconds = float(solver_config.max_time_seconds)
+    solver.parameters.num_search_workers = int(solver_config.num_search_workers)
+    solver.parameters.random_seed = int(solver_config.random_seed)
+    solver.parameters.cp_model_presolve = bool(solver_config.cp_model_presolve)
+    solver.parameters.log_search_progress = bool(solver_config.log_search_progress)
 
     status_code = solver.Solve(built.context.model)
     status = _map_status(status_code)
@@ -101,7 +140,7 @@ def solve_opening_model(
         try:
             floor_plan = extract_floor_plan(source, solver, built)
             validate_generated_floor_plan(
-                source, floor_plan, built.context.prepared, profile
+                source, floor_plan, built.context.prepared, config
             )
         except Exception as exc:  # noqa: BLE001
             status = OpeningGenerationStatus.MODEL_INVALID
@@ -112,6 +151,15 @@ def solve_opening_model(
             extraction_issue = None
     else:
         extraction_issue = None
+
+    result = OpeningGenerationResult(
+        status=status,
+        floor_plan=floor_plan,
+        profile_name=config.name,
+        message=_message(status),
+    )
+    if not collect_details:
+        return result, None
 
     try:
         raw_status = solver.StatusName(status_code)
@@ -152,10 +200,4 @@ def solve_opening_model(
         objective_terms=tuple(built.context.objective_terms),
         issues=tuple(issues),
     )
-    return OpeningGenerationResult(
-        status=status,
-        floor_plan=floor_plan,
-        profile_name=profile.name,
-        message=_message(status),
-        diagnostics=diagnostics,
-    )
+    return result, diagnostics

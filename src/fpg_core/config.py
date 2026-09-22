@@ -1,3 +1,8 @@
+"""Package-wide configuration aggregation and cross-feature validation.
+
+Feature-only settings remain in each feature's own ``config.py``.
+"""
+
 from __future__ import annotations
 
 import math
@@ -5,12 +10,12 @@ from dataclasses import dataclass
 
 from .candidate_scoring.config import ScoringConfig as CandidateScoringConfig
 from .candidate_search.config import CandidateSearchConfig
+from .domain import SetbackProfile, UsableLandConstraints, ValidationLimits
 from .floor_plan_openings.profiles import OpeningGenerationProfile
-from .floor_plan_post_processing.contracts import PostProcessingProfile
+from .floor_plan_post_processing.config import PostProcessingProfile
 from .floor_plan_preprocessing.config import PreprocessingConfig
 from .floor_plan_scoring.config import ScoringProfile as FloorPlanScoringConfig
 from .floor_plan_solver.profiles import ProfileCatalog
-from .types import SetbackProfile, UsableLandConstraints, ValidationLimits
 
 __all__ = [
     "BuildableSpaceConfig",
@@ -73,7 +78,15 @@ def _validate_preprocessing(config: PreprocessingConfig) -> None:
         raise FpgCoreConfigError("aspect-ratio rules must be unambiguous")
     _finite_positive("hallway_area_buffer", config.hallway_area_buffer)
     _finite_positive("hallway_min_width", config.hallway_min_width)
-    if config.floor_area_buffer < 0 or config.hallway_count < 0:
+    if (
+        isinstance(config.max_aspect_residual_units, bool)
+        or not math.isfinite(float(config.max_aspect_residual_units))
+        or config.max_aspect_residual_units < 0
+    ):
+        raise FpgCoreConfigError(
+            "max_aspect_residual_units must be finite and non-negative"
+        )
+    if config.floor_area_buffer < 0 or config.max_hallway_room_count < 0:
         raise FpgCoreConfigError("preprocessing buffers/counts are invalid")
     configured_sizes = {(item.room_type, item.size) for item in config.room_sizes}
     for item in config.room_sizes:
@@ -84,9 +97,7 @@ def _validate_preprocessing(config: PreprocessingConfig) -> None:
             raise FpgCoreConfigError("room-size ranges are invalid")
     for room_type in config.allowed_client_room_types:
         if (room_type, config.default_room_size) not in configured_sizes:
-            raise FpgCoreConfigError(
-                f"default room size missing for {room_type.value}"
-            )
+            raise FpgCoreConfigError(f"default room size missing for {room_type.value}")
 
 
 def validate_fpg_core_config(config: FpgCoreConfig) -> None:
@@ -97,6 +108,7 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
         create_default_registry as candidate_registry,
     )
     from .candidate_scoring.validation import validate_scoring_config
+    from .floor_plan_openings.constraints import OPENING_CONSTRAINT_IDS
     from .floor_plan_openings.registry import (
         create_default_registry as opening_registry,
     )
@@ -113,11 +125,16 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
 
     if not isinstance(config, FpgCoreConfig):
         raise FpgCoreConfigError("config must be an FpgCoreConfig")
-    if config.schema_version != 1:
+    if config.schema_version != 2:
         raise FpgCoreConfigError("unsupported schema_version")
     if config.project_units_per_meter <= 0:
         raise FpgCoreConfigError("project_units_per_meter must be positive")
     _validate_preprocessing(config.preprocessing)
+    candidate_search = config.candidate_search
+    if candidate_search.max_grid_node_count < 9:
+        raise FpgCoreConfigError(
+            "candidate_search.max_grid_node_count must be at least 9"
+        )
     buildable = config.buildable_space
     if (
         buildable.usable_land_constraints.minimum_width <= 0
@@ -158,11 +175,14 @@ def validate_fpg_core_config(config: FpgCoreConfig) -> None:
     openings = opening_registry()
     for feature_id in config.openings.enabled_features:
         openings.resolve(feature_id)
-    known_opening_constraints = {"shared_placement", "room_door_limits"}
-    if not set(config.openings.enabled_constraints).issubset(
-        known_opening_constraints
-    ):
-        raise FpgCoreConfigError("unknown opening constraint ID")
+    unknown_opening_constraints = set(config.openings.enabled_constraints).difference(
+        OPENING_CONSTRAINT_IDS
+    )
+    if unknown_opening_constraints:
+        raise FpgCoreConfigError(
+            "unknown opening constraint IDs: "
+            + ", ".join(sorted(unknown_opening_constraints))
+        )
     scoring = scoring_registry()
     group_keys = {group.key for group in config.floor_plan_scoring.groups}
     evaluator_keys: set[object] = set()

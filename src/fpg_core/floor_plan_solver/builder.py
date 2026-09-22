@@ -2,24 +2,24 @@ from __future__ import annotations
 
 from ortools.sat.python import cp_model
 
+from .config import FloorPlanSolverConfig
 from .constraints.base import PenaltyTerm
 from .constraints.registry import ConstraintRegistry
 from .model import BuiltModel, apply_seed_policy, create_model_context
 from .preparation import PreparedProblem
-from .profiles import GenerationProfile
 
 
 def build_model(
     problem: PreparedProblem,
-    profile: GenerationProfile,
+    config: FloorPlanSolverConfig,
     registry: ConstraintRegistry,
 ) -> BuiltModel:
-    registry.validate_profile(profile)
-    context = create_model_context(problem, profile)
+    registry.validate_config(config)
+    context = create_model_context(problem, config)
     apply_seed_policy(context)
 
     applied_hard: list[str] = []
-    for hard_use in profile.hard_constraints:
+    for hard_use in config.hard_constraints:
         registry.get_hard(hard_use.key).apply(context, hard_use.settings)
         applied_hard.append(hard_use.key)
 
@@ -27,7 +27,7 @@ def build_model(
     weighted_expressions = []
     applied_soft: list[str] = []
 
-    for soft_use in profile.soft_constraints:
+    for soft_use in config.soft_constraints:
         terms = registry.get_soft(soft_use.key).build_penalties(
             context, soft_use.settings
         )

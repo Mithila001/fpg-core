@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from shapely.geometry import MultiPolygon, Polygon
 
+from ...domain import ExecutionMode
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,
@@ -63,9 +64,13 @@ class EnclosedVoidsEvaluator(FloorPlanEvaluator):
                         severity=FindingSeverity.ERROR,
                     ),
                 ),
-                visualization_payload=EnclosedVoidsVisualizationData(
-                    area_tolerance=config.area_tolerance,
-                    voids=(),
+                visualization_payload=(
+                    EnclosedVoidsVisualizationData(
+                        area_tolerance=config.area_tolerance,
+                        voids=(),
+                    )
+                    if context.mode is ExecutionMode.DEBUG
+                    else None
                 ),
             )
 
@@ -109,18 +114,22 @@ class EnclosedVoidsEvaluator(FloorPlanEvaluator):
                 ScoreMetric("enclosed_void_count", len(significant)),
                 ScoreMetric("enclosed_void_area", total_area, "square_units"),
             ),
-            visualization_payload=EnclosedVoidsVisualizationData(
-                area_tolerance=config.area_tolerance,
-                voids=tuple(
-                    EnclosedVoidVisualization(
-                        points=tuple(
-                            (float(x), float(y))
-                            for x, y in void.exterior.coords
-                        ),
-                        area=float(void.area),
-                        affects_score=float(void.area) > config.area_tolerance,
+            visualization_payload=(
+                EnclosedVoidsVisualizationData(
+                    area_tolerance=config.area_tolerance,
+                    voids=tuple(
+                        EnclosedVoidVisualization(
+                            points=tuple(
+                                (float(x), float(y))
+                                for x, y in void.exterior.coords
+                            ),
+                            area=float(void.area),
+                            affects_score=float(void.area) > config.area_tolerance,
+                        )
+                        for void in void_polygons
                     )
-                    for void in void_polygons
-                ),
+                )
+                if context.mode is ExecutionMode.DEBUG
+                else None
             ),
         )

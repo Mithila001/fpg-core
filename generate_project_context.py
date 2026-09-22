@@ -19,9 +19,9 @@ Run from the project root:
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Iterable
 
 OUTPUT_STRUCTURE_FILE = "project_structure.txt"
 

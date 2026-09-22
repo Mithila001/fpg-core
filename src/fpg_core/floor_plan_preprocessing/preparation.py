@@ -4,8 +4,10 @@ import math
 from collections import defaultdict
 from dataclasses import replace
 
-from ..types import (
+from ..domain import (
+    CandidateSearchSpace,
     FloorSpec,
+    ResolvedCandidateGrid,
     RoomId,
     RoomRelationSpec,
     RoomSizeSpec,
@@ -100,38 +102,81 @@ def _select_floor(
         + hallway_count * hallway_area
         + policy.floor_area_buffer
     )
-    ratio = request.aspect_ratio
-    width = min(
-        request.max_width,
-        request.max_length / ratio,
-        math.sqrt(maximum / ratio),
+
+    minimum_axis = max(
+        [room.size.min_width for room in rooms]
+        + ([policy.hallway_min_width] if hallway_count else [])
+        + [float(policy.candidate_search_grid_spacing * 2), 1.0]
     )
-    length = width * ratio
-    area = width * length
-    if area + 1e-9 < minimum:
-        raise FloorPreparationError(
-            "The largest permitted floor at the requested aspect ratio has area "
-            f"{area:.2f}, below the required minimum {minimum:.2f}"
+    minimum_axis_units = math.ceil(minimum_axis)
+    ratio = request.aspect_ratio
+    tolerance = policy.max_aspect_residual_units
+
+    best: tuple[tuple[float, float, float, int, int], int, int] | None = None
+    for width in range(minimum_axis_units, request.max_width + 1):
+        max_length_by_area = math.floor((maximum + 1e-9) / width)
+        maximum_length = min(
+            request.max_length,
+            max_length_by_area,
+            math.floor(width * ratio + tolerance + 1e-9),
         )
-    oversized = [
-        str(room.id)
-        for room in rooms
-        if room.size.min_width > width or room.size.min_width > length
-    ]
-    if oversized:
-        raise FloorPreparationError(
-            "Selected floor cannot contain minimum dimensions for room(s): "
-            + ", ".join(oversized)
+        minimum_length = max(
+            minimum_axis_units,
+            math.ceil(width * ratio - tolerance - 1e-9),
+            math.ceil((minimum - 1e-9) / width),
         )
-    if hallway_count and (
-        width < policy.hallway_min_width
-        or length < policy.hallway_min_width
-    ):
+        if minimum_length > maximum_length:
+            continue
+
+        length = maximum_length
+        area = width * length
+        residual = abs(length - width * ratio)
+        reduction = (request.max_width - width) + (request.max_length - length)
+        ranking = (area, -residual, -reduction, width, length)
+        if best is None or ranking > best[0]:
+            best = (ranking, width, length)
+
+    if best is None:
         raise FloorPreparationError(
-            "Selected floor cannot contain the configured hallway dimensions"
+            "No whole-project-unit floor satisfies the area, room-width, floor-limit, "
+            "and aspect-ratio residual requirements."
         )
+
+    _, width, length = best
     return FloorSpec(width=width, length=length), minimum, maximum
 
+
+
+def _build_candidate_grid(
+    floor: FloorSpec,
+    policy: PreprocessingPolicy,
+) -> ResolvedCandidateGrid:
+    floor_width = int(floor.width)
+    floor_length = int(floor.length)
+    spacing = policy.candidate_search_grid_spacing
+
+    search_width = floor_width - (floor_width % spacing)
+    search_length = floor_length - (floor_length % spacing)
+    origin_x = (floor_width - search_width) / 2
+    origin_y = (floor_length - search_length) / 2
+
+    try:
+        search_space = CandidateSearchSpace(
+            origin_x=origin_x,
+            origin_y=origin_y,
+            width=search_width,
+            length=search_length,
+            grid_spacing=spacing,
+        )
+        return ResolvedCandidateGrid(
+            x_positions=search_space.x_positions(),
+            y_positions=search_space.y_positions(),
+        )
+    except (TypeError, ValueError) as exc:
+        raise FloorPreparationError(
+            "The selected floor cannot produce a valid centered Candidate Search "
+            "space with the configured grid spacing."
+        ) from exc
 
 def _add_hallways(
     request: RuledRequest,
@@ -170,7 +215,10 @@ def _add_hallways(
 
 
 def _prepare_relations(
-    rooms: tuple[RoomSpec, ...], reference_data: PreparedReferenceData
+    rooms: tuple[RoomSpec, ...],
+    reference_data: PreparedReferenceData,
+    *,
+    collect_details: bool,
 ) -> tuple[tuple[RoomRelationSpec, ...], tuple[RelationDecision, ...]]:
     by_type: dict[RoomType, list[RoomSpec]] = defaultdict(list)
     for room in rooms:
@@ -182,9 +230,14 @@ def _prepare_relations(
         source_type = reference.source_room_type
         sources = by_type.get(source_type, [])
         if not sources:
-            decisions.append(
-                RelationDecision(source_type, "removed", "source type is not present")
-            )
+            if collect_details:
+                decisions.append(
+                    RelationDecision(
+                        source_type,
+                        "removed",
+                        "source type is not present",
+                    )
+                )
             continue
         for source_index, source in enumerate(sources):
             targets: list[RoomSpec] = []
@@ -214,11 +267,14 @@ def _prepare_relations(
                     seen.add(str(target.id))
                     unique_targets.append(target)
             if not unique_targets:
-                decisions.append(
-                    RelationDecision(
-                        source_type, "removed", f"no targets remained for '{source.id}'"
+                if collect_details:
+                    decisions.append(
+                        RelationDecision(
+                            source_type,
+                            "removed",
+                            f"no targets remained for '{source.id}'",
+                        )
                     )
-                )
                 continue
             prepared.append(
                 RoomRelationSpec(
@@ -228,13 +284,14 @@ def _prepare_relations(
                     strength=reference.strength,
                 )
             )
-            decisions.append(
-                RelationDecision(
-                    source_type,
-                    "expanded",
-                    f"{source.id} -> {', '.join(str(t.id) for t in unique_targets)}",
+            if collect_details:
+                decisions.append(
+                    RelationDecision(
+                        source_type,
+                        "expanded",
+                        f"{source.id} -> {', '.join(str(t.id) for t in unique_targets)}",
+                    )
                 )
-            )
     return tuple(prepared), tuple(decisions)
 
 
@@ -242,13 +299,20 @@ def build_preprocessing_context(
     request: RuledRequest,
     reference_data: PreparedReferenceData,
     policy: PreprocessingPolicy,
+    *,
+    collect_details: bool,
 ) -> PreprocessingContext:
     non_hallways, final_request = _prepare_non_hallway_rooms(
         request, reference_data, policy
     )
     floor, minimum, maximum = _select_floor(final_request, non_hallways, policy)
     rooms = _add_hallways(final_request, non_hallways, floor, policy)
-    relations, relation_decisions = _prepare_relations(rooms, reference_data)
+    candidate_grid = _build_candidate_grid(floor, policy)
+    relations, relation_decisions = _prepare_relations(
+        rooms,
+        reference_data,
+        collect_details=collect_details,
+    )
     return PreprocessingContext(
         request=final_request,
         reference_data=reference_data,
@@ -258,4 +322,6 @@ def build_preprocessing_context(
         relation_decisions=relation_decisions,
         minimum_required_area=minimum,
         maximum_target_area=maximum,
+        candidate_grid=candidate_grid,
+        hallway_room_count_range=policy.hallway_room_count_range,
     )

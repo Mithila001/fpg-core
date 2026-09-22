@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 
+from ..domain import ExecutionMode
 from .config import EvaluatorRule, ScoringConfig
 from .exceptions import (
     EvaluatorContractError,
@@ -91,12 +92,24 @@ def _validate_rule(rule: EvaluatorRule) -> None:
 def validate_evaluator_result(
     expected_key: str,
     result: EvaluatorResult,
+    *,
+    mode: ExecutionMode | None = None,
 ) -> None:
     if str(result.evaluator_key) != expected_key:
         raise EvaluatorContractError(
             f"Evaluator '{expected_key}' returned result for "
             f"'{result.evaluator_key}'."
         )
+
+    if mode is ExecutionMode.PRODUCTION:
+        if result.metrics:
+            raise EvaluatorContractError(
+                f"Evaluator '{expected_key}' returned DEBUG metrics in PRODUCTION."
+            )
+        if result.details is not None:
+            raise EvaluatorContractError(
+                f"Evaluator '{expected_key}' returned DEBUG details in PRODUCTION."
+            )
 
     if result.status is EvaluationStatus.COMPLETED:
         if result.score is None:

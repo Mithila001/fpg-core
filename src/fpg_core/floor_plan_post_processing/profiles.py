@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from .config import (
+    FloorPlanPostProcessingConfig,
     GridSnapConfig,
     HallwayMergeConfig,
     PlaceholderRemovalConfig,
+    ProcessorUse,
     RectilinearSimplificationConfig,
     VerandaAdjustmentConfig,
     WallExtensionConfig,
 )
-from .contracts import PostProcessingProfile, ProcessorUse
 from .processors import (
     GridSnapProcessor,
     HallwayMergeProcessor,
@@ -19,7 +20,9 @@ from .processors import (
 )
 from .registry import ProcessorRegistry
 
-INITIAL_GENERATION_PROFILE = PostProcessingProfile(
+# A named, reusable configuration preset. The "PROFILE" name is retained because
+# profiles are useful presets; the request itself exposes this value as ``config``.
+INITIAL_GENERATION_PROFILE = FloorPlanPostProcessingConfig(
     name="initial_generation",
     processors=(
         ProcessorUse("veranda_adjustment", VerandaAdjustmentConfig()),

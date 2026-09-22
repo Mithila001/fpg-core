@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..types import (
+from ..domain import (
     EdgeClassification,
     LandSide,
     NormalizedLand,

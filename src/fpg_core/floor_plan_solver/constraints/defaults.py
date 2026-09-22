@@ -9,6 +9,7 @@ from .hard import (
     GaragePlacementConstraint,
     HallwayConnectivityConstraint,
     HallwayDimensionsConstraint,
+    HallwaySharedWallConstraint,
     HardRoomRelationsConstraint,
     MinimumCoverageConstraint,
     RoomSizeHierarchyConstraint,
@@ -18,6 +19,7 @@ from .soft import (
     BathroomDepthConstraint,
     DeadSpaceConstraint,
     FloorClusterPositionConstraint,
+    HallwayEfficiencyConstraint,
     KitchenBackExposureConstraint,
     SeedStabilityConstraint,
     SoftRoomRelationsConstraint,
@@ -34,6 +36,7 @@ def build_default_registry() -> ConstraintRegistry:
     registry.register_hard(MinimumCoverageConstraint())
     registry.register_hard(HallwayConnectivityConstraint())
     registry.register_hard(HallwayDimensionsConstraint())
+    registry.register_hard(HallwaySharedWallConstraint())
     registry.register_hard(FrontAnchorConstraint())
     registry.register_hard(GaragePlacementConstraint())
     registry.register_hard(BoundaryPlacementConstraint())
@@ -42,6 +45,7 @@ def build_default_registry() -> ConstraintRegistry:
     registry.register_soft(SoftRoomRelationsConstraint())
     registry.register_soft(FloorClusterPositionConstraint())
     registry.register_soft(DeadSpaceConstraint())
+    registry.register_soft(HallwayEfficiencyConstraint())
     registry.register_soft(KitchenBackExposureConstraint())
     registry.register_soft(SeedStabilityConstraint())
     registry.register_soft(BathroomDepthConstraint())

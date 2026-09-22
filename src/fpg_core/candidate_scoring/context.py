@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
+from ..domain import ExecutionMode
 from .types import CandidateScoringInput
 
 
@@ -19,8 +20,11 @@ class ScoringContext:
 
     scoring_input: CandidateScoringInput
     derived: Mapping[str, Any] = field(default_factory=dict)
+    mode: ExecutionMode = ExecutionMode.PRODUCTION
 
     def __post_init__(self) -> None:
+        if not isinstance(self.mode, ExecutionMode):
+            raise TypeError("mode must be an ExecutionMode instance.")
         object.__setattr__(self, "derived", MappingProxyType(dict(self.derived)))
 
 

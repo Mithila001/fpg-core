@@ -6,9 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from .config import SeedSource
-from .contracts import FloorPlanSolveRequest, RoomPlacementHint
-from .domain import (
+from ..domain import (
     FloorPlan,
     Polygon,
     RoomId,
@@ -17,6 +15,8 @@ from .domain import (
     RoomType,
     RoomWidthAxis,
 )
+from .config import SeedSource
+from .contracts import FloorPlanSolveRequest, RoomPlacementHint
 from .exceptions import InvalidSpecificationError, MissingSeedError
 
 
@@ -438,7 +438,7 @@ def _prepare_seed(
     floor: PreparedFloor,
     scale: CoordinateScale,
 ) -> PreparedSeed | None:
-    policy = request.profile.seed
+    policy = request.config.seed
 
     if policy.source is SeedSource.NONE:
         return None
@@ -459,14 +459,14 @@ def _prepare_seed(
 
     if seed is None and policy.require_source:
         raise MissingSeedError(
-            f"Profile '{request.profile.name}' requires {policy.source.value} seed data"
+            f"Configuration '{request.config.name}' requires {policy.source.value} seed data"
         )
     return seed
 
 
 def prepare_problem(request: FloorPlanSolveRequest) -> PreparedProblem:
     spec = request.specification
-    scale = CoordinateScale(request.profile.preparation.coordinate_scale)
+    scale = CoordinateScale(request.config.preparation.coordinate_scale)
 
     floor_spec = spec.floor
     floor_width = _positive_float(floor_spec.width, "floor.width")

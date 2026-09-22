@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import Any
 
+from ...domain import ExecutionMode
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,
@@ -12,6 +12,8 @@ from ..types import (
     EvaluatorResult,
     FindingSeverity,
     ScoreFinding,
+    SpatialDistributionDetails,
+    SpatialDistributionPointDetails,
 )
 from .base import CandidateEvaluator
 from .common import (
@@ -23,18 +25,6 @@ from .common import (
 )
 
 SPATIAL_DISTRIBUTION_KEY = EvaluatorKey("spatial_distribution")
-
-
-@dataclass(frozen=True, slots=True)
-class SpatialDistributionVisualizationData:
-    floor_width: float
-    floor_length: float
-    points: tuple[EvaluationPoint, ...]
-    grid_size: int
-    nearest_distances: tuple[tuple[float, ...], ...]
-    ideal_point_distance: float
-    theoretical_coverage_gap: float
-    gap_zero_score_ratio: float
 
 
 class SpatialDistributionEvaluator(CandidateEvaluator):
@@ -50,16 +40,42 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
         settings: Mapping[str, Any],
     ) -> EvaluatorResult:
         data = build_evaluation_data(context)
+        debug_enabled = context.mode is ExecutionMode.DEBUG
+
+        nnd_weight = setting_float(settings, "nnd_weight", 0.40)
+        coverage_weight = setting_float(settings, "coverage_weight", 0.60)
+        total_weight = nnd_weight + coverage_weight
+        if total_weight <= 0:
+            raise ValueError("nnd_weight and coverage_weight must have a positive total.")
+        nnd_weight /= total_weight
+        coverage_weight /= total_weight
+
+        sensitivity = setting_float(settings, "nnd_cv_sensitivity", 8.0)
+        sample_count_per_axis = setting_int(
+            settings,
+            "sample_count_per_axis",
+            setting_int(settings, "grid_size", 20),
+        )
+        if sample_count_per_axis < 2:
+            raise ValueError("sample_count_per_axis must be at least 2.")
+        gap_zero_score_ratio = setting_float(settings, "gap_zero_score_ratio", 1.5)
+        if gap_zero_score_ratio <= 1.0:
+            raise ValueError("gap_zero_score_ratio must be greater than 1.0.")
+
         if not data.points:
-            visualization = SpatialDistributionVisualizationData(
-                floor_width=data.floor_width,
-                floor_length=data.floor_length,
-                points=(),
-                grid_size=2,
-                nearest_distances=(),
-                ideal_point_distance=0.0,
-                theoretical_coverage_gap=0.0,
-                gap_zero_score_ratio=1.5,
+            empty_details = (
+                SpatialDistributionDetails(
+                    floor_width=data.floor_width,
+                    floor_length=data.floor_length,
+                    points=(),
+                    sample_count_per_axis=sample_count_per_axis,
+                    nearest_distances=(),
+                    ideal_point_distance=0.0,
+                    theoretical_coverage_gap=0.0,
+                    gap_zero_score_ratio=gap_zero_score_ratio,
+                )
+                if debug_enabled
+                else None
             )
             return EvaluatorResult(
                 evaluator_key=self.key,
@@ -72,24 +88,9 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
                         severity=FindingSeverity.ERROR,
                     ),
                 ),
-                visualization_payload=visualization,
+                metrics={"point_count": 0.0} if debug_enabled else {},
+                details=empty_details,
             )
-
-        nnd_weight = setting_float(settings, "nnd_weight", 0.40)
-        coverage_weight = setting_float(settings, "coverage_weight", 0.60)
-        total_weight = nnd_weight + coverage_weight
-        if total_weight <= 0:
-            raise ValueError("nnd_weight and coverage_weight must have a positive total.")
-        nnd_weight /= total_weight
-        coverage_weight /= total_weight
-
-        sensitivity = setting_float(settings, "nnd_cv_sensitivity", 8.0)
-        grid_size = setting_int(settings, "grid_size", 20)
-        if grid_size < 2:
-            raise ValueError("grid_size must be at least 2.")
-        gap_zero_score_ratio = setting_float(settings, "gap_zero_score_ratio", 1.5)
-        if gap_zero_score_ratio <= 1.0:
-            raise ValueError("gap_zero_score_ratio must be greater than 1.0.")
 
         nnd_score, nnd_metrics = _nnd_score(
             data.points,
@@ -101,10 +102,13 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
             data.points,
             data.floor_width,
             data.floor_length,
-            grid_size,
+            sample_count_per_axis,
             gap_zero_score_ratio,
+            collect_nearest_distances=debug_enabled,
         )
-        final_score = clamp_score(nnd_score * nnd_weight + coverage_score * coverage_weight)
+        final_score = clamp_score(
+            nnd_score * nnd_weight + coverage_score * coverage_weight
+        )
 
         findings: list[ScoreFinding] = []
         if nnd_metrics["coefficient_of_variation"] > 0.8:
@@ -119,17 +123,16 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
             findings.append(
                 ScoreFinding(
                     code="LARGE_UNCOVERED_REGION",
-                    message="Candidate points leave a comparatively large uncovered floor region.",
+                    message=(
+                        "Candidate points leave a comparatively large uncovered "
+                        "floor region."
+                    ),
                     severity=FindingSeverity.WARNING,
                 )
             )
 
-        return EvaluatorResult(
-            evaluator_key=self.key,
-            status=EvaluationStatus.COMPLETED,
-            score=final_score,
-            findings=tuple(findings),
-            metrics={
+        if debug_enabled:
+            metrics = {
                 "nnd_score": nnd_score,
                 "coverage_score": coverage_score,
                 "nnd_weight": nnd_weight,
@@ -137,20 +140,43 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
                 "point_count": float(len(data.points)),
                 **nnd_metrics,
                 **coverage_metrics,
-            },
-            visualization_payload=SpatialDistributionVisualizationData(
+            }
+            details: SpatialDistributionDetails | None = SpatialDistributionDetails(
                 floor_width=data.floor_width,
                 floor_length=data.floor_length,
-                points=data.points,
-                grid_size=grid_size,
+                points=tuple(_point_details(point) for point in data.points),
+                sample_count_per_axis=sample_count_per_axis,
                 nearest_distances=nearest_distances,
                 ideal_point_distance=nnd_metrics["ideal_point_distance"],
                 theoretical_coverage_gap=coverage_metrics[
                     "theoretical_coverage_gap"
                 ],
                 gap_zero_score_ratio=gap_zero_score_ratio,
-            ),
+            )
+        else:
+            metrics = {}
+            details = None
+
+        return EvaluatorResult(
+            evaluator_key=self.key,
+            status=EvaluationStatus.COMPLETED,
+            score=final_score,
+            findings=tuple(findings),
+            metrics=metrics,
+            details=details,
         )
+
+
+def _point_details(point: EvaluationPoint) -> SpatialDistributionPointDetails:
+    return SpatialDistributionPointDetails(
+        point_id=point.room_id,
+        source_room_id=point.source_room_id,
+        room_name=point.name,
+        room_type=point.room_type,
+        hint_index=point.hint_index,
+        x=point.x,
+        y=point.y,
+    )
 
 
 def _nnd_score(
@@ -202,22 +228,26 @@ def _coverage_score(
     points: tuple[EvaluationPoint, ...],
     floor_width: float,
     floor_length: float,
-    grid_size: int,
+    sample_count_per_axis: int,
     gap_zero_score_ratio: float,
+    *,
+    collect_nearest_distances: bool,
 ) -> tuple[float, dict[str, float], tuple[tuple[float, ...], ...]]:
     distances: list[float] = []
     rows: list[tuple[float, ...]] = []
-    for x_index in range(grid_size):
-        x = floor_width * x_index / (grid_size - 1)
-        column: list[float] = []
-        for y_index in range(grid_size):
-            y = floor_length * y_index / (grid_size - 1)
+    for x_index in range(sample_count_per_axis):
+        x = floor_width * x_index / (sample_count_per_axis - 1)
+        column: list[float] | None = [] if collect_nearest_distances else None
+        for y_index in range(sample_count_per_axis):
+            y = floor_length * y_index / (sample_count_per_axis - 1)
             nearest = min(
                 math.hypot(x - point.x, y - point.y) for point in points
             )
             distances.append(nearest)
-            column.append(nearest)
-        rows.append(tuple(column))
+            if column is not None:
+                column.append(nearest)
+        if column is not None:
+            rows.append(tuple(column))
 
     ordered = sorted(distances)
     percentile_index = min(len(ordered) - 1, math.ceil(0.95 * len(ordered)) - 1)
@@ -236,7 +266,7 @@ def _coverage_score(
             "coverage_mean_gap": mean_gap,
             "theoretical_coverage_gap": theoretical_gap,
             "gap_ratio": gap_ratio,
-            "coverage_grid_size": float(grid_size),
+            "coverage_sample_count_per_axis": float(sample_count_per_axis),
         },
         tuple(rows),
     )

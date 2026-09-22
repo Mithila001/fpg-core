@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..types import (
+from ..domain import (
     ConstraintStrength,
     FloorSpec,
+    HallwayRoomCountRange,
     MatchPolicy,
+    ResolvedCandidateGrid,
     RoomRelationSpec,
     RoomSpec,
     RoomType,
@@ -28,8 +30,10 @@ class NormalizedRoom:
 
 @dataclass(frozen=True, slots=True)
 class NormalizedRequest:
-    max_width: float
-    max_length: float
+    raw_max_width: float
+    raw_max_length: float
+    max_width: int
+    max_length: int
     aspect_ratio: float
     rooms: tuple[NormalizedRoom, ...]
     normalizations: tuple[NormalizationRecord, ...]
@@ -64,8 +68,10 @@ class PreparedReferenceData:
 
 @dataclass(frozen=True, slots=True)
 class RuledRequest:
-    max_width: float
-    max_length: float
+    raw_max_width: float
+    raw_max_length: float
+    max_width: int
+    max_length: int
     aspect_ratio: float
     rooms: tuple[NormalizedRoom, ...]
     selected_room_size: str
@@ -84,3 +90,5 @@ class PreprocessingContext:
     relation_decisions: tuple[RelationDecision, ...]
     minimum_required_area: float
     maximum_target_area: float
+    candidate_grid: ResolvedCandidateGrid
+    hallway_room_count_range: HallwayRoomCountRange

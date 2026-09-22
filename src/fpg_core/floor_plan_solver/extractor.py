@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .domain import FloorPlan, FloorPlanRoom, Point, Polygon
+from ..domain import FloorPlan, FloorPlanRoom, Point, Polygon
 from .model import BuiltModel
 
 

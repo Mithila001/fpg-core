@@ -6,11 +6,18 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from .constraints import RoomDoorLimitConstraint, SharedPlacementConstraint
+from ..domain import OpeningType, RoomId
+from .config import FloorPlanOpeningsConfig
+from .constraints import OPENING_CONSTRAINT_TYPES
 from .constraints.base import OpeningConstraint
-from .domain import AnalyzedWall, OpeningDemand, PlacementOption, PreparedFloorPlan
+from .domain import (
+    AnalyzedWall,
+    OpeningDemand,
+    PlacementOption,
+    PreparedFloorPlan,
+    WallOrientation,
+)
 from .exceptions import OpeningConfigurationError
-from .profiles import OpeningGenerationProfile
 from .registry import OpeningFeatureRegistry
 
 
@@ -31,7 +38,7 @@ class PlacementVariables:
 class OpeningModelContext:
     model: Any
     prepared: PreparedFloorPlan
-    profile: OpeningGenerationProfile
+    config: FloorPlanOpeningsConfig
     demands: tuple[OpeningDemand, ...]
     all_variables: list[PlacementVariables] = field(default_factory=list)
     variables_by_demand: dict[str, list[PlacementVariables]] = field(
@@ -46,7 +53,7 @@ class OpeningModelContext:
 
     @property
     def window_spacing(self) -> int:
-        return round(self.profile.geometry.window_spacing * self.prepared.scale)
+        return round(self.config.geometry.window_spacing * self.prepared.scale)
 
     def new_name(self, prefix: str, *parts: object) -> str:
         self._counter += 1
@@ -62,22 +69,155 @@ class BuiltOpeningModel:
 
 def _build_demands(
     prepared: PreparedFloorPlan,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
     registry: OpeningFeatureRegistry,
 ) -> tuple[OpeningDemand, ...]:
     demands: list[OpeningDemand] = []
-    for feature_id in profile.enabled_features:
-        demands.extend(registry.resolve(feature_id).build_demands(prepared, profile))
+    for feature_id in config.enabled_features:
+        demands.extend(registry.resolve(feature_id).build_demands(prepared, config))
     ids = [demand.id for demand in demands]
     if len(ids) != len(set(ids)):
         raise OpeningConfigurationError("opening demand IDs must be unique")
     return tuple(demands)
 
 
+def _room_corner_axes(
+    context: OpeningModelContext,
+    wall: AnalyzedWall,
+    room_id: RoomId,
+) -> tuple[int, ...]:
+    room = context.prepared.rooms_by_id[room_id]
+    scale = context.prepared.scale
+    points = room.boundary.points
+    coordinates: set[int] = set()
+
+    for index, first in enumerate(points):
+        second = points[(index + 1) % len(points)]
+        x1, y1 = round(first.x * scale), round(first.y * scale)
+        x2, y2 = round(second.x * scale), round(second.y * scale)
+
+        if wall.orientation is WallOrientation.HORIZONTAL:
+            if y1 != wall.fixed_coordinate or y2 != wall.fixed_coordinate:
+                continue
+            edge_start, edge_end = sorted((x1, x2))
+        else:
+            if x1 != wall.fixed_coordinate or x2 != wall.fixed_coordinate:
+                continue
+            edge_start, edge_end = sorted((y1, y2))
+
+        if min(edge_end, wall.end) <= max(edge_start, wall.start):
+            continue
+        coordinates.update((edge_start, edge_end))
+
+    return tuple(sorted(coordinates))
+
+
+def _endpoint_corner_distance(
+    context: OpeningModelContext,
+    wall: AnalyzedWall,
+    room_id: RoomId,
+    *,
+    use_end: bool,
+) -> int:
+    corners = _room_corner_axes(context, wall, room_id)
+    if not corners:
+        return wall.length
+    endpoint = wall.end if use_end else wall.start
+    return min(abs(endpoint - corner) for corner in corners)
+
+
+def _preferred_door_end(
+    context: OpeningModelContext,
+    demand: OpeningDemand,
+    wall: AnalyzedWall,
+) -> str:
+    room_ids = tuple(
+        room_id
+        for room_id in (demand.room_ids or wall.room_ids)
+        if room_id in context.prepared.rooms_by_id
+    )
+    if not room_ids:
+        return "start"
+
+    priority_by_type = context.config.policy.door_priority_by_room_type
+    priorities = {
+        room_id: priority_by_type.get(
+            context.prepared.rooms_by_id[room_id].room_type,
+            0,
+        )
+        for room_id in room_ids
+    }
+    levels = sorted(set(priorities.values()), reverse=True)
+
+    def score(*, use_end: bool) -> tuple[int, ...]:
+        return tuple(
+            sum(
+                _endpoint_corner_distance(
+                    context,
+                    wall,
+                    room_id,
+                    use_end=use_end,
+                )
+                for room_id in room_ids
+                if priorities[room_id] == level
+            )
+            for level in levels
+        )
+
+    start_score = score(use_end=False)
+    end_score = score(use_end=True)
+    return "end" if end_score < start_score else "start"
+
+
+def _create_position_cost(
+    context: OpeningModelContext,
+    demand: OpeningDemand,
+    wall: AnalyzedWall,
+    option: PlacementOption,
+    selected: Any,
+    start: Any,
+    *,
+    clearance: int,
+    latest: int,
+) -> Any:
+    maximum_cost = wall.length * (wall.length + 1) + wall.length
+    position_cost = context.model.NewIntVar(
+        0,
+        maximum_cost,
+        context.new_name("position_cost", option.id),
+    )
+
+    if demand.opening_type is OpeningType.DOOR:
+        preferred_end = _preferred_door_end(context, demand, wall)
+        edge_deviation = context.model.NewIntVar(
+            0,
+            wall.length,
+            context.new_name("edge_deviation", option.id),
+        )
+        if preferred_end == "end":
+            context.model.Add(edge_deviation == latest - start)
+        else:
+            context.model.Add(edge_deviation == start - clearance)
+        full_position_cost = edge_deviation * (wall.length + 1) + start
+    else:
+        center_expression = 2 * start + option.width - wall.length
+        center_deviation = context.model.NewIntVar(
+            0,
+            wall.length,
+            context.new_name("center_deviation", option.id),
+        )
+        context.model.AddAbsEquality(center_deviation, center_expression)
+        full_position_cost = center_deviation * (wall.length + 1) + start
+
+    context.model.Add(position_cost == full_position_cost).OnlyEnforceIf(selected)
+    context.model.Add(position_cost == 0).OnlyEnforceIf(selected.Not())
+    return position_cost
+
+
 def _create_variables(context: OpeningModelContext) -> None:
     walls = context.prepared.wall_by_id()
     clearance = round(
-        context.profile.geometry.corner_clearance * context.prepared.scale
+        context.config.geometry.corner_clearance * context.prepared.scale
     )
     for demand in context.demands:
         for option_index, option in enumerate(demand.options):
@@ -104,20 +244,16 @@ def _create_variables(context: OpeningModelContext) -> None:
                 selected,
                 context.new_name("interval", option.id),
             )
-
-            center_expression = 2 * start + option.width - wall.length
-            center_deviation = context.model.NewIntVar(
-                0, wall.length, context.new_name("center_deviation", option.id)
+            position_cost = _create_position_cost(
+                context,
+                demand,
+                wall,
+                option,
+                selected,
+                start,
+                clearance=clearance,
+                latest=latest,
             )
-            context.model.AddAbsEquality(center_deviation, center_expression)
-            position_cost = context.model.NewIntVar(
-                0,
-                wall.length * (wall.length + 1) + wall.length,
-                context.new_name("position_cost", option.id),
-            )
-            full_position_cost = center_deviation * (wall.length + 1) + start
-            context.model.Add(position_cost == full_position_cost).OnlyEnforceIf(selected)
-            context.model.Add(position_cost == 0).OnlyEnforceIf(selected.Not())
             variables = PlacementVariables(
                 demand=demand,
                 option=option,
@@ -138,10 +274,10 @@ def _create_variables(context: OpeningModelContext) -> None:
 
 def _apply_constraints(context: OpeningModelContext) -> None:
     constraints: dict[str, OpeningConstraint] = {
-        "shared_placement": SharedPlacementConstraint(),
-        "room_door_limits": RoomDoorLimitConstraint(),
+        constraint_type.constraint_id: constraint_type()
+        for constraint_type in OPENING_CONSTRAINT_TYPES
     }
-    for constraint_id in context.profile.enabled_constraints:
+    for constraint_id in context.config.enabled_constraints:
         try:
             constraint = constraints[constraint_id]
         except KeyError as exc:
@@ -179,7 +315,7 @@ def _apply_objective(context: OpeningModelContext) -> bool:
     }
     coefficient_by_tier: dict[str, int] = {}
     lower_maximum = maximum_preference
-    for tier in context.profile.objective.tier_order:
+    for tier in context.config.objective.tier_order:
         coefficient_by_tier[tier] = lower_maximum + 1
         tier_count = sum(
             1 for demand in context.demands if demand.objective_tier == tier
@@ -205,20 +341,20 @@ def _apply_objective(context: OpeningModelContext) -> bool:
                 f"select:{demand.id}:{demand.objective_tier}"
             )
     context.model.Maximize(sum(rewards) - sum(preference_costs))
-    context.objective_terms.append("wall_preference_and_centering")
+    context.objective_terms.append("wall_preference_and_opening_positioning")
     return True
 
 
 def build_opening_model(
     prepared: PreparedFloorPlan,
-    profile: OpeningGenerationProfile,
+    config: FloorPlanOpeningsConfig,
     registry: OpeningFeatureRegistry,
 ) -> BuiltOpeningModel:
-    demands = _build_demands(prepared, profile, registry)
+    demands = _build_demands(prepared, config, registry)
     context = OpeningModelContext(
         model=cp_model.CpModel(),
         prepared=prepared,
-        profile=profile,
+        config=config,
         demands=demands,
     )
     _create_variables(context)

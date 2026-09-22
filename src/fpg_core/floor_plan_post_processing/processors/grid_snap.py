@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ...types import Point, Polygon
+from ...domain import Point, Polygon
 from ..config import GridSnapConfig
 from ..contracts import FloorPlanProcessor, ProcessorOutcome, ProcessorStatus
 from ..exceptions import ProcessorError

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ...domain import RoomType
 from ..context import ScoringContext
-from ..domain import RoomType
 from ..exceptions import ScoringConfigurationError
 from ..types import (
     EvaluationStatus,

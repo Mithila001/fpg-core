@@ -5,7 +5,7 @@ from shapely.geometry import LineString, MultiPolygon
 from shapely.geometry import Polygon as ShapelyPolygon
 from shapely.ops import substring, unary_union
 
-from ...types import RoomRole
+from ...domain import RoomRole
 from ..config import WallExtensionConfig
 from ..contracts import FloorPlanProcessor, ProcessorOutcome, ProcessorStatus
 from ..exceptions import ProcessorError

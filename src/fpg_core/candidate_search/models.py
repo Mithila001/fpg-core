@@ -1,21 +1,24 @@
 from __future__ import annotations
 
 import math
-from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeAlias, cast
 
-from ..types import RoomId, RoomType
-from .config import (
-    DEFAULT_MAX_HALLWAY_HINT_COUNT,
-    DEFAULT_MIN_HALLWAY_HINT_COUNT,
+from ..domain import (
+    CandidateMap,
+    CandidatePoint,
+    HallwayRoomCountRange,
+    ResolvedCandidateGrid,
+    RoomId,
+    RoomType,
 )
+from .config import CandidateSearchConfig
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchTarget:
-    """Identifies one room that needs one or more candidate coordinates."""
+    """Identifies one concrete room that may receive one candidate point."""
 
     room_id: RoomId
     room_type: RoomType | None = None
@@ -23,133 +26,47 @@ class CandidateSearchTarget:
     def __post_init__(self) -> None:
         if not isinstance(self.room_id, str):
             raise TypeError("Candidate target room_id must be a string-based RoomId.")
-
         cleaned_room_id = self.room_id.strip()
         if not cleaned_room_id:
             raise ValueError("Candidate target room_id cannot be empty.")
-
         if self.room_type is not None and not isinstance(self.room_type, RoomType):
             raise TypeError("Candidate target room_type must be a RoomType or None.")
-
         object.__setattr__(self, "room_id", RoomId(cleaned_room_id))
 
     @property
     def is_hallway(self) -> bool:
-        """Whether Optuna may vary this target's hint-point count."""
-
         return self.room_type is RoomType.HALLWAY
 
 
-@dataclass(frozen=True, slots=True)
-class CandidatePoint:
-    """A generated hint coordinate associated with one room."""
-
-    room_id: RoomId
-    x: float
-    y: float
-    room_type: RoomType | None = None
-    hint_index: int = 1
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.room_id, str):
-            raise TypeError("Candidate point room_id must be a string-based RoomId.")
-
-        cleaned_room_id = self.room_id.strip()
-        if not cleaned_room_id:
-            raise ValueError("Candidate point room_id cannot be empty.")
-
-        if self.room_type is not None and not isinstance(self.room_type, RoomType):
-            raise TypeError("Candidate point room_type must be a RoomType or None.")
-
-        if isinstance(self.hint_index, bool) or not isinstance(self.hint_index, int):
-            raise TypeError("Candidate point hint_index must be an integer.")
-        if self.hint_index <= 0:
-            raise ValueError("Candidate point hint_index must be greater than zero.")
-        if self.room_type is not RoomType.HALLWAY and self.hint_index != 1:
-            raise ValueError(
-                "Only hallway candidate points may use a hint_index greater than one."
-            )
-
-        object.__setattr__(self, "room_id", RoomId(cleaned_room_id))
-        object.__setattr__(self, "x", _validated_finite_number("x", self.x))
-        object.__setattr__(self, "y", _validated_finite_number("y", self.y))
-
-
-@dataclass(frozen=True, slots=True)
-class CandidateSearchSettings:
-    """Configuration controlling the candidate coordinate search space."""
-
-    min_x: float
-    max_x: float
-    min_y: float
-    max_y: float
-    grid_resolution: float
-    trial_count: int
-    random_seed: int | None = None
-    min_hallway_hint_count: int = DEFAULT_MIN_HALLWAY_HINT_COUNT
-    max_hallway_hint_count: int = DEFAULT_MAX_HALLWAY_HINT_COUNT
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "min_x", _validated_finite_number("min_x", self.min_x))
-        object.__setattr__(self, "max_x", _validated_finite_number("max_x", self.max_x))
-        object.__setattr__(self, "min_y", _validated_finite_number("min_y", self.min_y))
-        object.__setattr__(self, "max_y", _validated_finite_number("max_y", self.max_y))
-        object.__setattr__(
-            self,
-            "grid_resolution",
-            _validated_finite_number("grid_resolution", self.grid_resolution),
-        )
-
-        if self.min_x > self.max_x:
-            raise ValueError("min_x cannot be greater than max_x.")
-        if self.min_y > self.max_y:
-            raise ValueError("min_y cannot be greater than max_y.")
-        if self.grid_resolution <= 0:
-            raise ValueError("grid_resolution must be greater than zero.")
-
-        _validate_positive_integer("trial_count", self.trial_count)
-        _validate_positive_integer(
-            "min_hallway_hint_count",
-            self.min_hallway_hint_count,
-        )
-        _validate_positive_integer(
-            "max_hallway_hint_count",
-            self.max_hallway_hint_count,
-        )
-
-        if self.min_hallway_hint_count > self.max_hallway_hint_count:
-            raise ValueError(
-                "min_hallway_hint_count cannot be greater than "
-                "max_hallway_hint_count."
-            )
-
-        if self.random_seed is not None:
-            if isinstance(self.random_seed, bool) or not isinstance(
-                self.random_seed,
-                int,
-            ):
-                raise TypeError("random_seed must be an integer or None.")
-
-
-CandidateEvaluator: TypeAlias = Callable[[tuple[CandidatePoint, ...]], float]
+CandidateEvaluator: TypeAlias = Callable[[CandidateMap], float]
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchInput:
-    """Complete input contract for one candidate-search operation or session."""
+    """Processing input and execution dependency for one Candidate Search.
+
+    ``grid`` and ``hallway_room_count_range`` describe the prepared floor-plan
+    operation. ``config`` controls how Candidate Search performs that operation.
+    All possible hallway room targets must be supplied. Each trial selects one
+    global hallway count and activates that many hallway targets. Every active
+    target receives exactly one point.
+    """
 
     targets: tuple[CandidateSearchTarget, ...]
-    settings: CandidateSearchSettings
+    grid: ResolvedCandidateGrid
+    hallway_room_count_range: HallwayRoomCountRange
     evaluator: CandidateEvaluator
+    config: CandidateSearchConfig
 
     def __post_init__(self) -> None:
         normalized_targets = tuple(self.targets)
         if not normalized_targets:
             raise ValueError("At least one candidate search target is required.")
-
-        for target in normalized_targets:
-            if not isinstance(target, CandidateSearchTarget):
-                raise TypeError("Every target must be a CandidateSearchTarget instance.")
+        if any(
+            not isinstance(target, CandidateSearchTarget)
+            for target in normalized_targets
+        ):
+            raise TypeError("Every target must be a CandidateSearchTarget instance.")
 
         room_ids = [target.room_id for target in normalized_targets]
         duplicate_room_ids = _find_duplicate_room_ids(room_ids)
@@ -158,120 +75,178 @@ class CandidateSearchInput:
             raise ValueError(
                 f"Candidate search target room IDs must be unique: {formatted_ids}"
             )
-
-        if not isinstance(self.settings, CandidateSearchSettings):
-            raise TypeError("settings must be a CandidateSearchSettings instance.")
+        if not isinstance(self.grid, ResolvedCandidateGrid):
+            raise TypeError("grid must be a ResolvedCandidateGrid instance.")
+        if not isinstance(self.hallway_room_count_range, HallwayRoomCountRange):
+            raise TypeError(
+                "hallway_room_count_range must be a HallwayRoomCountRange instance."
+            )
         if not callable(self.evaluator):
             raise TypeError("evaluator must be callable.")
+        if not isinstance(self.config, CandidateSearchConfig):
+            raise TypeError("config must be a CandidateSearchConfig instance.")
 
+        if self.grid.node_count > self.config.max_grid_node_count:
+            raise ValueError(
+                "Prepared candidate grid contains "
+                f"{self.grid.node_count} nodes, exceeding "
+                f"max_grid_node_count={self.config.max_grid_node_count}."
+            )
+        if self.grid.interior_node_count < 1:
+            raise ValueError(
+                "Prepared candidate grid must contain at least one non-edge "
+                "hint-point node."
+            )
+
+        hallway_target_count = sum(target.is_hallway for target in normalized_targets)
+        expected_hallway_target_count = self.hallway_room_count_range.maximum
+        if hallway_target_count != expected_hallway_target_count:
+            raise ValueError(
+                "The number of hallway targets must equal the prepared maximum "
+                "hallway room count: "
+                f"expected {expected_hallway_target_count}, received "
+                f"{hallway_target_count}."
+            )
+
+        non_hallway_count = len(normalized_targets) - hallway_target_count
+        maximum_point_count = non_hallway_count + expected_hallway_target_count
+        if maximum_point_count > self.grid.interior_node_count:
+            raise ValueError(
+                "Candidate search may request up to "
+                f"{maximum_point_count} room points but the prepared grid contains "
+                f"only {self.grid.interior_node_count} non-edge nodes."
+            )
         object.__setattr__(self, "targets", normalized_targets)
+
+    @property
+    def hallway_targets(self) -> tuple[CandidateSearchTarget, ...]:
+        return tuple(target for target in self.targets if target.is_hallway)
+
+    @property
+    def non_hallway_targets(self) -> tuple[CandidateSearchTarget, ...]:
+        return tuple(target for target in self.targets if not target.is_hallway)
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateSuggestion:
-    """Unscored candidate points produced by one Optuna trial."""
+    """One valid, non-overlapping candidate produced by an Optuna trial."""
 
     trial_number: int
-    points: tuple[CandidatePoint, ...]
+    candidate: CandidateMap
 
     def __post_init__(self) -> None:
         _validate_non_negative_integer("trial_number", self.trial_number)
-        object.__setattr__(self, "points", _validated_candidate_points(self.points))
+        if not isinstance(self.candidate, CandidateMap):
+            raise TypeError("candidate must be a CandidateMap instance.")
+
+    @property
+    def points(self) -> tuple[CandidatePoint, ...]:
+        return self.candidate.points
+
+    @property
+    def grid(self) -> ResolvedCandidateGrid:
+        return self.candidate.grid
+
+    @property
+    def hallway_room_count(self) -> int:
+        return sum(point.room_type is RoomType.HALLWAY for point in self.points)
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateTrialResult:
-    """The points and score produced by one completed candidate-search trial."""
+    """Candidate and score produced by one completed search trial."""
 
     trial_number: int
-    points: tuple[CandidatePoint, ...]
+    candidate: CandidateMap
     score: float
     completed_trials: int
 
     def __post_init__(self) -> None:
         _validate_non_negative_integer("trial_number", self.trial_number)
-
-        normalized_points = _validated_candidate_points(self.points)
-        numeric_score = _validated_finite_number("score", self.score)
-
+        if not isinstance(self.candidate, CandidateMap):
+            raise TypeError("candidate must be a CandidateMap instance.")
+        object.__setattr__(self, "score", _validated_finite_number("score", self.score))
         _validate_positive_integer("completed_trials", self.completed_trials)
 
-        object.__setattr__(self, "points", normalized_points)
-        object.__setattr__(self, "score", numeric_score)
+    @property
+    def points(self) -> tuple[CandidatePoint, ...]:
+        return self.candidate.points
+
+    @property
+    def grid(self) -> ResolvedCandidateGrid:
+        return self.candidate.grid
+
+    @property
+    def hallway_room_count(self) -> int:
+        return sum(point.room_type is RoomType.HALLWAY for point in self.points)
 
 
 @dataclass(frozen=True, slots=True)
 class CandidateSearchResult:
     """Best candidate arrangement discovered by a completed search."""
 
-    points: tuple[CandidatePoint, ...]
+    candidate: CandidateMap
     score: float
     completed_trials: int
 
     def __post_init__(self) -> None:
-        normalized_points = _validated_candidate_points(self.points)
-        numeric_score = _validated_finite_number("score", self.score)
-
+        if not isinstance(self.candidate, CandidateMap):
+            raise TypeError("candidate must be a CandidateMap instance.")
+        object.__setattr__(self, "score", _validated_finite_number("score", self.score))
         _validate_positive_integer("completed_trials", self.completed_trials)
 
-        object.__setattr__(self, "points", normalized_points)
-        object.__setattr__(self, "score", numeric_score)
+    @property
+    def points(self) -> tuple[CandidatePoint, ...]:
+        return self.candidate.points
+
+    @property
+    def grid(self) -> ResolvedCandidateGrid:
+        return self.candidate.grid
+
+    @property
+    def hallway_room_count(self) -> int:
+        return sum(point.room_type is RoomType.HALLWAY for point in self.points)
 
 
-def _validated_candidate_points(
-    points: tuple[CandidatePoint, ...],
-) -> tuple[CandidatePoint, ...]:
-    normalized_points = tuple(points)
-    if not normalized_points:
-        raise ValueError("Candidate result must contain at least one point.")
+@dataclass(frozen=True, slots=True)
+class CandidateSearchDetails:
+    """DEBUG-only grid and Optuna trial information."""
 
-    for point in normalized_points:
-        if not isinstance(point, CandidatePoint):
-            raise TypeError("Every result point must be a CandidatePoint instance.")
+    grid: ResolvedCandidateGrid
+    optuna_trial_count: int
+    completed_trial_count: int
 
-    points_by_room_id: dict[RoomId, list[CandidatePoint]] = defaultdict(list)
-    for point in normalized_points:
-        points_by_room_id[point.room_id].append(point)
-
-    for room_id, room_points in points_by_room_id.items():
-        if len(room_points) == 1:
-            continue
-
-        if any(point.room_type is not RoomType.HALLWAY for point in room_points):
-            raise ValueError(
-                "Only hallway rooms may contain multiple candidate points: "
-                f"{room_id}"
-            )
-
-        hint_indices = [point.hint_index for point in room_points]
-        if len(set(hint_indices)) != len(hint_indices):
-            raise ValueError(
-                f"Hallway candidate hint indexes must be unique for room '{room_id}'."
-            )
-
-    return normalized_points
+    def __post_init__(self) -> None:
+        if not isinstance(self.grid, ResolvedCandidateGrid):
+            raise TypeError("grid must be a ResolvedCandidateGrid instance.")
+        _validate_non_negative_integer("optuna_trial_count", self.optuna_trial_count)
+        _validate_non_negative_integer(
+            "completed_trial_count", self.completed_trial_count
+        )
 
 
 def _validated_finite_number(field_name: str, value: object) -> float:
     if isinstance(value, bool):
         raise TypeError(f"{field_name} must be numeric, not boolean.")
-
     try:
         numeric_value = float(cast(Any, value))
     except (TypeError, ValueError) as exc:
         raise TypeError(f"{field_name} must be numeric.") from exc
-
     if not math.isfinite(numeric_value):
         raise ValueError(f"{field_name} must be finite.")
-
     return numeric_value
 
 
-def _validate_positive_integer(field_name: str, value: object) -> None:
+def _validate_positive_integer(
+    field_name: str,
+    value: object,
+    *,
+    minimum: int = 1,
+) -> None:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"{field_name} must be an integer.")
-    if value <= 0:
-        raise ValueError(f"{field_name} must be greater than zero.")
+    if value < minimum:
+        raise ValueError(f"{field_name} must be at least {minimum}.")
 
 
 def _validate_non_negative_integer(field_name: str, value: object) -> None:
@@ -284,11 +259,9 @@ def _validate_non_negative_integer(field_name: str, value: object) -> None:
 def _find_duplicate_room_ids(room_ids: list[RoomId]) -> set[RoomId]:
     seen: set[RoomId] = set()
     duplicates: set[RoomId] = set()
-
     for room_id in room_ids:
         if room_id in seen:
             duplicates.add(room_id)
         else:
             seen.add(room_id)
-
     return duplicates

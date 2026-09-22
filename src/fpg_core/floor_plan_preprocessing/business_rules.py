@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import replace
 
-from ..types import RoomType
+from ..domain import RoomType
 from .config import (
     ExcessAttachedBathroomPolicy,
     PreprocessingPolicy,
@@ -43,7 +43,10 @@ def _select_majority_size(
 
 
 def apply_business_rules(
-    request: NormalizedRequest, policy: PreprocessingPolicy
+    request: NormalizedRequest,
+    policy: PreprocessingPolicy,
+    *,
+    collect_details: bool,
 ) -> RuledRequest:
     decisions = list(request.room_decisions)
     defaults = list(request.applied_defaults)
@@ -77,7 +80,7 @@ def apply_business_rules(
 
     used_ids = {room.id for room in sanitized}
     next_index = max((room.request_index for room in sanitized), default=-1) + 1
-    for _ in range(policy.hallway_count):
+    for _ in range(policy.max_hallway_room_count):
         room_id = _next_available_id("hallway", used_ids)
         hallway = NormalizedRoom(
             room_id,
@@ -89,10 +92,16 @@ def apply_business_rules(
         next_index += 1
         used_ids.add(room_id)
         sanitized.append(hallway)
-        decisions.append(
-            RoomDecision(room_id, RoomType.HALLWAY, "derived", "hallway policy")
-        )
-        defaults.append(f"derived hallway '{room_id}'")
+        if collect_details:
+            decisions.append(
+                RoomDecision(
+                    room_id,
+                    RoomType.HALLWAY,
+                    "derived",
+                    "candidate hallway room capacity",
+                )
+            )
+            defaults.append(f"derived candidate hallway room '{room_id}'")
 
     selected_size = _select_majority_size(tuple(sanitized), policy)
     normalized_rooms = tuple(
@@ -102,6 +111,8 @@ def apply_business_rules(
         for room in sanitized
     )
     return RuledRequest(
+        raw_max_width=request.raw_max_width,
+        raw_max_length=request.raw_max_length,
         max_width=request.max_width,
         max_length=request.max_length,
         aspect_ratio=request.aspect_ratio,

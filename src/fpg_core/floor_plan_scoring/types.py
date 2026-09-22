@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import NewType
 
@@ -88,6 +88,3 @@ class FloorPlanScoringResult:
     total_score: float
     passed_critical: bool
     critical_failure: ScoreFinding | None
-    group_results: tuple[ScoringGroupResult, ...]
-    evaluator_results: tuple[EvaluatorExecutionResult, ...]
-    findings: tuple[ScoreFinding, ...] = field(default_factory=tuple)

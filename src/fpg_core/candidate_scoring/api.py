@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+__all__ = [
+    "evaluate_candidate",
+]
+
+from ..domain import ExecutionMode
 from .config import ScoringConfig
 from .context import ScoringContextFactory
 from .manager import CandidateScoreManager
@@ -13,6 +18,7 @@ def evaluate_candidate(
     registry: EvaluatorRegistry,
     config: ScoringConfig,
     context_factory: ScoringContextFactory | None = None,
+    mode: ExecutionMode = ExecutionMode.PRODUCTION,
 ) -> ScoringResult:
     """Public one-shot API for candidate scoring."""
 
@@ -21,4 +27,4 @@ def evaluate_candidate(
         config=config,
         context_factory=context_factory,
     )
-    return manager.score(scoring_input)
+    return manager.score(scoring_input, mode=mode)

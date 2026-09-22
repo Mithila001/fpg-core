@@ -3,7 +3,7 @@ class OpeningGenerationError(Exception):
 
 
 class OpeningConfigurationError(OpeningGenerationError):
-    """Raised for programmer-facing profile or registry errors."""
+    """Raised for programmer-facing configuration or registry errors."""
 
 
 class OpeningInputError(OpeningGenerationError):

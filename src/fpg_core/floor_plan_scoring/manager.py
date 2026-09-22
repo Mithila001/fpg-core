@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from .config import EvaluatorRule, ScoringGroupRule, ScoringProfile
+from ..domain import ExecutionMode, FloorPlan, FloorPlanGenerationSpec
+from .config import EvaluatorRule, FloorPlanScoringConfig, ScoringGroupRule
 from .context import ScoringContext, ScoringContextFactory
-from .domain import FloorPlan, FloorPlanGenerationSpec
+from .contracts import FloorPlanScoringDetails
 from .exceptions import (
     EvaluatorContractError,
     EvaluatorExecutionError,
@@ -22,27 +23,33 @@ from .types import (
     ScoreMetric,
     ScoringGroupResult,
 )
-from .validation import validate_evaluator_result, validate_profile
+from .validation import validate_config, validate_evaluator_result
 
 
 class FloorPlanScoreManager:
     def __init__(
         self,
         registry: EvaluatorRegistry,
-        profile: ScoringProfile,
+        config: FloorPlanScoringConfig,
         context_factory: ScoringContextFactory | None = None,
     ) -> None:
         self._registry = registry
-        self._profile = profile
+        self._config = config
         self._context_factory = context_factory or ScoringContextFactory()
-        validate_profile(profile, registry)
+        validate_config(config, registry)
 
     def score(
         self,
         floor_plan: FloorPlan,
         specification: FloorPlanGenerationSpec,
-    ) -> FloorPlanScoringResult:
-        context = self._context_factory.build(floor_plan, specification)
+        *,
+        mode: ExecutionMode,
+    ) -> tuple[FloorPlanScoringResult, FloorPlanScoringDetails | None]:
+        context = self._context_factory.build(
+            floor_plan,
+            specification,
+            mode=mode,
+        )
         groups = self._ordered_groups()
         rules_by_group = {
             str(group.key): self._ordered_rules(group) for group in groups
@@ -94,27 +101,34 @@ class FloorPlanScoreManager:
                         contribution=0.0,
                     )
                 )
+            failure_metrics = (
+                ScoreMetric(
+                    "critical_group_score", critical_result.raw_score or 0.0
+                ),
+                ScoreMetric(
+                    "earned_critical_contribution", critical_result.contribution
+                ),
+            )
             failure = ScoreFinding(
                 code="CRITICAL_SCORING_FAILED",
                 message="One or more critical floor-plan evaluators failed.",
                 severity=FindingSeverity.ERROR,
-                metrics=(
-                    ScoreMetric(
-                        "critical_group_score", critical_result.raw_score or 0.0
-                    ),
-                    ScoreMetric(
-                        "earned_critical_contribution", critical_result.contribution
-                    ),
-                ),
             )
-            return FloorPlanScoringResult(
+            result = FloorPlanScoringResult(
                 total_score=_clamp_total(critical_result.contribution),
                 passed_critical=False,
                 critical_failure=failure,
-                group_results=tuple(critical_group_results),
-                evaluator_results=tuple(critical_evaluator_results),
-                findings=(failure,),
             )
+            details = (
+                FloorPlanScoringDetails(
+                    group_results=tuple(critical_group_results),
+                    evaluator_results=tuple(critical_evaluator_results),
+                    findings=(replace(failure, metrics=failure_metrics),),
+                )
+                if mode is ExecutionMode.DEBUG
+                else None
+            )
+            return result, details
 
         for group in groups:
             if group.key == CRITICAL_GROUP:
@@ -147,13 +161,20 @@ class FloorPlanScoreManager:
             group_results.append(group_result)
 
         total_score = _clamp_total(sum(group.contribution for group in group_results))
-        return FloorPlanScoringResult(
+        result = FloorPlanScoringResult(
             total_score=total_score,
             passed_critical=True,
             critical_failure=None,
-            group_results=tuple(group_results),
-            evaluator_results=tuple(evaluator_results),
         )
+        details = (
+            FloorPlanScoringDetails(
+                group_results=tuple(group_results),
+                evaluator_results=tuple(evaluator_results),
+            )
+            if mode is ExecutionMode.DEBUG
+            else None
+        )
+        return result, details
 
     def _execute(
         self,
@@ -182,6 +203,12 @@ class FloorPlanScoreManager:
             assert result.score is not None
             assert rule.minimum_score is not None
             passed_threshold = result.score >= rule.minimum_score
+        debug_enabled = context.mode is ExecutionMode.DEBUG
+        findings = (
+            result.findings
+            if debug_enabled
+            else tuple(replace(finding, metrics=()) for finding in result.findings)
+        )
         return EvaluatorExecutionResult(
             evaluator_key=rule.key,
             group_key=rule.group_key,
@@ -190,9 +217,11 @@ class FloorPlanScoreManager:
             configured_weight=rule.weight,
             threshold=rule.minimum_score,
             passed_threshold=passed_threshold,
-            findings=result.findings,
-            metrics=result.metrics,
-            visualization_payload=result.visualization_payload,
+            findings=findings,
+            metrics=result.metrics if debug_enabled else (),
+            visualization_payload=(
+                result.visualization_payload if debug_enabled else None
+            ),
         )
 
     @staticmethod
@@ -265,7 +294,7 @@ class FloorPlanScoreManager:
 
     def _ordered_groups(self) -> list[ScoringGroupRule]:
         return sorted(
-            (group for group in self._profile.groups if group.enabled),
+            (group for group in self._config.groups if group.enabled),
             key=lambda group: (group.order, str(group.key)),
         )
 
@@ -273,7 +302,7 @@ class FloorPlanScoreManager:
         return sorted(
             (
                 rule
-                for rule in self._profile.evaluators
+                for rule in self._config.evaluators
                 if rule.enabled and rule.group_key == group.key
             ),
             key=lambda rule: (rule.order, str(rule.key)),

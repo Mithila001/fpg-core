@@ -4,7 +4,7 @@ import math
 import re
 from collections import Counter
 
-from ..types import ConstraintStrength, MatchPolicy, RoomType
+from ..domain import ConstraintStrength, MatchPolicy, RoomType
 from .config import PreprocessingConfig, canonical_aspect_ratio
 from .context import (
     NormalizedRequest,
@@ -88,13 +88,61 @@ def _parse_aspect_ratio(value: float | str, config: PreprocessingConfig) -> floa
     return canonical
 
 
+def _floor_project_unit_limit(
+    field_name: str,
+    value: object,
+    *,
+    collect_details: bool,
+    records: list[NormalizationRecord],
+) -> tuple[float, int]:
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise NormalizationError(f"{field_name} must be numeric, not boolean")
+    try:
+        raw = float(value)
+    except (TypeError, ValueError) as exc:
+        raise NormalizationError(f"{field_name} must be numeric") from exc
+    if not math.isfinite(raw) or raw <= 0:
+        raise NormalizationError(f"{field_name} must be positive and finite")
+    normalized = math.floor(raw)
+    if normalized <= 0:
+        raise NormalizationError(
+            f"{field_name} becomes non-positive after whole-unit normalization"
+        )
+    if collect_details and not math.isclose(
+        raw, normalized, rel_tol=0.0, abs_tol=1e-12
+    ):
+        records.append(
+            NormalizationRecord(
+                field=field_name,
+                original=str(raw),
+                normalized=str(normalized),
+            )
+        )
+    return raw, normalized
+
+
 def normalize_request(
-    request: PreprocessingRequest, policy: PreprocessingConfig
+    request: PreprocessingRequest,
+    policy: PreprocessingConfig,
+    *,
+    collect_details: bool,
 ) -> NormalizedRequest:
     ratio = _parse_aspect_ratio(request.aspect_ratio, policy)
     records: list[NormalizationRecord] = []
     decisions: list[RoomDecision] = []
     defaults: list[str] = []
+    raw_max_width, max_width = _floor_project_unit_limit(
+        "floor_limits.max_width",
+        request.floor_limits.max_width,
+        collect_details=collect_details,
+        records=records,
+    )
+    raw_max_length, max_length = _floor_project_unit_limit(
+        "floor_limits.max_length",
+        request.floor_limits.max_length,
+        collect_details=collect_details,
+        records=records,
+    )
 
     supplied_ids = {
         room.id.strip()
@@ -119,19 +167,21 @@ def normalize_request(
                 room_id = f"{room_type.value}_{generated_counts[room_type]}"
                 if room_id not in supplied_ids and room_id not in used_ids:
                     break
-            defaults.append(f"generated room id '{room_id}'")
+            if collect_details:
+                defaults.append(f"generated room id '{room_id}'")
 
         name = room.name.strip() if isinstance(room.name, str) else ""
         if not name:
             name = room_id.replace("_", " ").title()
-            defaults.append(f"generated room name '{name}' for '{room_id}'")
+            if collect_details:
+                defaults.append(f"generated room name '{name}' for '{room_id}'")
 
         requested_size = None
         if room.requested_size is not None:
             requested_size = _normalize_size(room.requested_size)
             if not requested_size:
                 requested_size = None
-            elif str(room.requested_size).strip() != requested_size:
+            elif collect_details and str(room.requested_size).strip() != requested_size:
                 records.append(
                     NormalizationRecord(
                         "requested_size", str(room.requested_size), requested_size
@@ -150,8 +200,10 @@ def normalize_request(
         used_ids.add(room_id)
 
     return NormalizedRequest(
-        max_width=float(request.floor_limits.max_width),
-        max_length=float(request.floor_limits.max_length),
+        raw_max_width=raw_max_width,
+        raw_max_length=raw_max_length,
+        max_width=max_width,
+        max_length=max_length,
         aspect_ratio=ratio,
         rooms=tuple(rooms),
         normalizations=tuple(records),

@@ -4,9 +4,17 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, TypeAlias
 
-from ..types import FloorPlan, FloorPlanGenerationSpec, Polygon, RoomId
+from ..domain import (
+    ExecutionMode,
+    FeatureExecution,
+    FloorPlan,
+    FloorPlanGenerationSpec,
+    Polygon,
+    RoomId,
+)
+from .config import FloorPlanPostProcessingConfig, NumericPolicy
 
 
 class PipelineStatus(str, Enum):
@@ -20,12 +28,6 @@ class ProcessorStatus(str, Enum):
     NOT_APPLICABLE = "not_applicable"
     FAILED = "failed"
     SKIPPED = "skipped"
-
-
-@dataclass(frozen=True)
-class NumericPolicy:
-    tolerance: float = 1e-6
-    grid_size: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -55,30 +57,21 @@ class ProcessorExecution:
 
 
 @dataclass(frozen=True)
-class ProcessorUse:
-    processor_id: str
-    config: object
-    required: bool = False
-    validate_after: bool = False
-
-
-@dataclass(frozen=True)
-class PostProcessingProfile:
-    name: str
-    processors: tuple[ProcessorUse, ...]
-    numeric: NumericPolicy = field(default_factory=NumericPolicy)
-    reject_existing_openings: bool = True
-
-
-@dataclass(frozen=True)
 class PostProcessingRequest:
+    """Processing input for one post-processing execution.
+
+    ``floor_plan`` and ``specification`` describe what is being processed.
+    ``config`` controls how the post-processing pipeline performs that work.
+    """
+
     floor_plan: FloorPlan
-    profile: PostProcessingProfile
+    config: FloorPlanPostProcessingConfig
     specification: FloorPlanGenerationSpec | None = None
 
 
 @dataclass(frozen=True)
 class PostProcessingContext:
+    mode: ExecutionMode
     specification: FloorPlanGenerationSpec | None
     floor_boundary: Polygon
     numeric: NumericPolicy
@@ -89,8 +82,18 @@ class PostProcessingContext:
 class PostProcessingResult:
     status: PipelineStatus
     floor_plan: FloorPlan
-    executions: tuple[ProcessorExecution, ...]
     failure: ProcessingFailure | None = None
+
+
+@dataclass(frozen=True)
+class PostProcessingDetails:
+    executions: tuple[ProcessorExecution, ...]
+
+
+PostProcessingExecution: TypeAlias = FeatureExecution[
+    PostProcessingResult,
+    PostProcessingDetails,
+]
 
 
 class FloorPlanProcessor(ABC):

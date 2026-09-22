@@ -1,105 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass, field, replace
-from types import MappingProxyType
-from typing import Any
+from dataclasses import dataclass
 
-from .config import PreparationConfig, SeedPolicy, SeedSource, SolverConfig
-from .domain import RoomType
+from ..domain import RoomType
+from .config import (
+    FloorPlanSolverConfig,
+    HardConstraintUse,
+    PreparationConfig,
+    SeedPolicy,
+    SeedSource,
+    SoftConstraintUse,
+    SolverConfig,
+)
 from .exceptions import InvalidProfileError
 
-
-def _freeze(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return MappingProxyType({key: _freeze(item) for key, item in value.items()})
-    if isinstance(value, (tuple, list)):
-        return tuple(_freeze(item) for item in value)
-    return value
-
-
-@dataclass(frozen=True, slots=True)
-class HardConstraintUse:
-    key: str
-    settings: Mapping[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not self.key.strip():
-            raise InvalidProfileError("Hard constraint key cannot be empty")
-        object.__setattr__(self, "settings", _freeze(self.settings))
-
-
-@dataclass(frozen=True, slots=True)
-class SoftConstraintUse:
-    key: str
-    weight: int
-    settings: Mapping[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not self.key.strip():
-            raise InvalidProfileError("Soft constraint key cannot be empty")
-        if self.weight <= 0:
-            raise InvalidProfileError(
-                f"Soft constraint '{self.key}' must have a positive weight"
-            )
-        object.__setattr__(self, "settings", _freeze(self.settings))
-
-
-@dataclass(frozen=True, slots=True)
-class GenerationProfile:
-    """Complete behavior configuration for one CP-SAT generation stage."""
-
-    name: str
-    hard_constraints: tuple[HardConstraintUse, ...]
-    soft_constraints: tuple[SoftConstraintUse, ...]
-    solver: SolverConfig = field(default_factory=SolverConfig)
-    preparation: PreparationConfig = field(default_factory=PreparationConfig)
-    seed: SeedPolicy = field(default_factory=SeedPolicy)
-
-    def __post_init__(self) -> None:
-        if not self.name.strip():
-            raise InvalidProfileError("Profile name cannot be empty")
-        self._validate_unique_keys(self.hard_constraints, "hard")
-        self._validate_unique_keys(self.soft_constraints, "soft")
-
-    @staticmethod
-    def _validate_unique_keys(
-        items: tuple[HardConstraintUse | SoftConstraintUse, ...],
-        category: str,
-    ) -> None:
-        keys = [item.key for item in items]
-        duplicates = sorted({key for key in keys if keys.count(key) > 1})
-        if duplicates:
-            joined = ", ".join(duplicates)
-            raise InvalidProfileError(
-                f"Profile contains duplicate {category} constraints: {joined}"
-            )
-
-    def without_constraints(self, *keys: str) -> GenerationProfile:
-        removed = set(keys)
-        return replace(
-            self,
-            hard_constraints=tuple(
-                use for use in self.hard_constraints if use.key not in removed
-            ),
-            soft_constraints=tuple(
-                use for use in self.soft_constraints if use.key not in removed
-            ),
-        )
-
-    def with_hard_constraints(self, *uses: HardConstraintUse) -> GenerationProfile:
-        remove_keys = {use.key for use in uses}
-        current = tuple(
-            use for use in self.hard_constraints if use.key not in remove_keys
-        )
-        return replace(self, hard_constraints=current + tuple(uses))
-
-    def with_soft_constraints(self, *uses: SoftConstraintUse) -> GenerationProfile:
-        remove_keys = {use.key for use in uses}
-        current = tuple(
-            use for use in self.soft_constraints if use.key not in remove_keys
-        )
-        return replace(self, soft_constraints=current + tuple(uses))
+# Backward-compatible name for callers that previously treated a profile as
+# the complete solver configuration. New code should use FloorPlanSolverConfig.
+GenerationProfile = FloorPlanSolverConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +35,11 @@ class DefaultProfileSettings:
     refinement_max_time_seconds: float = 2.0
     refinement_position_tolerance: float = 10
     refinement_size_tolerance: float = 10
+    max_hallway_shared_wall: float = 12.0
+    hallway_efficiency_weight: int = 1
+    hallway_area_penalty_multiplier: int = 1
+    hallway_preferred_max_length: float | None = 40.0
+    hallway_excess_length_penalty_multiplier: int = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -196,6 +118,13 @@ def _default_hard_constraints(
             },
         ),
         HardConstraintUse(
+            "hallway_shared_wall",
+            {
+                "hallway_room_types": (RoomType.HALLWAY,),
+                "maximum_shared_wall": settings.max_hallway_shared_wall,
+            },
+        ),
+        HardConstraintUse(
             "front_anchor",
             {
                 "anchor_room_types": (
@@ -237,6 +166,21 @@ def _default_hard_constraints(
     )
 
 
+def _hallway_efficiency_use(settings: DefaultProfileSettings) -> SoftConstraintUse:
+    return SoftConstraintUse(
+        "hallway_efficiency",
+        weight=settings.hallway_efficiency_weight,
+        settings={
+            "hallway_room_types": (RoomType.HALLWAY,),
+            "area_penalty_multiplier": settings.hallway_area_penalty_multiplier,
+            "preferred_max_length": settings.hallway_preferred_max_length,
+            "excess_length_penalty_multiplier": (
+                settings.hallway_excess_length_penalty_multiplier
+            ),
+        },
+    )
+
+
 def build_default_profiles(
     settings: DefaultProfileSettings | None = None,
 ) -> ProfileCatalog:
@@ -262,6 +206,7 @@ def build_default_profiles(
                 },
             ),
             SoftConstraintUse("dead_space", weight=3),
+            _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=2),
             SoftConstraintUse(
                 "kitchen_back_exposure",
@@ -301,6 +246,7 @@ def build_default_profiles(
                 },
             ),
             SoftConstraintUse("dead_space", weight=4),
+            _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=3),
             SoftConstraintUse(
                 "kitchen_back_exposure",
@@ -334,6 +280,7 @@ def build_default_profiles(
                 settings={"position_multiplier": 2, "size_multiplier": 2},
             ),
             SoftConstraintUse("dead_space", weight=6),
+            _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=4),
             SoftConstraintUse(
                 "kitchen_back_exposure",
