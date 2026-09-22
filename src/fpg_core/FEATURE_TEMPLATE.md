@@ -111,43 +111,72 @@ Equivalent typed structures are allowed when more appropriate to the feature.
 - Shared `FeatureExecution`, `ExecutionMode`, and `ExecutionMetadata` types belong in `fpg_core.domain`.
 - Feature-specific result and details types remain inside the feature.
 - In `PRODUCTION`, avoid collecting expensive R&D details.
-- Each feature README must document what its `DEBUG` mode captures.
+- Consumer-visible `DEBUG` behavior must be documented in `docs/feature_documentations/<feature>.md`.
+- Do not silently break an existing public API only to make an older feature match this template. Treat legacy inconsistencies as migration work that requires an intentional compatibility/versioning decision.
 
-## Feature README Structure
+## Internal Feature README
 
-Every feature README should use this structure:
+`src/fpg_core/<feature>/README.md` is an **internal development document**, not consumer documentation. It exists to preserve implementation context for maintainers and AI agents working inside `fpg-core`.
 
-```md
-# <Feature Name>
+Use it for information such as:
 
-<Brief explanation of the feature and its responsibility.>
+- feature responsibility and internal boundaries,
+- algorithm/model design,
+- important invariants,
+- implementation stages,
+- non-obvious numerical/geometry behavior,
+- internal extension design,
+- maintenance/R&D notes,
+- known implementation limitations or technical debt.
 
-## Guide
+Its structure may follow the needs of the feature. Do not duplicate the complete consumer API contract into the internal README.
 
-### Public API
-<Supported operations and import paths.>
+## Consumer Documentation Obligation
 
-### Inputs
-<Required structures, optional configuration, execution modes, important fields, and units.>
+Every public feature must have one canonical consumer document at:
 
-### Outputs
-<Result, R&D details, metadata, statuses, and important fields.>
-
-### Errors and Expected Behaviour
-<Exceptions, failure results, mutation, determinism, and side effects.>
-
-### Extension Points
-<Optional registries, profiles, evaluators, processors, or constraints.>
-
-## AI Instructions
-- Keep this README synchronized with public behaviour.
-- Update examples when APIs or contracts change.
-- Document changes to inputs, outputs, and execution-mode details.
-- Do not document private implementation as a supported API.
-- Do not import another feature's internal modules.
+```text
+docs/feature_documentations/<feature>.md
 ```
 
-Sections that do not apply may be omitted.
+Package-wide consumer conventions and shared domain contracts belong in:
+
+```text
+docs/API_GUIDE.md
+```
+
+The mandatory maintenance rules are defined in:
+
+```text
+docs/DOCUMENTATION_STANDARD.md
+```
+
+When a public feature changes, updating the corresponding consumer document is part of the implementation. A change is incomplete if active public code and consumer documentation disagree.
+
+At minimum, the consumer feature document must keep synchronized:
+
+- purpose and supported use,
+- preferred public imports and operation signatures,
+- exact input/configuration contracts, defaults, units, and validation,
+- exact output/status variants and `PRODUCTION`/`DEBUG` behavior,
+- consumer-observable errors, warnings, findings, and diagnostics,
+- realistic public-API examples,
+- feature-root public export inventory,
+- compatibility/deprecation/migration notes.
+
+Do not treat the internal feature README as a substitute for this document.
+
+### AI workflow
+
+When AI modifies or creates a public feature:
+
+1. Read this feature template.
+2. Read `docs/DOCUMENTATION_STANDARD.md`.
+3. Inspect the feature's current public exports, API, contracts, config, exceptions, and relevant tests.
+4. Preserve public compatibility unless a breaking change is deliberate.
+5. Update the feature consumer document when observable public behavior changes.
+6. Update `docs/API_GUIDE.md` when shared/package-wide behavior changes.
+7. Update `CHANGELOG.md` and version/migration information when compatibility is affected.
 
 ## Testing Rules
 

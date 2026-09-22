@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Documentation
+
+- Replaced the monolithic consumer package reference with `docs/API_GUIDE.md` plus one canonical consumer document per feature under `docs/feature_documentations/`.
+- Added `docs/DOCUMENTATION_STANDARD.md` with mandatory AI/maintainer rules for consumer-documentation completeness, API versioning, changelog/migration handling, and source synchronization.
+- Clarified that feature-local `src/fpg_core/<feature>/README.md` files are internal development notes rather than consumer API documentation.
+
 ### Breaking
 
 - Floor-plan solver, scoring, post-processing, and openings entry points now return mode-aware `FeatureExecution` values; normal results are available through `execution.result`.

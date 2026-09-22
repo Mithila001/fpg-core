@@ -56,14 +56,13 @@ Internal modules may evolve, but consumers should depend only on documented publ
 
 ## Types and configuration
 
-Use `fpg_core.types` as the organized shared domain-type layer. Keep types focused, explicit, and reusable across features.
+Use `fpg_core.domain` as the canonical shared domain-type layer. Keep types focused, explicit, and reusable across features.
 
 - Define a concept once; do not create slightly different duplicates in separate modules.
 - Prefer enums and typed dataclasses over magic strings and loosely shaped mappings.
 - Prefer frozen, immutable configuration objects.
 - Keep request-specific data separate from reusable configuration.
 - Pass only the relevant configuration section into a feature when possible.
-- Maintain the temporary `fpg_core.types_new` compatibility namespace until an intentional migration removes it.
 
 `FpgCoreConfig` is the top-level configuration contract. Consumer projects provide its values; `fpg-core` owns its structure and validation through `validate_fpg_core_config()`.
 
@@ -93,17 +92,21 @@ Do not treat legacy comments, old behavior-mapping notes, or historical tests as
 
 ## Documentation
 
-Keep consumer-facing documentation in `docs/` accurate and usable by projects that install this package.
+Consumer documentation is a public API contract, not optional cleanup after implementation.
 
-`docs/SERVER_INTEGRATION.md` is the primary integration guide and must be updated when changes affect:
+Before creating or changing a public feature, read:
 
-- installation or imports,
-- public APIs or result structures,
-- configuration construction or validation,
-- required consumer responsibilities,
-- migration or compatibility behavior.
+- `src/fpg_core/FEATURE_TEMPLATE.md` for feature architecture/public-boundary rules.
+- `docs/DOCUMENTATION_STANDARD.md` for the mandatory consumer-documentation and API-versioning workflow.
 
-Also update `README.md`, `CHANGELOG.md`, and relevant feature documentation when appropriate. Documentation should describe how to use the package, not expose unnecessary internal implementation details.
+Canonical consumer documentation is split into:
+
+- `docs/API_GUIDE.md` for package-wide conventions, shared domain contracts, execution behavior, compatibility, and versioning.
+- `docs/feature_documentations/<feature>.md` for the complete consumer contract of each public feature.
+
+`src/fpg_core/<feature>/README.md` files are internal development notes. They are not a substitute for consumer documentation.
+
+When observable public behavior changes, update the affected feature document in the same change. Update `docs/API_GUIDE.md` when shared/package-wide behavior changes, and update `CHANGELOG.md` plus migration/version information when compatibility is affected.
 
 ## Change checklist
 
@@ -113,5 +116,6 @@ Before completing a change, confirm:
 2. Public contracts remain stable or the breaking change is explicit.
 3. Shared types remain centralized and consistent.
 4. Configuration remains externally supplied and core-validated.
-5. Consumer documentation reflects observable changes.
-6. The solution remains clear, scalable, and no more complex than necessary.
+5. Consumer documentation reflects observable changes and follows `docs/DOCUMENTATION_STANDARD.md`.
+6. Version/changelog/migration information is synchronized when public compatibility changes.
+7. The solution remains clear, scalable, and no more complex than necessary.

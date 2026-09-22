@@ -4,13 +4,14 @@ Reusable Python domain contracts and algorithms for automated residential floor-
 
 ## Documentation
 
-- [Consumer feature reference](docs/PACKAGE_FEATURE_REFERENCE.md) documents every
-  feature independently, including public APIs, contracts, configuration, outputs,
-  errors, and examples.
-- [Install and verify](docs/INSTALL_AND_VERIFY.md) covers local installation and
-  package checks.
-- [Trial flow test 2](custom_test/trial_flow_test_2/README.md) demonstrates the
-  solver profiles, post-processing, openings, and final scoring with realistic JSON.
+Consumer documentation is intentionally separate from feature implementation notes:
+
+- [Consumer API guide](docs/API_GUIDE.md) covers package-wide conventions, shared contracts, execution modes, compatibility, and versioning.
+- [Feature documentation](docs/feature_documentations/README.md) contains one consumer usage document per public feature.
+- [Documentation standard](docs/DOCUMENTATION_STANDARD.md) defines the mandatory synchronization/versioning rules for maintainers and AI agents.
+- [`FEATURE_TEMPLATE.md`](src/fpg_core/FEATURE_TEMPLATE.md) defines the feature architecture conventions used inside the package.
+
+Internal `src/fpg_core/<feature>/README.md` files are development notes, not consumer API documentation.
 
 ## Install
 
@@ -31,6 +32,8 @@ python -m mypy src/fpg_core
 Use feature-level public modules:
 
 ```python
+from fpg_core.buildable_land import calculate_buildable_land
+from fpg_core.usable_land import find_usable_land
 from fpg_core.floor_plan_preprocessing import prepare_generation_input
 from fpg_core.candidate_search import search_candidates
 from fpg_core.candidate_circulation import refine_candidate_circulation
