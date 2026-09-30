@@ -70,8 +70,6 @@ def refine_candidate_circulation(
         **{key: HallwayRemovalReason.UNUSED for key in unused_keys},
         **{key: HallwayRemovalReason.CONSOLIDATED for key in consolidated_keys},
     }
-    removed_keys = set(removal_reasons)
-
     result = CandidateCirculationResult(
         candidate=CandidateMap(
             grid=validated.source.candidate.grid,

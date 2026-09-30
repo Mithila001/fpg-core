@@ -9,6 +9,7 @@ from custom_test.full_flow.scenario import (
     build_preprocessing_config,
     build_preprocessing_request,
 )
+
 from fpg_core.candidate_circulation import (
     CandidateCirculationInput,
     refine_candidate_circulation,
@@ -24,7 +25,10 @@ from fpg_core.candidate_search import (
     search_candidates,
 )
 from fpg_core.domain import ExecutionMode
-from fpg_core.floor_plan_preprocessing import PreprocessingInput, prepare_generation_input
+from fpg_core.floor_plan_preprocessing import (
+    PreprocessingInput,
+    prepare_generation_input,
+)
 
 
 def test_candidate_flow_public_contracts_connect() -> None:

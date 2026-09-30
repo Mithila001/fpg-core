@@ -5,7 +5,7 @@ from typing import Any
 
 from ortools.sat.python import cp_model
 
-from ..domain import FloorPlan, OpeningPurpose, OpeningType
+from ..domain import FloorPlan, OpeningPurpose, OpeningType, RoomId
 from .config import FloorPlanOpeningsConfig
 from .contracts import (
     OpeningDiagnostics,
@@ -59,7 +59,7 @@ def _issues(built: BuiltOpeningModel, solver: Any, solved: bool) -> tuple[Openin
         )
 
     required_types = set(built.context.config.policy.required_access_room_types)
-    incident_candidate_rooms = set()
+    incident_candidate_rooms: set[RoomId] = set()
     for item in built.context.all_variables:
         if item.demand.opening_type is not OpeningType.DOOR:
             continue

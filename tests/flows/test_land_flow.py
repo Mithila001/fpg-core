@@ -5,6 +5,7 @@ from custom_test.full_flow.scenario import (
     build_land_request,
     build_usable_land_config,
 )
+
 from fpg_core.buildable_land import BuildableLandInput, calculate_buildable_land
 from fpg_core.domain import ExecutionMode
 from fpg_core.usable_land import UsableLandInput, find_usable_land

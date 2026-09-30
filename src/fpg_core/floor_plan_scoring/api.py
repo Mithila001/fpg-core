@@ -47,12 +47,12 @@ from .evaluators import (
     LivingRoomBalanceEvaluator,
     LivingRoomBalanceSettings,
     RequiredAdjacencyEvaluator,
+    RequiredAdjacencySettings,
     RoomAreaAggregation,
     RoomSizeConsistencyEvaluator,
     RoomSizeConsistencySettings,
     RoomSizeRelationRule,
     RoomTypeConsistencyRule,
-    RequiredAdjacencySettings,
 )
 from .manager import FloorPlanScoreManager
 from .registry import EvaluatorRegistry

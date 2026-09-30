@@ -22,12 +22,14 @@ from fpg_core.floor_plan_post_processing import (
 )
 from fpg_core.floor_plan_scoring import (
     FloorPlanScoringInput,
-    create_default_config as create_default_scoring_config,
     score_floor_plan,
 )
+from fpg_core.floor_plan_scoring import (
+    create_default_config as create_default_scoring_config,
+)
 from fpg_core.floor_plan_solver import (
-    FloorPlanSolveRequest,
     FloorPlanSolverConfig,
+    FloorPlanSolveRequest,
     PreparationConfig,
     SolverConfig,
     generate_floor_plan,
