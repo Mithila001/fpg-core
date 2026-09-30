@@ -27,13 +27,7 @@ from fpg_core.candidate_circulation import CandidateCirculationInput, refine_can
 from fpg_core.candidate_scoring import CandidateScoringInput, create_default_registry, evaluate_candidate
 from fpg_core.candidate_search import CandidateSearchInput, build_candidate_search_targets, search_candidates
 from fpg_core.domain import ExecutionMode, OpeningPurpose, OpeningType, RoomType, RoomWidthAxis
-from fpg_core.floor_plan_preprocessing import (
-    FloorLimits,
-    PreprocessingInput,
-    PreprocessingRequest,
-    RequestedRoom,
-    prepare_generation_input,
-)
+from fpg_core.floor_plan_preprocessing import PreprocessingInput, prepare_generation_input
 from fpg_core.usable_land import UsableLandInput, find_usable_land
 
 from scenario import (
@@ -47,6 +41,7 @@ from scenario import (
     build_land_request,
     build_opening_config,
     build_preprocessing_config,
+    build_preprocessing_request,
     build_route_rules,
     build_solver_profiles,
     build_usable_land_config,
@@ -154,24 +149,6 @@ def record_step(
     )
     return result
 
-
-def build_preprocessing_request(usable_land) -> PreprocessingRequest:
-    return PreprocessingRequest(
-        floor_limits=FloorLimits(
-            max_width=float(usable_land.width),
-            max_length=float(usable_land.length),
-        ),
-        aspect_ratio="1:1",
-        rooms=(
-            RequestedRoom(RoomType.BEDROOM, id="bedroom-1", name="Bedroom 1", requested_size="regular"),
-            RequestedRoom(RoomType.BEDROOM, id="bedroom-2", name="Bedroom 2", requested_size="regular"),
-            RequestedRoom(RoomType.BATHROOM, id="bathroom-1", name="Common Bathroom", requested_size="regular"),
-            RequestedRoom(RoomType.LIVING_ROOM, id="living-room-1", name="Living Room", requested_size="regular"),
-            RequestedRoom(RoomType.KITCHEN, id="kitchen-1", name="Kitchen", requested_size="regular"),
-            RequestedRoom(RoomType.DINING_ROOM, id="dining-room-1", name="Dining Room", requested_size="regular"),
-            RequestedRoom(RoomType.VERANDA, id="veranda-1", name="Front Veranda", requested_size="regular"),
-        ),
-    )
 
 
 def evaluator_summary(result) -> dict[str, Any]:
@@ -384,7 +361,9 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
         )
         write_output(output_path, payload)
 
-        preprocessing_request = build_preprocessing_request(usable_execution.result)
+        preprocessing_request = build_preprocessing_request(
+            usable_execution.result.width, usable_execution.result.length
+        )
         payload["scenario"]["preprocessing_request"] = to_jsonable(preprocessing_request)
         preprocessing_execution = record_step(
             payload,

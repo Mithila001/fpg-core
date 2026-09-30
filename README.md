@@ -1,16 +1,13 @@
 # fpg-core
 
-Reusable Python domain contracts and algorithms for automated residential floor-plan generation.
+Reusable Python domain contracts and computational features for automated residential floor-plan generation.
 
 ## Documentation
 
-- [Consumer feature reference](docs/PACKAGE_FEATURE_REFERENCE.md) documents every
-  feature independently, including public APIs, contracts, configuration, outputs,
-  errors, and examples.
-- [Install and verify](docs/INSTALL_AND_VERIFY.md) covers local installation and
-  package checks.
-- [Trial flow test 2](custom_test/trial_flow_test_2/README.md) demonstrates the
-  solver profiles, post-processing, openings, and final scoring with realistic JSON.
+- [Consumer package reference](docs/PACKAGE_FEATURE_REFERENCE.md) - complete supported public API, contracts, modes, failures, defaults, and integration notes.
+- [Developer documentation](docs/README.md) - feature architecture, testing, and documentation-maintenance guides.
+- [Contributing and development](CONTRIBUTING.md) - normal local development workflow.
+- [Manual full-flow workbench](custom_test/full_flow/README.md) - slower end-to-end R&D/visual verification.
 
 ## Install
 
@@ -18,11 +15,12 @@ Reusable Python domain contracts and algorithms for automated residential floor-
 python -m pip install -e ".[dev]"
 ```
 
-Run verification:
+## Verify
 
 ```bash
+python tools/generate_public_api_manifest.py --check
 python -m pytest
-python -m ruff check src tests
+python -m ruff check src tests custom_test tools
 python -m mypy src/fpg_core
 ```
 

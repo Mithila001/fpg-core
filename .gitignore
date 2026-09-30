@@ -16,3 +16,12 @@ venv/
 .idea/
 .vscode/
 .DS_Store
+
+# Local/generated context artifacts
+AI_CONTEXT.md
+project_structure.md
+project_structure.txt
+
+# Manual flow outputs
+custom_test/outputs/*
+!custom_test/outputs/.gitignore

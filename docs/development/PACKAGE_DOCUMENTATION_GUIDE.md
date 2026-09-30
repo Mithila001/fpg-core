@@ -1,6 +1,6 @@
-# FPG Core Package Documentation Template for AI
+# FPG Core Package Documentation Guide
 
-> **Purpose:** Use this file as the mandatory instruction template whenever generating or updating consumer-facing documentation for `fpg-core`.
+> **Purpose:** Use this guide whenever generating or updating consumer-facing documentation for `fpg-core`, whether the change is made by a human or a coding agent.
 >
 > The finished documentation must let a package consumer use every supported public feature without reading the source code and without guessing input structures, configuration fields, output structures, enum values, defaults, failure behavior, units, or mode-specific behavior.
 
@@ -915,11 +915,19 @@ Verify:
 
 ---
 
-# 17. AI Documentation Update Workflow
+# 17. Documentation Update Workflow
 
 When this template is supplied together with a new `fpg-core` source tree, follow this workflow.
 
 ## Step 1 — Inventory the current package
+
+Regenerate the repository's static public-export inventory first:
+
+```bash
+python tools/generate_public_api_manifest.py
+```
+
+Use `docs/_generated/public_api_manifest.json` as a coverage aid for package/feature-root exports. It does not replace source inspection for signatures, validation, behavior, or nested contracts.
 
 Create a machine/source-backed list of:
 
@@ -987,9 +995,14 @@ Examples must use current public imports and current field names.
 
 If code execution is available, import-check or run representative examples where practical.
 
-## Step 6 — Run the coverage audit
+## Step 6 - Run the coverage audit
 
-Do not finalize until the audit in Section 16 has no unexplained gaps.
+Do not finalize until the audit in Section 16 has no unexplained gaps. Then run the repository documentation contract checks:
+
+```bash
+python tools/generate_public_api_manifest.py --check
+python -m pytest tests/contracts/test_public_api_manifest.py tests/contracts/test_documentation_contracts.py tests/contracts/test_package_metadata.py
+```
 
 ## Step 7 — Update change/migration notes
 
@@ -1164,7 +1177,7 @@ If any checkbox fails, continue documenting before presenting the reference as c
 
 When the user says something similar to:
 
-> “Generate/update the full `fpg-core` package documentation for consumer projects using `Package_Documentation_Template.md`.”
+> “Generate/update the full `fpg-core` package documentation for consumer projects using `docs/development/PACKAGE_DOCUMENTATION_GUIDE.md`.”
 
 You must treat this template as a completeness contract.
 

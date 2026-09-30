@@ -13,7 +13,7 @@ change the result contract.
 
 ## Package Overview
 
-`fpg-core` 0.1.0 is a synchronous Python library of typed domain contracts and
+`fpg-core` 0.2.0 is a synchronous Python library of typed domain contracts and
 computational features for residential floor-plan generation. The supported
 dependency direction is `consumer application -> fpg-core`. Consumers provide
 configuration and request data and own orchestration, HTTP/API transport, persistence,
@@ -29,7 +29,7 @@ mandatory end-to-end pipeline, server, CLI, storage layer, or configuration load
 
 ### Python and distribution metadata
 
-- Distribution name/version: `fpg-core` `0.1.0` from `pyproject.toml`.
+- Distribution name/version: `fpg-core` `0.2.0` from `pyproject.toml`.
 - Python requirement: `>=3.11`; classifiers explicitly list Python 3.11 and 3.12.
 - Package layout: `src/fpg_core`; build backend: `setuptools.build_meta`.
 - The repository does not establish a public package-index URL. From a checkout,
@@ -1165,6 +1165,7 @@ The shipped default profiles enable:
 | `minimum_coverage` | `ratio=0.6` |
 | `hallway_connectivity` | `minimum_overlap=10`; hallway type must touch an anchor type and a non-hallway/non-anchor destination; default anchor is living room |
 | `hallway_dimensions` | hallway corridor width is constrained to `8..10`; the other dimension may extend as needed |
+| `hallway_shared_wall` | hallway pairs may touch/connect, but their collinear shared-wall overlap may not exceed `maximum_shared_wall=12.0` project units; corner-only contact has zero shared-wall length |
 | `front_anchor` | veranda, living room, bedroom, garage |
 | `back_exposure` | hallway and kitchen; minimum exposure `10.0` |
 | `garage_placement` | garage type |
@@ -1247,6 +1248,7 @@ DefaultProfileSettings(
     refinement_max_time_seconds: float = 2.0,
     refinement_position_tolerance: float = 10,
     refinement_size_tolerance: float = 10,
+    max_hallway_shared_wall: float = 12.0,
     hallway_efficiency_weight: int = 1,
     hallway_area_penalty_multiplier: int = 1,
     hallway_preferred_max_length: float | None = 40.0,
@@ -1400,10 +1402,10 @@ for processors.
   validate_after=False)` must resolve in the registry, use the processor's exact
   config type, appear once, and follow prerequisites. A required failure terminates
   the profile; `validate_after` checks the mutated plan immediately.
-- The built-in profile orders veranda adjustment, wall extension, placeholder
-  removal, hallway merge, grid snap, and rectilinear simplification. It rejects plans
-  that already contain openings; placeholder removal and grid snap are required and
-  validated.
+- The built-in profile uses processor IDs `veranda_adjustment`, `wall_extension`,
+  `remove_placeholder_rooms`, `hallway_merge`, `grid_snap`, and
+  `rectilinear_simplification` in that order. It rejects plans that already contain
+  openings; `remove_placeholder_rooms` and `grid_snap` are required and validated.
 - `VerandaAdjustmentConfig(transformation_version='veranda_adjustment:v1')` and
   `PlaceholderRemovalConfig`/`RectilinearSimplificationConfig` have no tuning beyond
   identity/version behavior.
@@ -2351,7 +2353,7 @@ surfaces; consumers may catch the documented feature-root base class.
 | Feature | Public default/profile | Exact role and important values |
 |---|---|---|
 | Candidate Scoring | `create_default_config()` | enables zone suitability (weight 20/order 10), exterior clearance (20/20), spatial distribution (25/40); relationship quality is registered but not enabled |
-| Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1 and enable `hallway_efficiency` with weight 1, area multiplier 1, preferred max length 40, excess-length multiplier 5 |
+| Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1, enforce `hallway_shared_wall` with a maximum shared wall of 12 project units, and enable `hallway_efficiency` with weight 1, area multiplier 1, preferred max length 40, excess-length multiplier 5 |
 | Post-Processing | `INITIAL_GENERATION_PROFILE` | order: veranda adjustment, wall extension, required placeholder removal+validation, hallway merge, required grid snap+validation, rectilinear simplification; tolerance `1e-6`, grid 1, rejects existing openings |
 | Openings | `DEFAULT_OPENING_CONFIG` / `DEFAULT_OPENING_PROFILE` | name `default_openings`; features `interior_doors`, `exterior_doors`, `windows`; constraints `shared_placement`, `room_door_limits`, `required_room_access`; explicit allowed-room pairs; all built-in room types required for access; corner-oriented door priorities; 10 s, one worker, seed 0 |
 | Floor Plan Scoring | `DEFAULT_FLOOR_PLAN_SCORING_CONFIG` / `DEFAULT_SCORING_PROFILE` | critical group: geometry integrity, required adjacency, enclosed voids, inward recess, each threshold 100; functional group: `room_size_consistency` weight 2 and `kitchen_dining` weight 1. Legacy living/bedroom evaluators remain registered but are not enabled by default |
@@ -2384,7 +2386,7 @@ The current migration-relevant breaking change is the floor-plan solver request 
 rename from `profile=` to `config=`. The serialized/result field
 `FloorPlanSolveResult.profile_name` remains unchanged.
 
-## Consumer Migration Notes — 2026-08-15
+## Consumer Migration Notes - 2026-09-30
 
 The current source contains these migration-relevant behavior/contract changes from
 the previously documented version:
@@ -2394,7 +2396,7 @@ the previously documented version:
 | Candidate Circulation | route rules had no required-transit field; cleanup removed only unused hallways | `CirculationRouteRule.required_transit_room_types=()` is available; default circulation config now also performs conservative hallway consolidation. Set `HallwayConsolidationConfig(enabled=False)` to retain unused-only cleanup. |
 | Floor Plan Scoring | default functional scoring used `living_room_balance` and `bedroom_quality` | default functional scoring now uses `room_size_consistency` plus `kitchen_dining`. Custom configs may still use the legacy evaluator classes/keys. `FloorPlanScoringInput` uses `config=`, not the removed `profile=` field. |
 | Floor Plan Openings | hallway/attached-bathroom compatibility included hidden implementation behavior; room access was not a mandatory graph constraint; door placement was center-oriented | `FeaturePolicy.allowed_room_pairs` is authoritative; `required_room_access` is structurally mandatory; required room types must connect to exactly one main entrance; doors prefer wall ends according to `door_placement_priority`. Consumers constructing custom `enabled_constraints` or `FeaturePolicy` must update them. |
-| Floor Plan Solver | supplied hallways had hard dimensions/connectivity but no dedicated compactness objective | all built-in profiles enable `hallway_efficiency`, which penalizes total hallway area and excessive length. The solver still cannot remove supplied hallway rooms. Tune via `DefaultProfileSettings` or replace/remove the soft constraint. |
+| Floor Plan Solver | supplied hallways had hard dimensions/connectivity but no shared-wall cap or dedicated compactness objective | all built-in profiles enforce `hallway_shared_wall` with `maximum_shared_wall=12.0` and enable `hallway_efficiency`, which penalizes total hallway area and excessive length. The solver still cannot remove supplied hallway rooms. Tune both through `DefaultProfileSettings` or replace/remove the corresponding constraints. |
 
 ## Consumer Integration Checklist
 
@@ -2421,7 +2423,7 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
-| `__version__` | constant/type alias | `'0.1.0'` | Documented in the corresponding feature/shared section. |
+| `__version__` | constant/type alias | `'0.2.0'` | Documented in the corresponding feature/shared section. |
 | `BuildableSpaceConfig` | dataclass/contract | `(active_profile: 'SetbackProfile', usable_land_constraints: 'UsableLandConstraints', validation_limits: 'ValidationLimits') -> None` | BuildableSpaceConfig(active_profile: 'SetbackProfile', usable_land_constraints: 'UsableLandConstraints', validation_limits: 'ValidationLimits') |
 | `CandidateSearchConfig` | dataclass/contract | `(trial_count: 'int' = 500, max_grid_node_count: 'int' = 250000, random_seed: 'int \| None' = None) -> None` | Reusable controls for how Candidate Search performs a search. |
 | `FpgCoreConfig` | dataclass/contract | `(schema_version: 'int', project_units_per_meter: 'int', buildable_space: 'BuildableSpaceConfig', preprocessing: 'PreprocessingConfig', candidate_search: 'CandidateSearchConfig', candidate_scoring: 'CandidateScoringConfig', floor_plan_solver: 'ProfileCatalog', post_processing: 'PostProcessingProfile', openings: 'OpeningGenerationProfile', floor_plan_scoring: 'FloorPlanScoringConfig') -> None` | FpgCoreConfig(schema_version: 'int', project_units_per_meter: 'int', buildable_space: 'BuildableSpaceConfig', preprocessing: 'PreprocessingConfig', candidate_search: 'CandidateSearchConfig', candidate_scoring: 'CandidateScoringConfig', floor_plan_solver: 'ProfileCatalog', post_processing: 'PostProcessingProfile', openings: 'OpeningGenerationProfile', floor_plan_scoring: 'FloorPlanScoringConfig') |
@@ -2662,7 +2664,7 @@ list every member/value. Type-alias rows resolve to their runtime canonical obje
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
 | `DEFAULT_PROFILES` | dataclass/contract | `constructor has no separately inspectable signature` | ProfileCatalog(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') |
-| `DefaultProfileSettings` | dataclass/contract | `(coordinate_scale: 'int' = 1, minimum_coverage_ratio: 'float' = 0.6, minimum_adjacency_overlap: 'float' = 10, attached_bathroom_minimum_shared_wall: 'float' = 10.0, initial_max_time_seconds: 'float' = 5.0, refinement_max_time_seconds: 'float' = 2.0, refinement_position_tolerance: 'float' = 10, refinement_size_tolerance: 'float' = 10, hallway_efficiency_weight: 'int' = 1, hallway_area_penalty_multiplier: 'int' = 1, hallway_preferred_max_length: 'float | None' = 40.0, hallway_excess_length_penalty_multiplier: 'int' = 5) -> None` | Central tuning values used to construct the built-in profiles, including hallway compactness weights. |
+| `DefaultProfileSettings` | dataclass/contract | `(coordinate_scale: 'int' = 1, minimum_coverage_ratio: 'float' = 0.6, minimum_adjacency_overlap: 'float' = 10, attached_bathroom_minimum_shared_wall: 'float' = 10.0, initial_max_time_seconds: 'float' = 5.0, refinement_max_time_seconds: 'float' = 2.0, refinement_position_tolerance: 'float' = 10, refinement_size_tolerance: 'float' = 10, max_hallway_shared_wall: 'float' = 12.0, hallway_efficiency_weight: 'int' = 1, hallway_area_penalty_multiplier: 'int' = 1, hallway_preferred_max_length: 'float | None' = 40.0, hallway_excess_length_penalty_multiplier: 'int' = 5) -> None` | Central tuning values used to construct the built-in profiles, including hallway compactness weights. |
 | `ConstraintRegistry` | dataclass/contract | `(hard: 'dict[str, HardConstraint]' = <factory>, soft: 'dict[str, SoftConstraint]' = <factory>) -> None` | Runtime collection of available hard and soft constraints. |
 | `FloorPlanSolveExecution` | constant/type alias | `_GenericAlias instance` | Documented in the corresponding feature/shared section. |
 | `FloorPlanSolveRequest` | dataclass/contract | `(specification: 'FloorPlanGenerationSpec', config: 'FloorPlanSolverConfig', candidate_hints: 'tuple[RoomPlacementHint, ...]' = (), existing_floor_plan: 'FloorPlan \| None' = None) -> None` | Processing input for one floor-plan solve. |
@@ -2834,7 +2836,7 @@ Verified against the current supplied source and packaging metadata:
 - [x] exceptions and returned statuses
 - [x] defaults/profiles
 - [x] extension registries/interfaces
-- [ ] relevant automated tests — test files were not included in the supplied 2026-08-15 source/docs archive
+- [x] relevant automated tests - contract/architecture tests and land/candidate flows were executed; the OR-Tools plan flow is present but could not run in this sandbox
 - [x] mutation/copy behavior from the supplied implementation
 - [x] execution-mode differences
 - [x] examples/import paths
@@ -2844,7 +2846,7 @@ Verified against the current supplied source and packaging metadata:
 
 Known unverified areas:
 
-- Automated behavior of the updated features was not re-run because the relevant test suite was not included in the supplied archive.
-- OR-Tools-backed runtime execution was not performed in this sandbox; the supplied implementation, contracts, validators, registrations, defaults, and syntax were verified statically.
+- The targeted Solver -> Post-Processing -> Openings -> Floor Plan Scoring flow was not executed in this sandbox because the required `ortools` runtime dependency is unavailable here. The flow test is included and must run in a complete development/CI environment.
+- Ruff and mypy were not available in this sandbox, so lint/type-check commands were not executed here.
 
-Documentation updated and source-verified on 2026-08-15 against the supplied source archive. No repository commit hash was supplied with this update. The coverage inventory accounts for all 340 names exported by `fpg_core`, `fpg_core.domain`, and the ten feature roots.
+Documentation updated and source-verified on 2026-09-30 against the supplied source and documentation. No repository commit hash was supplied with this update. The coverage inventory accounts for all 340 names exported by `fpg_core`, `fpg_core.domain`, and the ten feature roots.
