@@ -25,12 +25,12 @@ from .evaluators import (
     KitchenDiningSettings,
     LivingRoomBalanceEvaluator,
     RequiredAdjacencyEvaluator,
+    RequiredAdjacencySettings,
     RoomAreaAggregation,
     RoomSizeConsistencyEvaluator,
     RoomSizeConsistencySettings,
     RoomSizeRelationRule,
     RoomTypeConsistencyRule,
-    RequiredAdjacencySettings,
 )
 from .registry import EvaluatorRegistry
 from .types import CRITICAL_GROUP, FUNCTIONAL_GROUP

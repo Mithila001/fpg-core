@@ -29,6 +29,11 @@ from .living_room_balance import (
     LivingRoomBalanceEvaluator,
     LivingRoomBalanceSettings,
 )
+from .required_adjacency import (
+    REQUIRED_ADJACENCY_KEY,
+    RequiredAdjacencyEvaluator,
+    RequiredAdjacencySettings,
+)
 from .room_size_consistency import (
     ROOM_SIZE_CONSISTENCY_KEY,
     RoomAreaAggregation,
@@ -36,11 +41,6 @@ from .room_size_consistency import (
     RoomSizeConsistencySettings,
     RoomSizeRelationRule,
     RoomTypeConsistencyRule,
-)
-from .required_adjacency import (
-    REQUIRED_ADJACENCY_KEY,
-    RequiredAdjacencyEvaluator,
-    RequiredAdjacencySettings,
 )
 
 __all__ = [

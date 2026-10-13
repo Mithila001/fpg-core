@@ -41,7 +41,10 @@ from fpg_core.domain import (
 from fpg_core.floor_plan_openings import DEFAULT_OPENING_CONFIG
 from fpg_core.floor_plan_preprocessing import (
     AspectRatioRule,
+    FloorLimits,
     PreprocessingConfig,
+    PreprocessingRequest,
+    RequestedRoom,
     RoomCountRule,
     RoomRelationReference,
     RoomSizeReference,
@@ -197,6 +200,63 @@ def build_preprocessing_config() -> PreprocessingConfig:
         max_aspect_residual_units=20.0,
     )
 
+
+
+def build_preprocessing_request(
+    max_width: float,
+    max_length: float,
+) -> PreprocessingRequest:
+    return PreprocessingRequest(
+        floor_limits=FloorLimits(
+            max_width=float(max_width),
+            max_length=float(max_length),
+        ),
+        aspect_ratio="1:1",
+        rooms=(
+            RequestedRoom(
+                RoomType.BEDROOM,
+                id="bedroom-1",
+                name="Bedroom 1",
+                requested_size="regular",
+            ),
+            RequestedRoom(
+                RoomType.BEDROOM,
+                id="bedroom-2",
+                name="Bedroom 2",
+                requested_size="regular",
+            ),
+            RequestedRoom(
+                RoomType.BATHROOM,
+                id="bathroom-1",
+                name="Common Bathroom",
+                requested_size="regular",
+            ),
+            RequestedRoom(
+                RoomType.LIVING_ROOM,
+                id="living-room-1",
+                name="Living Room",
+                requested_size="regular",
+            ),
+            RequestedRoom(
+                RoomType.KITCHEN,
+                id="kitchen-1",
+                name="Kitchen",
+                requested_size="regular",
+            ),
+            RequestedRoom(
+                RoomType.DINING_ROOM,
+                id="dining-room-1",
+                name="Dining Room",
+                requested_size="regular",
+            ),
+            RequestedRoom(
+                RoomType.VERANDA,
+                id="veranda-1",
+                name="Front Veranda",
+                requested_size="regular",
+            ),
+        ),
+    )
 
 def build_route_rules() -> tuple[CirculationRouteRule, ...]:
     return (

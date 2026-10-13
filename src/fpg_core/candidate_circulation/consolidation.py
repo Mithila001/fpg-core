@@ -10,8 +10,17 @@ from .domain import (
     HallwayConsolidationDecision,
 )
 from .exceptions import CandidateCirculationError
-from .routing import HallwayTraffic, ResolvedRoute, RoutingPassResult, run_routing_passes
-from .validation import IndexedCandidatePoint, ValidatedCirculationInput, validate_circulation_input
+from .routing import (
+    HallwayTraffic,
+    ResolvedRoute,
+    RoutingPassResult,
+    run_routing_passes,
+)
+from .validation import (
+    IndexedCandidatePoint,
+    ValidatedCirculationInput,
+    validate_circulation_input,
+)
 
 
 @dataclass(frozen=True, slots=True)

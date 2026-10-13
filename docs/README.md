@@ -2,16 +2,16 @@
 
 ## Consumer documentation
 
-The canonical consumer documentation set is:
+The canonical consumer contract is [PACKAGE_FEATURE_REFERENCE.md](PACKAGE_FEATURE_REFERENCE.md). It is source-verified and is intended to let a consuming application integrate supported public features without reading implementation modules.
 
-- [API_GUIDE.md](API_GUIDE.md) — package-wide installation, imports, units, shared domain contracts, execution modes, compatibility, errors/statuses, and versioning.
-- [feature_documentations/](feature_documentations/README.md) — one complete usage document per public feature.
+When consumer-visible behavior changes, update that reference using [development/PACKAGE_DOCUMENTATION_GUIDE.md](development/PACKAGE_DOCUMENTATION_GUIDE.md).
 
-A consumer should be able to use supported public features from those documents without reading `src/fpg_core`.
+`_generated/public_api_manifest.json` is a machine-generated export inventory used to detect public-surface drift. Regenerate it with `python tools/generate_public_api_manifest.py`; do not edit it manually.
 
-## Maintainer / AI documentation
+## Developer documentation
 
-- [DOCUMENTATION_STANDARD.md](DOCUMENTATION_STANDARD.md) — mandatory rules for creating and keeping consumer documentation synchronized with public code.
-- [`src/fpg_core/FEATURE_TEMPLATE.md`](../src/fpg_core/FEATURE_TEMPLATE.md) — feature architecture and public-boundary conventions.
+- [Feature development guide](development/FEATURE_GUIDE.md) - package boundaries, feature shape, public contracts, and extension rules.
+- [Testing guide](development/TESTING_GUIDE.md) - contract tests, targeted flows, and the manual full-flow workbench.
+- [Package documentation guide](development/PACKAGE_DOCUMENTATION_GUIDE.md) - completeness rules and AI/human workflow for maintaining the consumer reference.
 
-Internal `src/fpg_core/<feature>/README.md` files are development notes and are not the consumer API contract.
+Historical or migration-specific notes are supporting information only. Active code, exports, tests, and the canonical consumer reference take precedence.

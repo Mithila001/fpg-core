@@ -5,36 +5,13 @@ import dataclasses
 import json
 import math
 import re
-import sys
 import traceback
-from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+from collections.abc import Callable, Mapping, Sequence
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Callable, TypeVar
-
-HERE = Path(__file__).resolve().parent
-PROJECT_ROOT = HERE.parents[1]
-SRC_DIR = PROJECT_ROOT / "src"
-OUTPUT_DIR = PROJECT_ROOT / "custom_test" / "outputs"
-if SRC_DIR.is_dir() and str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-from fpg_core import __version__ as FPG_CORE_VERSION
-from fpg_core.buildable_land import BuildableLandInput, calculate_buildable_land
-from fpg_core.candidate_circulation import CandidateCirculationInput, refine_candidate_circulation
-from fpg_core.candidate_scoring import CandidateScoringInput, create_default_registry, evaluate_candidate
-from fpg_core.candidate_search import CandidateSearchInput, build_candidate_search_targets, search_candidates
-from fpg_core.domain import ExecutionMode, OpeningPurpose, OpeningType, RoomType, RoomWidthAxis
-from fpg_core.floor_plan_preprocessing import (
-    FloorLimits,
-    PreprocessingInput,
-    PreprocessingRequest,
-    RequestedRoom,
-    prepare_generation_input,
-)
-from fpg_core.usable_land import UsableLandInput, find_usable_land
+from typing import Any, TypeVar
 
 from scenario import (
     PROJECT_UNITS_PER_METER,
@@ -47,16 +24,51 @@ from scenario import (
     build_land_request,
     build_opening_config,
     build_preprocessing_config,
+    build_preprocessing_request,
     build_route_rules,
     build_solver_profiles,
     build_usable_land_config,
 )
 
+from fpg_core import __version__ as FPG_CORE_VERSION
+from fpg_core.buildable_land import BuildableLandInput, calculate_buildable_land
+from fpg_core.candidate_circulation import (
+    CandidateCirculationInput,
+    refine_candidate_circulation,
+)
+from fpg_core.candidate_scoring import (
+    CandidateScoringInput,
+    create_default_registry,
+    evaluate_candidate,
+)
+from fpg_core.candidate_search import (
+    CandidateSearchInput,
+    build_candidate_search_targets,
+    search_candidates,
+)
+from fpg_core.domain import (
+    ExecutionMode,
+    OpeningPurpose,
+    OpeningType,
+    RoomType,
+    RoomWidthAxis,
+)
+from fpg_core.floor_plan_preprocessing import (
+    PreprocessingInput,
+    prepare_generation_input,
+)
+from fpg_core.usable_land import UsableLandInput, find_usable_land
+
+
 T = TypeVar("T")
+
+HERE = Path(__file__).resolve().parent
+PROJECT_ROOT = HERE.parents[1]
+OUTPUT_DIR = PROJECT_ROOT / "custom_test" / "outputs"
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def json_key(value: Any) -> str:
@@ -154,24 +166,6 @@ def record_step(
     )
     return result
 
-
-def build_preprocessing_request(usable_land) -> PreprocessingRequest:
-    return PreprocessingRequest(
-        floor_limits=FloorLimits(
-            max_width=float(usable_land.width),
-            max_length=float(usable_land.length),
-        ),
-        aspect_ratio="1:1",
-        rooms=(
-            RequestedRoom(RoomType.BEDROOM, id="bedroom-1", name="Bedroom 1", requested_size="regular"),
-            RequestedRoom(RoomType.BEDROOM, id="bedroom-2", name="Bedroom 2", requested_size="regular"),
-            RequestedRoom(RoomType.BATHROOM, id="bathroom-1", name="Common Bathroom", requested_size="regular"),
-            RequestedRoom(RoomType.LIVING_ROOM, id="living-room-1", name="Living Room", requested_size="regular"),
-            RequestedRoom(RoomType.KITCHEN, id="kitchen-1", name="Kitchen", requested_size="regular"),
-            RequestedRoom(RoomType.DINING_ROOM, id="dining-room-1", name="Dining Room", requested_size="regular"),
-            RequestedRoom(RoomType.VERANDA, id="veranda-1", name="Front Veranda", requested_size="regular"),
-        ),
-    )
 
 
 def evaluator_summary(result) -> dict[str, Any]:
@@ -384,7 +378,9 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
         )
         write_output(output_path, payload)
 
-        preprocessing_request = build_preprocessing_request(usable_execution.result)
+        preprocessing_request = build_preprocessing_request(
+            usable_execution.result.width, usable_execution.result.length
+        )
         payload["scenario"]["preprocessing_request"] = to_jsonable(preprocessing_request)
         preprocessing_execution = record_step(
             payload,
@@ -541,7 +537,10 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
             run_initial_generation,
         )
 
-        from fpg_core.floor_plan_solver import FloorPlanSolveRequest, generate_floor_plan
+        from fpg_core.floor_plan_solver import (
+            FloorPlanSolveRequest,
+            generate_floor_plan,
+        )
         if not initial_execution.result.solved:
             raise RuntimeError(
                 "Initial solver did not produce a floor plan: "
@@ -595,6 +594,8 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
 
         from fpg_core.floor_plan_post_processing import (
             INITIAL_GENERATION_PROFILE as POST_PROCESSING_CONFIG,
+        )
+        from fpg_core.floor_plan_post_processing import (
             PostProcessingRequest,
             post_process_floor_plan,
         )
@@ -619,7 +620,10 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
         payload["visualization"]["floor_plans"]["post_processing"] = to_jsonable(floor_plan)
         write_output(output_path, payload)
 
-        from fpg_core.floor_plan_openings import OpeningGenerationRequest, generate_openings
+        from fpg_core.floor_plan_openings import (
+            OpeningGenerationRequest,
+            generate_openings,
+        )
 
         openings_execution = record_step(
             payload,

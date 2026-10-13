@@ -1,17 +1,13 @@
 # fpg-core
 
-Reusable Python domain contracts and algorithms for automated residential floor-plan generation.
+Reusable Python domain contracts and computational features for automated residential floor-plan generation.
 
 ## Documentation
 
-Consumer documentation is intentionally separate from feature implementation notes:
-
-- [Consumer API guide](docs/API_GUIDE.md) covers package-wide conventions, shared contracts, execution modes, compatibility, and versioning.
-- [Feature documentation](docs/feature_documentations/README.md) contains one consumer usage document per public feature.
-- [Documentation standard](docs/DOCUMENTATION_STANDARD.md) defines the mandatory synchronization/versioning rules for maintainers and AI agents.
-- [`FEATURE_TEMPLATE.md`](src/fpg_core/FEATURE_TEMPLATE.md) defines the feature architecture conventions used inside the package.
-
-Internal `src/fpg_core/<feature>/README.md` files are development notes, not consumer API documentation.
+- [Consumer package reference](docs/PACKAGE_FEATURE_REFERENCE.md) - complete supported public API, contracts, modes, failures, defaults, and integration notes.
+- [Developer documentation](docs/README.md) - feature architecture, testing, and documentation-maintenance guides.
+- [Contributing and development](CONTRIBUTING.md) - normal local development workflow.
+- [Manual full-flow workbench](custom_test/full_flow/README.md) - slower end-to-end R&D/visual verification.
 
 ## Install
 
@@ -19,11 +15,12 @@ Internal `src/fpg_core/<feature>/README.md` files are development notes, not con
 python -m pip install -e ".[dev]"
 ```
 
-Run verification:
+## Verify
 
 ```bash
+python tools/generate_public_api_manifest.py --check
 python -m pytest
-python -m ruff check src tests
+python -m ruff check src tests custom_test tools
 python -m mypy src/fpg_core
 ```
 

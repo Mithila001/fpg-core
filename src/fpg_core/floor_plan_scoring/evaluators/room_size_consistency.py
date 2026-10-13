@@ -160,13 +160,13 @@ class RoomSizeConsistencySettings:
             relation_keys.add(key)
 
         consistency_types: set[RoomType] = set()
-        for rule in consistency_rules:
-            if rule.room_type in consistency_types:
+        for consistency_rule in consistency_rules:
+            if consistency_rule.room_type in consistency_types:
                 raise ScoringConfigurationError(
                     "Duplicate room-type consistency rule for "
-                    f"'{rule.room_type.value}'."
+                    f"'{consistency_rule.room_type.value}'."
                 )
-            consistency_types.add(rule.room_type)
+            consistency_types.add(consistency_rule.room_type)
 
         object.__setattr__(self, "relation_rules", relation_rules)
         object.__setattr__(self, "consistency_rules", consistency_rules)
@@ -202,8 +202,8 @@ class RoomSizeConsistencyEvaluator(FloorPlanEvaluator):
             if scored is not None:
                 scored_rules.append(scored)
 
-        for rule in config.consistency_rules:
-            scored = _score_same_type(context, rule, config)
+        for consistency_rule in config.consistency_rules:
+            scored = _score_same_type(context, consistency_rule, config)
             if scored is not None:
                 scored_rules.append(scored)
 
