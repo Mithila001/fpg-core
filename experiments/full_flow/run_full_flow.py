@@ -59,7 +59,6 @@ from fpg_core.floor_plan_preprocessing import (
 )
 from fpg_core.usable_land import UsableLandInput, find_usable_land
 
-
 T = TypeVar("T")
 
 HERE = Path(__file__).resolve().parent
@@ -167,7 +166,6 @@ def record_step(
     return result
 
 
-
 def evaluator_summary(result) -> dict[str, Any]:
     return {
         "total_score": result.total_score,
@@ -215,7 +213,12 @@ def geometry_validations(floor_plan, specification) -> list[dict[str, Any]]:
         bounds = polygon_bounds(room.boundary.points)
         room_bounds[str(room.id)] = bounds
         x1, y1, x2, y2 = bounds
-        if x1 < fx1 - tolerance or y1 < fy1 - tolerance or x2 > fx2 + tolerance or y2 > fy2 + tolerance:
+        if (
+            x1 < fx1 - tolerance
+            or y1 < fy1 - tolerance
+            or x2 > fx2 + tolerance
+            or y2 > fy2 + tolerance
+        ):
             outside.append(str(room.id))
 
     for index, room_a in enumerate(floor_plan.rooms):
@@ -238,7 +241,9 @@ def geometry_validations(floor_plan, specification) -> list[dict[str, Any]]:
         length = y2 - y1
         area = width * length
         short_side = min(width, length)
-        min_dimension_ok = width >= size.min_width - tolerance and length >= size.min_width - tolerance
+        min_dimension_ok = (
+            width >= size.min_width - tolerance and length >= size.min_width - tolerance
+        )
         if size.width_axis is RoomWidthAxis.X:
             max_dimension_ok = width <= size.max_width + tolerance
         elif size.width_axis is RoomWidthAxis.Y:
@@ -296,7 +301,10 @@ def geometry_validations(floor_plan, specification) -> list[dict[str, Any]]:
             {
                 "name": "hallway_shared_wall_limit",
                 "status": "passed" if not hallway_wall_violations else "failed",
-                "details": {"violations": hallway_wall_violations, "maximum_shared_wall": 12.0},
+                "details": {
+                    "violations": hallway_wall_violations,
+                    "maximum_shared_wall": 12.0,
+                },
             },
         )
     )
@@ -381,7 +389,9 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
         preprocessing_request = build_preprocessing_request(
             usable_execution.result.width, usable_execution.result.length
         )
-        payload["scenario"]["preprocessing_request"] = to_jsonable(preprocessing_request)
+        payload["scenario"]["preprocessing_request"] = to_jsonable(
+            preprocessing_request
+        )
         preprocessing_execution = record_step(
             payload,
             "preprocessing",
@@ -410,11 +420,15 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
             }
             try:
                 circulation_execution = refine_candidate_circulation(
-                    CandidateCirculationInput(candidate=candidate, config=circulation_config),
+                    CandidateCirculationInput(
+                        candidate=candidate, config=circulation_config
+                    ),
                     mode=ExecutionMode.PRODUCTION,
                 )
                 cleaned = circulation_execution.result
-                candidate_spec = prepared.generation_spec_for_candidate(cleaned.candidate)
+                candidate_spec = prepared.generation_spec_for_candidate(
+                    cleaned.candidate
+                )
                 scoring_result = evaluate_candidate(
                     CandidateScoringInput(
                         specification=candidate_spec,
@@ -505,7 +519,9 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
                 mode=ExecutionMode.DEBUG,
             ),
         )
-        payload["selected_candidate_score"] = evaluator_summary(selected_candidate_score)
+        payload["selected_candidate_score"] = evaluator_summary(
+            selected_candidate_score
+        )
         write_output(output_path, payload)
 
         # Import OR-Tools-backed features only when the flow reaches them. Keeping
@@ -541,13 +557,18 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
             FloorPlanSolveRequest,
             generate_floor_plan,
         )
+
         if not initial_execution.result.solved:
             raise RuntimeError(
                 "Initial solver did not produce a floor plan: "
                 f"{initial_execution.result.status.value}: {initial_execution.result.message}"
             )
         floor_plan = initial_execution.result.floor_plan
-        payload["visualization"]["floor_plans"]["initial_generation"] = to_jsonable(floor_plan)
+        if floor_plan is None:
+            raise RuntimeError("Initial solver reported success without a floor plan")
+        payload["visualization"]["floor_plans"]["initial_generation"] = to_jsonable(
+            floor_plan
+        )
         write_output(output_path, payload)
 
         refinement_a_execution = record_step(
@@ -568,7 +589,11 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
                 f"{refinement_a_execution.result.status.value}: {refinement_a_execution.result.message}"
             )
         floor_plan = refinement_a_execution.result.floor_plan
-        payload["visualization"]["floor_plans"]["refinement_a"] = to_jsonable(floor_plan)
+        if floor_plan is None:
+            raise RuntimeError("Refinement A reported success without a floor plan")
+        payload["visualization"]["floor_plans"]["refinement_a"] = to_jsonable(
+            floor_plan
+        )
         write_output(output_path, payload)
 
         refinement_b_execution = record_step(
@@ -589,7 +614,11 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
                 f"{refinement_b_execution.result.status.value}: {refinement_b_execution.result.message}"
             )
         floor_plan = refinement_b_execution.result.floor_plan
-        payload["visualization"]["floor_plans"]["refinement_b"] = to_jsonable(floor_plan)
+        if floor_plan is None:
+            raise RuntimeError("Refinement B reported success without a floor plan")
+        payload["visualization"]["floor_plans"]["refinement_b"] = to_jsonable(
+            floor_plan
+        )
         write_output(output_path, payload)
 
         from fpg_core.floor_plan_post_processing import (
@@ -600,12 +629,13 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
             post_process_floor_plan,
         )
 
+        post_processing_input = floor_plan
         post_processing_execution = record_step(
             payload,
             "post_processing",
             lambda: post_process_floor_plan(
                 PostProcessingRequest(
-                    floor_plan=floor_plan,
+                    floor_plan=post_processing_input,
                     specification=selected_spec,
                     config=POST_PROCESSING_CONFIG,
                 ),
@@ -614,10 +644,16 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
         )
         if post_processing_execution.result.status.value != "success":
             failure = post_processing_execution.result.failure
-            message = failure.message if failure is not None else "unknown post-processing failure"
+            message = (
+                failure.message
+                if failure is not None
+                else "unknown post-processing failure"
+            )
             raise RuntimeError(f"Post-processing failed: {message}")
         floor_plan = post_processing_execution.result.floor_plan
-        payload["visualization"]["floor_plans"]["post_processing"] = to_jsonable(floor_plan)
+        payload["visualization"]["floor_plans"]["post_processing"] = to_jsonable(
+            floor_plan
+        )
         write_output(output_path, payload)
 
         from fpg_core.floor_plan_openings import (
@@ -625,12 +661,13 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
             generate_openings,
         )
 
+        openings_input = floor_plan
         openings_execution = record_step(
             payload,
             "openings",
             lambda: generate_openings(
                 OpeningGenerationRequest(
-                    floor_plan=floor_plan,
+                    floor_plan=openings_input,
                     config=opening_config,
                 ),
                 mode=ExecutionMode.DEBUG,
@@ -642,6 +679,10 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
                 f"{openings_execution.result.status.value}: {openings_execution.result.message}"
             )
         floor_plan = openings_execution.result.floor_plan
+        if floor_plan is None:
+            raise RuntimeError(
+                "Opening generation reported success without a floor plan"
+            )
         payload["visualization"]["floor_plans"]["openings"] = to_jsonable(floor_plan)
         write_output(output_path, payload)
 
@@ -696,9 +737,15 @@ def run(round_number: int | None = None) -> tuple[dict[str, Any], Path]:
         )
 
         failed_validations = [
-            item["name"] for item in payload["validations"] if item["status"] != "passed"
+            item["name"]
+            for item in payload["validations"]
+            if item["status"] != "passed"
         ]
-        payload["status"] = "completed" if not failed_validations else "completed_with_validation_failures"
+        payload["status"] = (
+            "completed"
+            if not failed_validations
+            else "completed_with_validation_failures"
+        )
         payload["completed_at_utc"] = utc_now()
         write_output(output_path, payload)
         return payload, output_path
