@@ -3,10 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FPG Core · Full Flow Verification</title>
+  <title>FPG Core Â· Full Flow Verification</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
-
     :root {
       --ink-0: #070b0f;
       --ink-1: #0d1319;
@@ -37,14 +35,17 @@
       --room-garage: #5a4a42;
       --shadow: 0 18px 50px rgba(0, 0, 0, .28);
       --radius: 3px;
-      --mono: "IBM Plex Mono", "Cascadia Mono", monospace;
-      --display: "Space Grotesk", "Aptos", sans-serif;
+      --sans: "Segoe UI", "Aptos", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+      --display: "Segoe UI", "Aptos", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
     }
 
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: var(--ink-0); color: var(--text); }
+    html, body { margin: 0; width: 100%; height: 100%; background: var(--ink-0); color: var(--text); overflow: hidden; }
     body {
-      font-family: var(--mono);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.45;
       background-image:
         linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
@@ -73,42 +74,42 @@
     }
     .brand-copy { min-width: 0; }
     .brand-title { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .02em; }
-    .brand-sub { color: var(--muted); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; margin-top: 2px; }
-    .run-pill { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .brand-sub { color: var(--muted); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; margin-top: 2px; }
+    .run-pill { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; white-space: nowrap; }
     .run-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--faint); box-shadow: 0 0 0 3px rgba(255,255,255,.03); }
     .run-dot.ok { background: var(--ok); }
     .run-dot.bad { background: var(--bad); }
     .run-dot.warn { background: var(--warn); }
 
-    .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: calc(100vh - 66px); }
+    .shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); height: calc(100vh - 66px); min-height: 0; }
     .rail {
       border-right: 1px solid var(--line); background: rgba(13,19,25,.82);
-      padding: 18px 14px 28px; position: sticky; top: 66px; height: calc(100vh - 66px); overflow: auto;
+      padding: 18px 14px; height: 100%; overflow: auto;
     }
-    .section-label { color: var(--faint); font-size: 9px; text-transform: uppercase; letter-spacing: .2em; margin: 12px 8px 8px; }
+    .section-label { color: var(--faint); font-size: 14px; text-transform: uppercase; letter-spacing: .1em; margin: 12px 8px 8px; }
     .file-box {
       border: 1px dashed var(--line); background: var(--ink-1); padding: 13px; border-radius: var(--radius);
       transition: border-color .15s ease, background .15s ease;
     }
     .file-box.drag { border-color: var(--accent); background: var(--accent-soft); }
-    .file-box strong { display: block; font-family: var(--display); font-size: 12px; margin-bottom: 6px; }
-    .file-box p { margin: 0 0 10px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .file-box strong { display: block; font-family: var(--display); font-size: 15px; margin-bottom: 6px; }
+    .file-box p { margin: 0 0 10px; color: var(--muted); font-size: 14px; line-height: 1.55; }
     .file-trigger {
       display: inline-flex; align-items: center; justify-content: center; width: 100%;
       min-height: 34px; border: 1px solid var(--line); background: var(--ink-2); cursor: pointer; border-radius: 2px;
-      font-weight: 600; font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+      font-weight: 600; font-size: 14px; letter-spacing: .06em; text-transform: uppercase;
     }
     .file-trigger:hover { border-color: var(--accent); }
     #fileInput { position: absolute; opacity: 0; pointer-events: none; }
 
     .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); }
     .meta-cell { background: var(--ink-1); padding: 9px; min-height: 56px; }
-    .meta-k { color: var(--faint); text-transform: uppercase; font-size: 8px; letter-spacing: .12em; }
-    .meta-v { margin-top: 5px; font-family: var(--display); font-weight: 600; font-size: 12px; overflow-wrap: anywhere; }
+    .meta-k { color: var(--faint); text-transform: uppercase; font-size: 14px; letter-spacing: .12em; }
+    .meta-v { margin-top: 5px; font-family: var(--display); font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
 
     .stage-list { display: grid; gap: 4px; }
     .stage-btn {
-      width: 100%; display: grid; grid-template-columns: 15px minmax(0,1fr) auto; align-items: center;
+      width: 100%; display: grid; grid-template-columns: 15px minmax(0,1fr) auto auto; align-items: center;
       gap: 8px; padding: 8px 9px; border: 1px solid transparent; background: transparent;
       text-align: left; cursor: pointer; border-radius: 2px;
     }
@@ -117,31 +118,28 @@
     .stage-status { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
     .stage-status.completed { background: var(--ok); }
     .stage-status.failed { background: var(--bad); }
-    .stage-name { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stage-time { color: var(--faint); font-size: 9px; }
+    .stage-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stage-time, .stage-state { color: var(--faint); font-size: 14px; white-space: nowrap; }
 
-    .workspace { min-width: 0; padding: 22px; }
+    .workspace { min-width: 0; min-height: 0; height: 100%; padding: 12px; display: flex; flex-direction: column; }
     .empty {
       min-height: calc(100vh - 110px); display: grid; place-items: center; text-align: center;
     }
     .empty-inner { max-width: 620px; }
-    .empty-kicker { color: var(--accent); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; }
+    .empty-kicker { color: var(--accent); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; }
     .empty h1 { font: 700 clamp(34px, 6vw, 72px)/.94 var(--display); letter-spacing: -.055em; margin: 12px 0 18px; }
-    .empty p { max-width: 520px; margin: auto; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .empty p { max-width: 520px; margin: auto; color: var(--muted); font-size: 15px; line-height: 1.7; }
     .empty-line { width: 120px; height: 1px; margin: 26px auto; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
 
     .loaded { display: none; }
-    .loaded.visible { display: block; animation: enter .24s ease-out both; }
+    .loaded.visible { display: flex; flex: 1; min-height: 0; flex-direction: column; animation: enter .24s ease-out both; }
     @keyframes enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 
-    .headline { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
-    .headline h1 { font: 700 clamp(24px, 3.4vw, 44px)/1 var(--display); letter-spacing: -.04em; margin: 0; }
-    .headline p { color: var(--muted); font-size: 10px; margin: 7px 0 0; }
-    .score-readout { text-align: right; }
     .score-num { font: 700 28px/1 var(--display); color: var(--accent); }
-    .score-lbl { color: var(--faint); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; margin-top: 5px; }
+    .score-lbl { color: var(--faint); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; margin-top: 5px; }
 
     .visual-shell {
+      flex: 1; min-height: 0; display: flex; flex-direction: column;
       border: 1px solid var(--line); background: var(--ink-1); box-shadow: var(--shadow); overflow: hidden;
     }
     .visual-top {
@@ -149,38 +147,33 @@
       border-bottom: 1px solid var(--line); background: var(--ink-2);
     }
     .visual-title { min-width: 0; }
-    .visual-title strong { font-family: var(--display); font-size: 12px; }
-    .visual-title span { color: var(--muted); font-size: 9px; margin-left: 8px; }
+    .visual-title strong { font-family: var(--display); font-size: 15px; }
+    .visual-title span { color: var(--muted); font-size: 14px; margin-left: 8px; }
     .visual-controls { display: flex; gap: 6px; align-items: center; }
     select, .tool-btn {
       height: 30px; border: 1px solid var(--line); background: var(--ink-1); border-radius: 2px; padding: 0 9px;
-      font-size: 9px; cursor: pointer;
+      font-size: 14px; cursor: pointer;
     }
     .tool-btn:hover, select:hover { border-color: var(--accent); }
     .blueprint {
-      position: relative; min-height: 540px; display: grid; place-items: center; overflow: hidden;
-      background:
-        linear-gradient(rgba(84,214,214,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(84,214,214,.025) 1px, transparent 1px),
-        radial-gradient(circle at 50% 35%, rgba(84,214,214,.035), transparent 48%),
-        var(--ink-0);
-      background-size: 20px 20px, 20px 20px, auto, auto;
+      position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden;
+      background: radial-gradient(circle at 50% 35%, rgba(84,214,214,.035), transparent 48%), var(--ink-0);
     }
-    #planSvg { width: 100%; height: 100%; min-height: 540px; display: block; }
+    #planSvg { width: 100%; height: 100%; min-height: 0; display: block; }
     .front-ribbon {
       position: absolute; top: 10px; left: 50%; transform: translateX(-50%); pointer-events: none;
-      color: var(--accent); font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--accent); font-size: 14px; letter-spacing: .1em; text-transform: uppercase;
       background: var(--ink-0); border: 1px solid rgba(233,185,73,.32); padding: 5px 9px;
     }
     .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 10px 13px; border-top: 1px solid var(--line); background: var(--ink-2); }
-    .legend-item { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 9px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; }
     .legend-swatch { width: 12px; height: 6px; border: 1px solid rgba(255,255,255,.2); }
 
     .diagnostics { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 14px; margin-top: 14px; }
     .panel { border: 1px solid var(--line); background: var(--ink-1); min-width: 0; }
     .panel-head { min-height: 39px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--ink-2); }
-    .panel-head strong { font: 600 11px var(--display); }
-    .panel-head span { color: var(--faint); font-size: 9px; }
+    .panel-head strong { font: 600 14px var(--display); }
+    .panel-head span { color: var(--faint); font-size: 14px; }
     .panel-body { padding: 11px; }
 
     .validation-list { display: grid; gap: 1px; background: var(--line-soft); }
@@ -188,45 +181,81 @@
     .check { width: 9px; height: 9px; border-radius: 50%; background: var(--faint); }
     .check.passed { background: var(--ok); }
     .check.failed { background: var(--bad); }
-    .validation-name { font-size: 10px; }
-    .validation-detail { color: var(--faint); font-size: 9px; text-align: right; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .validation-name { font-size: 14px; }
+    .validation-detail { color: var(--faint); font-size: 14px; text-align: right; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .trial-chart { height: 166px; position: relative; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 10px 5px 22px 31px; }
     .trial-bars { position: absolute; inset: 0; display: flex; align-items: end; gap: 2px; padding-left: 2px; }
     .trial-bar { flex: 1; min-width: 2px; max-width: 18px; background: var(--route-public); opacity: .68; position: relative; }
     .trial-bar.best { background: var(--accent); opacity: 1; }
     .trial-bar.rejected { background: var(--bad); opacity: .55; }
-    .trial-axis { position: absolute; left: -31px; color: var(--faint); font-size: 8px; }
+    .trial-axis { position: absolute; left: -31px; color: var(--faint); font-size: 14px; }
     .trial-axis.top { top: -4px; }
     .trial-axis.mid { top: 48%; }
     .trial-axis.bottom { bottom: -4px; }
-    .trial-caption { color: var(--muted); font-size: 9px; line-height: 1.6; }
+    .trial-caption { color: var(--muted); font-size: 14px; line-height: 1.6; }
 
     .raw-wrap { margin-top: 14px; }
+    .mast-actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-left: auto; }
+    .overview-btn { height: 32px; padding: 0 12px; border: 1px solid var(--line); background: var(--ink-2); color: var(--text); cursor: pointer; font-size: 14px; }
+    .overview-btn:hover:not(:disabled) { border-color: var(--accent); }
+    .overview-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .overview-dialog { width: 80vw; max-width: none; max-height: calc(100dvh - 28px); padding: 18px; overflow: auto; border: 1px solid var(--line); color: var(--text); background: var(--ink-1); box-shadow: var(--shadow); }
+    .overview-dialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
+    .overview-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
+    .overview-title { min-width: 0; }
+    .overview-title h2 { margin: 0; font: 700 24px/1.1 var(--display); letter-spacing: -.03em; }
+    .overview-title p { margin: 7px 0 0; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+    .overview-score { text-align: right; white-space: nowrap; }
+    .overview-score .score-num { font-size: 24px; }
+    .overview-close { width: 32px; height: 32px; border: 1px solid var(--line); background: var(--ink-2); color: var(--text); cursor: pointer; }
+    .overview-close:hover { border-color: var(--accent); }
+    .overview-dialog .meta-grid { margin-bottom: 14px; }
+    .overview-dialog .section-label { margin-left: 0; }
+    .overview-tabs { display: flex; gap: 4px; margin-bottom: 14px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+    .overview-tab { flex: 0 0 auto; padding: 10px 14px; border: 1px solid transparent; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; font-size: 14px; white-space: nowrap; }
+    .overview-tab:hover { color: var(--text); background: var(--ink-2); }
+    .overview-tab[aria-selected="true"] { color: var(--text); border-color: var(--line); border-bottom-color: var(--accent); background: var(--ink-2); }
+    .overview-tabpanel[hidden] { display: none; }
+    .overview-tabpanel { min-height: 300px; }
+    .overview-tabpanel .panel { height: 100%; }
+    .overview-tabpanel .panel-body { padding: 16px; }
+    .overview-dialog .stage-name { white-space: normal; overflow-wrap: anywhere; }
+    .overview-dialog .stage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: min(55vh, 560px); overflow: auto; }
+    .overview-dialog .validation-row { grid-template-columns: 18px minmax(180px, .7fr) minmax(0, 1.3fr); min-height: 48px; }
+    .overview-dialog .validation-detail { max-width: none; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+    .overview-dialog .trial-chart { height: 280px; }
+    .overview-dialog .trial-bar { max-width: none; }
+    .overview-dialog pre { max-height: min(58vh, 560px); }
     .raw-tools { display: flex; gap: 7px; }
-    .raw-tools input { width: 220px; height: 28px; border: 1px solid var(--line); background: var(--ink-0); color: var(--text); padding: 0 8px; font-size: 9px; }
-    pre { margin: 0; max-height: 360px; overflow: auto; padding: 13px; color: #b7c7d4; background: var(--ink-0); font: 10px/1.62 var(--mono); tab-size: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .raw-tools input { width: 220px; height: 28px; border: 1px solid var(--line); background: var(--ink-0); color: var(--text); padding: 0 8px; font-size: 14px; }
+    pre { margin: 0; max-height: 360px; overflow: auto; padding: 13px; color: #b7c7d4; background: var(--ink-0); font: 14px/1.55 var(--mono); tab-size: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
     mark { background: var(--accent); color: var(--ink-0); }
 
-    .error-box { border: 1px solid rgba(255,123,114,.35); background: rgba(255,123,114,.08); padding: 11px; color: #ffc0bb; font-size: 10px; line-height: 1.55; margin-bottom: 14px; }
+    .error-box { border: 1px solid rgba(255,123,114,.35); background: rgba(255,123,114,.08); padding: 11px; color: #ffc0bb; font-size: 14px; line-height: 1.55; margin-bottom: 14px; }
 
     @media (max-width: 980px) {
-      .shell { grid-template-columns: 1fr; }
-      .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      html, body { min-height: 100%; height: auto; overflow: auto; }
+      .shell { height: auto; min-height: calc(100vh - 66px); grid-template-columns: 1fr; }
+      .rail { height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .workspace { height: auto; min-height: 70vh; }
+      .loaded.visible { min-height: 70vh; }
       .diagnostics { grid-template-columns: 1fr; }
       .stage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
+      .overview-dialog { width: calc(100vw - 20px); }
       .mast { padding: 0 12px; }
-      .run-pill { display: none; }
+      .brand-sub, .run-pill { display: none; }
       .workspace { padding: 12px; }
-      .headline { align-items: start; flex-direction: column; }
-      .score-readout { text-align: left; }
       .visual-top { align-items: stretch; flex-direction: column; }
       .visual-controls { width: 100%; }
       .visual-controls select { flex: 1; min-width: 0; }
       .blueprint, #planSvg { min-height: 420px; }
       .stage-list { grid-template-columns: 1fr; }
+      .overview-dialog .stage-list { grid-template-columns: 1fr; }
+      .overview-dialog .validation-row { grid-template-columns: 18px minmax(0, 1fr); }
+      .overview-dialog .validation-detail { grid-column: 2; }
     }
   </style>
 </head>
@@ -239,7 +268,10 @@
         <div class="brand-sub">package verification instrument</div>
       </div>
     </div>
-    <div class="run-pill"><span id="headerDot" class="run-dot"></span><span id="headerStatus">NO RUN LOADED</span></div>
+    <div class="mast-actions">
+      <button id="overviewBtn" class="overview-btn" type="button" aria-haspopup="dialog" aria-controls="overviewDialog" disabled>Overview</button>
+      <div class="run-pill"><span id="headerDot" class="run-dot"></span><span id="headerStatus">NO RUN LOADED</span></div>
+    </div>
   </header>
 
   <div class="shell">
@@ -252,16 +284,6 @@
         <input id="fileInput" type="file" accept="application/json,.json" />
       </div>
 
-      <div class="section-label">Run</div>
-      <div class="meta-grid">
-        <div class="meta-cell"><div class="meta-k">Round</div><div id="metaRound" class="meta-v">—</div></div>
-        <div class="meta-cell"><div class="meta-k">Core</div><div id="metaCore" class="meta-v">—</div></div>
-        <div class="meta-cell"><div class="meta-k">Trials</div><div id="metaTrials" class="meta-v">—</div></div>
-        <div class="meta-cell"><div class="meta-k">Validations</div><div id="metaValidations" class="meta-v">—</div></div>
-      </div>
-
-      <div class="section-label">Stages</div>
-      <div id="stageList" class="stage-list"><span style="color:var(--faint);font-size:10px;padding:6px 8px">Load a run to inspect stages.</span></div>
     </aside>
 
     <main class="workspace">
@@ -275,18 +297,6 @@
       </section>
 
       <section id="loadedState" class="loaded">
-        <div id="errorBox"></div>
-        <div class="headline">
-          <div>
-            <h1 id="runTitle">Full Flow</h1>
-            <p id="runSubtitle">—</p>
-          </div>
-          <div class="score-readout">
-            <div id="scoreNum" class="score-num">—</div>
-            <div class="score-lbl">Final score</div>
-          </div>
-        </div>
-
         <section class="visual-shell">
           <div class="visual-top">
             <div class="visual-title"><strong id="visualName">Floor plan</strong><span id="visualMeta"></span></div>
@@ -300,40 +310,75 @@
             </div>
           </div>
           <div class="blueprint">
-            <div class="front-ribbon">Front / −Y</div>
+            <div class="front-ribbon">Front / &minus;Y</div>
             <svg id="planSvg" role="img" aria-label="Floor plan visualization"></svg>
           </div>
           <div id="legend" class="legend"></div>
-        </section>
-
-        <div class="diagnostics">
-          <section class="panel">
-            <div class="panel-head"><strong>Validations</strong><span id="validationSummary">—</span></div>
-            <div class="panel-body"><div id="validationList" class="validation-list"></div></div>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><strong>Candidate trials</strong><span id="trialSummary">—</span></div>
-            <div class="panel-body">
-              <div class="trial-chart">
-                <span class="trial-axis top">100</span><span class="trial-axis mid">50</span><span class="trial-axis bottom">0</span>
-                <div id="trialBars" class="trial-bars"></div>
-              </div>
-              <div id="trialCaption" class="trial-caption">—</div>
-            </div>
-          </section>
-        </div>
-
-        <section class="panel raw-wrap">
-          <div class="panel-head">
-            <strong>Raw inspection</strong>
-            <div class="raw-tools"><input id="rawSearch" type="search" placeholder="filter current JSON…" /></div>
-          </div>
-          <pre id="rawJson"></pre>
         </section>
       </section>
     </main>
   </div>
 
+
+  <dialog id="overviewDialog" class="overview-dialog" aria-labelledby="runTitle">
+    <div class="overview-head">
+      <div class="overview-title">
+        <h2 id="runTitle">Full Flow</h2>
+        <p id="runSubtitle">&mdash;</p>
+      </div>
+      <div class="overview-score">
+        <div id="scoreNum" class="score-num">&mdash;</div>
+        <div class="score-lbl">Final score</div>
+      </div>
+      <button id="overviewClose" class="overview-close" type="button" aria-label="Close overview">&times;</button>
+    </div>
+    <div class="overview-tabs" role="tablist" aria-label="Run details">
+      <button id="tab-summary" class="overview-tab" type="button" role="tab" aria-selected="true" aria-controls="panel-summary" tabindex="0">Summary</button>
+      <button id="tab-stages" class="overview-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-stages" tabindex="-1">Stages</button>
+      <button id="tab-validations" class="overview-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-validations" tabindex="-1">Validations</button>
+      <button id="tab-trials" class="overview-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-trials" tabindex="-1">Candidate trials</button>
+      <button id="tab-raw" class="overview-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-raw" tabindex="-1">Raw JSON</button>
+    </div>
+    <section id="panel-summary" class="overview-tabpanel" role="tabpanel" aria-labelledby="tab-summary" tabindex="0">
+      <div id="errorBox"></div>
+      <div class="meta-grid">
+        <div class="meta-cell"><div class="meta-k">Round</div><div id="metaRound" class="meta-v">&mdash;</div></div>
+        <div class="meta-cell"><div class="meta-k">Core version</div><div id="metaCore" class="meta-v">&mdash;</div></div>
+        <div class="meta-cell"><div class="meta-k">Candidate trials</div><div id="metaTrials" class="meta-v">&mdash;</div></div>
+        <div class="meta-cell"><div class="meta-k">Passed / total</div><div id="metaValidations" class="meta-v">&mdash;</div></div>
+      </div>
+    </section>
+    <section id="panel-stages" class="overview-tabpanel" role="tabpanel" aria-labelledby="tab-stages" tabindex="0" hidden>
+      <div id="stageList" class="stage-list"><span style="color:var(--faint);font-size:14px;padding:8px">Load a run to inspect stages.</span></div>
+    </section>
+    <section id="panel-validations" class="overview-tabpanel" role="tabpanel" aria-labelledby="tab-validations" tabindex="0" hidden>
+      <section class="panel">
+        <div class="panel-head"><strong>Validation results</strong><span id="validationSummary">&mdash;</span></div>
+        <div class="panel-body"><div id="validationList" class="validation-list"></div></div>
+      </section>
+    </section>
+    <section id="panel-trials" class="overview-tabpanel" role="tabpanel" aria-labelledby="tab-trials" tabindex="0" hidden>
+      <section class="panel">
+        <div class="panel-head"><strong>Candidate trial scores</strong><span id="trialSummary">&mdash;</span></div>
+        <div class="panel-body">
+          <div class="trial-chart">
+            <span class="trial-axis top">100</span><span class="trial-axis mid">50</span><span class="trial-axis bottom">0</span>
+            <div id="trialBars" class="trial-bars"></div>
+          </div>
+          <div id="trialCaption" class="trial-caption">&mdash;</div>
+        </div>
+      </section>
+    </section>
+    <section id="panel-raw" class="overview-tabpanel" role="tabpanel" aria-labelledby="tab-raw" tabindex="0" hidden>
+      <section class="panel raw-wrap">
+        <div class="panel-head">
+          <strong>Raw run data</strong>
+          <div class="raw-tools"><input id="rawSearch" type="search" placeholder="Filter current JSON..." aria-label="Filter current JSON" /></div>
+        </div>
+        <pre id="rawJson"></pre>
+      </section>
+    </section>
+  </dialog>
   <script>
     const $ = (id) => document.getElementById(id);
     let state = { data: null, currentStage: null, zoom: null };
@@ -348,7 +393,7 @@
     function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function fmt(value, digits = 2) {
       const n = Number(value);
-      if (!Number.isFinite(n)) return '—';
+      if (!Number.isFinite(n)) return 'â€”';
       return n.toLocaleString(undefined, { maximumFractionDigits: digits });
     }
     function statusClass(status) {
@@ -370,6 +415,34 @@
       reader.readAsText(file);
     }
 
+    const overviewTabs = [...document.querySelectorAll('[role="tab"]')];
+    function selectOverviewTab(tab, focus = false) {
+      overviewTabs.forEach(item => {
+        const selected = item === tab;
+        item.setAttribute('aria-selected', String(selected));
+        item.tabIndex = selected ? 0 : -1;
+        $(item.getAttribute('aria-controls')).hidden = !selected;
+      });
+      if (focus) tab.focus();
+    }
+    overviewTabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => selectOverviewTab(tab));
+      tab.addEventListener('keydown', event => {
+        let next = index;
+        if (event.key === 'ArrowRight') next = (index + 1) % overviewTabs.length;
+        else if (event.key === 'ArrowLeft') next = (index - 1 + overviewTabs.length) % overviewTabs.length;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = overviewTabs.length - 1;
+        else return;
+        event.preventDefault();
+        selectOverviewTab(overviewTabs[next], true);
+      });
+    });
+    $('overviewBtn').addEventListener('click', () => $('overviewDialog').showModal());
+    $('overviewClose').addEventListener('click', () => $('overviewDialog').close());
+    $('overviewDialog').addEventListener('click', event => {
+      if (event.target === $('overviewDialog')) $('overviewDialog').close();
+    });
     $('fileInput').addEventListener('change', (event) => event.target.files?.[0] && readFile(event.target.files[0]));
     ['dragenter','dragover'].forEach(type => $('dropZone').addEventListener(type, event => { event.preventDefault(); $('dropZone').classList.add('drag'); }));
     ['dragleave','drop'].forEach(type => $('dropZone').addEventListener(type, event => { event.preventDefault(); $('dropZone').classList.remove('drag'); }));
@@ -379,19 +452,20 @@
       state.data = data;
       $('emptyState').style.display = 'none';
       $('loadedState').classList.add('visible');
+      $('overviewBtn').disabled = false;
       setHeaderStatus(data.status);
-      $('metaRound').textContent = data.test_round ?? '—';
-      $('metaCore').textContent = data.fpg_core_version ?? '—';
+      $('metaRound').textContent = data.test_round ?? 'â€”';
+      $('metaCore').textContent = data.fpg_core_version ?? 'â€”';
       $('metaTrials').textContent = (data.candidate_trials || []).length;
       const validations = data.validations || [];
       const passed = validations.filter(v => v.status === 'passed').length;
       $('metaValidations').textContent = `${passed}/${validations.length}`;
       $('runTitle').textContent = `Full Flow / Round ${data.test_round ?? '?'}`;
-      $('runSubtitle').textContent = `${data.started_at_utc || 'unknown start'} · ${data.output_file || ''}`;
+      $('runSubtitle').textContent = `${data.started_at_utc || 'unknown start'} Â· ${data.output_file || ''}`;
 
       const scoringStep = findStep('final_scoring');
       const score = scoringStep?.execution?.result?.total_score;
-      $('scoreNum').textContent = Number.isFinite(Number(score)) ? fmt(score, 1) : '—';
+      $('scoreNum').textContent = Number.isFinite(Number(score)) ? fmt(score, 1) : 'â€”';
 
       renderErrors();
       renderStages();
@@ -415,14 +489,14 @@
     function renderStages() {
       const list = $('stageList'); list.innerHTML = '';
       const steps = state.data?.steps || [];
-      if (!steps.length) { list.innerHTML = '<span style="color:var(--faint);font-size:10px;padding:6px 8px">No stages recorded.</span>'; return; }
+      if (!steps.length) { list.innerHTML = '<span style="color:var(--faint);font-size:14px;padding:8px">No stages recorded.</span>'; return; }
       steps.forEach((step, index) => {
         const btn = document.createElement('button');
         btn.type = 'button'; btn.className = 'stage-btn';
-        btn.innerHTML = `<span class="stage-status ${esc(step.status)}"></span><span class="stage-name">${esc(step.name)}</span><span class="stage-time">${fmt(step.duration_seconds, 3)}s</span>`;
+        btn.innerHTML = `<span class="stage-status ${esc(step.status)}"></span><span class="stage-name">${esc(step.name)}</span><span class="stage-state">${esc(step.status).replaceAll('_', ' ')}</span><span class="stage-time">${fmt(step.duration_seconds, 3)}s</span>`;
         btn.addEventListener('click', () => {
           document.querySelectorAll('.stage-btn').forEach(x => x.classList.remove('active'));
-          btn.classList.add('active'); state.currentStage = index; updateRaw();
+          btn.classList.add('active'); state.currentStage = index; updateRaw(); selectOverviewTab($('tab-raw'), true);
         });
         list.appendChild(btn);
       });
@@ -459,7 +533,7 @@
       $('trialBars').innerHTML = trials.map((trial, index) => {
         const score = Math.max(0, Math.min(100, Number(trial.score) || 0));
         const cls = [index === bestIndex ? 'best' : '', trial.status !== 'scored' ? 'rejected' : ''].filter(Boolean).join(' ');
-        return `<div class="trial-bar ${cls}" style="height:${score}%" title="Trial ${esc(trial.trial)} · score ${fmt(score,1)} · hallways ${esc(trial.input_hallway_count)}→${esc(trial.output_hallway_count ?? '?')}"></div>`;
+        return `<div class="trial-bar ${cls}" style="height:${score}%" title="Trial ${esc(trial.trial)} Â· score ${fmt(score,1)} Â· hallways ${esc(trial.input_hallway_count)}â†’${esc(trial.output_hallway_count ?? '?')}"></div>`;
       }).join('');
       const rejected = trials.filter(t => t.status !== 'scored').length;
       $('trialCaption').textContent = trials.length ? `${trials.length - rejected} candidates scored successfully; ${rejected} evaluator rejections. Gold is the best scored trial.` : 'No candidate-trial data was written.';
@@ -478,6 +552,16 @@
 
     $('visualMode').addEventListener('change', updateVisualization);
     $('floorStage').addEventListener('change', updateVisualization);
+    [$('visualMode'), $('floorStage')].forEach(select => {
+      select.addEventListener('wheel', event => {
+        if (select.disabled || select.options.length < 2 || event.deltaY === 0) return;
+        event.preventDefault();
+        const next = Math.max(0, Math.min(select.options.length - 1, select.selectedIndex + Math.sign(event.deltaY)));
+        if (next === select.selectedIndex) return;
+        select.selectedIndex = next;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }, { passive: false });
+    });
     $('fitBtn').addEventListener('click', updateVisualization);
     $('rawSearch').addEventListener('input', updateRaw);
 
@@ -509,6 +593,34 @@
       defs.appendChild(pattern); svg.appendChild(defs);
     }
 
+    function projectUnitsPerMeter() {
+      const value = Number(state.data?.project_units_per_meter);
+      return Number.isFinite(value) && value > 0 ? value : 10;
+    }
+
+    function addMeasurementGrid(svg, minX, minY, maxX, maxY, unit) {
+      const group = svgEl('g', { 'pointer-events': 'none' });
+      const fontSize = 2.4;
+      const labelAttrs = { fill: '#c1cbd2', 'font-size': fontSize, 'font-family': 'Cascadia Code, Consolas, monospace', 'paint-order': 'stroke', stroke: cssVar('--ink-0'), 'stroke-width': .8, 'stroke-linejoin': 'round' };
+      const xCount = Math.floor((maxX - minX) / unit);
+      const yCount = Math.floor((maxY - minY) / unit);
+      for (let i = 0; i <= xCount; i++) {
+        const x = minX + i * unit;
+        const major = i % 5 === 0;
+        group.appendChild(svgEl('line', { x1: x, y1: minY, x2: x, y2: maxY, stroke: '#d8e1e8', 'stroke-opacity': major ? .30 : .14, 'stroke-width': major ? .65 : .4, 'vector-effect': 'non-scaling-stroke' }));
+        group.appendChild(svgEl('text', { ...labelAttrs, x, y: maxY + fontSize * 1.5, 'text-anchor': 'middle' }, `${i}m`));
+      }
+      for (let i = 0; i <= yCount; i++) {
+        const y = minY + i * unit;
+        const major = i % 5 === 0;
+        group.appendChild(svgEl('line', { x1: minX, y1: y, x2: maxX, y2: y, stroke: '#d8e1e8', 'stroke-opacity': major ? .30 : .14, 'stroke-width': major ? .65 : .4, 'vector-effect': 'non-scaling-stroke' }));
+        group.appendChild(svgEl('text', { ...labelAttrs, x: minX - fontSize, y: y + fontSize * .35, 'text-anchor': 'end' }, `${i}m`));
+      }
+      if (maxX - (minX + xCount * unit) > 1e-6) group.appendChild(svgEl('text', { ...labelAttrs, x: maxX, y: maxY + fontSize * 1.5, 'text-anchor': 'end' }, `${fmt((maxX - minX) / unit,1)}m`));
+      if (maxY - (minY + yCount * unit) > 1e-6) group.appendChild(svgEl('text', { ...labelAttrs, x: minX - fontSize, y: maxY + fontSize * .35, 'text-anchor': 'end' }, `${fmt((maxY - minY) / unit,1)}m`));
+      svg.appendChild(group);
+    }
+
     function renderFloorPlan() {
       const stage = $('floorStage').value;
       const plan = state.data?.visualization?.floor_plans?.[stage];
@@ -521,25 +633,32 @@
       const boundary = plan.boundary.points;
       const xs = boundary.map(p => Number(p.x)), ys = boundary.map(p => Number(p.y));
       const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-      setViewBox(svg, minX, minY, maxX, maxY); addSvgDefs(svg, 10);
-      svg.appendChild(svgEl('rect', { x:minX, y:minY, width:maxX-minX, height:maxY-minY, fill:'url(#microGrid)', stroke:cssVar('--accent'), 'stroke-width':1.1, 'vector-effect':'non-scaling-stroke' }));
+      const unit = projectUnitsPerMeter();
+      setViewBox(svg, minX, minY, maxX, maxY);
+      svg.appendChild(svgEl('rect', { x:minX, y:minY, width:maxX-minX, height:maxY-minY, fill:cssVar('--ink-0'), stroke:cssVar('--accent'), 'stroke-width':1.1, 'vector-effect':'non-scaling-stroke' }));
 
       const rooms = plan.rooms || [];
+      addMeasurementGrid(svg, minX, minY, maxX, maxY, unit);
       rooms.forEach(room => {
         const points = room.boundary?.points || [];
         if (!points.length) return;
         const type = room.room_type || 'unknown';
-        const fill = cssVar(ROOM_VAR[type] || '--room-hallway');
         const poly = svgEl('polygon', {
-          points: points.map(p => `${p.x},${p.y}`).join(' '), fill, 'fill-opacity': .80,
+          points: points.map(p => `${p.x},${p.y}`).join(' '), fill: cssVar(ROOM_VAR[type] || '--room-hallway'), 'fill-opacity': .80,
           stroke: '#d8e1e8', 'stroke-opacity': .68, 'stroke-width': .75, 'vector-effect': 'non-scaling-stroke'
         });
-        const title = svgEl('title', {}, `${room.name || room.id} · ${type}`); poly.appendChild(title); svg.appendChild(poly);
+        poly.appendChild(svgEl('title', {}, `${room.name || room.id} - ${type}`));
+        svg.appendChild(poly);
+      });
+
+      rooms.forEach(room => {
+        const points = room.boundary?.points || [];
+        if (!points.length) return;
         const b = bounds(points), cx = (b.minX+b.maxX)/2, cy = (b.minY+b.maxY)/2;
         const w = b.maxX-b.minX, h = b.maxY-b.minY, fontSize = Math.max(2.2, Math.min(4, Math.min(w,h) * .16));
-        const label = svgEl('text', { x:cx, y:cy-.5, 'text-anchor':'middle', fill:'#f3f7fa', 'font-size':fontSize, 'font-family':'IBM Plex Mono, monospace', 'font-weight':'600', 'pointer-events':'none' });
+        const label = svgEl('text', { x:cx, y:cy-.5, 'text-anchor':'middle', fill:'#f3f7fa', 'font-size':fontSize, 'font-family':'Cascadia Code, Consolas, monospace', 'font-weight':'600', 'pointer-events':'none' });
         label.appendChild(svgEl('tspan', { x:cx, dy:0 }, room.name || room.id));
-        label.appendChild(svgEl('tspan', { x:cx, dy:fontSize*1.15, fill:'#c1cbd2', 'font-size':fontSize*.72 }, `${fmt(w,1)} × ${fmt(h,1)}`));
+        label.appendChild(svgEl('tspan', { x:cx, dy:fontSize*1.15, fill:'#c1cbd2', 'font-size':fontSize*.72 }, `${fmt(w / unit,1)} x ${fmt(h / unit,1)} m`));
         svg.appendChild(label);
       });
 
@@ -550,7 +669,7 @@
           stroke: isDoor ? cssVar('--door') : cssVar('--window'),
           'stroke-width': isDoor ? 2.2 : 2.0, 'stroke-linecap':'round', 'vector-effect':'non-scaling-stroke'
         });
-        line.appendChild(svgEl('title', {}, `${opening.opening_type}: ${opening.purpose} · ${(opening.connected_room_ids || []).join(' ↔ ')}`));
+        line.appendChild(svgEl('title', {}, `${opening.opening_type}: ${opening.purpose} Â· ${(opening.connected_room_ids || []).join(' â†” ')}`));
         svg.appendChild(line);
         if (isDoor) {
           svg.appendChild(svgEl('circle', { cx:opening.start.x, cy:opening.start.y, r:.85, fill:cssVar('--door') }));
@@ -558,8 +677,8 @@
       });
 
       const floorW = maxX-minX, floorH = maxY-minY;
-      $('visualMeta').textContent = `${fmt(floorW,1)} × ${fmt(floorH,1)} units · ${rooms.length} rooms · ${(plan.openings || []).length} openings`;
-      renderFloorLegend(rooms, plan.openings || []);
+      $('visualMeta').textContent = `${fmt(floorW / unit,1)} x ${fmt(floorH / unit,1)} m (${fmt(floorW,0)} x ${fmt(floorH,0)} units) | 1 m grid (${fmt(unit,0)} units) | ${rooms.length} rooms | ${(plan.openings || []).length} openings`;
+      renderFloorLegend(rooms, plan.openings || [], unit);
     }
 
     function bounds(points) {
@@ -567,9 +686,9 @@
       return { minX:Math.min(...xs), maxX:Math.max(...xs), minY:Math.min(...ys), maxY:Math.max(...ys) };
     }
 
-    function renderFloorLegend(rooms, openings) {
+    function renderFloorLegend(rooms, openings, unit) {
       const types = [...new Set(rooms.map(r => r.room_type))];
-      const items = types.map(type => `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar(ROOM_VAR[type] || '--room-hallway')}"></span>${esc(type)}</span>`);
+      const items = [`<span class="legend-item"><span class="legend-swatch" style="background:transparent;border-color:var(--muted)"></span>1 m grid (${fmt(unit,0)} units)</span>`, ...types.map(type => `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar(ROOM_VAR[type] || '--room-hallway')}"></span>${esc(type)}</span>`)]
       if (openings.some(o => o.opening_type === 'door')) items.push(`<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--door')}"></span>door</span>`);
       if (openings.some(o => o.opening_type === 'window')) items.push(`<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--window')}"></span>window</span>`);
       $('legend').innerHTML = items.join('');
@@ -606,7 +725,7 @@
           'stroke-width': 1.35, 'stroke-linecap':'round', 'stroke-linejoin':'round', opacity:.72,
           'vector-effect':'non-scaling-stroke'
         });
-        route.appendChild(svgEl('title', {}, `${path.rule_name} · ${fmt(path.path_efficiency_score,1)}% efficient`)); svg.appendChild(route);
+        route.appendChild(svgEl('title', {}, `${path.rule_name} Â· ${fmt(path.path_efficiency_score,1)}% efficient`)); svg.appendChild(route);
       });
 
       const hallwayClasses = new Map((visual.hallway_classifications || []).map(x => [`${x.room_id}[${x.hint_index}]`, x.traffic_class]));
@@ -614,15 +733,16 @@
         const isHall = point.room_type === 'hallway';
         const color = isHall ? cssVar('--accent') : cssVar(ROOM_VAR[point.room_type] || '--room-bedroom');
         svg.appendChild(svgEl('circle', { cx:point.x, cy:point.y, r:isHall?3.0:2.6, fill:color, stroke:'#f0f4f7', 'stroke-width':.55, 'vector-effect':'non-scaling-stroke' }));
-        const text = svgEl('text', { x:point.x, y:Number(point.y)-4.3, 'text-anchor':'middle', fill:'#f3f7fa', 'font-size':2.7, 'font-family':'IBM Plex Mono, monospace', 'font-weight':'600', 'paint-order':'stroke', stroke:cssVar('--ink-0'), 'stroke-width':1.6, 'stroke-linejoin':'round' }, point.room_id);
+        const text = svgEl('text', { x:point.x, y:Number(point.y)-4.3, 'text-anchor':'middle', fill:'#f3f7fa', 'font-size':2.7, 'font-family':'Cascadia Code, Consolas, monospace', 'font-weight':'600', 'paint-order':'stroke', stroke:cssVar('--ink-0'), 'stroke-width':1.6, 'stroke-linejoin':'round' }, point.room_id);
         svg.appendChild(text);
         if (isHall) {
           const cls = hallwayClasses.get(`${point.room_id}[${point.hint_index}]`) || 'unclassified';
-          svg.appendChild(svgEl('text', { x:point.x, y:Number(point.y)+5.1, 'text-anchor':'middle', fill:cssVar('--muted'), 'font-size':2.1, 'font-family':'IBM Plex Mono, monospace', 'paint-order':'stroke', stroke:cssVar('--ink-0'), 'stroke-width':1.3 }, cls));
+          svg.appendChild(svgEl('text', { x:point.x, y:Number(point.y)+5.1, 'text-anchor':'middle', fill:cssVar('--muted'), 'font-size':2.1, 'font-family':'Cascadia Code, Consolas, monospace', 'paint-order':'stroke', stroke:cssVar('--ink-0'), 'stroke-width':1.3 }, cls));
         }
       });
 
-      $('visualMeta').textContent = `${candidate.points.length} room hints · ${paths.length} resolved routes · spacing ${fmt(grid.grid_spacing,1)}`;
+      const unit = projectUnitsPerMeter();
+      $('visualMeta').textContent = `${candidate.points.length} room hints | ${paths.length} resolved routes | spacing ${fmt(grid.grid_spacing / unit,1)} m (${fmt(grid.grid_spacing,0)} units)`;
       $('legend').innerHTML = [
         `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--accent')}"></span>hallway hint</span>`,
         `<span class="legend-item"><span class="legend-swatch" style="background:${cssVar('--route-public')}"></span>public route</span>`,
