@@ -11,7 +11,7 @@ When consumer-visible behavior changes, update that reference using [development
 ## Developer documentation
 
 - [Feature development guide](development/FEATURE_GUIDE.md) - package boundaries, feature shape, public contracts, and extension rules.
-- [Testing guide](development/TESTING_GUIDE.md) - contract tests, targeted flows, and the manual full-flow workbench.
+- [Testing guide](development/TESTING_GUIDE.md) - contract tests, targeted flows, and the manual full-flow experiment.
 - [Package documentation guide](development/PACKAGE_DOCUMENTATION_GUIDE.md) - completeness rules and AI/human workflow for maintaining the consumer reference.
 
 Historical or migration-specific notes are supporting information only. Active code, exports, tests, and the canonical consumer reference take precedence.

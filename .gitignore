@@ -23,5 +23,5 @@ project_structure.md
 project_structure.txt
 
 # Manual flow outputs
-custom_test/outputs/*
-!custom_test/outputs/.gitignore
+experiments/outputs/*
+!experiments/outputs/.gitignore

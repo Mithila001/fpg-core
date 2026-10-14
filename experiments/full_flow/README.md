@@ -1,4 +1,4 @@
-# Full Flow Custom Test
+# Full Flow Experiment
 
 Package-local manual integration test for `fpg-core`. It calls the package's public APIs directly; there is no HTTP server, job queue, SSE layer, database, or application schema involved.
 
@@ -7,21 +7,21 @@ Package-local manual integration test for `fpg-core`. It calls the package's pub
 From the repository root, with the normal project virtual environment active:
 
 ```bash
-python custom_test/full_flow/run_full_flow.py
+python experiments/full_flow/run_full_flow.py
 ```
 
 The runner automatically writes the next output as:
 
 ```text
-custom_test/outputs/full_flow_1.json
-custom_test/outputs/full_flow_2.json
+experiments/outputs/full_flow_1.json
+experiments/outputs/full_flow_2.json
 ...
 ```
 
 An explicit round can be requested without overwriting an existing file:
 
 ```bash
-python custom_test/full_flow/run_full_flow.py --round 12
+python experiments/full_flow/run_full_flow.py --round 12
 ```
 
 The runner exits with `0` only when the full flow completes and all final validations pass. A failed stage still produces a JSON file containing the successful earlier stages and the traceback.
@@ -51,7 +51,7 @@ The scenario explicitly adds `kitchen <-> dining_room` to the opening policy bec
 
 ## View
 
-Open `viewer.html` directly in a browser and choose one of the generated `custom_test/outputs/full_flow_*.json` files.
+Open `viewer.html` directly in a browser and choose one of the generated `experiments/outputs/full_flow_*.json` files.
 
 The viewer provides:
 
@@ -64,4 +64,4 @@ The viewer provides:
 - candidate trial scores;
 - raw JSON for deeper inspection.
 
-`custom_test/outputs/.gitignore` keeps generated JSON results out of Git while retaining the directory itself.
+`experiments/outputs/.gitignore` keeps generated JSON results out of Git while retaining the directory itself.

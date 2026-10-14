@@ -50,7 +50,7 @@ python -m pytest
 Also run lint/type checks when the development environment provides them:
 
 ```bash
-python -m ruff check src tests custom_test tools
+python -m ruff check src tests experiments tools
 python -m mypy src/fpg_core
 ```
 

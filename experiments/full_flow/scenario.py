@@ -82,7 +82,7 @@ def build_land_request() -> BuildableSpaceRequestData:
 
 def build_buildable_land_config() -> BuildableLandConfig:
     setback_profile = SetbackProfile(
-        name="custom_test_residential_v1",
+        name="experiments_residential_v1",
         status="active",
         description="Deterministic residential profile for fpg-core manual verification.",
         calculation_mode=SetbackCalculationMode.BASE_PLUS_ROAD_ADJUSTMENT,
@@ -384,7 +384,7 @@ def build_opening_config():
     )
     return replace(
         DEFAULT_OPENING_CONFIG,
-        name="custom_test_full_flow_openings",
+        name="experiments_full_flow_openings",
         policy=policy,
     )
 

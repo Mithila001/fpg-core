@@ -23,8 +23,8 @@ python -m pip install -e ".[dev]"
 ```bash
 python tools/generate_public_api_manifest.py --check
 python -m pytest
-python -m ruff check src tests custom_test tools
+python -m ruff check src tests experiments tools
 python -m mypy src/fpg_core
 ```
 
-The manual `custom_test/full_flow/` workbench is intentionally separate from the normal pytest suite. Use it for end-to-end R&D, visual inspection, and deeper scenario debugging.
+The manual `experiments/full_flow/` workbench is intentionally separate from the normal pytest suite. Use it for end-to-end R&D, visual inspection, and deeper scenario debugging.

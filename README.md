@@ -7,7 +7,7 @@ Reusable Python domain contracts and computational features for automated reside
 - [Consumer package reference](docs/PACKAGE_FEATURE_REFERENCE.md) - complete supported public API, contracts, modes, failures, defaults, and integration notes.
 - [Developer documentation](docs/README.md) - feature architecture, testing, and documentation-maintenance guides.
 - [Contributing and development](CONTRIBUTING.md) - normal local development workflow.
-- [Manual full-flow workbench](custom_test/full_flow/README.md) - slower end-to-end R&D/visual verification.
+- [Manual full-flow workbench](experiments/full_flow/README.md) - slower end-to-end R&D/visual verification.
 
 ## Install
 
@@ -20,7 +20,7 @@ python -m pip install -e ".[dev]"
 ```bash
 python tools/generate_public_api_manifest.py --check
 python -m pytest
-python -m ruff check src tests custom_test tools
+python -m ruff check src tests experiments tools
 python -m mypy src/fpg_core
 ```
 

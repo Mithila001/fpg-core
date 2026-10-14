@@ -34,7 +34,7 @@ Use fixed seeds and a single solver worker where deterministic verification matt
 
 ## Manual/R&D full flow
 
-`custom_test/full_flow/` remains the deeper package-local workbench. It is intentionally not the default automated test suite because it is slower and produces visual/debug output.
+`experiments/full_flow/` is the deeper package-local workbench. It is intentionally not the default automated test suite because it is slower and produces visual/debug output.
 
 Use it when:
 
@@ -43,7 +43,7 @@ Use it when:
 - DEBUG payloads/viewer output changed;
 - a regression only appears in a realistic end-to-end scenario.
 
-Generated JSON belongs under `custom_test/outputs/` and is ignored by Git.
+Generated JSON belongs under `experiments/outputs/` and is ignored by Git.
 
 ## Normal commands
 
