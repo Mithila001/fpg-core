@@ -1,0 +1,139 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FPG Core / Phase 1</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink-0: #070b0f; --ink-1: #0d1319; --ink-2: #141c24;
+      --line: #2a3945; --line-soft: #1f2b34; --text: #e6edf3;
+      --muted: #8ea0ad; --accent: #e9b949; --accent-soft: rgba(233,185,73,.13);
+      --ok: #73d6a3; --bad: #ff7b72; --public: #54d6d6; --private: #d7a6ff;
+      --sans: "Segoe UI", "Aptos", Arial, sans-serif;
+      --mono: "Cascadia Code", Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--ink-0); color: var(--text); overflow: hidden; }
+    body { font: 14px/1.45 var(--sans); }
+    button, input, select { font: inherit; color: inherit; }
+    button, select, input[type="number"] { border: 1px solid var(--line); border-radius: 2px; background: var(--ink-1); }
+    button, select { min-height: 34px; padding: 0 10px; cursor: pointer; }
+    button:hover:not(:disabled), select:hover:not(:disabled) { border-color: var(--accent); }
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    :disabled { opacity: .4; cursor: default; }
+    [hidden] { display: none !important; }
+    .mast { height: 66px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 22px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .mark { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--accent); color: var(--accent); font-weight: 700; box-shadow: inset 0 0 0 4px var(--ink-0), inset 0 0 0 5px var(--accent-soft); }
+    .brand-title { font-size: 15px; font-weight: 600; }
+    .brand-sub { margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+    .run-status { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 9px; }
+    .run-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .run-dot.ok { background: var(--ok); } .run-dot.bad { background: var(--bad); } .run-dot.warn { background: var(--accent); }
+    .shell { display: grid; grid-template-columns: 272px minmax(0,1fr); height: calc(100% - 66px); min-height: 0; }
+    .rail { background: var(--ink-1); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; padding: 18px 14px 0; gap: 18px; }
+    .section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 9px; }
+    .file-box { border: 1px dashed var(--line); padding: 12px; background: var(--ink-0); }
+    .file-box.drag { border-color: var(--accent); background: var(--accent-soft); }
+    .file-box button { width: 100%; }
+    .file-name { margin-top: 8px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .error { margin: 8px 0 0; color: var(--bad); font-size: 12px; overflow-wrap: anywhere; }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .metric span { display: block; font-size: 11px; color: var(--muted); }
+    .metric strong { font: 600 22px/1.6 var(--mono); }
+    #bestScore { color: var(--accent); }
+    .trial-section { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+    .trial-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .trial-heading .section-label { margin: 0; }
+    #bestBtn { min-height: 26px; font-size: 12px; }
+    #scoreChart { width: 100%; height: 66px; flex: none; margin-bottom: 12px; cursor: crosshair; }
+    .trial-list { overflow: auto; flex: 1; min-height: 0; padding-bottom: 14px; scrollbar-width: thin; }
+    .trial-row { width: 100%; border: 1px solid transparent; background: transparent; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 9px 10px; text-align: left; margin-bottom: 2px; }
+    .trial-row:hover { background: var(--ink-2); }
+    .trial-row[aria-current="true"] { border-color: rgba(233,185,73,.35); background: var(--accent-soft); }
+    .trial-row .score { font-family: var(--mono); }
+    .trial-row small { font-size: 10px; color: var(--muted); }
+    .trial-row.best .score { color: var(--accent); }
+    .trial-row.rejected small { color: var(--bad); }
+    .score-track { height: 2px; background: var(--line); align-self: center; }
+    .score-track i { display: block; height: 100%; background: var(--muted); }
+    .trial-row[aria-current="true"] .score-track i { background: var(--accent); }
+    .workspace { padding: 12px; display: flex; min-width: 0; min-height: 0; }
+    .visual-shell { border: 1px solid var(--line); background: var(--ink-1); display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+    .visual-top { background: var(--ink-2); border-bottom: 1px solid var(--line); padding: 10px 12px; display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
+    .playback { display: flex; align-items: center; gap: 5px; }
+    .icon-btn { width: 34px; padding: 0; display: grid; place-items: center; }
+    .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
+    #playBtn { background: var(--accent-soft); color: var(--accent); border-color: rgba(233,185,73,.4); }
+    .trial-position { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+    #trialNumber { width: 65px; height: 34px; padding: 0 7px; color: var(--text); font-family: var(--mono); }
+    .visual-controls { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+    #visualMode { min-width: 215px; }
+    .timeline { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+    #trialSlider { flex: 1; min-width: 40px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+    .trial-score { white-space: nowrap; color: var(--muted); font-size: 12px; }
+    #currentScore { color: var(--accent); font: 600 15px var(--mono); margin-left: 6px; }
+    .blueprint { flex: 1; position: relative; min-height: 0; overflow: hidden; background: radial-gradient(circle at 50% 35%,rgba(84,214,214,.035),transparent 48%),var(--ink-0); }
+    #planSvg { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+    #planSvg:active { cursor: grabbing; }
+    .front-ribbon { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); border: 1px solid rgba(233,185,73,.32); padding: 4px 9px; color: var(--accent); background: var(--ink-0); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
+    .canvas-message { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; padding: 24px; }
+    .canvas-message strong { font-size: 20px; font-weight: 500; } .canvas-message p { color: var(--muted); margin: 10px 0 0; }
+    .canvas-footer { padding: 9px 12px; border-top: 1px solid var(--line); background: var(--ink-2); display: flex; align-items: center; flex-wrap: wrap; gap: 6px 18px; font-size: 11px; color: var(--muted); }
+    #legend { display: flex; flex-wrap: wrap; gap: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .swatch { display: inline-block; width: 10px; height: 6px; border: 1px solid rgba(255,255,255,.2); }
+    #visualMeta { margin-left: auto; }
+    .data-note { border-top: 1px solid var(--line-soft); padding: 7px 12px; color: var(--accent); font-size: 11px; }
+    .details-btn { min-height: 28px; font-size: 12px; }
+    dialog { width: min(850px,calc(100% - 32px)); max-height: 85vh; padding: 0; color: var(--text); border: 1px solid var(--line); background: var(--ink-1); }
+    dialog::backdrop { background: rgba(0,0,0,.65); }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); }
+    .dialog-head h2 { margin: 0; font-size: 17px; } .dialog-body { padding: 16px; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; } th, td { padding: 10px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; } th { color: var(--muted); font-weight: 400; } td:last-child, th:last-child { text-align: right; }
+    details { margin-top: 16px; } summary { cursor: pointer; color: var(--muted); } pre { max-height: 350px; overflow: auto; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media (max-width: 1000px) { .shell { grid-template-columns: 235px minmax(0,1fr); } .visual-controls { margin-left: 0; } }
+    @media (max-width: 640px) { .mast { padding: 0 12px; } .brand-sub { display: none; } .shell { grid-template-columns: 155px minmax(0,1fr); } .rail { padding: 12px 8px 0; gap: 12px; } .workspace { padding: 6px; } .metrics { gap: 6px; } .metric strong { font-size: 17px; } .visual-top { padding: 8px; gap: 8px; } .visual-controls { flex-wrap: wrap; width: 100%; } #visualMode { min-width: 0; width: 100%; } .icon-btn { width: 28px; } #trialNumber { width: 48px; } .timeline { padding: 8px; gap: 6px; } }
+  </style>
+  <script src="viewer.js" defer></script>
+</head>
+<body>
+  <header class="mast">
+    <div class="brand"><div class="mark" aria-hidden="true">F</div><div><div class="brand-title">FPG Core / Phase 1</div><div class="brand-sub">Candidate trial workbench</div></div></div>
+    <div class="run-status"><span id="headerDot" class="run-dot" aria-hidden="true"></span><span id="headerStatus">NO RUN LOADED</span></div>
+  </header>
+  <div class="shell">
+    <aside class="rail" aria-label="Run and trial selection">
+      <section><div class="section-label">Run source</div><div id="dropZone" class="file-box"><button id="chooseFile" type="button">Choose JSON</button><input id="fileInput" type="file" accept=".json,application/json" hidden><div id="fileName" class="file-name">Or drop a run here.</div><p id="loadError" class="error" role="alert" hidden></p></div></section>
+      <section class="metrics" aria-label="Run scores"><div class="metric"><span>Best score</span><strong id="bestScore">—</strong></div><div class="metric"><span>Target score</span><strong id="targetScore">—</strong></div></section>
+      <section class="trial-section"><div class="trial-heading"><div class="section-label">Trials <span id="trialCount"></span></div><button id="bestBtn" type="button" data-run-control disabled>Go to best</button></div><svg id="scoreChart" viewBox="0 0 242 66" role="img" aria-label="Score history; use the trial slider to select a trial"></svg><div id="trialList" class="trial-list" aria-label="Trials"></div></section>
+    </aside>
+    <main class="workspace">
+      <section class="visual-shell" aria-label="Trial visualization">
+        <div class="visual-top">
+          <div class="playback" role="group" aria-label="Trial playback">
+            <button id="firstBtn" class="icon-btn" type="button" aria-label="First trial" title="First trial" data-run-control disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h2v16H5zm14 0v16L8 12z"/></svg></button>
+            <button id="prevBtn" class="icon-btn" type="button" aria-label="Previous trial" title="Previous trial (left arrow)" data-run-control disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4v16L5 12z"/></svg></button>
+            <button id="playBtn" class="icon-btn" type="button" aria-label="Play trials" aria-pressed="false" title="Play / pause (space)" data-run-control disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path id="playIcon" d="M7 4v16l13-8z"/></svg></button>
+            <button id="nextBtn" class="icon-btn" type="button" aria-label="Next trial" title="Next trial (right arrow)" data-run-control disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4v16l11-8z"/></svg></button>
+            <button id="lastBtn" class="icon-btn" type="button" aria-label="Last trial" title="Last trial" data-run-control disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 4h2v16h-2zM5 4v16l11-8z"/></svg></button>
+          </div>
+          <label class="trial-position">Trial <input id="trialNumber" type="number" min="1" value="1" aria-label="Trial position" data-run-control disabled><span id="totalTrials">/ 0</span></label>
+          <div class="visual-controls">
+            <select id="visualMode" aria-label="Visualization section" data-run-control disabled><option value="search">Candidate search</option><option value="circulation">Candidate circulation evaluation</option></select>
+            <select id="playSpeed" aria-label="Playback speed" title="Playback speed" data-run-control disabled><option value="2000">0.5×</option><option value="1000" selected>1×</option><option value="500">2×</option><option value="250">4×</option></select>
+            <button id="fitBtn" type="button" data-run-control disabled>Reset view</button>
+          </div>
+        </div>
+        <div class="timeline"><input id="trialSlider" type="range" min="0" max="0" value="0" aria-label="Select trial" data-run-control disabled><span class="trial-score">Score <strong id="currentScore">—</strong></span><button id="detailsBtn" class="details-btn" type="button" data-run-control disabled>Details</button></div>
+        <div class="blueprint"><div id="frontRibbon" class="front-ribbon" hidden>Front / −Y</div><svg id="planSvg" role="img" aria-label="Candidate hint grid"></svg><div id="canvasMessage" class="canvas-message"><strong id="messageTitle">Load a candidate run</strong><p id="messageText">Choose a JSON file to step through its trials.</p></div></div>
+        <div class="canvas-footer"><div id="legend"></div><span id="visualMeta">Scroll to zoom · drag to pan</span></div>
+        <div id="dataNote" class="data-note" hidden></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="detailsDialog" aria-labelledby="detailsTitle"><div class="dialog-head"><h2 id="detailsTitle">Trial details</h2><button id="closeDetails" type="button">Close</button></div><div class="dialog-body"><p id="trialOutcome"></p><table><thead><tr><th>Evaluator</th><th>Status</th><th>Raw score</th><th>Contribution</th></tr></thead><tbody id="evaluatorRows"></tbody></table><details><summary>Raw trial JSON</summary><pre id="rawTrial"></pre></details></div></dialog>
+</body>
+</html>
