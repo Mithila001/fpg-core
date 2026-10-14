@@ -43,7 +43,7 @@ Use it when:
 - DEBUG payloads/viewer output changed;
 - a regression only appears in a realistic end-to-end scenario.
 
-Generated JSON belongs under `experiments/outputs/` and is ignored by Git.
+Generated JSON belongs under `experiments/outputs/<experiment-name>/` and is ignored by Git.
 
 ## Normal commands
 

@@ -13,8 +13,8 @@ python experiments/full_flow/run_full_flow.py
 The runner automatically writes the next output as:
 
 ```text
-experiments/outputs/full_flow_1.json
-experiments/outputs/full_flow_2.json
+experiments/outputs/full_flow/full_flow_1.json
+experiments/outputs/full_flow/full_flow_2.json
 ...
 ```
 
@@ -51,7 +51,7 @@ The scenario explicitly adds `kitchen <-> dining_room` to the opening policy bec
 
 ## View
 
-Open `viewer.html` directly in a browser and choose one of the generated `experiments/outputs/full_flow_*.json` files.
+Open `viewer.html` directly in a browser and choose one of the generated `experiments/outputs/full_flow/full_flow_*.json` files.
 
 The viewer provides:
 

@@ -64,7 +64,7 @@ T = TypeVar("T")
 
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parents[1]
-OUTPUT_DIR = PROJECT_ROOT / "experiments" / "outputs"
+OUTPUT_DIR = PROJECT_ROOT / "experiments" / "outputs" / TEST_TYPE
 
 
 def utc_now() -> str:

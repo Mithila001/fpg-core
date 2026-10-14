@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from experiments.full_flow.scenario import (
+from tests.flows.scenario import (
     build_buildable_land_config,
     build_land_request,
     build_usable_land_config,

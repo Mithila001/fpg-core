@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from experiments.full_flow.scenario import (
+from tests.flows.scenario import (
     build_candidate_circulation_config,
     build_candidate_scoring_config,
     build_candidate_search_config,
