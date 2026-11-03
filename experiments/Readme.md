@@ -2,6 +2,8 @@
 
 `experiments/` contains focused, manually run experiments for evaluating whether features in the `fpg-core` package work as intended.
 
+See [verification](../docs/development/verification.md) for checks and the distinction between manual experiments and automated tests.
+
 ## Boundaries
 
 - This directory is for experiments and exploratory evaluation. Automated tests belong under `tests/`.

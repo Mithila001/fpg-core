@@ -1,7 +1,6 @@
 include README.md
-include CHANGELOG.md
-include CONTRIBUTING.md
 recursive-include docs *.md *.json
+prune docs/personal
 recursive-include tools *.py
 recursive-include src/fpg_core py.typed
 global-exclude *.py[cod]

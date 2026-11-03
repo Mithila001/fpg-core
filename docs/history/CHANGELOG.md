@@ -4,9 +4,9 @@
 
 ### Documentation
 
-- Replaced the monolithic consumer package reference with `docs/API_GUIDE.md` plus one canonical consumer document per feature under `docs/feature_documentations/`.
-- Added `docs/DOCUMENTATION_STANDARD.md` with mandatory AI/maintainer rules for consumer-documentation completeness, API versioning, changelog/migration handling, and source synchronization.
-- Clarified that feature-local `src/fpg_core/<feature>/README.md` files are internal development notes rather than consumer API documentation.
+- Consolidated agent-oriented architecture and feature guidance under `docs/`, with root `AGENTS.md` as the concise task router.
+- Added mandatory documentation update policy, verification guidance, a personal scratch area, and a standard-library documentation checker.
+- Replaced duplicated feature-local README manuals and repaired links to missing documentation.
 
 ### Breaking
 

@@ -1,65 +1,35 @@
-# FPG Core Agent Workflow
+# fpg-core agent instructions
 
-This file is the repository-level change router for coding agents. It tells an agent what must be kept in sync. Detailed engineering rules live in normal developer documentation under `docs/development/`.
+`fpg-core` is a reusable Python package for single-storey residential floor-plan generation. This is the only repository-level agent instruction file. Read only the documents relevant to the change; `docs/personal/` is user-owned scratch space, not project authority.
 
-`AI_CONTEXT.md`, `project_structure.md`, and `project_structure.txt` are local/generated context artifacts when present. They are not authoritative project files and must not be used as the source of repository rules.
+## Non-negotiable boundaries
 
-## Source of truth order
+- Keep imports directed from consuming applications to `fpg_core`, never the reverse. No HTTP, database, worker, deployment, or client-format dependencies in the package.
+- Features expose supported APIs from their package `__init__.py` / `api.py`; exchange data via `fpg_core.domain`, not another feature's internal modules.
+- Protect exported contracts, room identities, enum values, project units (10 units = 1 m), hard constraints, and deterministic/seeded behavior. Treat public changes as migrations.
+- Check current imports, exports, configurations, and execution paths before relying on prose. Code and verified tests take precedence over documentation.
 
-When sources disagree, use this order:
+## Read by task
 
-1. active code and public exports under `src/fpg_core/`;
-2. tests that verify current runtime contracts;
-3. `docs/PACKAGE_FEATURE_REFERENCE.md` for consumer-facing documentation;
-4. feature README/design/history documents for explanation only.
+| Work | Focused documentation |
+| --- | --- |
+| Overall pipeline or feature boundaries | [Pipeline](docs/architecture/pipeline.md), [Contracts](docs/architecture/contracts.md) |
+| Buildable/usable geometry | [Land](docs/features/land.md) |
+| Room preparation, floor choice, candidate grid | [Preprocessing](docs/features/preprocessing.md) |
+| Optuna, routing, candidate evaluation | [Candidates](docs/features/candidates.md) |
+| CP-SAT constraints, profiles, hallways | [Solver](docs/features/solver.md) |
+| Geometry processors | [Post-processing](docs/features/post-processing.md) |
+| Doors, windows, accessibility | [Openings](docs/features/openings.md) |
+| Completed-plan quality checks | [Final scoring](docs/features/final-scoring.md) |
+| Integration/public contract changes | [Contracts](docs/architecture/contracts.md), [Changelog](docs/history/CHANGELOG.md) |
+| Verification or experiment workflow | [Verification](docs/development/verification.md), relevant `experiments/*/README.md` |
 
-Never preserve stale behavior only because an old Markdown file says it exists.
+## Required change workflow
 
-## Before changing code
+1. Inspect the active implementation, affected public exports, consumers, and tests if present. Respect feature isolation and avoid unnecessary dependencies/rewrites.
+2. **Read [documentation maintenance](docs/development/documentation-maintenance.md) for every code or public-contract change.** Update affected canonical docs in the same change; retire obsolete descriptions and links. Do not defer documentation to a later task.
+3. Add or adjust focused tests for changed behavior. Run applicable checks from [verification](docs/development/verification.md); report unavailable checks rather than claiming success.
+4. If public exports changed, regenerate `docs/_generated/public_api_manifest.json`. Record breaking changes and migration actions in the changelog.
+5. Before finishing, run `python tools/check_docs.py` and the manifest check, then summarize implementation, documentation, verification, and any remaining gaps.
 
-1. Identify the affected feature(s), shared domain contracts, and public exports.
-2. Read `docs/development/FEATURE_GUIDE.md` for feature/boundary rules.
-3. Read `docs/development/TESTING_GUIDE.md` and identify the affected tests/flows.
-4. If consumer-visible behavior may change, read `docs/development/PACKAGE_DOCUMENTATION_GUIDE.md` before editing documentation.
-
-## Required synchronization
-
-| Change | General tests | Targeted flow | Consumer reference |
-|---|---|---|---|
-| Internal refactor with identical behavior | update only if needed | run affected flow | no |
-| Algorithm/validation behavior | yes | update/run affected flow | yes when observable |
-| Config/default/profile change | yes | update/run affected flow | yes |
-| Public signature/type/enum/status/exception change | yes | update/run affected flow | required |
-| Shared `fpg_core.domain` contract change | yes | run every affected flow | required |
-| New/removed public feature | yes | add/update relevant flow | required |
-| Documentation-only correction | documentation checks | no unless example behavior changed | update directly |
-
-When a feature already participates in a flow test, keep that flow test synchronized with the feature change. Do not create a second overlapping flow unless it verifies a genuinely different boundary.
-
-## Before finishing
-
-Run the smallest relevant checks first, then the full normal suite when practical:
-
-```bash
-python tools/generate_public_api_manifest.py --check
-python -m pytest tests/contracts tests/architecture
-python -m pytest tests/flows/<affected-flow>.py
-python -m pytest
-```
-
-Also run lint/type checks when the development environment provides them:
-
-```bash
-python -m ruff check src tests experiments tools
-python -m mypy src/fpg_core
-```
-
-If public exports changed, regenerate the manifest before final verification:
-
-```bash
-python tools/generate_public_api_manifest.py
-```
-
-If consumer-visible behavior changed, update `docs/PACKAGE_FEATURE_REFERENCE.md` using the documentation guide and include migration notes for breaking changes.
-
-Remove temporary implementation notes, generated context files, debug dumps, and one-off artifacts before finishing. Do not add application/server/database/HTTP concerns to `fpg-core`.
+Do not treat generated local context dumps, historical notes, or `docs/personal/` as specifications.
