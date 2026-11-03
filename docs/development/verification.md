@@ -75,7 +75,9 @@ counts and timeouts for smoke checks. P01C candidate completion does not imply i
 floor-plan branches succeeded. Inspect nested run statuses and errors. Actual
 research runs are not part of default CI.
 
-CI checks Core independently. The Lab workflow runs cheap verification on relevant
+Automatic CI runs for pull requests targeting `main`, including updates to an open
+pull request; ordinary branch pushes do not trigger it. CI checks Core independently.
+The Lab workflow runs cheap verification on relevant
 Core/Lab changes, runs Lab's suite for Lab changes, and supports manually requesting
 that suite for Core integration changes. Report checks actually run, failures, and
 environment limitations; never claim success for unavailable tooling.

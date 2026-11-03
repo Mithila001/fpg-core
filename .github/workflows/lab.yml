@@ -1,9 +1,8 @@
 name: Lab integration
 
 on:
-  push:
-    paths: ['src/**', 'pyproject.toml', 'fpg-lab/**', '.github/workflows/lab.yml']
   pull_request:
+    branches: [main]
     paths: ['src/**', 'pyproject.toml', 'fpg-lab/**', '.github/workflows/lab.yml']
   workflow_dispatch:
     inputs:
@@ -36,7 +35,7 @@ jobs:
         working-directory: .
         env:
           EVENT: ${{ github.event_name }}
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
           MANUAL_FULL: ${{ inputs.full_tests }}
         run: |
           if [ "$EVENT" = workflow_dispatch ]; then
