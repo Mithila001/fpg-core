@@ -15,7 +15,7 @@ Do not redefine common `RoomType`, room IDs, `FloorPlan`, `FloorPlanGenerationSp
 
 ## Units and coordinate ownership
 
-Current convention: **10 project units = 1 metre** (1 unit = 10 cm). Geometry may use floats; preprocessing's chosen floor extents use whole project units and a centered candidate grid may start at half units. Solver/opening CP-SAT integer coordinate scales are internal **conversion settings**, not a new consumer unit system. Make every conversion explicit.
+Repository examples and Lab use **10 project units = 1 metre** (1 unit = 10 cm). Core processes consistent project units supplied by its consumer; `project_units_per_meter` records the physical conversion and is not a universal enforced scale. Geometry may use floats; preprocessing's chosen floor extents use whole project units and a centered candidate grid may start at half units. Solver/opening CP-SAT integer coordinate scales are internal **conversion settings**, not a new consumer unit system. Make every conversion explicit.
 
 `FloorPlanGenerationSpec` owns the required rooms and relations for a solve. Room IDs, enum values, and relation strengths are identity/semantic contracts across stages. Changing any public type or default needs a compatibility review and a changelog entry.
 

@@ -1,6 +1,6 @@
 # Floor Plan Solver
 
-> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Internal feature `README.md` files are development notes and are not the consumer contract. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
+> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Implementation rationale is maintained in the internal architecture and feature notes. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
 
 ## Purpose
 
@@ -142,6 +142,7 @@ The shipped default profiles enable:
 | `minimum_coverage` | `ratio=0.6` |
 | `hallway_connectivity` | `minimum_overlap=10`; hallway type must touch an anchor type and a non-hallway/non-anchor destination; default anchor is living room |
 | `hallway_dimensions` | hallway corridor width is constrained to `8..10`; the other dimension may extend as needed |
+| `hallway_shared_wall` | hallway pairs may touch/connect, but their collinear shared-wall overlap may not exceed `maximum_shared_wall=12.0` project units; corner-only contact has zero shared-wall length |
 | `front_anchor` | veranda, living room, bedroom, garage |
 | `back_exposure` | hallway and kitchen; minimum exposure `10.0` |
 | `garage_placement` | garage type |
@@ -224,6 +225,7 @@ DefaultProfileSettings(
     refinement_max_time_seconds: float = 2.0,
     refinement_position_tolerance: float = 10,
     refinement_size_tolerance: float = 10,
+    max_hallway_shared_wall: float = 12.0,
     hallway_efficiency_weight: int = 1,
     hallway_area_penalty_multiplier: int = 1,
     hallway_preferred_max_length: float | None = 40.0,
@@ -295,10 +297,6 @@ With hallway efficiency enabled, `penalty_terms` can contain
 `FloorPlanSolveResult.profile_name` is retained for serialized/public compatibility
 even though the request field is named `config`.
 
-## Warnings / diagnostics
-
-The solver does not expose a separate warning collection. Expected solver outcomes are represented by `SolverStatus` and `FloorPlanSolveResult.message`; a non-solution status is not automatically an exception. In `DEBUG`, `SolverDiagnostics` contains raw solver status, wall time, objective/bound information, conflicts, branches, applied hard/soft constraint IDs, and penalty terms. `PRODUCTION` omits diagnostics.
-
 ## Errors / failure conditions
 
 Invalid specifications, configs, constraint IDs, or required seed data raise the
@@ -339,37 +337,42 @@ hallway-efficiency objective while still satisfying hard width/connectivity rule
 Connected hallways may later be merged by `floor_plan_post_processing`; that is a
 separate responsibility from solver-side compaction.
 
+
+## Warnings / diagnostics
+
+The solver does not expose a separate warning collection. Expected solver outcomes are represented by `SolverStatus` and `FloorPlanSolveResult.message`; a non-solution status is not automatically an exception. In `DEBUG`, `SolverDiagnostics` contains raw solver status, wall time, objective/bound information, conflicts, branches, applied hard/soft constraint IDs, and penalty terms. `PRODUCTION` omits diagnostics.
+
 ## Public Export Inventory
 
-The supported feature-root import surface is `fpg_core.floor_plan_solver`. Its current exported symbols are:
+### `fpg_core.floor_plan_solver` exports (25)
 
-- `DEFAULT_PROFILES`
-- `DefaultProfileSettings`
-- `ConstraintRegistry`
-- `FloorPlanSolveExecution`
-- `FloorPlanSolveRequest`
-- `FloorPlanSolveResult`
-- `FloorPlanSolver`
-- `FloorPlanSolverConfig`
-- `FloorPlanSolverError`
-- `GenerationProfile`
-- `HardConstraintUse`
-- `INITIAL_GENERATION_PROFILE`
-- `PreparationConfig`
-- `ProfileCatalog`
-- `REFINEMENT_A_PROFILE`
-- `REFINEMENT_B_PROFILE`
-- `RoomPlacementHint`
-- `SeedPolicy`
-- `SeedSource`
-- `SoftConstraintUse`
-- `SolverConfig`
-- `SolverDiagnostics`
-- `SolverStatus`
-- `build_default_profiles`
-- `generate_floor_plan`
-
-Consumers should prefer the feature-root import surface shown above and `fpg_core.domain` for canonical shared contracts. Implementation submodules are not part of the supported consumer surface unless explicitly documented.
+| Export | Kind | Exact contract/value | Coverage |
+|---|---|---|---|
+| `DEFAULT_PROFILES` | dataclass/contract | `constructor has no separately inspectable signature` | ProfileCatalog(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') |
+| `DefaultProfileSettings` | dataclass/contract | `(coordinate_scale: 'int' = 1, minimum_coverage_ratio: 'float' = 0.6, minimum_adjacency_overlap: 'float' = 10, attached_bathroom_minimum_shared_wall: 'float' = 10.0, initial_max_time_seconds: 'float' = 5.0, refinement_max_time_seconds: 'float' = 2.0, refinement_position_tolerance: 'float' = 10, refinement_size_tolerance: 'float' = 10, max_hallway_shared_wall: 'float' = 12.0, hallway_efficiency_weight: 'int' = 1, hallway_area_penalty_multiplier: 'int' = 1, hallway_preferred_max_length: 'float | None' = 40.0, hallway_excess_length_penalty_multiplier: 'int' = 5) -> None` | Central tuning values used to construct the built-in profiles, including hallway compactness weights. |
+| `ConstraintRegistry` | dataclass/contract | `(hard: 'dict[str, HardConstraint]' = <factory>, soft: 'dict[str, SoftConstraint]' = <factory>) -> None` | Runtime collection of available hard and soft constraints. |
+| `FloorPlanSolveExecution` | constant/type alias | `_GenericAlias instance` | Documented in the corresponding feature/shared section. |
+| `FloorPlanSolveRequest` | dataclass/contract | `(specification: 'FloorPlanGenerationSpec', config: 'FloorPlanSolverConfig', candidate_hints: 'tuple[RoomPlacementHint, ...]' = (), existing_floor_plan: 'FloorPlan \| None' = None) -> None` | Processing input for one floor-plan solve. |
+| `FloorPlanSolveResult` | dataclass/contract | `(status: 'SolverStatus', floor_plan: 'FloorPlan \| None', profile_name: 'str', message: 'str') -> None` | FloorPlanSolveResult(status: 'SolverStatus', floor_plan: 'FloorPlan \| None', profile_name: 'str', message: 'str') |
+| `FloorPlanSolver` | class/interface/registry | `(registry: 'ConstraintRegistry \| None' = None) -> 'None'` | Small application service that owns one generic CP-SAT pipeline. |
+| `FloorPlanSolverConfig` | dataclass/contract | `(name: 'str', hard_constraints: 'tuple[HardConstraintUse, ...]', soft_constraints: 'tuple[SoftConstraintUse, ...]', solver: 'SolverConfig' = <factory>, preparation: 'PreparationConfig' = <factory>, seed: 'SeedPolicy' = <factory>) -> None` | Complete reusable configuration for one CP-SAT generation stage. |
+| `FloorPlanSolverError` | exception | `constructor has no separately inspectable signature` | Base exception for invalid solver input or configuration. |
+| `GenerationProfile` | dataclass/contract | `(name: 'str', hard_constraints: 'tuple[HardConstraintUse, ...]', soft_constraints: 'tuple[SoftConstraintUse, ...]', solver: 'SolverConfig' = <factory>, preparation: 'PreparationConfig' = <factory>, seed: 'SeedPolicy' = <factory>) -> None` | Complete reusable configuration for one CP-SAT generation stage. |
+| `HardConstraintUse` | dataclass/contract | `(key: 'str', settings: 'Mapping[str, Any]' = <factory>) -> None` | Configuration for one enabled hard constraint. |
+| `INITIAL_GENERATION_PROFILE` | dataclass/contract | `constructor has no separately inspectable signature` | Complete reusable configuration for one CP-SAT generation stage. |
+| `PreparationConfig` | dataclass/contract | `(coordinate_scale: 'int' = 10) -> None` | Conversion settings between project units and CP-SAT integer units. |
+| `ProfileCatalog` | dataclass/contract | `(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') -> None` | ProfileCatalog(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') |
+| `REFINEMENT_A_PROFILE` | dataclass/contract | `constructor has no separately inspectable signature` | Complete reusable configuration for one CP-SAT generation stage. |
+| `REFINEMENT_B_PROFILE` | dataclass/contract | `constructor has no separately inspectable signature` | Complete reusable configuration for one CP-SAT generation stage. |
+| `RoomPlacementHint` | dataclass/contract | `(room_id: 'RoomId', x: 'float', y: 'float', width: 'float \| None' = None, length: 'float \| None' = None) -> None` | Candidate-search hint for a room's lower-left position and optional size. |
+| `SeedPolicy` | dataclass/contract | `(source: 'SeedSource' = <SeedSource.NONE: 'none'>, require_source: 'bool' = False, apply_hints: 'bool' = True, position_tolerance: 'float \| None' = None, size_tolerance: 'float \| None' = None) -> None` | Controls how candidate or existing-layout geometry is used as a seed. |
+| `SeedSource` | enum | `NONE='none'; CANDIDATE_HINTS='candidate_hints'; EXISTING_FLOOR_PLAN='existing_floor_plan'` | Documented in the corresponding feature/shared section. |
+| `SoftConstraintUse` | dataclass/contract | `(key: 'str', weight: 'int', settings: 'Mapping[str, Any]' = <factory>) -> None` | Configuration for one enabled soft constraint and its objective weight. |
+| `SolverConfig` | dataclass/contract | `(max_time_seconds: 'float' = 30.0, num_search_workers: 'int' = 0, random_seed: 'int \| None' = None, log_search_progress: 'bool' = False, relative_gap_limit: 'float \| None' = None, cp_model_presolve: 'bool' = True) -> None` | OR-Tools runtime settings for one solve. |
+| `SolverDiagnostics` | dataclass/contract | `(raw_status: 'str', wall_time_seconds: 'float', objective_value: 'float \| None', best_objective_bound: 'float \| None', conflicts: 'int', branches: 'int', applied_hard_constraints: 'tuple[str, ...]', applied_soft_constraints: 'tuple[str, ...]', penalty_terms: 'tuple[str, ...]') -> None` | SolverDiagnostics(raw_status: 'str', wall_time_seconds: 'float', objective_value: 'float \| None', best_objective_bound: 'float \| None', conflicts: 'int', branches: 'int', applied_hard_constraints: 'tuple[str, ...]', applied_soft_constraints: 'tuple[str, ...]', penalty_terms: 'tuple[str, ...]') |
+| `SolverStatus` | enum | `OPTIMAL='optimal'; FEASIBLE='feasible'; INFEASIBLE='infeasible'; MODEL_INVALID='model_invalid'; UNKNOWN='unknown'` | Documented in the corresponding feature/shared section. |
+| `build_default_profiles` | function | `build_default_profiles(settings: 'DefaultProfileSettings \| None' = None) -> 'ProfileCatalog'` | Documented in the corresponding feature/shared section. |
+| `generate_floor_plan` | function | `generate_floor_plan(request: 'FloorPlanSolveRequest', *, registry: 'ConstraintRegistry \| None' = None, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FloorPlanSolveExecution'` | Documented in the corresponding feature/shared section. |
 
 ## API Compatibility
 

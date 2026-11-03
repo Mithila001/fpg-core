@@ -15,4 +15,4 @@ These files are the consumer-facing documentation for individual `fpg-core` feat
 | Floor Plan Openings | [floor_plan_openings.md](floor_plan_openings.md) |
 | Floor Plan Scoring | [floor_plan_scoring.md](floor_plan_scoring.md) |
 
-Internal `src/fpg_core/<feature>/README.md` files are development notes and are not part of this consumer documentation set.
+Internal architecture and feature notes are linked from the [documentation map](../README.md); they explain implementation rationale separately from these consumer contracts.

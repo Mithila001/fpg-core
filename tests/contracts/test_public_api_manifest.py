@@ -7,7 +7,6 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = PROJECT_ROOT / "docs" / "_generated" / "public_api_manifest.json"
-REFERENCE_PATH = PROJECT_ROOT / "docs" / "PACKAGE_FEATURE_REFERENCE.md"
 
 
 def test_public_api_manifest_is_current() -> None:
@@ -31,13 +30,24 @@ def _coverage_section(reference: str, module_name: str) -> str:
 
 def test_consumer_reference_covers_every_public_export() -> None:
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    reference = REFERENCE_PATH.read_text(encoding="utf-8")
 
     missing: list[str] = []
     for module_name, module in manifest["modules"].items():
+        doc = (
+            PROJECT_ROOT
+            / "docs"
+            / (
+                "API_GUIDE.md"
+                if module_name in {"fpg_core", "fpg_core.domain"}
+                else f"feature_documentations/{module_name.split('.')[-1]}.md"
+            )
+        )
+        reference = doc.read_text(encoding="utf-8")
         section = _coverage_section(reference, module_name)
         for export in module["exports"]:
             if f"| `{export}` |" not in section:
                 missing.append(f"{module_name}.{export}")
 
-    assert not missing, "consumer reference is missing public exports:\n" + "\n".join(missing)
+    assert not missing, "consumer reference is missing public exports:\n" + "\n".join(
+        missing
+    )

@@ -6,6 +6,8 @@ recursive-include src/fpg_core py.typed
 global-exclude *.py[cod]
 global-exclude __pycache__
 
-# Local/manual experiments are not package distribution content.
-prune experiments
+# Application and agent workflows are repository-only content.
+prune fpg-lab
+prune .agents
+prune .venv
 prune tests

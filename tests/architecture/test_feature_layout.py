@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "src" / "fpg_core"
-REQUIRED_FEATURE_FILES = {"README.md", "__init__.py", "api.py", "exceptions.py"}
+REQUIRED_FEATURE_FILES = {"__init__.py", "api.py", "exceptions.py"}
 
 
 def test_feature_packages_have_consistent_public_boundary() -> None:

@@ -1,6 +1,6 @@
 # Usable Land
 
-> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Internal feature `README.md` files are development notes and are not the consumer contract. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
+> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Implementation rationale is maintained in the internal architecture and feature notes. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
 
 ## Purpose
 
@@ -54,10 +54,6 @@ The result is `UsableLand` with world-coordinate `boundary`, integer `width`,
 `UsableLandDetails`: evaluated pair count, local buildable/selected boundaries, and
 the road-aligned transform origin and axes. PRODUCTION sets `details=None`.
 
-## Warnings / diagnostics
-
-This feature has no separate warning channel. Search-limit and no-solution cases are represented by `UsableLandError`, not partial output. In `DEBUG`, `UsableLandDetails` exposes evaluated-pair counts, road-aligned local geometry, the selected local rectangle, and transform axes/origin for diagnosis.
-
 ## Errors / failure conditions
 
 Invalid input/config types raise `TypeError`/`ValueError`. `UsableLandError` exposes
@@ -66,6 +62,9 @@ Invalid input/config types raise `TypeError`/`ValueError`. `UsableLandError` exp
 `USABLE_LAND_CALCULATION_FAILED`.
 
 ## Usage example
+
+First run the complete [Buildable Land example](buildable_land.md#usage-example)
+to define `buildable_land` and `normalized_land` for the same road-aligned parcel.
 
 ```python
 from fpg_core.domain import ExecutionMode
@@ -84,17 +83,22 @@ usable = execution.result
 The call is deterministic and non-mutating. Ranking favors area, then the smaller
 dimension, then parallel-to-road alignment, followed by stable coordinate tie-breaks.
 
+
+## Warnings / diagnostics
+
+This feature has no separate warning channel. Search-limit and no-solution cases are represented by `UsableLandError`, not partial output. In `DEBUG`, `UsableLandDetails` exposes evaluated-pair counts, road-aligned local geometry, the selected local rectangle, and transform axes/origin for diagnosis.
+
 ## Public Export Inventory
 
-The supported feature-root import surface is `fpg_core.usable_land`. Its current exported symbols are:
+### `fpg_core.usable_land` exports (5)
 
-- `UsableLandConfig`
-- `UsableLandDetails`
-- `UsableLandError`
-- `UsableLandInput`
-- `find_usable_land`
-
-Consumers should prefer the feature-root import surface shown above and `fpg_core.domain` for canonical shared contracts. Implementation submodules are not part of the supported consumer surface unless explicitly documented.
+| Export | Kind | Exact contract/value | Coverage |
+|---|---|---|---|
+| `UsableLandConfig` | dataclass/contract | `(minimum_width: 'int', minimum_length: 'int', search_resolution: 'int', maximum_sweep_lines: 'int') -> None` | Reusable search limits and dimensional requirements. |
+| `UsableLandDetails` | dataclass/contract | `(evaluated_rectangle_pairs: 'int', local_buildable_boundary: 'Polygon', selected_local_boundary: 'Polygon', transform_origin: 'Point', transform_x_axis: 'tuple[float, float]', transform_y_axis: 'tuple[float, float]') -> None` | DEBUG-only search and road-aligned geometry information. |
+| `UsableLandError` | exception | `(code: 'BuildableSpaceErrorCode', message: 'str', *, details: 'dict[str, object] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `UsableLandInput` | dataclass/contract | `(buildable_land: 'BuildableLand', land: 'NormalizedLand', config: 'UsableLandConfig') -> None` | Land geometry being processed plus reusable usable-land configuration. |
+| `find_usable_land` | function | `find_usable_land(usable_input: 'UsableLandInput', *, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FeatureExecution[UsableLand, UsableLandDetails]'` | Find the best road-aligned rectangle inside buildable land. |
 
 ## API Compatibility
 

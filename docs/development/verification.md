@@ -1,32 +1,81 @@
 # Development and verification
 
-## Setup
+Core uses the root `.venv`; Lab uses `fpg-lab/.venv`, containing both local packages.
+See the [setup tutorial](../../README.md). Commands below use `python` to mean the
+appropriate environment's interpreter; activation is optional.
 
-From the repository root, with Python 3.11 or newer:
+## Select checks by impact
 
-```bash
-python -m pip install -e ".[dev]"
-```
+| Change | Verification |
+| --- | --- |
+| Documentation | Links/placement, affected contract coverage, changed runnable examples |
+| Core internal behavior | Focused feature/flow tests and applicable static checks |
+| Public behavior used by Lab | Core checks, affected Lab caller review, cheap integration verifier, relevant Lab regression tests |
+| Lab code | Relevant Lab tests, lint, and type checks |
+| Solver/search quality or pipeline behavior | Bounded representative experiment when the result is needed |
 
-## Checks
+A Core change does not automatically require Lab's full suite or research runs.
+Inspect the affected public contract before deciding consumer impact. Lint/import
+checks, automated orchestration tests, and real experiments are different checks.
+
+## Core commands
+
+From the repository root:
 
 ```bash
 python tools/check_docs.py
 python tools/generate_public_api_manifest.py --check
 python -m pytest
-python -m ruff check src tests experiments tools
+python -m ruff check src tests tools
 python -m mypy src/fpg_core
+python -m build
+python tools/check_distribution.py
 ```
 
-The manifest check parses public `__all__` declarations without importing heavy solver dependencies. If exports change, run `python tools/generate_public_api_manifest.py` and include the generated JSON. Check docs after every documentation move or API rename.
+Root pytest discovery targets `tests/` only. Architecture and contract tests protect
+feature boundaries, public exports, documentation coverage, execution contracts,
+and metadata. The ten public feature examples execute with their documented
+prerequisites as regression checks. They do not require Lab's dependencies. Focused public-API flows are
+in `tests/flows/`: land, candidates, and final plan processing. Use fixed seeds,
+small trial counts, bounded solver times, and one worker when deterministic checks
+matter. A passing inventory test does not prove documentation semantics.
 
-**Checkout caveat:** some distributed source snapshots do not include a `tests/` directory, even though `pyproject.toml` defines dev test dependencies. Do not report `pytest` passing unless tests are present and run; absent tests normally yield pytest exit code 5. Add appropriate focused tests when implementing new behavior. If a tool or optional dependency is unavailable, report that instead of treating it as a passed check.
+`python -m build` builds a source archive and then a wheel from it. The distribution
+checker inspects both archives and dependency metadata. To verify an installed
+wheel, create a fresh environment outside package source, install the wheel and
+its runtime dependencies, and run a public import/example. Confirm Lab, NiceGUI,
+and Plotly are absent. Do not install Core dev extras for this consumer check.
 
-For algorithm changes, verify public contracts/validation, geometry invariants, feasibility and infeasibility, seeded behavior, configuration, and stage compatibility as appropriate. Run focused checks before any broader suite.
+## Lab commands
 
-## Manual package-only flows
+From `fpg-lab/`, with its interpreter:
 
-- `python experiments/phase-1/run_flow.py`: preprocessing through candidate scoring, target/limit controlled; see [phase-1 README](../../experiments/phase-1/README.md).
-- `python experiments/full_flow/run_full_flow.py`: buildable land through final scoring and custom checks; see [full-flow README](../../experiments/full_flow/README.md).
+```bash
+python -m scripts.verify_fpg_core
+python -m pytest
+python -m ruff check fpg_lab scripts tests
+python -m mypy fpg_lab scripts
+```
 
-These are **manual experiments**, not automated tests. They write outputs under `experiments/outputs/` (ignored by Git). They require installed runtime dependencies, including OR-Tools for the complete pipeline, and may be expensive. The experiment scripts are not part of the installed package and must not become runtime imports of `fpg_core`.
+The verifier checks the local Core origin, public imports, seed schema, and all P01
+configuration mappings without running solver experiments. The existing suite
+checks orchestration with real preprocessing/search and deterministic substitutes
+for costly stages; it covers branch failures, debug retention, input validation,
+shutdown, recovery, and snapshots. Use targeted test selection for narrow changes.
+
+## Manual experiments
+
+Use [Lab's run instructions](../../fpg-lab/README.md) and the
+[P01 family guide](../../fpg-lab/docs/experiments/p01.md). Old root experiment
+runners/viewers are retired. Core-only usage examples remain in the public docs;
+Core integration tests remain independent of Lab.
+
+Run headless experiments against an isolated database. Use explicit small trial
+counts and timeouts for smoke checks. P01C candidate completion does not imply its
+floor-plan branches succeeded. Inspect nested run statuses and errors. Actual
+research runs are not part of default CI.
+
+CI checks Core independently. The Lab workflow runs cheap verification on relevant
+Core/Lab changes, runs Lab's suite for Lab changes, and supports manually requesting
+that suite for Core integration changes. Report checks actually run, failures, and
+environment limitations; never claim success for unavailable tooling.

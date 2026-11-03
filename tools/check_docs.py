@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -10,15 +11,31 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]\n]+\]\(([^)]+)\)")
-SKIP_DIRS = {".git", ".venv", "venv", "build", "dist", "__pycache__", ".pytest_cache"}
+SKIP_DIRS = {
+    ".git",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "data",
+    ".qa",
+    ".test-tmp",
+}
+AGENT_FILES = {Path("AGENTS.md"), Path("fpg-lab/AGENTS.md")}
 
 
 def markdown_files() -> list[Path]:
-    return sorted(
-        path
-        for path in ROOT.rglob("*.md")
-        if not any(part in SKIP_DIRS for part in path.relative_to(ROOT).parts)
-    )
+    files = []
+    for directory, children, names in os.walk(ROOT):
+        children[:] = [name for name in children if name not in SKIP_DIRS]
+        files.extend(
+            Path(directory) / name for name in names if name.lower().endswith(".md")
+        )
+    return sorted(files)
 
 
 def active_lines(path: Path):
@@ -44,13 +61,22 @@ def active_lines(path: Path):
 def check() -> list[str]:
     issues: list[str] = []
     files = markdown_files()
-    agents = [p for p in files if p.name.lower() in {"agent.md", "agents.md"}]
-    if agents != [ROOT / "AGENTS.md"]:
-        issues.append("Expected exactly one repository agent file: AGENTS.md at root")
+    agents = {
+        p.relative_to(ROOT)
+        for p in files
+        if p.name.lower() in {"agent.md", "agents.md"}
+    }
+    if agents != AGENT_FILES:
+        issues.append("Expected scoped agent files at AGENTS.md and fpg-lab/AGENTS.md")
 
     for path in files:
         relative = path.relative_to(ROOT)
-        if path.name not in {"README.md", "AGENTS.md"} and relative.parts[0] != "docs":
+        allowed = (
+            relative.parts[0] == "docs"
+            or relative.parts[:2] == ("fpg-lab", "docs")
+            or relative.parts[:2] == (".agents", "skills")
+        )
+        if path.name not in {"README.md", "AGENTS.md"} and not allowed:
             issues.append(f"{relative}: non-README Markdown belongs under docs/")
         if relative.parts[:2] == ("docs", "personal"):
             continue  # Intentionally unmanaged user notes.
@@ -64,11 +90,15 @@ def check() -> list[str]:
                     continue  # Web and mail links are not part of this check.
                 target_path = unquote(parsed.path)
                 if target_path.startswith("/"):
-                    issues.append(f"{relative}:{line_number}: local link must be relative: {destination}")
+                    issues.append(
+                        f"{relative}:{line_number}: local link must be relative: {destination}"
+                    )
                     continue
                 target = path.parent / target_path
                 if not target.exists():
-                    issues.append(f"{relative}:{line_number}: missing link target: {destination}")
+                    issues.append(
+                        f"{relative}:{line_number}: missing link target: {destination}"
+                    )
     return issues
 
 

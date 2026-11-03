@@ -13,6 +13,7 @@ dist/
 venv/
 .env
 .env.*
+!.env.example
 .idea/
 .vscode/
 .DS_Store
@@ -21,7 +22,3 @@ venv/
 AI_CONTEXT.md
 project_structure.md
 project_structure.txt
-
-# Manual flow outputs
-experiments/outputs/*
-!experiments/outputs/.gitignore

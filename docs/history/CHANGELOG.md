@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Repository and Lab integration
+
+- Added FPG Lab under `fpg-lab/` as an experimental consumer of this checkout's
+  public Core APIs. Core distributions and development dependencies exclude Lab.
+- Use root `.venv` for Core and `fpg-lab/.venv` for Lab. Lab setup derives Core
+  from the parent directory; `CorePath` / `--core-path` overrides are removed.
+- Lab accepts its current profile schema 6 only (distinct from Core aggregate
+  schema 2). Legacy upgrades and the embedded older profile were removed. Stop
+  Lab, review `.env`, reset with the explicit fresh setup option, and reseed to
+  replace old local records. No sibling database is imported.
+- The tracked Lab seed is the single starter source. The export command validates
+  and normalizes it; it does not automatically regenerate policy from Core defaults.
+- Retired root manual experiment runners/viewers. Use Core public Markdown examples
+  and focused flow tests, or Lab UI/headless experiments for research.
+- Consolidated public documentation into `API_GUIDE.md` and per-feature documents;
+  public export/contract checks now target those documents. Replaced the monolithic
+  reference, duplicate documentation policy and duplicate testing guide.
+- Added scoped agent instructions, P01 family guidance, repository-local skills,
+  distribution isolation checks and a separate impact-scoped Lab workflow.
+- Core version and public algorithms/contracts are unchanged by this integration.
+
 ### Documentation
 
 - Consolidated agent-oriented architecture and feature guidance under `docs/`, with root `AGENTS.md` as the concise task router.

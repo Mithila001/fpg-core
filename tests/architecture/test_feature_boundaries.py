@@ -61,3 +61,14 @@ def test_features_do_not_import_other_feature_internals() -> None:
                 )
 
     assert not failures, "\n".join(failures)
+
+
+def test_core_has_no_lab_imports() -> None:
+    for path in PACKAGE_ROOT.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                names = [node.module or ""]
+            assert not any(name.split(".")[0] == "fpg_lab" for name in names), path

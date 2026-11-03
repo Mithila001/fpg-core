@@ -1,11 +1,10 @@
 # fpg-core Consumer API Guide
 
-This is the package-wide consumer contract guide. It contains the conventions and shared types that apply across features. Exact feature-specific inputs, outputs, configuration, errors, warnings/diagnostics, and examples live under [`feature_documentations/`](feature_documentations/README.md).
+Supported package-wide contracts and shared types. Feature-specific calls, configuration, errors, and examples are in the [feature index](feature_documentations/README.md). This guide targets the current source tree, including unreleased changes; package metadata is not a claim of publication.
 
-> A consumer should not need to inspect `src/fpg_core` to determine how to call a supported public feature. Internal feature `README.md` files are development notes, not consumer API documentation.
 ## Package Overview
 
-`fpg-core` 0.1.0 is a synchronous Python library of typed domain contracts and
+`fpg-core` 0.2.0 is a synchronous Python library of typed domain contracts and
 computational features for residential floor-plan generation. The supported
 dependency direction is `consumer application -> fpg-core`. Consumers provide
 configuration and request data and own orchestration, HTTP/API transport, persistence,
@@ -16,11 +15,12 @@ The package exposes independent features for buildable and usable land, input
 preparation, candidate search/circulation/scoring, CP-SAT floor-plan solving,
 post-processing, opening generation, and final-plan scoring. It does not expose a
 mandatory end-to-end pipeline, server, CLI, storage layer, or configuration loader.
+
 ## Installation and Compatibility
 
 ### Python and distribution metadata
 
-- Distribution name/version: `fpg-core` `0.1.0` from `pyproject.toml`.
+- Distribution name/version: `fpg-core` `0.2.0` from `pyproject.toml`.
 - Python requirement: `>=3.11`; classifiers explicitly list Python 3.11 and 3.12.
 - Package layout: `src/fpg_core`; build backend: `setuptools.build_meta`.
 - The repository does not establish a public package-index URL. From a checkout,
@@ -38,6 +38,7 @@ mandatory end-to-end pipeline, server, CLI, storage layer, or configuration load
 The package version fallback in an uninstalled source checkout is `0.2.0`; installed
 distributions report their metadata version. Consumers should use distribution
 metadata as authoritative and should not infer compatibility from the fallback.
+
 ## Public Import Conventions
 
 Use `fpg_core.<feature>` for feature operations and feature-owned contracts. Use
@@ -82,6 +83,7 @@ collects the three shared buildable/usable-land policies. The package-root
 `CandidateSearchConfig` and `PreprocessingConfig` are the same canonical classes
 exported by their feature roots. `canonical_aspect_ratio` is also re-exported as a
 convenience.
+
 ## Global Units and Geometry Conventions
 
 - The package does not impose metres, feet, or another physical unit. All coordinates,
@@ -98,6 +100,7 @@ convenience.
 - Frozen dataclasses are immutable shallow contracts. `FloorPlan` and its `rooms`,
   `openings`, `identity_redirects`, and `applied_transformations` collections are
   intentionally mutable and use per-instance factories.
+
 ## Execution Modes and Common Return Envelopes
 
 `ExecutionMode` has exactly `PRODUCTION = "production"` and `DEBUG = "debug"`.
@@ -116,6 +119,7 @@ and accepts the mode only for evaluator context/debug payload policy.
 Returned failure statuses are normal results and are distinct from raised validation,
 configuration, registry, and processing exceptions. Each feature section identifies
 which mechanism it uses.
+
 ## Feature Documentation Index
 
 | Feature | Consumer document | Preferred operation |
@@ -132,7 +136,7 @@ which mechanism it uses.
 | Floor Plan Scoring | [floor_plan_scoring.md](feature_documentations/floor_plan_scoring.md) | `score_floor_plan` |
 ## Reusable Example Fixtures
 
-Several feature documents reuse these fully constructed public contracts. Copy
+Several feature examples below reuse these fully constructed public contracts. Copy
 this block first when running an example that names an `example_*` value.
 
 ```python
@@ -194,6 +198,7 @@ example_route_rule = CirculationRouteRule(
     importance_weight=1.0,
 )
 ```
+
 ## Shared Domain Contract Reference
 
 All contracts in this section are public from `fpg_core.domain`. `RoomId`,
@@ -378,6 +383,7 @@ values are `standard` and `solver_placeholder`.
 Opening types are `door` and `window`; purposes are `room_connection`,
 `main_entrance`, `secondary_entrance`, and `daylight`. Geometry-changing post-processing
 mutates the supplied `FloorPlan`; opening generation and both scoring features do not.
+
 ## Cross-Feature Compatibility Reference
 
 These are compatibility edges, not a package-mandated pipeline.
@@ -395,6 +401,7 @@ These are compatibility edges, not a package-mandated pipeline.
 No automatic adapter converts `CandidatePoint` values into `RoomPlacementHint`; the
 consumer maps shared room IDs and coordinates explicitly. Candidate scoring and final
 floor-plan scoring are different contracts and their scores are not interchangeable.
+
 ## Extension and Registry APIs
 
 Registry instances are mutable runtime dependencies. Registration keys/IDs must be
@@ -413,6 +420,7 @@ custom entries before passing the registry to the operation. Candidate scoring m
 `registry` and `config` required keyword arguments; other registry-enabled operations
 accept `None` and build the shipped registry. Extension implementations must return
 the exact documented result contract and respect the mode's visualization/debug policy.
+
 ## Public Exception and Status Reference
 
 | Feature | Raised public family | Returned status values |
@@ -432,12 +440,13 @@ Returned solver/pipeline/opening failures do not raise merely because the status
 successful. Check the result status and optional payload before access. Exception
 families used internally but not feature-root-exported are not preferred import
 surfaces; consumers may catch the documented feature-root base class.
+
 ## Built-in Defaults and Profiles Reference
 
 | Feature | Public default/profile | Exact role and important values |
 |---|---|---|
 | Candidate Scoring | `create_default_config()` | enables zone suitability (weight 20/order 10), exterior clearance (20/20), spatial distribution (25/40); relationship quality is registered but not enabled |
-| Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1 and enable `hallway_efficiency` with weight 1, area multiplier 1, preferred max length 40, excess-length multiplier 5 |
+| Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1, enforce `hallway_shared_wall` with a maximum shared wall of 12 project units, and enable `hallway_efficiency` with weight 1, area multiplier 1, preferred max length 40, excess-length multiplier 5 |
 | Post-Processing | `INITIAL_GENERATION_PROFILE` | order: veranda adjustment, wall extension, required placeholder removal+validation, hallway merge, required grid snap+validation, rectilinear simplification; tolerance `1e-6`, grid 1, rejects existing openings |
 | Openings | `DEFAULT_OPENING_CONFIG` / `DEFAULT_OPENING_PROFILE` | name `default_openings`; features `interior_doors`, `exterior_doors`, `windows`; constraints `shared_placement`, `room_door_limits`, `required_room_access`; explicit allowed-room pairs; all built-in room types required for access; corner-oriented door priorities; 10 s, one worker, seed 0 |
 | Floor Plan Scoring | `DEFAULT_FLOOR_PLAN_SCORING_CONFIG` / `DEFAULT_SCORING_PROFILE` | critical group: geometry integrity, required adjacency, enclosed voids, inward recess, each threshold 100; functional group: `room_size_consistency` weight 2 and `kitchen_dining` weight 1. Legacy living/bedroom evaluators remain registered but are not enabled by default |
@@ -446,6 +455,7 @@ Buildable Land, Usable Land, Preprocessing, Candidate Search, and Candidate
 Circulation intentionally ship no universal jurisdiction/project profile. Their
 consumer supplies domain policy. Defaults shown in individual constructors are
 package defaults, not building-code recommendations.
+
 ## Compatibility Aliases and Legacy Surfaces
 
 | Compatibility name | Canonical surface | Behavioral difference / migration |
@@ -468,7 +478,8 @@ These names are active compatibility exports; source does not mark them deprecat
 The current migration-relevant breaking change is the floor-plan solver request field
 rename from `profile=` to `config=`. The serialized/result field
 `FloorPlanSolveResult.profile_name` remains unchanged.
-## Consumer Migration Notes — 2026-08-15
+
+## Consumer Migration Notes - 2026-09-30
 
 The current source contains these migration-relevant behavior/contract changes from
 the previously documented version:
@@ -478,7 +489,8 @@ the previously documented version:
 | Candidate Circulation | route rules had no required-transit field; cleanup removed only unused hallways | `CirculationRouteRule.required_transit_room_types=()` is available; default circulation config now also performs conservative hallway consolidation. Set `HallwayConsolidationConfig(enabled=False)` to retain unused-only cleanup. |
 | Floor Plan Scoring | default functional scoring used `living_room_balance` and `bedroom_quality` | default functional scoring now uses `room_size_consistency` plus `kitchen_dining`. Custom configs may still use the legacy evaluator classes/keys. `FloorPlanScoringInput` uses `config=`, not the removed `profile=` field. |
 | Floor Plan Openings | hallway/attached-bathroom compatibility included hidden implementation behavior; room access was not a mandatory graph constraint; door placement was center-oriented | `FeaturePolicy.allowed_room_pairs` is authoritative; `required_room_access` is structurally mandatory; required room types must connect to exactly one main entrance; doors prefer wall ends according to `door_placement_priority`. Consumers constructing custom `enabled_constraints` or `FeaturePolicy` must update them. |
-| Floor Plan Solver | supplied hallways had hard dimensions/connectivity but no dedicated compactness objective | all built-in profiles enable `hallway_efficiency`, which penalizes total hallway area and excessive length. The solver still cannot remove supplied hallway rooms. Tune via `DefaultProfileSettings` or replace/remove the soft constraint. |
+| Floor Plan Solver | supplied hallways had hard dimensions/connectivity but no shared-wall cap or dedicated compactness objective | all built-in profiles enforce `hallway_shared_wall` with `maximum_shared_wall=12.0` and enable `hallway_efficiency`, which penalizes total hallway area and excessive length. The solver still cannot remove supplied hallway rooms. Tune both through `DefaultProfileSettings` or replace/remove the corresponding constraints. |
+
 ## Consumer Integration Checklist
 
 - [ ] Install on Python 3.11 or newer and import through feature roots/domain.
@@ -493,6 +505,87 @@ the previously documented version:
   generation returns a copy; scoring/search inputs are not mutated.
 - [ ] Set solver/search seeds and a single solver worker where repeatable tests matter.
 - [ ] Calibrate jurisdiction/domain parameters; package defaults are not regulations.
+
+## Shared Public Export Inventory
+
+### `fpg_core` exports (8)
+
+| Export | Kind | Exact contract/value | Coverage |
+|---|---|---|---|
+| `__version__` | constant/type alias | `'0.2.0'` | Documented in the corresponding feature/shared section. |
+| `BuildableSpaceConfig` | dataclass/contract | `(active_profile: 'SetbackProfile', usable_land_constraints: 'UsableLandConstraints', validation_limits: 'ValidationLimits') -> None` | BuildableSpaceConfig(active_profile: 'SetbackProfile', usable_land_constraints: 'UsableLandConstraints', validation_limits: 'ValidationLimits') |
+| `CandidateSearchConfig` | dataclass/contract | `(trial_count: 'int' = 500, max_grid_node_count: 'int' = 250000, random_seed: 'int \| None' = None) -> None` | Reusable controls for how Candidate Search performs a search. |
+| `FpgCoreConfig` | dataclass/contract | `(schema_version: 'int', project_units_per_meter: 'int', buildable_space: 'BuildableSpaceConfig', preprocessing: 'PreprocessingConfig', candidate_search: 'CandidateSearchConfig', candidate_scoring: 'CandidateScoringConfig', floor_plan_solver: 'ProfileCatalog', post_processing: 'PostProcessingProfile', openings: 'OpeningGenerationProfile', floor_plan_scoring: 'FloorPlanScoringConfig') -> None` | FpgCoreConfig(schema_version: 'int', project_units_per_meter: 'int', buildable_space: 'BuildableSpaceConfig', preprocessing: 'PreprocessingConfig', candidate_search: 'CandidateSearchConfig', candidate_scoring: 'CandidateScoringConfig', floor_plan_solver: 'ProfileCatalog', post_processing: 'PostProcessingProfile', openings: 'OpeningGenerationProfile', floor_plan_scoring: 'FloorPlanScoringConfig') |
+| `FpgCoreConfigError` | exception | `constructor has no separately inspectable signature` | Documented in the corresponding feature/shared section. |
+| `PreprocessingConfig` | dataclass/contract | `(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) -> None` | PreprocessingConfig(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) |
+| `validate_fpg_core_config` | function | `validate_fpg_core_config(config: 'FpgCoreConfig') -> 'None'` | Documented in the corresponding feature/shared section. |
+| `canonical_aspect_ratio` | function | `canonical_aspect_ratio(value: 'float', rules: 'tuple[AspectRatioRule, ...]', *, tolerance: 'float' = 1e-06) -> 'float \| None'` | Documented in the corresponding feature/shared section. |
+
+
+### `fpg_core.domain` exports (58)
+
+| Export | Kind | Exact contract/value | Coverage |
+|---|---|---|---|
+| `BuildableLand` | dataclass/contract | `(boundary: 'Polygon', area: 'float', edge_setbacks: 'tuple[EdgeSetback, ...]') -> None` | BuildableLand(boundary: 'Polygon', area: 'float', edge_setbacks: 'tuple[EdgeSetback, ...]') |
+| `BuildableSpaceErrorCode` | enum | `INVALID_REQUEST='invalid_request'; INVALID_LAND_BOUNDARY='invalid_land_boundary'; NON_CONVEX_LAND='non_convex_land'; SELF_INTERSECTING_LAND='self_intersecting_land'; INVALID_ROAD_ATTACHMENT='invalid_road_attachment'; MULTIPLE_MAIN_ENTRY_ROADS='multiple_main_entry_roads'; UNSUPPORTED_ROAD_TYPE='unsupported_road_type'; REFERENCE_DATA_ERROR='reference_data_error'; SETBACK_ELIMINATES_BUILDABLE_LAND='setback_eliminates_buildable_land'; BUILDABLE_LAND_CALCULATION_FAILED='buildable_land_calculation_failed'; NO_USABLE_LAND_FOUND='no_usable_land_found'; SEARCH_LIMIT_EXCEEDED='search_limit_exceeded'; USABLE_LAND_CALCULATION_FAILED='usable_land_calculation_failed'; UNEXPECTED_BUILDABLE_SPACE_ERROR='unexpected_buildable_space_error'` | Documented in the corresponding feature/shared section. |
+| `BuildableSpaceReferenceData` | dataclass/contract | `(schema_version: 'int', project_units_per_meter: 'int', active_profile: 'SetbackProfile', usable_land_constraints: 'UsableLandConstraints', validation_limits: 'ValidationLimits') -> None` | BuildableSpaceReferenceData(schema_version: 'int', project_units_per_meter: 'int', active_profile: 'SetbackProfile', usable_land_constraints: 'UsableLandConstraints', validation_limits: 'ValidationLimits') |
+| `BuildableSpaceRequestData` | dataclass/contract | `(land_boundary: 'Polygon', roads: 'tuple[RoadAttachment, ...]') -> None` | BuildableSpaceRequestData(land_boundary: 'Polygon', roads: 'tuple[RoadAttachment, ...]') |
+| `BuildableSpaceResult` | dataclass/contract | `(original_land_area: 'float', buildable_land: 'BuildableLand', usable_land: 'UsableLand', reference_profile: 'str', project_units_per_meter: 'int') -> None` | BuildableSpaceResult(original_land_area: 'float', buildable_land: 'BuildableLand', usable_land: 'UsableLand', reference_profile: 'str', project_units_per_meter: 'int') |
+| `BuildableSpaceStage` | enum | `REQUEST_VALIDATION='request_validation'; REFERENCE_DATA='reference_data'; BUILDABLE_LAND='buildable_land'; USABLE_LAND='usable_land'; RESPONSE='response'` | Documented in the corresponding feature/shared section. |
+| `CandidateMap` | dataclass/contract | `(grid: 'ResolvedCandidateGrid', points: 'tuple[CandidatePoint, ...]') -> None` | A candidate hint map coupled to the exact grid that produced it. |
+| `CandidatePoint` | dataclass/contract | `(room_id: 'RoomId', x: 'float', y: 'float', room_type: 'RoomType \| None' = None, hint_index: 'int' = 1) -> None` | A reusable room hint coordinate passed between generation features. |
+| `CandidateSearchSpace` | dataclass/contract | `(origin_x: 'Coordinate', origin_y: 'Coordinate', width: 'int', length: 'int', grid_spacing: 'int') -> None` | Centered, divisible Candidate Search rectangle in floor coordinates. |
+| `CirculationGrid` | dataclass/contract | `(width: 'float', length: 'float', scale: 'float', origin_x: 'float' = 0.0, origin_y: 'float' = 0.0) -> None` | Axis-aligned routing grid expressed in project units. |
+| `CirculationGridNode` | dataclass/contract | `(x_index: 'int', y_index: 'int', x: 'float', y: 'float') -> None` | One grid node used by an orthogonal circulation path. |
+| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float', required_transit_room_types: 'tuple[RoomType, ...]' = ()) -> None` | Shared typed request for room-type circulation routing, including optional required intermediate room types. |
+| `CirculationTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
+| `ConstraintStrength` | enum | `HARD='hard'; SOFT='soft'` | Documented in the corresponding feature/shared section. |
+| `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'` | Determines which matching destinations a route rule selects. |
+| `EdgeClassification` | dataclass/contract | `(edge_index: 'int', side: 'LandSide') -> None` | EdgeClassification(edge_index: 'int', side: 'LandSide') |
+| `EdgeSetback` | dataclass/contract | `(edge_index: 'int', side: 'LandSide', base_setback: 'int', road_adjustment: 'int', final_setback: 'int', road_type: 'RoadType \| None' = None) -> None` | EdgeSetback(edge_index: 'int', side: 'LandSide', base_setback: 'int', road_adjustment: 'int', final_setback: 'int', road_type: 'RoadType \| None' = None) |
+| `ExecutionMetadata` | dataclass/contract | `(mode: 'ExecutionMode', duration_seconds: 'float') -> None` | Small execution-wide metadata shared by all feature operations. |
+| `ExecutionMode` | enum | `PRODUCTION='production'; DEBUG='debug'` | Controls how much non-result execution data a feature may collect. |
+| `FeatureExecution` | dataclass/contract | `(result: 'TResult', details: 'TDetails \| None', metadata: 'ExecutionMetadata') -> None` | Standard envelope returned by completed FPG Core feature operations. |
+| `FloorPlan` | dataclass/contract | `(boundary: fpg_core.domain.geometry.Polygon, rooms: list[fpg_core.domain.floor_plan.FloorPlanRoom], openings: list[fpg_core.domain.floor_plan.FloorPlanOpening] = <factory>, identity_redirects: dict[fpg_core.domain.floor_plan_spec.RoomId, fpg_core.domain.floor_plan_spec.RoomId] = <factory>, applied_transformations: set[str] = <factory>) -> None` | FloorPlan(boundary: fpg_core.domain.geometry.Polygon, rooms: list[fpg_core.domain.floor_plan.FloorPlanRoom], openings: list[fpg_core.domain.floor_plan.FloorPlanOpening] = <factory>, identity_redirects: dict[fpg_core.domain.floor_plan_spec.RoomId, fpg_core.domain.floor_plan_spec.RoomId] = <factory>, applied_transformations: set[str] = <factory>) |
+| `FloorPlanGenerationSpec` | dataclass/contract | `(floor: fpg_core.domain.floor_plan_spec.FloorSpec, rooms: tuple[fpg_core.domain.floor_plan_spec.RoomSpec, ...], room_relations: tuple[fpg_core.domain.floor_plan_spec.RoomRelationSpec, ...]) -> None` | FloorPlanGenerationSpec(floor: fpg_core.domain.floor_plan_spec.FloorSpec, rooms: tuple[fpg_core.domain.floor_plan_spec.RoomSpec, ...], room_relations: tuple[fpg_core.domain.floor_plan_spec.RoomRelationSpec, ...]) |
+| `FloorPlanOpening` | dataclass/contract | `(id: fpg_core.domain.floor_plan.OpeningId, opening_type: fpg_core.domain.floor_plan.OpeningType, purpose: fpg_core.domain.floor_plan.OpeningPurpose, start: fpg_core.domain.geometry.Point, end: fpg_core.domain.geometry.Point, connected_room_ids: tuple[fpg_core.domain.floor_plan_spec.RoomId, ...] = ()) -> None` | FloorPlanOpening(id: fpg_core.domain.floor_plan.OpeningId, opening_type: fpg_core.domain.floor_plan.OpeningType, purpose: fpg_core.domain.floor_plan.OpeningPurpose, start: fpg_core.domain.geometry.Point, end: fpg_core.domain.geometry.Point, connected_room_ids: tuple[fpg_core.domain.floor_plan_spec.RoomId, ...] = ()) |
+| `FloorPlanRoom` | dataclass/contract | `(id: fpg_core.domain.floor_plan_spec.RoomId, room_type: fpg_core.domain.floor_plan_spec.RoomType, name: str, boundary: fpg_core.domain.geometry.Polygon, role: fpg_core.domain.floor_plan.RoomRole = <RoomRole.STANDARD: 'standard'>, parent_room_id: Optional[fpg_core.domain.floor_plan_spec.RoomId] = None, metadata: fpg_core.domain.floor_plan.RoomMetadata = <factory>) -> None` | FloorPlanRoom(id: fpg_core.domain.floor_plan_spec.RoomId, room_type: fpg_core.domain.floor_plan_spec.RoomType, name: str, boundary: fpg_core.domain.geometry.Polygon, role: fpg_core.domain.floor_plan.RoomRole = <RoomRole.STANDARD: 'standard'>, parent_room_id: Optional[fpg_core.domain.floor_plan_spec.RoomId] = None, metadata: fpg_core.domain.floor_plan.RoomMetadata = <factory>) |
+| `FloorSpec` | dataclass/contract | `(width: float, length: float) -> None` | FloorSpec(width: float, length: float) |
+| `FloorWidthAlignment` | enum | `PARALLEL_TO_ENTRY_ROAD='parallel_to_entry_road'; PERPENDICULAR_TO_ENTRY_ROAD='perpendicular_to_entry_road'` | Documented in the corresponding feature/shared section. |
+| `GridRoutingCostProfile` | dataclass/contract | `(empty_node_cost: 'float', traversable_hint_node_cost: 'float', turn_cost: 'float', perimeter_bias_max_cost: 'float') -> None` | Costs shared by orthogonal grid-routing features. |
+| `HallwayClassification` | dataclass/contract | `(room_id: 'RoomId', hint_index: 'int', traffic_class: 'HallwayTrafficClass') -> None` | Production-safe traffic classification for one hallway hint point. |
+| `HallwayRoomCountRange` | dataclass/contract | `(maximum: 'int', minimum: 'int' = 1) -> None` | Allowed number of distinct hallway rooms in one candidate trial. |
+| `HallwayTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'; MIXED='mixed'; UNCLASSIFIED='unclassified'; UNUSED='unused'` | Traffic role assigned to one hallway hint point. |
+| `LandEdge` | dataclass/contract | `(index: 'int', source_edge_index: 'int', segment: 'Segment') -> None` | LandEdge(index: 'int', source_edge_index: 'int', segment: 'Segment') |
+| `LandSide` | enum | `FRONT='front'; BACK='back'; LEFT='left'; RIGHT='right'` | Documented in the corresponding feature/shared section. |
+| `MatchPolicy` | enum | `AND='and'; OR='or'` | Documented in the corresponding feature/shared section. |
+| `NormalizedLand` | dataclass/contract | `(boundary: 'Polygon', edges: 'tuple[LandEdge, ...]', main_entry_road: 'RoadAttachment') -> None` | NormalizedLand(boundary: 'Polygon', edges: 'tuple[LandEdge, ...]', main_entry_road: 'RoadAttachment') |
+| `OpeningId` | constant/type alias | `NewType instance` | NewType creates simple unique types with almost zero runtime overhead. |
+| `OpeningPurpose` | enum | `ROOM_CONNECTION='room_connection'; MAIN_ENTRANCE='main_entrance'; SECONDARY_ENTRANCE='secondary_entrance'; DAYLIGHT='daylight'` | Documented in the corresponding feature/shared section. |
+| `OpeningType` | enum | `DOOR='door'; WINDOW='window'` | Documented in the corresponding feature/shared section. |
+| `Point` | dataclass/contract | `(x: 'float', y: 'float') -> None` | Point(x: 'float', y: 'float') |
+| `Polygon` | dataclass/contract | `(points: 'tuple[Point, ...]') -> None` | Polygon(points: 'tuple[Point, ...]') |
+| `RoadAttachment` | dataclass/contract | `(boundary_edge_index: 'int', role: 'RoadRole', road_type: 'RoadType') -> None` | RoadAttachment(boundary_edge_index: 'int', role: 'RoadRole', road_type: 'RoadType') |
+| `RoadRole` | enum | `MAIN_ENTRY='main_entry'` | Documented in the corresponding feature/shared section. |
+| `ResolvedCandidateGrid` | dataclass/contract | `(x_positions: 'tuple[Coordinate, ...]', y_positions: 'tuple[Coordinate, ...]') -> None` | Exact uniform candidate-location and orthogonal-routing grid. |
+| `RoadType` | enum | `MAIN_ROAD='main_road'; PRIVATE_ROAD='private_road'` | Documented in the corresponding feature/shared section. |
+| `RoomId` | constant/type alias | `NewType instance` | NewType creates simple unique types with almost zero runtime overhead. |
+| `RoomMetadata` | dataclass/contract | `(source_room_ids: tuple[fpg_core.domain.floor_plan_spec.RoomId, ...] = (), applied_transformations: tuple[str, ...] = ()) -> None` | Typed post-solver provenance retained with a room. |
+| `RoomRelationSpec` | dataclass/contract | `(source_room_id: fpg_core.domain.floor_plan_spec.RoomId, target_room_ids: tuple[fpg_core.domain.floor_plan_spec.RoomId, ...], match_policy: fpg_core.domain.floor_plan_spec.MatchPolicy, strength: fpg_core.domain.floor_plan_spec.ConstraintStrength) -> None` | RoomRelationSpec(source_room_id: fpg_core.domain.floor_plan_spec.RoomId, target_room_ids: tuple[fpg_core.domain.floor_plan_spec.RoomId, ...], match_policy: fpg_core.domain.floor_plan_spec.MatchPolicy, strength: fpg_core.domain.floor_plan_spec.ConstraintStrength) |
+| `RoomRole` | enum | `STANDARD='standard'; SOLVER_PLACEHOLDER='solver_placeholder'` | Documented in the corresponding feature/shared section. |
+| `RoomSizeSpec` | dataclass/contract | `(min_width: float, max_width: float, min_area: float, max_area: float, width_axis: fpg_core.domain.floor_plan_spec.RoomWidthAxis = <RoomWidthAxis.ANY: 'any'>) -> None` | RoomSizeSpec(min_width: float, max_width: float, min_area: float, max_area: float, width_axis: fpg_core.domain.floor_plan_spec.RoomWidthAxis = <RoomWidthAxis.ANY: 'any'>) |
+| `RoomSpec` | dataclass/contract | `(id: fpg_core.domain.floor_plan_spec.RoomId, room_type: fpg_core.domain.floor_plan_spec.RoomType, name: str, size: fpg_core.domain.floor_plan_spec.RoomSizeSpec) -> None` | RoomSpec(id: fpg_core.domain.floor_plan_spec.RoomId, room_type: fpg_core.domain.floor_plan_spec.RoomType, name: str, size: fpg_core.domain.floor_plan_spec.RoomSizeSpec) |
+| `RoomType` | enum | `BEDROOM='bedroom'; BATHROOM='bathroom'; ATTACHED_BATHROOM='attached_bathroom'; LIVING_ROOM='living_room'; KITCHEN='kitchen'; DINING_ROOM='dining_room'; HALLWAY='hallway'; VERANDA='veranda'; GARAGE='garage'` | Documented in the corresponding feature/shared section. |
+| `RoomWidthAxis` | enum | `ANY='any'; X='x'; Y='y'` | Axis to which the room's width range applies. |
+| `RouteCostBreakdown` | dataclass/contract | `(movement_cost: 'float', perimeter_bias_cost: 'float', turn_cost: 'float', traffic_conflict_cost: 'float', total_cost: 'float') -> None` | Cost components accumulated by one resolved circulation route. |
+| `Segment` | dataclass/contract | `(start: 'Point', end: 'Point') -> None` | Segment(start: 'Point', end: 'Point') |
+| `SetbackCalculationMode` | enum | `BASE_PLUS_ROAD_ADJUSTMENT='base_plus_road_adjustment'` | Documented in the corresponding feature/shared section. |
+| `SetbackProfile` | dataclass/contract | `(name: 'str', status: 'str', description: 'str', calculation_mode: 'SetbackCalculationMode', base_setbacks: 'Mapping[LandSide, int]', road_adjustments: 'Mapping[RoadType, Mapping[LandSide, int]]') -> None` | SetbackProfile(name: 'str', status: 'str', description: 'str', calculation_mode: 'SetbackCalculationMode', base_setbacks: 'Mapping[LandSide, int]', road_adjustments: 'Mapping[RoadType, Mapping[LandSide, int]]') |
+| `UsableLand` | dataclass/contract | `(boundary: 'Polygon', width: 'int', length: 'int', area: 'int', floor_width_alignment: 'FloorWidthAlignment', entry_road_edge_index: 'int') -> None` | UsableLand(boundary: 'Polygon', width: 'int', length: 'int', area: 'int', floor_width_alignment: 'FloorWidthAlignment', entry_road_edge_index: 'int') |
+| `UsableLandConstraints` | dataclass/contract | `(minimum_width: 'int', minimum_length: 'int', search_resolution: 'int', maximum_sweep_lines: 'int') -> None` | UsableLandConstraints(minimum_width: 'int', minimum_length: 'int', search_resolution: 'int', maximum_sweep_lines: 'int') |
+| `ValidationLimits` | dataclass/contract | `(minimum_vertex_count: 'int', maximum_vertex_count: 'int', maximum_absolute_coordinate: 'int') -> None` | ValidationLimits(minimum_vertex_count: 'int', maximum_vertex_count: 'int', maximum_absolute_coordinate: 'int') |
+
+
 ## API Versioning and Compatibility
 
 `fpg-core` uses the package version as the public API version. Features do not receive independent API version numbers.
@@ -508,7 +601,7 @@ After `1.0.0`, use normal Semantic Versioning: MAJOR for breaking public API cha
 
 ### Current metadata state
 
-The checked-in `pyproject.toml` declares distribution version `0.1.0`, while `CHANGELOG.md` contains a `0.2.0` release section plus additional `Unreleased` changes and the source-checkout fallback in `fpg_core.__version__` is `0.2.0`. Consumer documentation in this directory therefore targets the **current source tree**, not a claim that all of these contracts are already published under the `0.1.0` distribution metadata. Before publishing a package release, synchronize the distribution version, changelog, and documentation target.
+The checked-in `pyproject.toml` declares distribution version `0.2.0`, while `CHANGELOG.md` contains a `0.2.0` release section plus additional `Unreleased` changes and the source-checkout fallback in `fpg_core.__version__` is `0.2.0`. Consumer documentation in this directory therefore targets the **current source tree**, not a claim that all of these contracts are already published under the `0.2.0` distribution metadata. Before publishing a package release, synchronize the distribution version, changelog, and documentation target.
 
 ## Documentation Scope
 
@@ -517,4 +610,4 @@ The canonical consumer documentation set is:
 - `docs/API_GUIDE.md` — package-wide conventions, shared contracts, compatibility, errors/statuses, and integration guidance.
 - `docs/feature_documentations/<feature>.md` — one complete consumer document per public feature.
 
-`src/fpg_core/<feature>/README.md` files are intentionally excluded from the consumer contract. They may contain algorithm design, maintenance notes, internal decisions, and R&D context.
+Internal architecture and feature notes under `docs/architecture/` and `docs/features/` explain design and maintenance rationale. The consumer guide and per-feature documents own supported API contracts.

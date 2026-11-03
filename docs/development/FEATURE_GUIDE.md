@@ -26,7 +26,6 @@ A normal feature should expose a recognizable public boundary:
 
 ```text
 feature_name/
-|-- README.md
 |-- __init__.py
 |-- api.py
 |-- exceptions.py
@@ -81,7 +80,7 @@ Before intentionally changing one:
 
 1. inspect callers and shared types;
 2. update tests and affected flow tests;
-3. update the consumer reference;
+3. update the consumer API guide and affected feature document;
 4. add a concise migration note when compatibility changes.
 
 Prefer compatibility aliases only when they have a real migration purpose. Do not keep dead aliases indefinitely without reason.
@@ -92,6 +91,10 @@ Use `Protocol`, `ABC`, registries, or strategy interfaces only when implementati
 
 Do not create speculative interfaces, factories, or base classes for a single implementation.
 
-## Feature README
+## Feature documentation
 
-A feature README is a focused explanation, not the canonical complete package contract. Keep it useful for maintainers and local feature understanding. Consumer-visible exact contracts belong in `docs/PACKAGE_FEATURE_REFERENCE.md`.
+Consumer-visible contracts belong in the [API guide](../API_GUIDE.md) and the
+affected [feature document](../feature_documentations/README.md). Internal feature
+notes under `docs/features/` explain rationale and invariants; add detail when it
+helps a maintainer make a decision, and link to public contracts instead of copying
+them. Feature-local README files are not required.

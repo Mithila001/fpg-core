@@ -1,26 +1,34 @@
 # Documentation map
 
-`AGENTS.md` at the repository root is the coding-agent entry point. The root `README.md` is the human-facing overview. This directory holds canonical technical documentation; read the relevant section rather than loading everything.
+## Public Core documentation
 
-## Architecture
+- [Consumer API guide](API_GUIDE.md): installation, units, shared contracts,
+  execution conventions, reusable examples, compatibility, and package exports.
+- [Feature contracts](feature_documentations/README.md): complete feature-specific
+  APIs, inputs, configuration, outputs, failure handling, diagnostics, and examples.
+- [Changelog](history/CHANGELOG.md): significant changes and migration guidance.
 
-- [Pipeline](architecture/pipeline.md): stage boundaries, Optuna evaluator loop, and data flow.
-- [Contracts](architecture/contracts.md): canonical domain types, public APIs, units, results, and package isolation.
+These Markdown files target consumers as well as developers. No Lab installation
+or implementation-source reading is required to use the documented public APIs.
 
-## Feature behavior
+## Internal architecture and feature notes
 
-- [Land](features/land.md): buildable and usable land.
-- [Preprocessing](features/preprocessing.md): room rules, floor selection, grid, hallway identities.
-- [Candidates](features/candidates.md): search, circulation, and scoring.
-- [Solver](features/solver.md): CP-SAT hard/soft constraints and generation profiles.
-- [Post-processing](features/post-processing.md): ordered processors, mutation, rollback.
-- [Openings](features/openings.md): doors, windows, and required room access.
-- [Final scoring](features/final-scoring.md): post-generation evaluation.
+Read only the documents relevant to your task:
 
-## Maintenance
+- [Pipeline](architecture/pipeline.md) and [contracts](architecture/contracts.md).
+- [Land](features/land.md), [preprocessing](features/preprocessing.md),
+  [candidates](features/candidates.md), [solver](features/solver.md),
+  [post-processing](features/post-processing.md), [openings](features/openings.md),
+  [final scoring](features/final-scoring.md).
 
-- [Documentation maintenance](development/documentation-maintenance.md): mandatory update and deletion rules for agents.
-- [Verification](development/verification.md): checks and experiment runners.
-- [Changelog](history/CHANGELOG.md): historical migrations and unreleased changes.
+These notes capture implementation rationale and invariants; the public guides own
+consumer contracts.
 
-[`personal/`](personal/README.md) is an intentionally informal user-owned workspace. Its contents are never authoritative and need not follow the core documentation update policy.
+## Development
+
+- [Feature development](development/FEATURE_GUIDE.md).
+- [Verification](development/verification.md): check selection and exact commands.
+- [Documentation maintenance](development/documentation-maintenance.md).
+- [Root agent instructions](../AGENTS.md) and [Lab documentation](../fpg-lab/docs/README.md).
+
+[Personal notes](personal/README.md) are informal, user-owned, and not authoritative.

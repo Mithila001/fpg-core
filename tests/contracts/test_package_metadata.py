@@ -28,7 +28,7 @@ def _source_checkout_version() -> str:
 def test_package_versions_and_consumer_reference_stay_in_sync() -> None:
     pyproject = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     version = str(pyproject["project"]["version"])
-    reference = (PROJECT_ROOT / "docs" / "PACKAGE_FEATURE_REFERENCE.md").read_text(
+    reference = (PROJECT_ROOT / "docs" / "API_GUIDE.md").read_text(
         encoding="utf-8"
     )
 

@@ -1,6 +1,6 @@
 # Floor Plan Preprocessing
 
-> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Internal feature `README.md` files are development notes and are not the consumer contract. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
+> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Implementation rationale is maintained in the internal architecture and feature notes. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
 
 ## Purpose
 
@@ -78,10 +78,6 @@ spec containing exactly the selected hallway rooms. In DEBUG, `details` records
 normalizations, room/relation decisions, size choice, floor/grid selection, hallway
 range, defaults, and warnings. Metadata contains mode and duration.
 
-## Warnings / diagnostics
-
-Warnings are DEBUG-only data in `PreprocessingReport.warnings: tuple[str, ...]`. The same report also records applied defaults, normalization records, room/relation decisions, floor selection, candidate-grid selection, and hallway-count selection. Consumers must not depend on `execution.details` or warning strings being present in `PRODUCTION`. Expected invalid requests still raise typed preprocessing exceptions rather than being downgraded to warnings.
-
 ## Errors / failure conditions
 
 Expected failures raise `FloorPlanPreprocessingError` subclasses. Inspect `.stage`,
@@ -138,48 +134,53 @@ Compatibility `candidate_search_space` properties are derived views; the exact
 `ResolvedCandidateGrid` is authoritative. The operation does not invoke search or a
 solver.
 
+
+## Warnings / diagnostics
+
+Warnings are DEBUG-only data in `PreprocessingReport.warnings: tuple[str, ...]`. The same report also records applied defaults, normalization records, room/relation decisions, floor selection, candidate-grid selection, and hallway-count selection. Consumers must not depend on `execution.details` or warning strings being present in `PRODUCTION`. Expected invalid requests still raise typed preprocessing exceptions rather than being downgraded to warnings.
+
 ## Public Export Inventory
 
-The supported feature-root import surface is `fpg_core.floor_plan_preprocessing`. Its current exported symbols are:
+### `fpg_core.floor_plan_preprocessing` exports (36)
 
-- `AspectRatioRule`
-- `BusinessRuleError`
-- `CandidateGridSelection`
-- `CandidateSearchSpaceSelection`
-- `ContextValidationError`
-- `ExcessAttachedBathroomPolicy`
-- `FloorLimits`
-- `FloorPlanPreprocessingError`
-- `FloorPreparationError`
-- `FloorSelection`
-- `InputValidationError`
-- `NormalizationError`
-- `NormalizationRecord`
-- `OutputValidationError`
-- `PreprocessingConfig`
-- `PreprocessingErrorCode`
-- `PreprocessingExecution`
-- `PreprocessingInput`
-- `PreprocessingPolicy`
-- `PreprocessingReferenceData`
-- `PreprocessingReport`
-- `PreprocessingRequest`
-- `PreprocessingStage`
-- `PreparedGenerationInput`
-- `ReferenceDataError`
-- `RelationDecision`
-- `RelationPreparationError`
-- `RequestedRoom`
-- `RoomCountRule`
-- `RoomDecision`
-- `RoomPreparationError`
-- `RoomRelationReference`
-- `RoomSizeReference`
-- `RoomSizeSelectionStrategy`
-- `canonical_aspect_ratio`
-- `prepare_generation_input`
-
-Consumers should prefer the feature-root import surface shown above and `fpg_core.domain` for canonical shared contracts. Implementation submodules are not part of the supported consumer surface unless explicitly documented.
+| Export | Kind | Exact contract/value | Coverage |
+|---|---|---|---|
+| `AspectRatioRule` | dataclass/contract | `(label: 'str', canonical_value: 'float') -> None` | AspectRatioRule(label: 'str', canonical_value: 'float') |
+| `BusinessRuleError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `CandidateGridSelection` | dataclass/contract | `(floor_width: 'int', floor_length: 'int', grid: 'ResolvedCandidateGrid') -> None` | DEBUG explanation of the grid prepared for downstream features. |
+| `CandidateSearchSpaceSelection` | dataclass/contract | `(floor_width: 'int', floor_length: 'int', grid: 'ResolvedCandidateGrid') -> None` | DEBUG explanation of the grid prepared for downstream features. |
+| `ContextValidationError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `ExcessAttachedBathroomPolicy` | enum | `REMOVE='remove'; REJECT='reject'` | Documented in the corresponding feature/shared section. |
+| `FloorLimits` | dataclass/contract | `(max_width: 'float', max_length: 'float') -> None` | FloorLimits(max_width: 'float', max_length: 'float') |
+| `FloorPlanPreprocessingError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Base class for expected preprocessing failures. |
+| `FloorPreparationError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `FloorSelection` | dataclass/contract | `(requested_width: 'float', requested_length: 'float', normalized_max_width: 'int', normalized_max_length: 'int', selected_width: 'int', selected_length: 'int', requested_aspect_ratio: 'float', selected_aspect_ratio: 'float', aspect_residual_units: 'float', minimum_required_area: 'float', maximum_target_area: 'float', unused_limit_area: 'float') -> None` | FloorSelection(requested_width: 'float', requested_length: 'float', normalized_max_width: 'int', normalized_max_length: 'int', selected_width: 'int', selected_length: 'int', requested_aspect_ratio: 'float', selected_aspect_ratio: 'float', aspect_residual_units: 'float', minimum_required_area: 'float', maximum_target_area: 'float', unused_limit_area: 'float') |
+| `InputValidationError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `NormalizationError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `NormalizationRecord` | dataclass/contract | `(field: 'str', original: 'str', normalized: 'str') -> None` | NormalizationRecord(field: 'str', original: 'str', normalized: 'str') |
+| `OutputValidationError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `PreprocessingConfig` | dataclass/contract | `(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) -> None` | PreprocessingConfig(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) |
+| `PreprocessingErrorCode` | enum | `INVALID_INPUT='invalid_input'; INVALID_ASPECT_RATIO='invalid_aspect_ratio'; INVALID_ROOM_COUNT='invalid_room_count'; FORBIDDEN_ROOM_TYPE='forbidden_room_type'; DUPLICATE_ROOM_ID='duplicate_room_id'; ATTACHED_BATHROOM_COUNT_EXCEEDS_BEDROOMS='attached_bathroom_count_exceeds_bedrooms'; NORMALIZATION_FAILED='normalization_failed'; INVALID_REFERENCE_DATA='invalid_reference_data'; MISSING_ROOM_REFERENCE='missing_room_reference'; INVALID_ROOM_RELATION='invalid_room_relation'; FLOOR_LIMITS_INSUFFICIENT='floor_limits_insufficient'; INVALID_PREPARED_CONTEXT='invalid_prepared_context'; INVALID_PREPROCESSING_OUTPUT='invalid_preprocessing_output'` | Documented in the corresponding feature/shared section. |
+| `PreprocessingExecution` | constant/type alias | `_GenericAlias instance` | Documented in the corresponding feature/shared section. |
+| `PreprocessingInput` | dataclass/contract | `(request: 'PreprocessingRequest', config: 'PreprocessingConfig') -> None` | PreprocessingInput(request: 'PreprocessingRequest', config: 'PreprocessingConfig') |
+| `PreprocessingPolicy` | dataclass/contract | `(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) -> None` | PreprocessingConfig(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) |
+| `PreprocessingReferenceData` | dataclass/contract | `(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) -> None` | PreprocessingConfig(room_count_rules: 'tuple[RoomCountRule, ...]', supported_aspect_ratios: 'tuple[AspectRatioRule, ...]', room_sizes: 'tuple[RoomSizeReference, ...]', room_relations: 'tuple[RoomRelationReference, ...]', mandatory_room_types: 'tuple[RoomType, ...]', floor_area_buffer: 'float', hallway_area_buffer: 'float', max_hallway_room_count: 'int', hallway_min_width: 'float', candidate_search_grid_spacing: 'int', default_room_size: 'str', max_aspect_residual_units: 'float', min_aspect_ratio: 'float' = 0.5, max_aspect_ratio: 'float' = 2.0, room_size_strategy: 'RoomSizeSelectionStrategy' = <RoomSizeSelectionStrategy.MAJORITY: 'majority'>, size_normalization_exclusions: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,), excess_attached_bathrooms: 'ExcessAttachedBathroomPolicy' = <ExcessAttachedBathroomPolicy.REJECT: 'reject'>) |
+| `PreprocessingReport` | dataclass/contract | `(normalizations: 'tuple[NormalizationRecord, ...]', room_decisions: 'tuple[RoomDecision, ...]', relation_decisions: 'tuple[RelationDecision, ...]', selected_room_size: 'str', floor_selection: 'FloorSelection', candidate_search_space_selection: 'CandidateGridSelection', hallway_room_count_range: 'HallwayRoomCountRange', applied_defaults: 'tuple[str, ...]' = (), warnings: 'tuple[str, ...]' = ()) -> None` | Debug-only preprocessing decisions and normalized input information. |
+| `PreprocessingRequest` | dataclass/contract | `(floor_limits: 'FloorLimits', aspect_ratio: 'float \| str', rooms: 'tuple[RequestedRoom, ...]') -> None` | PreprocessingRequest(floor_limits: 'FloorLimits', aspect_ratio: 'float \| str', rooms: 'tuple[RequestedRoom, ...]') |
+| `PreprocessingStage` | enum | `INPUT_VALIDATION='input_validation'; NORMALIZATION='normalization'; REFERENCE_DATA='reference_data'; BUSINESS_RULES='business_rules'; ROOM_PREPARATION='room_preparation'; RELATION_PREPARATION='relation_preparation'; FLOOR_PREPARATION='floor_preparation'; CONTEXT_VALIDATION='context_validation'; OUTPUT_VALIDATION='output_validation'` | Documented in the corresponding feature/shared section. |
+| `PreparedGenerationInput` | dataclass/contract | `(generation_spec: 'FloorPlanGenerationSpec', candidate_grid: 'ResolvedCandidateGrid', hallway_room_count_range: 'HallwayRoomCountRange') -> None` | Production result shared with Candidate Search and later generation stages. |
+| `ReferenceDataError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `RelationDecision` | dataclass/contract | `(source_room_type: 'RoomType', action: 'str', detail: 'str') -> None` | RelationDecision(source_room_type: 'RoomType', action: 'str', detail: 'str') |
+| `RelationPreparationError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `RequestedRoom` | dataclass/contract | `(room_type: 'RoomType', id: 'str \| None' = None, name: 'str \| None' = None, requested_size: 'str \| None' = None) -> None` | RequestedRoom(room_type: 'RoomType', id: 'str \| None' = None, name: 'str \| None' = None, requested_size: 'str \| None' = None) |
+| `RoomCountRule` | dataclass/contract | `(room_type: 'RoomType', minimum: 'int', maximum: 'int', client_selectable: 'bool' = True) -> None` | RoomCountRule(room_type: 'RoomType', minimum: 'int', maximum: 'int', client_selectable: 'bool' = True) |
+| `RoomDecision` | dataclass/contract | `(room_id: 'str', room_type: 'RoomType', action: 'str', reason: 'str') -> None` | RoomDecision(room_id: 'str', room_type: 'RoomType', action: 'str', reason: 'str') |
+| `RoomPreparationError` | exception | `(message: 'str', *, code: 'PreprocessingErrorCode \| None' = None, details: 'Mapping[str, Any] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `RoomRelationReference` | dataclass/contract | `(source_room_type: 'RoomType', target_room_types: 'tuple[RoomType, ...]', match_policy: 'MatchPolicy \| str', strength: 'ConstraintStrength \| str', required: 'bool' = True) -> None` | RoomRelationReference(source_room_type: 'RoomType', target_room_types: 'tuple[RoomType, ...]', match_policy: 'MatchPolicy \| str', strength: 'ConstraintStrength \| str', required: 'bool' = True) |
+| `RoomSizeReference` | dataclass/contract | `(room_type: 'RoomType', size: 'str', min_width: 'float', max_width: 'float', min_area: 'float', max_area: 'float') -> None` | RoomSizeReference(room_type: 'RoomType', size: 'str', min_width: 'float', max_width: 'float', min_area: 'float', max_area: 'float') |
+| `RoomSizeSelectionStrategy` | enum | `MAJORITY='majority'` | Documented in the corresponding feature/shared section. |
+| `canonical_aspect_ratio` | function | `canonical_aspect_ratio(value: 'float', rules: 'tuple[AspectRatioRule, ...]', *, tolerance: 'float' = 1e-06) -> 'float \| None'` | Documented in the corresponding feature/shared section. |
+| `prepare_generation_input` | function | `prepare_generation_input(input: 'PreprocessingInput', *, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'PreprocessingExecution'` | Prepare one trusted generation specification without external side effects. |
 
 ## API Compatibility
 

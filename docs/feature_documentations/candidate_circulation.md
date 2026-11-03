@@ -1,6 +1,6 @@
 # Candidate Circulation
 
-> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Internal feature `README.md` files are development notes and are not the consumer contract. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
+> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Implementation rationale is maintained in the internal architecture and feature notes. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
 
 ## Purpose
 
@@ -229,10 +229,6 @@ HallwayConsolidationAttemptDetails(
 )
 ```
 
-## Warnings / diagnostics
-
-Candidate Circulation has no separate warning collection. In `DEBUG`, `CandidateCirculationDetails` exposes circulation-efficiency score, routing-pass count, grid-node count, each routing pass, final hallway traffic, removed hallway points, and hallway-consolidation attempts. Route/input/alignment failures raise the documented circulation exceptions rather than returning warning-only results.
-
 ## Errors / failure conditions
 
 Bad input/configuration can raise `TypeError`, `ValueError`, or
@@ -277,38 +273,43 @@ against intermediate **candidate points**, not arbitrary empty grid cells. The i
 candidate is not mutated. If hallway hints are removed, the consumer must keep later
 room specifications/solver inputs consistent with the returned candidate identities.
 
+
+## Warnings / diagnostics
+
+Candidate Circulation has no separate warning collection. In `DEBUG`, `CandidateCirculationDetails` exposes circulation-efficiency score, routing-pass count, grid-node count, each routing pass, final hallway traffic, removed hallway points, and hallway-consolidation attempts. Route/input/alignment failures raise the documented circulation exceptions rather than returning warning-only results.
+
 ## Public Export Inventory
 
-The supported feature-root import surface is `fpg_core.candidate_circulation`. Its current exported symbols are:
+### `fpg_core.candidate_circulation` exports (26)
 
-- `CandidateCirculationConfig`
-- `CandidateCirculationDetails`
-- `CandidateCirculationError`
-- `CandidateCirculationInput`
-- `CandidateCirculationInputError`
-- `CandidateCirculationResult`
-- `CirculationPathDetails`
-- `CirculationTrafficClass`
-- `CirculationPathNotFoundError`
-- `CirculationRouteRule`
-- `DestinationSelection`
-- `GridAlignmentError`
-- `GridNode`
-- `HallwayClassification`
-- `HallwayConsolidationAttemptDetails`
-- `HallwayConsolidationConfig`
-- `HallwayConsolidationDecision`
-- `HallwayRemovalReason`
-- `HallwayTrafficClass`
-- `HallwayTrafficDetails`
-- `RemovedHallwayPointDetails`
-- `RouteCostBreakdown`
-- `RoutingCostProfile`
-- `RoutingPassDetails`
-- `TrafficClass`
-- `refine_candidate_circulation`
-
-Consumers should prefer the feature-root import surface shown above and `fpg_core.domain` for canonical shared contracts. Implementation submodules are not part of the supported consumer surface unless explicitly documented.
+| Export | Kind | Exact contract/value | Coverage |
+|---|---|---|---|
+| `CandidateCirculationConfig` | dataclass/contract | `(costs: 'RoutingCostProfile', route_rules: 'tuple[CirculationRouteRule, ...]', always_traversable_room_types: 'tuple[RoomType, ...]', max_routing_passes: 'int' = 3, hallway_consolidation: 'HallwayConsolidationConfig' = <factory>) -> None` | Reusable routing policy; request-specific grid comes from `CandidateMap`. |
+| `CandidateCirculationDetails` | dataclass/contract | `(circulation_efficiency_score: 'float', routing_pass_count: 'int', grid_node_count: 'int', passes: 'tuple[RoutingPassDetails, ...]', final_hallway_traffic: 'tuple[HallwayTrafficDetails, ...]', removed_hallway_points: 'tuple[RemovedHallwayPointDetails, ...]', hallway_consolidation_attempts: 'tuple[HallwayConsolidationAttemptDetails, ...]') -> None` | DEBUG-only route efficiency, hallway traffic, removals, and route-verified consolidation attempts. |
+| `CandidateCirculationError` | exception | `constructor has no separately inspectable signature` | Base exception for candidate circulation failures. |
+| `CandidateCirculationInput` | dataclass/contract | `(candidate: 'CandidateMap', config: 'CandidateCirculationConfig') -> None` | Candidate map and reusable circulation policy. |
+| `CandidateCirculationInputError` | exception | `constructor has no separately inspectable signature` | Raised when the circulation input or configuration is invalid. |
+| `CandidateCirculationResult` | dataclass/contract | `(candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = ()) -> None` | Production result with cleaned candidate and retained hallway traffic tags. |
+| `CirculationPathDetails` | dataclass/contract | `(rule_id: 'int', rule_name: 'str', traffic_class: 'CirculationTrafficClass', destination_selection: 'DestinationSelection', allowed_transit_room_types: 'tuple[RoomType, ...]', required_transit_room_types: 'tuple[RoomType, ...]', required_transit_point_keys: 'tuple[str, ...]', importance_weight: 'float', source_point_key: 'str', source_room_id: 'str', source_room_type: 'RoomType', destination_point_key: 'str', destination_room_id: 'str', destination_room_type: 'RoomType', nodes: 'tuple[CirculationGridNode, ...]', step_count: 'int', manhattan_step_count: 'int', detour_step_count: 'int', turn_count: 'int', manhattan_reference_cost: 'float', costs: 'RouteCostBreakdown', path_efficiency_score: 'float') -> None` | DEBUG data for one expanded and resolved route, including required-transit evidence. |
+| `CirculationTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
+| `CirculationPathNotFoundError` | exception | `constructor has no separately inspectable signature` | Raised when a configured route cannot be resolved on the grid. |
+| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float', required_transit_room_types: 'tuple[RoomType, ...]' = ()) -> None` | Shared typed request for room-type circulation routing; required types constrain the intermediate path. |
+| `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'` | Determines which matching destinations a route rule selects. |
+| `GridAlignmentError` | exception | `constructor has no separately inspectable signature` | Raised when a hint point does not align with the configured grid. |
+| `GridNode` | dataclass/contract | `(x_index: 'int', y_index: 'int', x: 'float', y: 'float') -> None` | One grid node used by an orthogonal circulation path. |
+| `HallwayClassification` | dataclass/contract | `(room_id: 'RoomId', hint_index: 'int', traffic_class: 'HallwayTrafficClass') -> None` | Production-safe traffic classification for one retained hallway hint point. |
+| `HallwayConsolidationAttemptDetails` | dataclass/contract | `(point_key: 'str', nearby_point_keys: 'tuple[str, ...]', decision: 'HallwayConsolidationDecision', max_route_cost_increase_ratio: 'float | None') -> None` | DEBUG record of one route-verified nearby-hallway removal attempt. |
+| `HallwayConsolidationConfig` | dataclass/contract | `(enabled: 'bool' = True, minimum_separation_grid_steps: 'float' = 2.0, max_route_cost_increase_ratio: 'float' = 0.15) -> None` | Controls conservative removal of redundant nearby hallway hints. |
+| `HallwayConsolidationDecision` | enum | `REMOVED='removed'; KEPT_ROUTE_UNAVAILABLE='kept_route_unavailable'; KEPT_ROUTE_COVERAGE_CHANGED='kept_route_coverage_changed'; KEPT_ROUTE_COST_INCREASE='kept_route_cost_increase'` | DEBUG outcome of testing one hallway for consolidation. |
+| `HallwayRemovalReason` | enum | `UNUSED='unused'; CONSOLIDATED='consolidated'` | Why a hallway hint was removed from the production candidate. |
+| `HallwayTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'; MIXED='mixed'; UNCLASSIFIED='unclassified'; UNUSED='unused'` | Traffic role assigned to one hallway hint point. |
+| `HallwayTrafficDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', public_route_count: 'int', private_route_count: 'int', public_importance_weight: 'float', private_importance_weight: 'float', traffic_class: 'HallwayTrafficClass', removed: 'bool', removal_reason: 'HallwayRemovalReason | None') -> None` | Traffic totals, final role, and optional removal reason for one hallway hint. |
+| `RemovedHallwayPointDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', reason: 'HallwayRemovalReason') -> None` | Identity, position, and removal reason for one removed hallway hint. |
+| `RouteCostBreakdown` | dataclass/contract | `(movement_cost: 'float', perimeter_bias_cost: 'float', turn_cost: 'float', traffic_conflict_cost: 'float', total_cost: 'float') -> None` | Cost components accumulated by one resolved circulation route. |
+| `RoutingCostProfile` | dataclass/contract | `(empty_node_cost: 'float', traversable_hint_node_cost: 'float', turn_cost: 'float', perimeter_bias_max_cost: 'float', traffic_conflict_cost: 'float') -> None` | Routing costs including the multi-pass hallway conflict penalty. |
+| `RoutingPassDetails` | dataclass/contract | `(pass_number: 'int', classifications_changed_from_previous: 'bool', paths: 'tuple[CirculationPathDetails, ...]', hallway_traffic: 'tuple[HallwayTrafficDetails, ...]') -> None` | DEBUG snapshot of one routing and hallway-classification pass. |
+| `TrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Backward-compatible feature-boundary alias of `CirculationTrafficClass`. |
+| `refine_candidate_circulation` | function | `refine_candidate_circulation(circulation_input: 'CandidateCirculationInput', *, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FeatureExecution[CandidateCirculationResult, CandidateCirculationDetails]'` | Resolve routes, classify hallways, remove unused hallway hints, then optionally consolidate nearby redundant hallway hints. |
 
 ## API Compatibility
 

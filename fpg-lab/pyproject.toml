@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fpg-lab"
+version = "1.0.0"
+description = "Local Python research environment for fpg-core experiments"
+requires-python = ">=3.11"
+dependencies = [
+    "fpg-core",
+    "nicegui[plotly]==3.17.1",
+    "plotly==6.9.0",
+    "SQLAlchemy>=2.0,<3",
+    "pydantic>=2.8,<3",
+    "python-dotenv>=1.2.2,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.5", "mypy>=1.11,<3"]
+
+[tool.setuptools.packages.find]
+include = ["fpg_lab*", "scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["fpg_core", "fpg_core.*"]
+follow_imports = "normal"
+
+[[tool.mypy.overrides]]
+module = ["plotly", "plotly.*"]
+ignore_missing_imports = true

@@ -1,6 +1,6 @@
 # Buildable Land
 
-> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Internal feature `README.md` files are development notes and are not the consumer contract. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
+> **Consumer documentation.** Package-wide conventions, shared domain contracts, execution envelopes, units, and versioning are defined in [API_GUIDE.md](../API_GUIDE.md). Implementation rationale is maintained in the internal architecture and feature notes. Examples that reference `example_*` values use the [reusable example fixtures](../API_GUIDE.md#reusable-example-fixtures).
 
 ## Purpose
 
@@ -62,10 +62,6 @@ normalized_land)`. `NormalizedLand` has a counter-clockwise boundary, normalized
 has `boundary`, `area`, and one `EdgeSetback` per source edge. DEBUG adds
 `BuildableLandDetails(edge_classifications)`; PRODUCTION sets `details=None`.
 
-## Warnings / diagnostics
-
-This feature has no separate production warning collection. Invalid or unusable geometry is reported by raised exceptions rather than warning strings. In `DEBUG`, `execution.details.edge_classifications` exposes the road-relative edge classification used to calculate setbacks; `PRODUCTION` omits these details.
-
 ## Errors / failure conditions
 
 Invalid contract types raise `TypeError`/`ValueError`. Geometry/domain failures raise
@@ -114,18 +110,23 @@ Inputs are not mutated. The normalized boundary may reverse orientation while so
 edge identity remains stable. Side meaning is road-relative, not a global compass
 direction. The operation is deterministic for fixed input/configuration.
 
+
+## Warnings / diagnostics
+
+This feature has no separate production warning collection. Invalid or unusable geometry is reported by raised exceptions rather than warning strings. In `DEBUG`, `execution.details.edge_classifications` exposes the road-relative edge classification used to calculate setbacks; `PRODUCTION` omits these details.
+
 ## Public Export Inventory
 
-The supported feature-root import surface is `fpg_core.buildable_land`. Its current exported symbols are:
+### `fpg_core.buildable_land` exports (6)
 
-- `BuildableLandConfig`
-- `BuildableLandDetails`
-- `BuildableLandError`
-- `BuildableLandInput`
-- `BuildableLandResult`
-- `calculate_buildable_land`
-
-Consumers should prefer the feature-root import surface shown above and `fpg_core.domain` for canonical shared contracts. Implementation submodules are not part of the supported consumer surface unless explicitly documented.
+| Export | Kind | Exact contract/value | Coverage |
+|---|---|---|---|
+| `BuildableLandConfig` | dataclass/contract | `(setback_profile: 'SetbackProfile', validation_limits: 'ValidationLimits') -> None` | Reusable validation and setback policy for buildable-land calculation. |
+| `BuildableLandDetails` | dataclass/contract | `(edge_classifications: 'tuple[EdgeClassification, ...]') -> None` | DEBUG-only land-side classification information. |
+| `BuildableLandError` | exception | `(code: 'BuildableSpaceErrorCode', message: 'str', *, details: 'dict[str, object] \| None' = None) -> 'None'` | Documented in the corresponding feature/shared section. |
+| `BuildableLandInput` | dataclass/contract | `(request: 'BuildableSpaceRequestData', config: 'BuildableLandConfig') -> None` | Request-specific land data plus reusable buildable-land configuration. |
+| `BuildableLandResult` | dataclass/contract | `(buildable_land: 'BuildableLand', normalized_land: 'NormalizedLand') -> None` | Production output required by later land-processing stages. |
+| `calculate_buildable_land` | function | `calculate_buildable_land(buildable_input: 'BuildableLandInput', *, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FeatureExecution[BuildableLandResult, BuildableLandDetails]'` | Validate a land request, apply setbacks, and calculate buildable land. |
 
 ## API Compatibility
 

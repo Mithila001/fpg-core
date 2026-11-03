@@ -49,7 +49,6 @@ from fpg_core.floor_plan_preprocessing import (
 from fpg_core.usable_land import UsableLandConfig
 
 
-
 def build_land_request() -> BuildableSpaceRequestData:
     # 24 m x 20 m rectangular parcel. Edge 0 is the front/main-road edge.
     return BuildableSpaceRequestData(

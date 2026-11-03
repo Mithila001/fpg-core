@@ -7,7 +7,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_ROOT = PROJECT_ROOT / "src" / "fpg_core"
 MANIFEST_PATH = PROJECT_ROOT / "docs" / "_generated" / "public_api_manifest.json"
-REFERENCE_PATH = PROJECT_ROOT / "docs" / "PACKAGE_FEATURE_REFERENCE.md"
 
 
 def _coverage_section(reference: str, module_name: str) -> str:
@@ -19,7 +18,9 @@ def _coverage_section(reference: str, module_name: str) -> str:
 
 
 def _definitions(module_name: str) -> dict[str, tuple[str, tuple[str, ...]]]:
-    package_path = PACKAGE_ROOT / module_name.removeprefix("fpg_core.").replace(".", "/")
+    package_path = PACKAGE_ROOT / module_name.removeprefix("fpg_core.").replace(
+        ".", "/"
+    )
     if module_name == "fpg_core":
         paths = list(PACKAGE_ROOT.glob("*.py"))
     elif package_path.is_dir():
@@ -83,10 +84,19 @@ def _definitions(module_name: str) -> dict[str, tuple[str, tuple[str, ...]]]:
 
 def test_documented_public_contract_rows_include_current_fields_and_arguments() -> None:
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    reference = REFERENCE_PATH.read_text(encoding="utf-8")
     failures: list[str] = []
 
     for module_name, module in manifest["modules"].items():
+        doc = (
+            PROJECT_ROOT
+            / "docs"
+            / (
+                "API_GUIDE.md"
+                if module_name in {"fpg_core", "fpg_core.domain"}
+                else f"feature_documentations/{module_name.split('.')[-1]}.md"
+            )
+        )
+        reference = doc.read_text(encoding="utf-8")
         definitions = _definitions(module_name)
         section = _coverage_section(reference, module_name)
         for export in module["exports"]:
@@ -102,10 +112,13 @@ def test_documented_public_contract_rows_include_current_fields_and_arguments() 
                 ),
                 "",
             )
-            if not row:
-                continue
+            assert row, f"missing contract row: {module_name}.{export}"
             for name in names:
                 if name not in row:
-                    failures.append(f"{module_name}.{export}: missing {kind} item {name!r}")
+                    failures.append(
+                        f"{module_name}.{export}: missing {kind} item {name!r}"
+                    )
 
-    assert not failures, "documentation contract rows are stale:\n" + "\n".join(failures)
+    assert not failures, "documentation contract rows are stale:\n" + "\n".join(
+        failures
+    )
