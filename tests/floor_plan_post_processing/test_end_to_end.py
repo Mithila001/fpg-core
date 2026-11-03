@@ -127,8 +127,8 @@ def test_required_failure_stops_after_rollback(floor_plan: FloorPlan) -> None:
 
 def test_invalid_mode_is_rejected(floor_plan: FloorPlan) -> None:
     with pytest.raises(TypeError, match="ExecutionMode"):
-        post_process_floor_plan(  # type: ignore[arg-type]
+        post_process_floor_plan(
             PostProcessingRequest(floor_plan, _profile()),
             registry=_registry(),
-            mode="debug",
+            mode="debug",  # type: ignore[arg-type]
         )

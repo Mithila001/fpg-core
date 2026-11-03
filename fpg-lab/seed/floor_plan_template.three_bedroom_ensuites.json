@@ -1,0 +1,74 @@
+{
+  "name": "three-bedroom-garage-two-ensuites",
+  "description": "Three bedrooms, two attached bathrooms, shared bathroom and garage.",
+  "schema_version": "1",
+  "template_data": {
+    "floor_limits": {
+      "max_width": 220,
+      "max_length": 180
+    },
+    "aspect_ratio": "4:3",
+    "rooms": [
+      {
+        "id": "living_room_1",
+        "name": "Living Room",
+        "room_type": "living_room",
+        "requested_size": "medium"
+      },
+      {
+        "id": "kitchen_1",
+        "name": "Kitchen",
+        "room_type": "kitchen",
+        "requested_size": "medium"
+      },
+      {
+        "id": "dining_room_1",
+        "name": "Dining Room",
+        "room_type": "dining_room",
+        "requested_size": "medium"
+      },
+      {
+        "id": "bedroom_1",
+        "name": "Bedroom 1",
+        "room_type": "bedroom",
+        "requested_size": "medium"
+      },
+      {
+        "id": "bedroom_2",
+        "name": "Bedroom 2",
+        "room_type": "bedroom",
+        "requested_size": "medium"
+      },
+      {
+        "id": "bathroom_1",
+        "name": "Bathroom",
+        "room_type": "bathroom",
+        "requested_size": "medium"
+      },
+      {
+        "id": "bedroom_3",
+        "name": "Bedroom 3",
+        "room_type": "bedroom",
+        "requested_size": "medium"
+      },
+      {
+        "id": "garage_1",
+        "name": "Garage",
+        "room_type": "garage",
+        "requested_size": "medium"
+      },
+      {
+        "id": "attached_bathroom_1",
+        "name": "Attached Bathroom 1",
+        "room_type": "attached_bathroom",
+        "requested_size": "medium"
+      },
+      {
+        "id": "attached_bathroom_2",
+        "name": "Attached Bathroom 2",
+        "room_type": "attached_bathroom",
+        "requested_size": "medium"
+      }
+    ]
+  }
+}

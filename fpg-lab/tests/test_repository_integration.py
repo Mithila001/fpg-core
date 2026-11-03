@@ -20,7 +20,9 @@ def test_core_origin_and_public_import_boundaries() -> None:
         for path in directory.rglob("*.py"):
             for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
                 if isinstance(node, ast.Import):
-                    imports = [(alias.name, []) for alias in node.names]
+                    imports: list[tuple[str, list[str]]] = [
+                        (alias.name, []) for alias in node.names
+                    ]
                 elif isinstance(node, ast.ImportFrom) and node.level == 0:
                     imports = [(node.module or "", [alias.name for alias in node.names])]
                 else:
@@ -63,6 +65,8 @@ def test_settings_paths_do_not_depend_on_working_directory(
         monkeypatch.chdir(tmp_path)
         get_settings.cache_clear()
         assert get_settings() == from_lab
-        assert Path(make_url(from_lab.database_url).database) == ROOT / "data/path-check.db"
+        database = make_url(from_lab.database_url).database
+        assert database is not None
+        assert Path(database) == ROOT / "data/path-check.db"
     finally:
         get_settings.cache_clear()

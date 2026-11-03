@@ -76,7 +76,7 @@ def test_infeasible_status_is_returned(generation_spec: FloorPlanGenerationSpec)
 
 def test_invalid_mode_is_rejected(generation_spec: FloorPlanGenerationSpec) -> None:
     with pytest.raises(TypeError, match="ExecutionMode"):
-        generate_floor_plan(  # type: ignore[arg-type]
+        generate_floor_plan(
             FloorPlanSolveRequest(generation_spec, _profile()),
-            mode="debug",
+            mode="debug",  # type: ignore[arg-type]
         )

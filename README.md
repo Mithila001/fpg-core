@@ -90,6 +90,25 @@ Ubuntu uses `.venv/bin/python` for the same commands. Lab owns its `.env` and lo
 `data/` directory. See [Lab's README](fpg-lab/README.md) for setup, resets, other
 experiments, and static checks.
 
+## VS Code interpreters
+
+Open [fpg.code-workspace](fpg.code-workspace) with **File > Open Workspace from
+File** to work on Core and Lab together. Each workspace folder defaults to its own
+`.venv`, so Pylance can resolve Lab dependencies while Core stays independent.
+Opening only the repository root gives Pylance one interpreter for both projects;
+automatic terminal activation does not change that limitation.
+
+If VS Code has already remembered a different interpreter, open a Python file in
+each workspace folder and run **Python: Select Interpreter**. Select the root
+`.venv/Scripts/python.exe` for Core and `fpg-lab/.venv/Scripts/python.exe` for Lab
+(on Ubuntu, use each environment's `bin/python`). Then run **Developer: Reload
+Window**. The workspace default applies to initial selection; it does not override
+an interpreter already selected in VS Code.
+
+For Lab alone, opening `fpg-lab/` as the VS Code folder and selecting its `.venv`
+also works. No dependency reinstall is needed when imports already succeed using
+the appropriate environment's Python.
+
 ## Maintain the repository
 
 From the root, using the Core interpreter:

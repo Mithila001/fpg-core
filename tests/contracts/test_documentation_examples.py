@@ -28,7 +28,7 @@ def _example(document: Path, heading: str) -> str:
 
 @pytest.mark.parametrize("document", FEATURES, ids=lambda path: path.stem)
 def test_public_feature_usage_example(document: Path) -> None:
-    namespace = {}
+    namespace: dict[str, object] = {}
     fixtures = _example(DOCS / "API_GUIDE.md", "Reusable Example Fixtures")
     exec(compile(fixtures, "API_GUIDE.md", "exec"), namespace)
     if document.stem == "usable_land":

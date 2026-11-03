@@ -22,13 +22,16 @@ bash scripts/setup_ubuntu.sh
 
 Open **http://127.0.0.1:8080**. Setup creates `fpg-lab/.venv`, installs this Lab and
 the parent Core in editable mode, creates `.env` if absent, validates Core imports
-and the starter profile, and seeds an active configuration and request template.
+and the starter profile, and seeds an active configuration and four request templates.
 There is no separate Core checkout option. The root Core development environment
 is independent; no environment activation is required for these commands.
 
 After setup, only the start command is needed. Stop with Ctrl+C; shutdown waits for
 an active Core stage to finish. Do not run two Lab processes against one database:
 startup recovery assumes a single owner and marks abandoned runs interrupted.
+
+For VS Code, follow the [interpreter setup](../README.md#vs-code-interpreters)
+to give Pylance Lab's environment separately from Core.
 
 ## Configuration and data
 
@@ -49,7 +52,7 @@ maps to Core aggregate schema 2; they are distinct formats. Old Lab schemas are
 rejected. There is no automatic migration of prior databases/profiles.
 
 Normal setup preserves `.env` and experiment history, but upserts the named starter
-profile/template and activates the starter. To rebuild local tables deliberately,
+profile and four shipped templates, and activates the starter profile. To rebuild local tables deliberately,
 stop Lab and use `-Fresh Yes` on Windows or `--fresh Yes` on Ubuntu. This destroys
 Lab records in the configured database. Review `.env` before resetting.
 
@@ -73,6 +76,16 @@ used; stored experiment snapshots remain unchanged.
 - Templates: save requests and load them into experiments; Core preprocessing
   checks them against the selected profile.
 - P01A searches and scores candidate maps.
+- After a P01A run stops, replay saved hints with play/pause, speed, scrubbing,
+  adjustable onion skins, room filtering, an animated single-room placement heatmap,
+  and all-trials or improvements-only views. Trial IDs seek the same canvas;
+  evaluator progression charts follow its playhead. Keep
+  **Store debug data** enabled. Start with 100 trials, then try 500; raw/cleaned
+  hints and evaluator contributions help inspect guidance before tuning settings.
+  Rooms appear in an aligned checkbox grid. **Select one** makes room choices
+  exclusive; **Select all / Deselect all** toggles the complete set and selecting
+  all turns off exclusive selection. Playback/settings and room controls share
+  a compact row above the canvas on wide screens and stack on narrow screens.
 - P01B accepts manual room/hallway hints, then runs initial solving, refinements,
   post-processing, openings and final scoring.
 - P01C branches into floor-plan generation when candidate score is strictly greater
@@ -85,6 +98,31 @@ The [P01 guide](docs/experiments/p01.md) explains shared behavior and retention.
 "Store debug data" controls detailed recording: P01A skips individual trial records
 when disabled; P01C retains score/status metadata. Termination is cooperative at
 stage boundaries. Interrupted runs are not automatically resumed.
+
+## Research request templates
+
+Setup installs these four templates. Each includes a living room, kitchen, dining
+room and shared bathroom. Attached bathrooms are additional rooms paired by Core
+preprocessing policy; these are request templates, not separate system profiles.
+
+| Template | Bedrooms | Attached bathrooms | Other rooms | Maximum floor limits |
+| --- | --- | --- | --- | --- |
+| `two-bedroom-research-template` | 2 | 0 | — | 180 × 140 |
+| `two-bedroom-garage-veranda` | 2 | 0 | Garage, veranda | 200 × 160 |
+| `two-bedroom-garage-ensuite` | 2 | 1 | Garage | 200 × 160 |
+| `three-bedroom-garage-two-ensuites` | 3 | 2 | Garage | 220 × 180 |
+
+Limits use project units (examples use 10 units per metre). Preprocessing chooses
+the actual floor within those limits using the selected profile and room sizes;
+the limits do not force that footprint. Select a template from **Load a template**
+when creating an experiment; saved runs keep their original request snapshots.
+
+To add the three new presets to an existing installation without reseeding its
+configuration, run from `fpg-lab/`:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.seed_db --floor-plan-template seed/floor_plan_template.garage_veranda.json --floor-plan-template seed/floor_plan_template.two_bedroom_ensuite.json --floor-plan-template seed/floor_plan_template.three_bedroom_ensuites.json
+```
 
 ## Headless experiments
 

@@ -58,7 +58,13 @@ try {
 
     Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.init_db")
     Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.verify_fpg_core", "--system-config", "seed/system_configuration.default.json")
-    Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.seed_db", "--system-config", "seed/system_configuration.default.json", "--activate", "--floor-plan-template", "seed/floor_plan_template.example.json")
+    Invoke-Checked -Command $VirtualPython -Arguments @(
+        "-m", "scripts.seed_db", "--system-config", "seed/system_configuration.default.json", "--activate",
+        "--floor-plan-template", "seed/floor_plan_template.example.json",
+        "--floor-plan-template", "seed/floor_plan_template.garage_veranda.json",
+        "--floor-plan-template", "seed/floor_plan_template.two_bedroom_ensuite.json",
+        "--floor-plan-template", "seed/floor_plan_template.three_bedroom_ensuites.json"
+    )
 
     Write-Host ""
     Write-Host "FPG Lab initialization completed."

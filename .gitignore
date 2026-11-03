@@ -22,3 +22,5 @@ venv/
 AI_CONTEXT.md
 project_structure.md
 project_structure.txt
+
+.playwright-mcp

@@ -79,7 +79,7 @@ def test_invalid_input_is_structured_by_mode(floor_plan: FloorPlan) -> None:
 
 def test_invalid_mode_is_rejected(floor_plan: FloorPlan) -> None:
     with pytest.raises(TypeError, match="ExecutionMode"):
-        generate_openings(  # type: ignore[arg-type]
+        generate_openings(
             OpeningGenerationRequest(floor_plan, DEFAULT_OPENING_PROFILE),
-            mode="debug",
+            mode="debug",  # type: ignore[arg-type]
         )

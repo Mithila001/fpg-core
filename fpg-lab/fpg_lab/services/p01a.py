@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fpg_lab.database.models import P01CandidateTrial, P01Experiment
@@ -32,3 +33,18 @@ class P01AService(P01Service):
 
     def get_candidate_trial(self, trial_id: int) -> P01CandidateTrial:
         return super().get_trial(trial_id)[0]
+
+    def replay_trials(self, experiment_id: int, *, after: int = 0) -> list[P01CandidateTrial]:
+        """Read one bounded chronological page, checking the experiment's flow first."""
+        self.get_experiment(experiment_id)
+        return list(
+            self.session.scalars(
+                select(P01CandidateTrial)
+                .where(
+                    P01CandidateTrial.experiment_id == experiment_id,
+                    P01CandidateTrial.trial_no > after,
+                )
+                .order_by(P01CandidateTrial.trial_no)
+                .limit(100)
+            )
+        )

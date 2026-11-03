@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from fpg_lab.runtime import LabRuntime
 
 
-def shell(title: str, subtitle: str = "") -> None:
+def shell(
+    title: str, subtitle: str = "", *, compact: bool = False, back_link: str | None = None
+) -> None:
     ui.colors(
         primary="#75beff",
         secondary="#b0b0b0",
@@ -87,7 +89,12 @@ def shell(title: str, subtitle: str = "") -> None:
             ui.link(name, path).classes("lab-text no-underline hover:underline")
         ui.label("Local research workspace").classes("ml-auto text-xs lab-muted")
     ui.query("body").classes("lab-workspace")
-    ui.label(title).classes("text-3xl font-semibold mt-5")
+    with ui.row().classes("w-full items-center justify-between"):
+        ui.label(title).classes(
+            "text-2xl font-semibold" if compact else "text-3xl font-semibold mt-5"
+        )
+        if back_link:
+            ui.link("Back to experiments", back_link).classes("text-sm")
     if subtitle:
         ui.label(subtitle).classes("lab-muted mb-4")
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 
 from nicegui import run, ui
@@ -14,6 +15,7 @@ from fpg_lab.inputs import FloorPlanRequest
 from fpg_lab.runtime import FLOW_SERVICES, LabRuntime, row_document
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
 from fpg_lab.ui.components import db_call, editor_value, json_panel, notify_error, set_editor, shell
+from fpg_lab.ui.replay import candidate_replay
 from fpg_lab.visualization import figures
 
 STAGES = {
@@ -26,7 +28,12 @@ STAGES = {
 }
 
 
-def table(rows: list[dict[str, Any]], fields: tuple[str, ...], link_prefix: str) -> None:
+def table(
+    rows: list[dict[str, Any]],
+    fields: tuple[str, ...],
+    link_prefix: str,
+    on_trial: Callable[[int], None] | None = None,
+) -> None:
     columns = [
         {
             "name": field,
@@ -43,6 +50,14 @@ def table(rows: list[dict[str, Any]], fields: tuple[str, ...], link_prefix: str)
         row_key="id",
         pagination=25,
     ).classes("w-full")
+    if on_trial is not None:
+        widget.add_slot(
+            "body-cell-id",
+            '<q-td :props="props"><q-btn flat dense color="primary" '
+            ':label="props.row.id" @click="$parent.$emit(\'seek-trial\', props.row.trial_no)" /></q-td>',
+        )
+        widget.on("seek-trial", lambda event: on_trial(int(event.args)))
+        return
     widget.add_slot(
         "body-cell-id",
         '<q-td :props="props"><a class="text-primary underline" :href="\''
@@ -323,10 +338,16 @@ def register_experiments(runtime: LabRuntime) -> None:
             shell("Unknown experiment")
             return
         shell(
-            f"{flow.upper()} run #{experiment_id}",
-            "Live progress, saved results, and reproducible configuration snapshots.",
+            f"{flow.upper()} run #{experiment_id}", compact=True, back_link=f"/experiments/{flow}"
         )
-        ui.link("Back to experiments", f"/experiments/{flow}")
+        replay_area = ui.column().classes("w-full gap-3")
+        replay_loaded = False
+        replay_seek: Callable[[int], None] | None = None
+
+        def seek_saved_trial(trial_no: int) -> None:
+            if replay_seek is not None:
+                replay_seek(trial_no)
+
         area = ui.column().classes("w-full gap-5")
         trial_page = ui.number("Trial page", value=1, min=1, precision=0).classes("w-36")
         timer: ui.timer
@@ -343,6 +364,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 notify_error(exc)
 
         async def refresh_run() -> None:
+            nonlocal replay_loaded, replay_seek
             try:
                 item, trials, scores, runs = await db_call(
                     runtime,
@@ -350,6 +372,11 @@ def register_experiments(runtime: LabRuntime) -> None:
                         session, flow, experiment_id, int(trial_page.value or 1)
                     ),
                 )
+                if item["status"] not in ACTIVE_STATUSES and flow == "p01a" and not replay_loaded:
+                    replay_area.clear()
+                    with replay_area:
+                        replay_seek = await candidate_replay(runtime, item)
+                    replay_loaded = True
                 area.clear()
                 with area:
                     with ui.card().classes("w-full p-5"):
@@ -374,7 +401,10 @@ def register_experiments(runtime: LabRuntime) -> None:
                         ).classes("text-sm lab-muted")
                     if scores:
                         with ui.row().classes("w-full"):
-                            ui.plotly(figures.score_history(scores)).classes("flex-1 min-w-80 h-72")
+                            if replay_seek is None:
+                                ui.plotly(figures.score_history(scores)).classes(
+                                    "flex-1 min-w-80 h-72"
+                                )
                             ui.plotly(figures.score_distribution(scores)).classes(
                                 "flex-1 min-w-80 h-72"
                             )
@@ -390,6 +420,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                             trials,
                             ("id", "trial_no", "status", "final_score", "duration_ms"),
                             f"/experiments/{flow}/runs/{experiment_id}/trials/",
+                            on_trial=seek_saved_trial if replay_seek else None,
                         )
                     if runs:
                         ui.label("Floor-plan runs").classes("text-lg font-semibold")

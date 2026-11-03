@@ -39,6 +39,8 @@ def candidate_map(
     candidate: Mapping[str, Any] | None, *, title: str = "Candidate map"
 ) -> go.Figure:
     result = figure(title, geometry=True)
+    result.update_xaxes(showgrid=False)
+    result.update_yaxes(showgrid=False)
     if not candidate:
         return result
     grid = candidate.get("grid") or {}
@@ -135,7 +137,7 @@ def floor_plan(plan: Mapping[str, Any] | None, *, title: str = "Floor plan") -> 
     return result
 
 
-def score_history(trials: Sequence[Mapping[str, Any]]) -> go.Figure:
+def score_history(trials: Sequence[Mapping[str, Any]], *, trial_no: int | None = None) -> go.Figure:
     result = figure("Candidate score progression")
     scored = [trial for trial in trials if trial.get("final_score") is not None]
     result.add_trace(
@@ -149,6 +151,24 @@ def score_history(trials: Sequence[Mapping[str, Any]]) -> go.Figure:
     )
     result.update_xaxes(title="Trial")
     result.update_yaxes(title="Score", range=[0, 100])
+    best = None
+    best_scores = []
+    for trial in trials:
+        score = trial.get("final_score")
+        if score is not None:
+            best = score if best is None else max(best, score)
+        best_scores.append(best)
+    result.add_trace(
+        go.Scatter(
+            x=[t["trial_no"] for t in trials],
+            y=best_scores,
+            mode="lines",
+            name="Best so far",
+            line=dict(shape="hv"),
+        )
+    )
+    if trial_no is not None:
+        result.add_vline(x=trial_no, line_color=PALETTE[1])
     return result
 
 
@@ -167,8 +187,7 @@ def score_breakdown(scoring: Mapping[str, Any] | None) -> go.Figure:
     result = figure("Score breakdown")
     if not scoring:
         return result
-    details = scoring.get("details") or scoring
-    evaluators = details.get("evaluator_results", [])
+    evaluators = scoring.get("evaluator_results", [])
     result.add_trace(
         go.Bar(
             x=[e.get("evaluator_key", e.get("key", "")) for e in evaluators],
@@ -176,4 +195,64 @@ def score_breakdown(scoring: Mapping[str, Any] | None) -> go.Figure:
             marker_color=PALETTE[1],
         )
     )
+    result.add_trace(
+        go.Bar(
+            x=[e.get("evaluator_key", "") for e in evaluators],
+            y=[e.get("contribution") for e in evaluators],
+            name="Contribution",
+            marker_color=PALETTE[0],
+        )
+    )
+    result.data[0].name = "Raw score"
     return result
+
+
+def evaluator_histories(trials: Sequence[Mapping[str, Any]]) -> dict[str, go.Figure]:
+    """Keep missing/unevaluated scores as gaps; maxima belong to each evaluator."""
+    ordered = sorted(trials, key=lambda trial: trial["trial_no"])
+    evaluations = [
+        {
+            e["evaluator_key"]: e
+            for e in (t.get("candidate_scoring_data") or {}).get("evaluator_results", [])
+        }
+        for t in ordered
+    ]
+    keys = dict.fromkeys(key for values in evaluations for key in values)
+    results = {}
+    for key in keys:
+        result = figure(key.replace("_", " ").title())
+        scores, maxima, details = [], [], []
+        best = None
+        for values in evaluations:
+            evaluation = values.get(key, {})
+            status = evaluation.get("status", "unavailable")
+            score = evaluation.get("raw_score") if status == "completed" else None
+            if score is not None:
+                best = score if best is None else max(best, score)
+            scores.append(score)
+            maxima.append(best)
+            details.append([status, evaluation.get("contribution")])
+        xs = [trial["trial_no"] for trial in ordered]
+        result.add_trace(
+            go.Scatter(
+                x=xs,
+                y=scores,
+                mode="lines+markers",
+                name="Raw score",
+                connectgaps=False,
+                customdata=details,
+                hovertemplate="Trial %{x}<br>Score %{y:.2f}<br>Status %{customdata[0]}"
+                "<br>Contribution %{customdata[1]}<extra></extra>",
+            )
+        )
+        result.add_trace(
+            go.Scatter(
+                x=xs, y=maxima, mode="lines", name="Evaluator best so far", line=dict(shape="hv")
+            )
+        )
+        result.update_xaxes(title="Trial")
+        result.update_yaxes(title="Score", range=[0, 100])
+        if xs:
+            result.add_vline(x=xs[0], line_color=PALETTE[1])
+        results[key] = result
+    return results

@@ -71,11 +71,11 @@ def test_invalid_mode_is_rejected(
     generation_spec: FloorPlanGenerationSpec,
 ) -> None:
     with pytest.raises(TypeError, match="ExecutionMode"):
-        score_floor_plan(  # type: ignore[arg-type]
+        score_floor_plan(
             FloorPlanScoringInput(
                 floor_plan,
                 generation_spec,
                 create_default_profile(),
             ),
-            mode="debug",
+            mode="debug",  # type: ignore[arg-type]
         )

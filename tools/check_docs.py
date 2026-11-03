@@ -29,7 +29,7 @@ AGENT_FILES = {Path("AGENTS.md"), Path("fpg-lab/AGENTS.md")}
 
 
 def markdown_files() -> list[Path]:
-    files = []
+    files: list[Path] = []
     for directory, children, names in os.walk(ROOT):
         children[:] = [name for name in children if name not in SKIP_DIRS]
         files.extend(

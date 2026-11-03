@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "name": "FPG Core",
+      "path": "."
+    },
+    {
+      "name": "FPG Lab",
+      "path": "fpg-lab"
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv"
+  }
+}
