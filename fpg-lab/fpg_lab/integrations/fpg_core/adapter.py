@@ -185,7 +185,6 @@ class FpgCoreAdapter:
         )
 
         specification = prepared.generation_spec
-        self._validate_route_rule_room_types(specification)
         search_config = self._required("candidate_search")
 
         search_input = CandidateSearchInput(
@@ -218,7 +217,7 @@ class FpgCoreAdapter:
             return refine_candidate_circulation(
                 CandidateCirculationInput(
                     candidate=candidate,
-                    config=self._required("candidate_circulation"),
+                    config=self._circulation_config(candidate),
                 ),
                 mode=self.execution_mode(debug=debug),
             )
@@ -238,7 +237,7 @@ class FpgCoreAdapter:
         )
 
         try:
-            config = self._required("candidate_circulation")
+            config = self._circulation_config(circulation.result.candidate)
             execution = refine_candidate_circulation(
                 CandidateCirculationInput(
                     candidate=circulation.result.candidate,
@@ -430,23 +429,13 @@ class FpgCoreAdapter:
             mode=self.execution_mode(debug=debug),
         )
 
-    def _validate_route_rule_room_types(self, specification: Any) -> None:
-        available = {room.room_type.value for room in specification.rooms}
-        missing: list[str] = []
-        circulation = self.config_document.candidate_circulation
-        if circulation is None:
-            raise FpgCoreAdapterError(
-                "Required configuration section 'candidate_circulation' is missing"
-            )
-        for rule in circulation.route_rules:
-            if rule.source_room_type not in available:
-                missing.append(f"rule {rule.id} source {rule.source_room_type!r} is absent")
-            if rule.destination_room_type not in available:
-                missing.append(
-                    f"rule {rule.id} destination {rule.destination_room_type!r} is absent"
-                )
-        if missing:
-            raise FpgCoreAdapterError(
-                "Candidate circulation rules do not match the preprocessed room set: "
-                + "; ".join(missing)
-            )
+    def _circulation_config(self, candidate: Any) -> Any:
+        config = self._required("candidate_circulation")
+        available = {point.room_type for point in candidate.points}
+        rules = tuple(
+            rule for rule in config.route_rules
+            if rule.source_room_type in available and rule.destination_room_type in available
+        )
+        if not rules:
+            raise FpgCoreAdapterError("No circulation route rules match the candidate rooms")
+        return replace(config, route_rules=rules)

@@ -61,9 +61,10 @@ try {
     Invoke-Checked -Command $VirtualPython -Arguments @(
         "-m", "scripts.seed_db", "--system-config", "seed/system_configuration.default.json", "--activate",
         "--floor-plan-template", "seed/floor_plan_template.example.json",
-        "--floor-plan-template", "seed/floor_plan_template.garage_veranda.json",
-        "--floor-plan-template", "seed/floor_plan_template.two_bedroom_ensuite.json",
-        "--floor-plan-template", "seed/floor_plan_template.three_bedroom_ensuites.json"
+        "--floor-plan-template", "seed/floor_plan_template.minimal.json",
+        "--floor-plan-template", "seed/floor_plan_template.super_minimal.json",
+        "--floor-plan-template", "seed/floor_plan_template.average.json",
+        "--floor-plan-template", "seed/floor_plan_template.big_plan.json"
     )
 
     Write-Host ""

@@ -54,6 +54,31 @@ def test_old_lab_profiles_are_rejected_without_mutating_input(schema: int) -> No
     assert payload == original
 
 
+def test_circulation_required_transit_is_decoded_without_changing_scoring() -> None:
+    from fpg_core.domain import RoomType
+
+    codec = CoreConfigCodec()
+    payload = codec.default_configuration().payload
+    assert payload["preprocessing"]["candidate_search_grid_spacing"] == 10
+    rules = payload["candidate_circulation"]["route_rules"]
+    assert [rule["id"] for rule in rules] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13]
+    assert all(rule["required_transit_room_types"] == [] for rule in rules)
+    rules[0]["required_transit_room_types"] = ["hallway"]
+    resolved = codec.decode_for_flow(payload, "p01a")
+    assert resolved.candidate_circulation.route_rules[0].required_transit_room_types == (
+        RoomType.HALLWAY,
+    )
+
+    scoring_rules = next(
+        rule["settings"]["route_rules"]
+        for rule in payload["candidate_scoring"]["evaluator_rules"]
+        if rule["key"] == "relationship_quality"
+    )
+    scoring_rules[0]["required_transit_room_types"] = ["hallway"]
+    with pytest.raises(CoreConfigurationError, match="relationship quality does not support"):
+        codec.validate_payload(payload)
+
+
 def test_settings_paths_do_not_depend_on_working_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

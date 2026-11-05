@@ -312,6 +312,7 @@ class CoreConfigCodec:
                 destination_selection=DestinationSelection(x.destination_selection),
                 traffic_class=CirculationTrafficClass(x.traffic_class),
                 allowed_transit_room_types=tuple(RoomType(v) for v in x.allowed_transit_room_types),
+                required_transit_room_types=tuple(RoomType(v) for v in x.required_transit_room_types),
                 importance_weight=x.importance_weight,
             )
             for x in rules

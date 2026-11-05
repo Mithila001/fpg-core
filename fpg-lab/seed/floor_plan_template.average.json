@@ -1,32 +1,14 @@
 {
-  "name": "two-bedroom-garage-veranda",
-  "description": "Two bedrooms, shared bathroom, garage and veranda.",
+  "name": "Average",
+  "description": "Average residential research request.",
   "schema_version": "1",
   "template_data": {
     "floor_limits": {
-      "max_width": 200,
-      "max_length": 160
+      "max_width": 220,
+      "max_length": 165
     },
     "aspect_ratio": "4:3",
     "rooms": [
-      {
-        "id": "living_room_1",
-        "name": "Living Room",
-        "room_type": "living_room",
-        "requested_size": "medium"
-      },
-      {
-        "id": "kitchen_1",
-        "name": "Kitchen",
-        "room_type": "kitchen",
-        "requested_size": "medium"
-      },
-      {
-        "id": "dining_room_1",
-        "name": "Dining Room",
-        "room_type": "dining_room",
-        "requested_size": "medium"
-      },
       {
         "id": "bedroom_1",
         "name": "Bedroom 1",
@@ -46,15 +28,33 @@
         "requested_size": "medium"
       },
       {
-        "id": "garage_1",
-        "name": "Garage",
-        "room_type": "garage",
+        "id": "living_room_1",
+        "name": "Living Room",
+        "room_type": "living_room",
+        "requested_size": "medium"
+      },
+      {
+        "id": "kitchen_1",
+        "name": "Kitchen",
+        "room_type": "kitchen",
+        "requested_size": "medium"
+      },
+      {
+        "id": "dining_room_1",
+        "name": "Dining Room",
+        "room_type": "dining_room",
         "requested_size": "medium"
       },
       {
         "id": "veranda_1",
         "name": "Veranda",
         "room_type": "veranda",
+        "requested_size": "medium"
+      },
+      {
+        "id": "garage_1",
+        "name": "Garage",
+        "room_type": "garage",
         "requested_size": "medium"
       }
     ]

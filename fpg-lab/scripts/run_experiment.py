@@ -44,13 +44,13 @@ def sample_hints() -> dict[str, Any]:
         "rooms": [
             {"room_id": room_id, "x": x, "y": y}
             for room_id, x, y in (
-                ("living_1", 19.5, 18.5),
-                ("kitchen_1", 55.5, 18.5),
-                ("bedroom_1", 19.5, 66.5),
-                ("bathroom_1", 55.5, 66.5),
+                ("living_1", 20.5, 23.5),
+                ("kitchen_1", 60.5, 23.5),
+                ("bedroom_1", 20.5, 73.5),
+                ("bathroom_1", 60.5, 73.5),
             )
         ],
-        "hallways": [{"x": 19.5, "y": 42.5}],
+        "hallways": [{"x": 40.5, "y": 43.5}],
     }
 
 

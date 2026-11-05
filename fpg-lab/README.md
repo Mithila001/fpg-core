@@ -26,7 +26,7 @@ bash scripts/setup_ubuntu.sh
 
 Open **http://127.0.0.1:8080**. Setup creates `fpg-lab/.venv`, installs this Lab and
 the parent Core in editable mode, creates `.env` if absent, validates Core imports
-and the starter profile, and seeds an active configuration and four request templates.
+and the starter profile, and seeds an active configuration and five request templates.
 There is no separate Core checkout option. The root Core development environment
 is independent; no environment activation is required for these commands.
 
@@ -56,7 +56,7 @@ maps to Core aggregate schema 2; they are distinct formats. Old Lab schemas are
 rejected. There is no automatic migration of prior databases/profiles.
 
 Normal setup preserves `.env` and experiment history, but upserts the named starter
-profile and four shipped templates, and activates the starter profile. To rebuild local tables deliberately,
+profile and five shipped templates, and activates the starter profile. To rebuild local tables deliberately,
 stop Lab and use `-Fresh Yes` on Windows or `--fresh Yes` on Ubuntu. This destroys
 Lab records in the configured database. Review `.env` before resetting.
 
@@ -105,28 +105,23 @@ stage boundaries. Interrupted runs are not automatically resumed.
 
 ## Research request templates
 
-Setup installs these four templates. Each includes a living room, kitchen, dining
-room and shared bathroom. Attached bathrooms are additional rooms paired by Core
-preprocessing policy; these are request templates, not separate system profiles.
+Setup installs these five templates. Full Template (Default) is selected when
+opening an experiment if the template is present. Each includes a living room,
+kitchen and shared bathroom; attached bathrooms are additional rooms paired by
+Core preprocessing policy.
 
 | Template | Bedrooms | Attached bathrooms | Other rooms | Maximum floor limits |
 | --- | --- | --- | --- | --- |
-| `two-bedroom-research-template` | 2 | 0 | — | 180 × 140 |
-| `two-bedroom-garage-veranda` | 2 | 0 | Garage, veranda | 200 × 160 |
-| `two-bedroom-garage-ensuite` | 2 | 1 | Garage | 200 × 160 |
-| `three-bedroom-garage-two-ensuites` | 3 | 2 | Garage | 220 × 180 |
+| Full Template (Default) | 3 | 1 | Dining room, veranda, garage | 240 ? 180 |
+| Minimal | 1 | 0 | Veranda | 180 ? 135 |
+| Super Minimal | 1 | 0 | ? | 160 ? 120 |
+| Average | 2 | 0 | Dining room, veranda, garage | 220 ? 165 |
+| Big Plan | 4 | 2 | Dining room, veranda, garage | 280 ? 210 |
 
-Limits use project units (examples use 10 units per metre). Preprocessing chooses
-the actual floor within those limits using the selected profile and room sizes;
-the limits do not force that footprint. Select a template from **Load a template**
-when creating an experiment; saved runs keep their original request snapshots.
-
-To add the three new presets to an existing installation without reseeding its
-configuration, run from `fpg-lab/`:
-
-```powershell
-.\.venv\Scripts\python.exe -m scripts.seed_db --floor-plan-template seed/floor_plan_template.garage_veranda.json --floor-plan-template seed/floor_plan_template.two_bedroom_ensuite.json --floor-plan-template seed/floor_plan_template.three_bedroom_ensuites.json
-```
+Limits use project units (examples use 10 units per metre); all request a 4:3
+aspect ratio. Preprocessing chooses the actual floor within those limits. Saved
+runs keep their original request snapshots. Setup upserts these names and does not
+remove older templates from an existing database.
 
 ## Headless experiments
 

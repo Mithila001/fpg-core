@@ -177,6 +177,7 @@ class RouteRuleDocument(StrictModel):
     destination_selection: DestinationSelectionValue
     traffic_class: TrafficClassValue
     allowed_transit_room_types: list[RoomTypeValue] = Field(default_factory=list)
+    required_transit_room_types: list[RoomTypeValue] = Field(default_factory=list)
     importance_weight: float = Field(gt=0, allow_inf_nan=False)
 
 
@@ -214,6 +215,12 @@ class RelationshipQualitySettingsDocument(StrictModel):
     costs: RoutingCostDocument
     route_rules: list[RouteRuleDocument] = Field(min_length=1)
     always_traversable_room_types: list[RoomTypeValue] = Field(default_factory=lambda: ["hallway"])
+
+    @model_validator(mode="after")
+    def validate_required_transit(self) -> RelationshipQualitySettingsDocument:
+        if any(rule.required_transit_room_types for rule in self.route_rules):
+            raise ValueError("relationship quality does not support required transit room types")
+        return self
 
 
 class SpatialDistributionSettingsDocument(StrictModel):

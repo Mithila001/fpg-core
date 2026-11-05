@@ -183,14 +183,62 @@
       ],
       "room_relations": [
         {
-          "source_room_type": "kitchen",
+          "source_room_type": "veranda",
           "target_room_types": [
-            "dining_room",
+            "living_room"
+          ],
+          "match_policy": "and",
+          "strength": "hard",
+          "required": true
+        },
+        {
+          "source_room_type": "bedroom",
+          "target_room_types": [
+            "hallway",
             "living_room"
           ],
           "match_policy": "or",
           "strength": "hard",
-          "required": false
+          "required": true
+        },
+        {
+          "source_room_type": "kitchen",
+          "target_room_types": [
+            "hallway",
+            "living_room"
+          ],
+          "match_policy": "or",
+          "strength": "hard",
+          "required": true
+        },
+        {
+          "source_room_type": "dining_room",
+          "target_room_types": [
+            "hallway",
+            "living_room"
+          ],
+          "match_policy": "or",
+          "strength": "hard",
+          "required": true
+        },
+        {
+          "source_room_type": "dining_room",
+          "target_room_types": [
+            "kitchen",
+            "hallway"
+          ],
+          "match_policy": "or",
+          "strength": "hard",
+          "required": true
+        },
+        {
+          "source_room_type": "bathroom",
+          "target_room_types": [
+            "hallway"
+          ],
+          "match_policy": "and",
+          "strength": "hard",
+          "required": true
         },
         {
           "source_room_type": "attached_bathroom",
@@ -202,11 +250,21 @@
           "required": true
         },
         {
-          "source_room_type": "veranda",
+          "source_room_type": "garage",
           "target_room_types": [
-            "living_room"
+            "living_room",
+            "veranda"
           ],
-          "match_policy": "and",
+          "match_policy": "or",
+          "strength": "hard",
+          "required": true
+        },
+        {
+          "source_room_type": "kitchen",
+          "target_room_types": [
+            "dining_room"
+          ],
+          "match_policy": "or",
           "strength": "soft",
           "required": false
         }
@@ -221,7 +279,7 @@
       "hallway_area_buffer": 120.0,
       "max_hallway_room_count": 3,
       "hallway_min_width": 8.0,
-      "candidate_search_grid_spacing": 6,
+      "candidate_search_grid_spacing": 10,
       "default_room_size": "medium",
       "max_aspect_residual_units": 20.0,
       "min_aspect_ratio": 0.5,
@@ -247,15 +305,16 @@
       "route_rules": [
         {
           "id": 1,
-          "name": "Living to bedrooms",
+          "name": "Living to front veranda",
           "source_room_type": "living_room",
-          "destination_room_type": "bedroom",
+          "destination_room_type": "veranda",
           "destination_selection": "all_matching",
-          "traffic_class": "private",
+          "traffic_class": "public",
           "allowed_transit_room_types": [
             "hallway"
           ],
-          "importance_weight": 2.0
+          "required_transit_room_types": [],
+          "importance_weight": 1.3
         },
         {
           "id": 2,
@@ -265,8 +324,138 @@
           "destination_selection": "lowest_cost_match",
           "traffic_class": "public",
           "allowed_transit_room_types": [
+            "hallway",
+            "dining_room"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.2
+        },
+        {
+          "id": 3,
+          "name": "Kitchen to dining",
+          "source_room_type": "kitchen",
+          "destination_room_type": "dining_room",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "public",
+          "allowed_transit_room_types": [
+            "hallway",
+            "living_room"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.4
+        },
+        {
+          "id": 4,
+          "name": "Bedrooms to common bathroom",
+          "source_room_type": "bedroom",
+          "destination_room_type": "bathroom",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "private",
+          "allowed_transit_room_types": [
             "hallway"
           ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.1
+        },
+        {
+          "id": 5,
+          "name": "Bedrooms to attached bathrooms",
+          "source_room_type": "bedroom",
+          "destination_room_type": "attached_bathroom",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "private",
+          "allowed_transit_room_types": [],
+          "required_transit_room_types": [],
+          "importance_weight": 1.5
+        },
+        {
+          "id": 6,
+          "name": "Living to all bedrooms",
+          "source_room_type": "living_room",
+          "destination_room_type": "bedroom",
+          "destination_selection": "all_matching",
+          "traffic_class": "private",
+          "allowed_transit_room_types": [
+            "hallway"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.0
+        },
+        {
+          "id": 7,
+          "name": "Garage to kitchen",
+          "source_room_type": "garage",
+          "destination_room_type": "kitchen",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "public",
+          "allowed_transit_room_types": [
+            "hallway",
+            "dining_room"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 0.8
+        },
+        {
+          "id": 8,
+          "name": "Living to dining",
+          "source_room_type": "living_room",
+          "destination_room_type": "dining_room",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "public",
+          "allowed_transit_room_types": [
+            "hallway"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.0
+        },
+        {
+          "id": 9,
+          "name": "Living to common bathroom",
+          "source_room_type": "living_room",
+          "destination_room_type": "bathroom",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "public",
+          "allowed_transit_room_types": [
+            "hallway"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.0
+        },
+        {
+          "id": 11,
+          "name": "Veranda to living",
+          "source_room_type": "veranda",
+          "destination_room_type": "living_room",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "public",
+          "allowed_transit_room_types": [
+            "hallway"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.0
+        },
+        {
+          "id": 12,
+          "name": "Garage to living",
+          "source_room_type": "garage",
+          "destination_room_type": "living_room",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "public",
+          "allowed_transit_room_types": [
+            "hallway"
+          ],
+          "required_transit_room_types": [],
+          "importance_weight": 1.0
+        },
+        {
+          "id": 13,
+          "name": "Garage to veranda",
+          "source_room_type": "garage",
+          "destination_room_type": "veranda",
+          "destination_selection": "lowest_cost_match",
+          "traffic_class": "public",
+          "allowed_transit_room_types": [],
+          "required_transit_room_types": [],
           "importance_weight": 1.0
         }
       ],

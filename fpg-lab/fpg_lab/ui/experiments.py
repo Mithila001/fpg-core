@@ -96,6 +96,9 @@ def register_experiments(runtime: LabRuntime) -> None:
             ui.label(str(exc)).classes("text-rose-300")
             return
         state: dict[str, Any] = {"preview": None, "request": None, "hints": None}
+        default_template = next(
+            (t for t in templates if t["name"] == "Full Template (Default)"), None
+        )
 
         def invalidate() -> None:
             state["preview"] = None
@@ -123,6 +126,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 ).classes("min-w-80")
                 template = ui.select(
                     {t["id"]: t["name"] for t in templates},
+                    value=default_template["id"] if default_template else None,
                     label="Load a template",
                     on_change=apply_template,
                 ).classes("min-w-80")
@@ -140,7 +144,7 @@ def register_experiments(runtime: LabRuntime) -> None:
             request_editor = ui.json_editor(
                 {
                     "content": {
-                        "json": json.loads(
+                        "json": default_template["template_data"] if default_template else json.loads(
                             (ROOT / "seed/floor_plan_template.example.json").read_text(
                                 encoding="utf-8"
                             )
