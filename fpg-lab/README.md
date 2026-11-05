@@ -12,6 +12,10 @@ Python 3.11+ is required. From `fpg-lab/` on Windows:
 powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows.ps1
 .\.venv\Scripts\python.exe -m fpg_lab
 ```
+or if already in the environment
+```
+python -m fpg_lab
+```
 
 On Ubuntu with Python and venv support installed:
 

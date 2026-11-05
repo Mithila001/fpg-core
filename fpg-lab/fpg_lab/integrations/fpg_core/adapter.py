@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from fpg_lab.integrations.fpg_core.config_codec import ResolvedSystemConfiguration
@@ -229,6 +229,37 @@ class FpgCoreAdapter:
             ) from exc
         except Exception as exc:
             raise FpgCoreAdapterError(f"FPG Core candidate circulation failed: {exc}") from exc
+
+    def final_circulation_routing(self, circulation: Any) -> dict[str, Any]:
+        """Record a Lab diagnostic reroute over the cleaned candidate via public Core APIs."""
+        from fpg_core.candidate_circulation import (
+            CandidateCirculationInput,
+            refine_candidate_circulation,
+        )
+
+        try:
+            config = self._required("candidate_circulation")
+            execution = refine_candidate_circulation(
+                CandidateCirculationInput(
+                    candidate=circulation.result.candidate,
+                    config=replace(
+                        config,
+                        hallway_consolidation=replace(config.hallway_consolidation, enabled=False),
+                    ),
+                ),
+                mode=self.execution_mode(debug=True),
+            )
+            if execution.details is None or not execution.details.passes:
+                return {"source": "lab_diagnostic_reroute", "error": "No routing diagnostics returned"}
+            return {
+                "source": "lab_diagnostic_reroute",
+                "paths": execution.details.passes[-1].paths,
+                "efficiency_score": execution.details.circulation_efficiency_score,
+                "hallway_traffic": execution.details.final_hallway_traffic,
+            }
+        except Exception as exc:
+            # Diagnostic failure must not discard a successfully evaluated candidate.
+            return {"source": "lab_diagnostic_reroute", "error": str(exc)}
 
     def score_candidate(
         self,

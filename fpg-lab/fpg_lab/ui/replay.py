@@ -10,7 +10,7 @@ from nicegui import events, ui
 from fpg_lab.runtime import LabRuntime, row_document
 from fpg_lab.services.p01a import P01AService
 from fpg_lab.ui.components import db_call, json_panel
-from fpg_lab.visualization import figures, replay
+from fpg_lab.visualization import circulation, figures, replay
 
 
 async def candidate_replay(
@@ -53,6 +53,13 @@ async def candidate_replay(
     best = next((f for f in all_frames if f["trial_no"] == item["best_trial_no"]), None)
 
     room_ids = set(styles)
+    all_path_keys = {
+        circulation.path_key(path)
+        for frame in all_frames
+        for before in (False, True)
+        for path in circulation.paths(frame, before=before) or []
+    }
+    selected_paths = set(all_path_keys)
     syncing_rooms = False
     with ui.element("div").classes(
         "w-full grid grid-cols-1 lg:grid-cols-5 gap-4 scroll-mt-20"
@@ -77,11 +84,7 @@ async def candidate_replay(
                     .props("dense")
                     .classes("min-w-0")
                 )
-                source = (
-                    ui.select(["Raw hints", "Cleaned hints"], value="Raw hints", label="Geometry")
-                    .props("dense")
-                    .classes("min-w-0")
-                )
+                source = ui.switch("Cleaned hints", value=False).props("dense")
                 onion = (
                     ui.number(
                         "Previous frames",
@@ -95,21 +98,25 @@ async def candidate_replay(
                     .classes("min-w-0")
                 )
         with ui.column().classes("lg:col-span-2 w-full gap-2 min-w-0"):
-            with ui.row().classes("w-full items-center gap-3"):
-                single = ui.switch("Select one", value=False).props("dense")
-                all_rooms = ui.button("Deselect all").props("dense flat")
-                heatmap = ui.button("Show placement heatmap").props("dense outline")
-            checks = {}
-            with ui.element("div").classes(
-                "w-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-1"
-            ):
-                for key, style in styles.items():
-                    checks[key] = (
-                        ui.checkbox(f"{style['label']} · {style['name']}", value=True)
-                        .props("dense")
-                        .classes("min-w-0")
-                    )
-                    checks[key].tooltip(key)
+            view = ui.toggle(["Hints", "Heatmap", "Circulation"], value="Hints").props("dense")
+            with ui.expansion(f"Rooms · {len(room_ids)} selected").classes("w-full") as rooms_panel:
+                with ui.row().classes("w-full items-center gap-3"):
+                    single = ui.switch("Select one", value=False).props("dense")
+                    all_rooms = ui.button("Deselect all").props("dense flat")
+                checks = {}
+                with ui.element("div").classes(
+                    "w-full grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1"
+                ):
+                    for key, style in styles.items():
+                        checks[key] = (
+                            ui.checkbox(f"{style['label']} · {style['name']}", value=True)
+                            .props("dense")
+                            .classes("min-w-0")
+                        )
+                        checks[key].tooltip(key)
+            heatmap = ui.button("Show placement heatmap").props("dense outline")
+            before_cleanup = ui.switch("Before cleanup", value=False).props("dense")
+            route_panel = ui.column().classes("w-full max-h-72 overflow-auto gap-1")
     slider = ui.slider(min=0, max=max(1, len(sequence) - 1), step=1, value=0).props(
         'label-always aria-label="Replay frame"'
     )
@@ -164,7 +171,17 @@ async def candidate_replay(
         slider.props(
             f'label-value="Trial {frame["trial_no"]}" aria-valuetext="Trial {frame["trial_no"]}"'
         )
-        cleaned = source.value == "Cleaned hints"
+        is_circulation = view.value == "Circulation"
+        rooms_panel.set_visibility(not is_circulation)
+        rooms_panel.set_text(f"Rooms · {len(room_ids)} selected")
+        heatmap.set_visibility(view.value == "Heatmap")
+        before_cleanup.set_visibility(is_circulation)
+        route_panel.set_visibility(is_circulation)
+        source.set_visibility(not is_circulation)
+        onion.set_enabled(not is_circulation and not heatmap_active)
+        cleaned = not before_cleanup.value if is_circulation else bool(source.value)
+        if is_circulation and not frame.get("circulation_data"):
+            cleaned = False
         counts = None
         history_key = (next(iter(room_ids)), cleaned) if len(room_ids) == 1 else None
         if history_key is not None and history_key not in observations:
@@ -172,7 +189,7 @@ async def candidate_replay(
                 all_frames, history_key[0], cleaned=cleaned
             )
         heatmap.set_enabled(history_key is not None and bool(observations.get(history_key)))
-        if heatmap_active and history_key is not None:
+        if view.value == "Heatmap" and heatmap_active and history_key is not None:
             counts = replay.placement_counts(observations[history_key], frame["trial_no"])
         canvas.figure = replay.replay_map(
             sequence,
@@ -180,10 +197,49 @@ async def candidate_replay(
             prepared=prepared,
             styles=styles,
             cleaned=cleaned,
-            previous_frames=max(0, min(int(onion.value or 0), len(all_frames) - 1)),
-            selected_rooms=room_ids,
+            previous_frames=0 if is_circulation else max(
+                0, min(int(onion.value or 0), len(all_frames) - 1)
+            ),
+            selected_rooms=None if is_circulation else room_ids,
             heatmap_counts=counts,
         )
+        route_panel.clear()
+        available = circulation.paths(frame, before=bool(before_cleanup.value))
+        if is_circulation:
+            circulation.add_overlay(
+                canvas.figure, frame, before=bool(before_cleanup.value),
+                selected=selected_paths, styles=styles,
+            )
+            with route_panel:
+                ui.label("Public: solid blue · Private: dashed amber").classes("text-xs lab-muted")
+                ui.label("Source: circle · Destination: diamond · Removed hallway: cross").classes(
+                    "text-xs lab-muted"
+                )
+                if available is None:
+                    routing = (frame.get("circulation_data") or {}).get("lab_final_routing") or {}
+                    ui.label(routing.get("error") or (
+                        "No saved paths. Older runs can show Before cleanup; "
+                        "new debug runs record the after-cleanup diagnostic reroute."
+                    )).classes("text-sm text-amber-300")
+                else:
+                    visible_keys = {circulation.path_key(path) for path in available}
+                    absent = len(selected_paths - visible_keys)
+                    if absent:
+                        ui.label(f"{absent} selected paths absent in this trial").classes(
+                            "text-xs lab-muted"
+                        )
+                    with ui.row():
+                        ui.button("Select all", on_click=lambda: select_paths(True)).props("dense flat")
+                        ui.button("Deselect all", on_click=lambda: select_paths(False)).props("dense flat")
+                    if not available:
+                        ui.label("No paths in this trial.").classes("text-sm lab-muted")
+                    for path in available:
+                        key = circulation.path_key(path)
+                        ui.checkbox(
+                            circulation.path_label(path, styles), value=key in selected_paths,
+                        ).props("dense").on_value_change(
+                            lambda event, key=key: choose_path(key, bool(event.value))
+                        )
         for axis, bounds in viewport.items():
             canvas.figure.update_layout({axis: {"range": bounds, "autorange": False}})
         canvas.update()
@@ -194,6 +250,35 @@ async def candidate_replay(
             plot.update()
         diagnostics.clear()
         with diagnostics:
+            if is_circulation:
+                if not before_cleanup.value and available is not None:
+                    ui.label("After cleanup · Lab diagnostic reroute").classes("text-sm lab-muted")
+                selected = [p for p in available or [] if circulation.path_key(p) in selected_paths]
+                if selected:
+                    with ui.expansion("Path scores and costs").classes("w-full"):
+                        for path in selected:
+                            ui.label(circulation.path_label(path, styles)).classes("font-medium")
+                            costs = path["costs"]
+                            ui.label(
+                                f"Steps {path['step_count']} · Detour {path['detour_step_count']} · "
+                                f"Turns {path['turn_count']} · Reference cost "
+                                f"{path['manhattan_reference_cost']:.2f}"
+                            ).classes("text-sm")
+                            ui.label(" · ".join(
+                                f"{name.replace('_', ' ')} {value:.2f}"
+                                for name, value in costs.items()
+                            )).classes("text-sm")
+                efficiency = (
+                    ((frame.get("circulation_data") or {}).get("lab_final_routing") or {})
+                    .get("efficiency_score")
+                )
+                if before_cleanup.value and available:
+                    total_weight = sum(p["importance_weight"] for p in available)
+                    efficiency = sum(
+                        p["path_efficiency_score"] * p["importance_weight"] for p in available
+                    ) / total_weight if total_weight else None
+                if efficiency is not None:
+                    ui.label(f"Circulation efficiency for this view: {efficiency:.2f}/100").classes("text-sm")
             if frame.get("error_data"):
                 ui.label(
                     str(frame["error_data"].get("message", "Trial failed or was rejected"))
@@ -243,7 +328,7 @@ async def candidate_replay(
         nonlocal heatmap_active
         pause()
         if len(room_ids) != 1 or not replay.placement_history(
-            all_frames, next(iter(room_ids)), cleaned=source.value == "Cleaned hints"
+            all_frames, next(iter(room_ids)), cleaned=bool(source.value)
         ):
             heatmap_active = False
         heatmap.set_text("Show motion" if heatmap_active else "Show placement heatmap")
@@ -288,6 +373,27 @@ async def candidate_replay(
         heatmap_active = not heatmap_active
         filters_changed()
 
+    def choose_path(key: tuple[int, str, str], checked: bool) -> None:
+        if checked:
+            selected_paths.add(key)
+        else:
+            selected_paths.discard(key)
+        pause()
+        render()
+
+    def select_paths(checked: bool) -> None:
+        if checked:
+            selected_paths.update(all_path_keys)
+        else:
+            selected_paths.clear()
+        pause()
+        render()
+
+    def change_view() -> None:
+        nonlocal heatmap_active
+        heatmap_active = False
+        filters_changed()
+
     def seek_trial(trial_no: int) -> None:
         pause()
         if not any(f["trial_no"] == trial_no for f in sequence):
@@ -315,6 +421,8 @@ async def candidate_replay(
     slider.on("pan", pause)
     mode.on_value_change(change_mode)
     source.on_value_change(filters_changed)
+    view.on_value_change(change_view)
+    before_cleanup.on_value_change(filters_changed)
     single.on_value_change(change_single)
     all_rooms.on_click(toggle_all)
     for key, checkbox in checks.items():
