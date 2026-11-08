@@ -147,3 +147,25 @@ class P01FloorPlanRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     experiment: Mapped[P01Experiment] = relationship(back_populates="floor_plan_runs")
+
+
+class P01BPreset(Base):
+    __tablename__ = "fpg_p01b_preset"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    data: Mapped[dict] = mapped_column(JSONDocument, nullable=False)
+
+
+class P01BIteration(Base):
+    __tablename__ = "fpg_p01b_iteration"
+    __table_args__ = (UniqueConstraint("experiment_id", "number"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    experiment_id: Mapped[int] = mapped_column(
+        ForeignKey("fpg_p01_experiment.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    stages: Mapped[list] = mapped_column(JSONDocument, nullable=False, default=list)
+    scoring: Mapped[dict | None] = mapped_column(JSONDocument)
+    error: Mapped[dict | None] = mapped_column(JSONDocument)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

@@ -80,17 +80,6 @@ class LabRuntime:
         validated = FLOW_INPUTS[flow_type].model_validate(payload)
         with self.database.session_factory() as session:
             service = FLOW_SERVICES[flow_type](session, self.codec)
-            if flow_type == "p01b":
-                # Pin the resolved profile so preview and creation cannot use different active profiles.
-                configuration = service._resolve_configuration(validated.system_configuration_id)
-                validated = validated.model_copy(
-                    update={"system_configuration_id": configuration.id}
-                )
-                self._manual_preview(
-                    validated.floor_plan_request,
-                    configuration.configuration_data,
-                    validated.hint_points.model_dump(mode="json"),
-                )
             experiment = service.create_experiment(validated)
             try:
                 self.jobs.submit(experiment.id, flow_type)

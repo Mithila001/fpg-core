@@ -31,6 +31,9 @@
 
 ### Breaking
 
+- Lab P01B now accepts saved cleaned-candidate presets and iteration controls;
+  its former manual-hint input and A/B/openings workflow are retired. Export a
+  new debug P01A trial and save it as a P01B preset to run the replacement.
 - Floor-plan solver, scoring, post-processing, and openings entry points now return mode-aware `FeatureExecution` values; normal results are available through `execution.result`.
 - Solver and opening diagnostics, scoring evaluator/group analysis, and post-processing execution records are now DEBUG-only `execution.details`.
 - `score_floor_plan` now accepts one `FloorPlanScoringInput` instead of separate floor plan, specification, and profile arguments.

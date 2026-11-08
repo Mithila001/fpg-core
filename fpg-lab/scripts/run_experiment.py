@@ -56,6 +56,10 @@ def sample_hints() -> dict[str, Any]:
 
 def collect(runtime: LabRuntime, flow: str, experiment_id: int) -> dict[str, Any]:
     with runtime.database.session_factory() as session:
+        from sqlalchemy import select
+
+        from fpg_lab.database.models import P01BIteration
+
         service = FLOW_SERVICES[flow](session)
         experiment = service.get_experiment(experiment_id)
         trials, _ = service.list_trials(experiment_id=experiment_id, limit=100000, offset=0)
@@ -64,6 +68,16 @@ def collect(runtime: LabRuntime, flow: str, experiment_id: int) -> dict[str, Any
             "experiment": row_document(experiment),
             "trials": [row_document(t) for t, _ in trials],
             "floor_plan_runs": [row_document(r) for r in runs],
+            "iterations": [
+                row_document(r)
+                for r in session.scalars(
+                    select(P01BIteration)
+                    .where(P01BIteration.experiment_id == experiment_id)
+                    .order_by(P01BIteration.number)
+                )
+            ]
+            if flow == "p01b"
+            else [],
         }
 
 
@@ -74,7 +88,11 @@ def main() -> None:
     parser.add_argument(
         "--request", type=Path, help="Custom request JSON; otherwise use the research sample"
     )
-    parser.add_argument("--hints", type=Path, help="P01B hints JSON for a custom request")
+    parser.add_argument("--preset-id", type=int, help="Saved P01B hint map preset ID")
+    parser.add_argument("--iterations", type=int, default=1)
+    parser.add_argument("--refinement-rounds", type=int, default=0)
+    parser.add_argument("--initial-time-limit", type=float, default=5)
+    parser.add_argument("--disable-hints", action="store_true")
     parser.add_argument("--configuration-id", type=int)
     parser.add_argument(
         "--threshold",
@@ -92,8 +110,8 @@ def main() -> None:
         parser.error("--timeout must be positive and finite")
     if args.flow != "p01c" and args.threshold is not None:
         parser.error("--threshold is only used by P01C")
-    if args.flow == "p01b" and args.request and not args.hints:
-        parser.error("--hints is required when using a custom P01B request")
+    if args.flow == "p01b" and args.preset_id is None:
+        parser.error("--preset-id is required for P01B")
     try:
         with LabRuntime(database_url=args.database_url) as runtime:
             configuration_id = args.configuration_id
@@ -131,11 +149,14 @@ def main() -> None:
                 "should_save": not args.no_debug,
             }
             if args.flow == "p01b":
-                payload["hint_points"] = (
-                    json.loads(args.hints.read_text(encoding="utf-8"))
-                    if args.hints
-                    else sample_hints()
-                )
+                payload = {
+                    "preset_id": args.preset_id,
+                    "system_configuration_id": configuration_id,
+                    "iterations": args.iterations,
+                    "refinement_rounds": args.refinement_rounds,
+                    "initial_time_limit": args.initial_time_limit,
+                    "disable_hints": args.disable_hints,
+                }
             else:
                 payload["trial_count"] = args.trial_count
             experiment_id = runtime.start_experiment(args.flow, payload)

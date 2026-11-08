@@ -32,7 +32,6 @@ class ResolvedSystemConfiguration:
     floor_plan_scoring: Any | None
 
 
-
 @dataclass(frozen=True, slots=True)
 class ValidatedCoreConfiguration:
     config: ResolvedSystemConfiguration
@@ -44,11 +43,8 @@ class ValidatedCoreConfiguration:
 FLOW_REQUIRED_SECTIONS: dict[str, tuple[str, ...]] = {
     "p01a": ("preprocessing", "candidate_search", "candidate_circulation", "candidate_scoring"),
     "p01b": (
-        "preprocessing",
-        "candidate_circulation",
         "floor_plan_solver",
         "post_processing",
-        "openings",
         "floor_plan_scoring",
     ),
     "p01c": (
@@ -125,6 +121,24 @@ class CoreConfigCodec:
             raise CoreConfigurationError(
                 f"{flow_type.upper()} requires configuration section(s): {', '.join(missing)}"
             )
+        if (
+            flow_type == "p01b"
+            and validated.config.document.experiments.p01b_refinement is not None
+        ):
+            solver = validated.config.document.floor_plan_solver
+            assert solver is not None
+            try:
+                self._build_solver(
+                    solver.model_copy(
+                        update={
+                            "refinement_a": validated.config.document.experiments.p01b_refinement
+                        }
+                    )
+                )
+            except Exception as exc:
+                raise CoreConfigurationError(
+                    f"Invalid P01B refinement configuration: {exc}"
+                ) from exc
         return validated
 
     def decode(self, payload: Mapping[str, Any]) -> ResolvedSystemConfiguration:
@@ -312,7 +326,9 @@ class CoreConfigCodec:
                 destination_selection=DestinationSelection(x.destination_selection),
                 traffic_class=CirculationTrafficClass(x.traffic_class),
                 allowed_transit_room_types=tuple(RoomType(v) for v in x.allowed_transit_room_types),
-                required_transit_room_types=tuple(RoomType(v) for v in x.required_transit_room_types),
+                required_transit_room_types=tuple(
+                    RoomType(v) for v in x.required_transit_room_types
+                ),
                 importance_weight=x.importance_weight,
             )
             for x in rules
@@ -631,7 +647,9 @@ class CoreConfigCodec:
 
         preprocessing = config.preprocessing
         if preprocessing is None:
-            source = json.loads((ROOT / "seed/system_configuration.default.json").read_text(encoding="utf-8"))["configuration_data"]["preprocessing"]
+            source = json.loads(
+                (ROOT / "seed/system_configuration.default.json").read_text(encoding="utf-8")
+            )["configuration_data"]["preprocessing"]
             preprocessing = CoreConfigCodec._build_preprocessing(
                 PreprocessingDocument.model_validate(source)
             )

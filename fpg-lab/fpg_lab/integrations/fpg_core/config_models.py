@@ -603,6 +603,7 @@ class P01COrchestrationDocument(StrictModel):
 
 class ExperimentsDocument(StrictModel):
     p01c: P01COrchestrationDocument = Field(default_factory=P01COrchestrationDocument)
+    p01b_refinement: SolverStageDocument | None = None
 
 
 class SystemConfigurationDocument(StrictModel):

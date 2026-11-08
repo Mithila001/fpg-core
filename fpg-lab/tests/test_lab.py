@@ -198,7 +198,7 @@ def test_current_core_configuration() -> None:
         codec.validate_payload(encoded)
 
 
-@pytest.mark.parametrize("flow", ["p01a", "p01b", "p01c"])
+@pytest.mark.parametrize("flow", ["p01a", "p01c"])
 @pytest.mark.parametrize("debug", [True, False])
 def test_flows_and_persistence(tmp_path: Path, flow: str, debug: bool) -> None:
     adapters = []
@@ -295,10 +295,8 @@ def test_submission_failure_and_invalid_input(tmp_path: Path) -> None:
         create_profile(runtime)
         with pytest.raises(ValidationError):
             runtime.start_experiment("p01a", {**payload("p01a"), "trial_count": 0})
-        bad = payload("p01b")
-        bad["hint_points"]["rooms"][0]["x"] = 1.234
-        with pytest.raises(Exception, match="Manual candidate validation"):
-            runtime.start_experiment("p01b", bad)
+        with pytest.raises(ValidationError):
+            runtime.start_experiment("p01b", {"preset_id": 1, "initial_time_limit": 1, "iterations": 101})
         with runtime.database.session_factory() as session:
             assert list(session.scalars(select(P01Experiment))) == []
         runtime.jobs.shutdown()

@@ -72,8 +72,13 @@ class P01AInput(RunInput):
     trial_count: int = Field(default=100, ge=1, le=100_000)
 
 
-class P01BInput(RunInput):
-    hint_points: ManualHints
+class P01BInput(StrictModel):
+    preset_id: int = Field(gt=0)
+    disable_hints: bool = False
+    refinement_rounds: int = Field(default=0, ge=0, le=5, strict=True)
+    iterations: int = Field(default=1, ge=1, le=100, strict=True)
+    initial_time_limit: PositiveFinite
+    system_configuration_id: int | None = Field(default=None, gt=0)
 
 
 P01CInput = P01AInput

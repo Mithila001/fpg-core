@@ -90,8 +90,8 @@ used; stored experiment snapshots remain unchanged.
   exclusive; **Select all / Deselect all** toggles the complete set and selecting
   all turns off exclusive selection. Playback/settings and room controls share
   a compact row above the canvas on wide screens and stack on narrow screens.
-- P01B accepts manual room/hallway hints, then runs initial solving, refinements,
-  post-processing, openings and final scoring.
+- P01B imports a P01A cleaned candidate preset, then runs independent initial solves,
+  repeated refinements, post-processing and final scoring without openings.
 - P01C branches into floor-plan generation when candidate score is strictly greater
   than its configured threshold; branch failure does not stop candidate search.
 
@@ -129,18 +129,19 @@ From `fpg-lab/`, use a separate database when the UI is running:
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01a --trial-count 1 --database-url sqlite:///./data/smoke.db --timeout 60 --output data/p01a.json
-.\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01b --database-url sqlite:///./data/smoke.db --timeout 120 --output data/p01b.json
+.\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01b --preset-id 1 --database-url sqlite:///./data/smoke.db --timeout 120 --output data/p01b.json
 .\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01c --trial-count 1 --threshold 0 --database-url sqlite:///./data/smoke.db --timeout 120 --output data/p01c.json
 ```
 
-Ubuntu uses `.venv/bin/python`. The runner supplies a small request and matching
-P01B hints. Use `--request request.json`, `--hints hints.json` for a custom P01B
-request, and `--configuration-id` for a saved profile. `--threshold` creates a
+Ubuntu uses `.venv/bin/python`. Create a P01B preset in the UI before using its ID
+in the headless runner. P01A and P01C accept `--request request.json`; all flows
+accept `--configuration-id` for a saved profile. `--threshold` creates a
 separate scenario profile without changing an existing one. Explicit input/output
 paths and a relative database override are relative to the invoking directory;
 use the documented Lab working directory. Run `--help` for other options.
 
-Inspect both experiment status and `floor_plan_runs[*].status` / `error_data`.
+Inspect both experiment status and `floor_plan_runs[*].status` / `error_data`
+for P01C, or `iterations[*].status` / `error` for P01B.
 Candidate completion alone does not establish floor-plan success. These are real
 experiments and may be infeasible; they are separate from automated checks.
 

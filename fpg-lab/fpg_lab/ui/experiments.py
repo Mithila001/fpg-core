@@ -69,6 +69,11 @@ def table(
 def register_experiments(runtime: LabRuntime) -> None:
     @ui.page("/experiments/{flow}")
     async def experiment_page(flow: str) -> None:
+        if flow == "p01b":
+            from fpg_lab.ui.p01b import main_page
+
+            await main_page(runtime)
+            return
         if flow not in FLOW_SERVICES:
             shell("Unknown experiment")
             return
@@ -144,7 +149,9 @@ def register_experiments(runtime: LabRuntime) -> None:
             request_editor = ui.json_editor(
                 {
                     "content": {
-                        "json": default_template["template_data"] if default_template else json.loads(
+                        "json": default_template["template_data"]
+                        if default_template
+                        else json.loads(
                             (ROOT / "seed/floor_plan_template.example.json").read_text(
                                 encoding="utf-8"
                             )
@@ -338,6 +345,11 @@ def register_experiments(runtime: LabRuntime) -> None:
 
     @ui.page("/experiments/{flow}/runs/{experiment_id}")
     async def run_page(flow: str, experiment_id: int) -> None:
+        if flow == "p01b":
+            from fpg_lab.ui.p01b import run_page as p01b_run_page
+
+            await p01b_run_page(runtime, experiment_id)
+            return
         if flow not in FLOW_SERVICES:
             shell("Unknown experiment")
             return
@@ -477,6 +489,27 @@ def register_experiments(runtime: LabRuntime) -> None:
                 return row_document(trial), linked
 
             item, linked = await db_call(runtime, read)
+            if flow == "p01a":
+                from fpg_lab.integrations.fpg_core.p01b_input import export_trial
+
+                experiment = await db_call(
+                    runtime,
+                    lambda session: row_document(
+                        FLOW_SERVICES[flow](session).get_experiment(experiment_id)
+                    ),
+                )
+                try:
+                    exported = export_trial(experiment, item)
+                    ui.button(
+                        icon="content_copy",
+                        on_click=lambda: ui.run_javascript(
+                            f"navigator.clipboard.writeText({json.dumps(json.dumps(exported))})"
+                        ),
+                    ).props("flat dense").tooltip("Copy cleaned hint map")
+                except Exception:
+                    ui.button(icon="content_copy").props("flat dense disable").tooltip(
+                        "Cleaned candidate specification was not saved"
+                    )
             candidate = item["candidate_search_data"]
             if candidate:
                 ui.plotly(figures.candidate_map(candidate)).classes("w-full h-[32rem]")

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import Any
 
 from nicegui import events, ui
 
+from fpg_lab.integrations.fpg_core.p01b_input import export_trial
 from fpg_lab.runtime import LabRuntime, row_document
 from fpg_lab.services.p01a import P01AService
 from fpg_lab.ui.components import db_call, json_panel
@@ -71,6 +73,8 @@ async def candidate_replay(
                 following = ui.button("Next").props("dense outline")
                 restart = ui.button("Restart").props("dense flat")
                 jump = ui.button("Jump to best").props("dense flat")
+                copy_hint = ui.button(icon="content_copy").props("dense flat")
+                copy_hint.tooltip("Copy selected trial's cleaned hint map")
             with ui.element("div").classes("w-full grid grid-cols-2 sm:grid-cols-4 gap-3"):
                 speed = (
                     ui.select([1, 2, 5, 10], value=2, label="Frames / second")
@@ -121,7 +125,15 @@ async def candidate_replay(
         'label-always aria-label="Replay frame"'
     )
     summary = ui.label().classes("text-sm")
-    canvas = ui.plotly(figures.figure("Hint-map replay", geometry=True)).classes("w-full h-[36rem]")
+    with ui.element("div").classes(
+        "w-full grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] gap-5 items-start"
+    ):
+        canvas = ui.plotly(figures.figure("Hint-map replay", geometry=True)).classes(
+            "w-full h-[36rem] min-w-0"
+        )
+        with ui.column().classes("w-full min-w-0") as sidebar:
+            diagnostics = ui.column().classes("w-full min-w-0")
+    heading.move(sidebar, target_index=0)
     history = ui.plotly(
         figures.score_history(all_frames, trial_no=all_frames[0]["trial_no"])
     ).classes("w-full h-64")
@@ -129,7 +141,6 @@ async def candidate_replay(
     with ui.element("div").classes("w-full grid grid-cols-1 lg:grid-cols-3 gap-3"):
         for chart in figures.evaluator_histories(all_frames).values():
             evaluator_plots.append(ui.plotly(chart).classes("w-full min-w-0 h-72"))
-    diagnostics = ui.column().classes("w-full")
     viewport: dict[str, list[float]] = {}
     heatmap_active = False
     observations: dict[tuple[str, bool], dict[tuple[float, float], list[int]]] = {}
@@ -158,6 +169,11 @@ async def candidate_replay(
             return
         index = min(int(slider.value), len(sequence) - 1)
         frame = sequence[index]
+        try:
+            export_trial(item, frame)
+            copy_hint.enable()
+        except Exception:
+            copy_hint.disable()
         delta = frame["score_change"]
 
         def display(value: float | None) -> str:
@@ -197,9 +213,9 @@ async def candidate_replay(
             prepared=prepared,
             styles=styles,
             cleaned=cleaned,
-            previous_frames=0 if is_circulation else max(
-                0, min(int(onion.value or 0), len(all_frames) - 1)
-            ),
+            previous_frames=0
+            if is_circulation
+            else max(0, min(int(onion.value or 0), len(all_frames) - 1)),
             selected_rooms=None if is_circulation else room_ids,
             heatmap_counts=counts,
         )
@@ -207,8 +223,11 @@ async def candidate_replay(
         available = circulation.paths(frame, before=bool(before_cleanup.value))
         if is_circulation:
             circulation.add_overlay(
-                canvas.figure, frame, before=bool(before_cleanup.value),
-                selected=selected_paths, styles=styles,
+                canvas.figure,
+                frame,
+                before=bool(before_cleanup.value),
+                selected=selected_paths,
+                styles=styles,
             )
             with route_panel:
                 ui.label("Public: solid blue · Private: dashed amber").classes("text-xs lab-muted")
@@ -217,10 +236,13 @@ async def candidate_replay(
                 )
                 if available is None:
                     routing = (frame.get("circulation_data") or {}).get("lab_final_routing") or {}
-                    ui.label(routing.get("error") or (
-                        "No saved paths. Older runs can show Before cleanup; "
-                        "new debug runs record the after-cleanup diagnostic reroute."
-                    )).classes("text-sm text-amber-300")
+                    ui.label(
+                        routing.get("error")
+                        or (
+                            "No saved paths. Older runs can show Before cleanup; "
+                            "new debug runs record the after-cleanup diagnostic reroute."
+                        )
+                    ).classes("text-sm text-amber-300")
                 else:
                     visible_keys = {circulation.path_key(path) for path in available}
                     absent = len(selected_paths - visible_keys)
@@ -229,14 +251,19 @@ async def candidate_replay(
                             "text-xs lab-muted"
                         )
                     with ui.row():
-                        ui.button("Select all", on_click=lambda: select_paths(True)).props("dense flat")
-                        ui.button("Deselect all", on_click=lambda: select_paths(False)).props("dense flat")
+                        ui.button("Select all", on_click=lambda: select_paths(True)).props(
+                            "dense flat"
+                        )
+                        ui.button("Deselect all", on_click=lambda: select_paths(False)).props(
+                            "dense flat"
+                        )
                     if not available:
                         ui.label("No paths in this trial.").classes("text-sm lab-muted")
                     for path in available:
                         key = circulation.path_key(path)
                         ui.checkbox(
-                            circulation.path_label(path, styles), value=key in selected_paths,
+                            circulation.path_label(path, styles),
+                            value=key in selected_paths,
                         ).props("dense").on_value_change(
                             lambda event, key=key: choose_path(key, bool(event.value))
                         )
@@ -264,21 +291,27 @@ async def candidate_replay(
                                 f"Turns {path['turn_count']} · Reference cost "
                                 f"{path['manhattan_reference_cost']:.2f}"
                             ).classes("text-sm")
-                            ui.label(" · ".join(
-                                f"{name.replace('_', ' ')} {value:.2f}"
-                                for name, value in costs.items()
-                            )).classes("text-sm")
+                            ui.label(
+                                " · ".join(
+                                    f"{name.replace('_', ' ')} {value:.2f}"
+                                    for name, value in costs.items()
+                                )
+                            ).classes("text-sm")
                 efficiency = (
-                    ((frame.get("circulation_data") or {}).get("lab_final_routing") or {})
-                    .get("efficiency_score")
-                )
+                    (frame.get("circulation_data") or {}).get("lab_final_routing") or {}
+                ).get("efficiency_score")
                 if before_cleanup.value and available:
                     total_weight = sum(p["importance_weight"] for p in available)
-                    efficiency = sum(
-                        p["path_efficiency_score"] * p["importance_weight"] for p in available
-                    ) / total_weight if total_weight else None
+                    efficiency = (
+                        sum(p["path_efficiency_score"] * p["importance_weight"] for p in available)
+                        / total_weight
+                        if total_weight
+                        else None
+                    )
                 if efficiency is not None:
-                    ui.label(f"Circulation efficiency for this view: {efficiency:.2f}/100").classes("text-sm")
+                    ui.label(f"Circulation efficiency for this view: {efficiency:.2f}/100").classes(
+                        "text-sm"
+                    )
             if frame.get("error_data"):
                 ui.label(
                     str(frame["error_data"].get("message", "Trial failed or was rejected"))
@@ -416,6 +449,13 @@ async def candidate_replay(
             next(i for i, f in enumerate(sequence) if best and f["trial_no"] == best["trial_no"])
         )
     )
+
+    def copy_selected() -> None:
+        document = export_trial(item, sequence[int(slider.value)])
+        ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})")
+        ui.notify("Cleaned hint map copied")
+
+    copy_hint.on_click(copy_selected)
     speed.on_value_change(lambda: setattr(timer, "interval", 1 / speed.value))
     slider.on_value_change(render)
     slider.on("pan", pause)

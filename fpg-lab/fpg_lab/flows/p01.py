@@ -71,6 +71,16 @@ def search_trial_document(trial: Any) -> dict[str, Any]:
 
 
 def recover_interrupted_experiments(session: Session) -> int:
+    from fpg_lab.database.models import P01BIteration
+
+    session.execute(
+        update(P01BIteration)
+        .where(P01BIteration.status == "running")
+        .values(
+            status="interrupted",
+            error={"stage": "runtime", "message": "Lab stopped before this iteration finished."},
+        )
+    )
     result = cast(
         CursorResult[Any],
         session.execute(
@@ -152,7 +162,9 @@ class P01FlowRunner:
             experiment.stop_reason = None
             session.commit()
             if experiment.flow_type == "p01b":
-                self._run_p01b(session, experiment)
+                from fpg_lab.flows.p01b import run_p01b
+
+                run_p01b(self, session, experiment)
             else:
                 self._run_candidate_flow(session, experiment)
 
@@ -250,6 +262,16 @@ class P01FlowRunner:
                     circulation_data["lab_final_routing"] = to_jsonable(
                         adapter.final_circulation_routing(circulation)
                     )
+                    # Keep the specification paired with the cleaned candidate, including
+                    # the hallway identities selected by circulation.
+                    try:
+                        circulation_data["lab_generation_specification"] = to_jsonable(
+                            adapter.generation_specification_for_candidate(
+                                prepared, circulation.result.candidate
+                            )
+                        )
+                    except Exception as exc:
+                        circulation_data["lab_generation_specification_error"] = str(exc)
                 scoring = adapter.score_candidate(
                     specification, circulation, debug=experiment.persist_trial_data
                 )
