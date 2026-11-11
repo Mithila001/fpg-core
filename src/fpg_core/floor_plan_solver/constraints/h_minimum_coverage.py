@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import math
 
-from ...exceptions import InvalidProfileError
-from ...model import ModelContext
-from ..base import ConstraintSettings
+from ..exceptions import InvalidProfileError
+from ..model import ModelContext
+from .base import ConstraintSettings
 
 
 class MinimumCoverageConstraint:

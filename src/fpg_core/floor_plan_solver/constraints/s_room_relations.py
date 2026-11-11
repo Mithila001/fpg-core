@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from ...model import ModelContext
-from ..base import ConstraintSettings, PenaltyTerm
-from ..geometry import (
+from ..model import ModelContext
+from .base import ConstraintSettings, PenaltyTerm
+from .geometry import (
     adjacency_literal,
     exact_or_literal,
     violation_when_present,

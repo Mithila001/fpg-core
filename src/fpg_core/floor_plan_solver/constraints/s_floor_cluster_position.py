@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from ...exceptions import InvalidProfileError
-from ...model import ModelContext, RoomVariables
-from ..base import ConstraintSettings, PenaltyTerm, require_room_types
-from ..geometry import active_linear_penalty
+from ..exceptions import InvalidProfileError
+from ..model import ModelContext, RoomVariables
+from .base import ConstraintSettings, PenaltyTerm, require_room_types
+from .geometry import active_linear_penalty
 
 
 class FloorClusterPositionConstraint:

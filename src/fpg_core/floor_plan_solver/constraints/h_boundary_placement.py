@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from ...exceptions import InvalidProfileError
-from ...model import ModelContext
-from ..base import ConstraintSettings, require_room_types
+from ..exceptions import InvalidProfileError
+from ..model import ModelContext
+from .base import ConstraintSettings, require_room_types
 
 
 class BoundaryPlacementConstraint:

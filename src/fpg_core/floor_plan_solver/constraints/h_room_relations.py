@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from ...model import ModelContext
-from ..base import ConstraintSettings
-from ..geometry import adjacency_literal
+from ..model import ModelContext
+from .base import ConstraintSettings
+from .geometry import adjacency_literal
 
 
 class HardRoomRelationsConstraint:
