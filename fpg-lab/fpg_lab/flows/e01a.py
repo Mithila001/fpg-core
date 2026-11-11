@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from shapely.geometry import LineString, Point, Polygon, box
-from shapely.ops import unary_union
+from shapely.ops import polylabel, unary_union
 
 RADIUS = 4.0
 GRID = 2.0
@@ -128,6 +128,21 @@ def _smooth(path: list[tuple], safe_area: Any) -> list[tuple]:
     return result
 
 
+def _room_point(room: Polygon, walkable_area: Any) -> tuple[float, float] | None:
+    area = room.intersection(walkable_area)
+    if area.geom_type == "Polygon":
+        parts = [area]
+    elif area.geom_type in ("MultiPolygon", "GeometryCollection"):
+        parts = [part for part in area.geoms if part.geom_type == "Polygon"]
+    else:
+        return None
+    parts = [part for part in parts if part.area > 0]
+    if not parts:
+        return None
+    point = polylabel(max(parts, key=lambda part: part.area), tolerance=0.25)
+    return point.x, point.y
+
+
 def preset_trips(plan: Mapping[str, Any]) -> list[tuple[str, str]]:
     by_type: dict[str, list[str]] = {}
     for room in plan["rooms"]:
@@ -147,8 +162,12 @@ def simulate(plan: Mapping[str, Any], trips: Sequence[tuple[str, str]] | None = 
     rooms, floor, walls = geometry(plan)
     safe = floor.difference(walls.buffer(RADIUS + 0.001, cap_style="square", join_style="mitre"))
     planning = floor.difference(walls.buffer(RADIUS + 0.6, cap_style="square", join_style="mitre"))
-    centers = {key: (polygon.centroid.x, polygon.centroid.y) for key, polygon in rooms.items()}
-    vertices, graph = _graph(planning, centers)
+    room_points = {
+        key: point
+        for key, polygon in rooms.items()
+        if (point := _room_point(polygon, planning)) is not None
+    }
+    vertices, graph = _graph(planning, room_points)
     bathroom_ids = sorted(r["id"] for r in plan["rooms"]
                           if r["room_type"] in ("bathroom", "attached_bathroom"))
     routes, failures = [], []
@@ -156,11 +175,9 @@ def simulate(plan: Mapping[str, Any], trips: Sequence[tuple[str, str]] | None = 
         destinations = bathroom_ids if requested == "@closest_bathroom" else [requested]
         candidates = []
         for dest in destinations:
-            if source not in centers or dest not in centers or source == dest:
+            if source not in room_points or dest not in room_points or source == dest:
                 continue
-            if not planning.covers(Point(centers[source])) or not planning.covers(Point(centers[dest])):
-                continue
-            path = _shortest(vertices, graph, centers[source], centers[dest])
+            path = _shortest(vertices, graph, room_points[source], room_points[dest])
             if path:
                 points = _smooth(path, safe)
                 line = LineString(points)

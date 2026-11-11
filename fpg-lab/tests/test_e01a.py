@@ -1,9 +1,9 @@
 from copy import deepcopy
 
 import pytest
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point, Polygon
 
-from fpg_lab.flows.e01a import RADIUS, geometry, simulate
+from fpg_lab.flows.e01a import RADIUS, _room_point, geometry, simulate
 from fpg_lab.flows.e01a_plans import plans
 from fpg_lab.ui.e01a import traffic_figure
 
@@ -35,12 +35,41 @@ def test_fixtures_and_routes(results):
             line = LineString(route["points"])
             assert line.distance(walls) >= RADIUS - 1e-6
             assert floor.buffer(1e-7).covers(route["footprint"])
-            assert line.coords[0] == (rooms[route["source"]].centroid.x, rooms[route["source"]].centroid.y)
-            assert line.coords[-1] == (rooms[route["destination"]].centroid.x, rooms[route["destination"]].centroid.y)
+            assert rooms[route["source"]].covers(Point(line.coords[0]))
+            assert rooms[route["destination"]].covers(Point(line.coords[-1]))
         assert any(len(route["points"]) > 4 for route in result["routes"])
         assert all(len(row) == len(result["heatmap"]["x"]) for row in result["heatmap"]["z"])
         assert any(v == 0 for row in result["heatmap"]["z"] for v in row)
         assert any(v is not None and v > 1 for row in result["heatmap"]["z"] for v in row)
+
+
+def test_concave_room_uses_walkable_interior_point():
+    plan = deepcopy(plans()["compact"])
+    room = next(item for item in plan["rooms"] if item["id"] == "living")
+    room["boundary"]["points"] = [
+        {"x": x, "y": y}
+        for x, y in ((0, 20), (60, 20), (60, 65), (50, 65), (50, 30), (0, 30))
+    ]
+    living_door = next(
+        opening for opening in plan["openings"]
+        if set(opening["connected_room_ids"]) == {"living", "hallway"}
+    )
+    living_door["start"]["x"], living_door["end"]["x"] = 50, 60
+    plan["openings"] = [opening for opening in plan["openings"] if opening["id"] != "window_living"]
+    concave = Polygon([(p["x"], p["y"]) for p in room["boundary"]["points"]])
+    assert not concave.contains(concave.centroid)
+
+    rooms, floor, walls = geometry(plan)
+    walkable = floor.difference(walls.buffer(RADIUS + 0.6, cap_style="square", join_style="mitre"))
+    point = _room_point(rooms["living"], walkable)
+    assert point is not None
+    assert rooms["living"].covers(Point(point))
+    assert walkable.covers(Point(point))
+
+    result = simulate(plan, [("veranda", "living")])
+    assert len(result["routes"]) == 1
+    route = result["routes"][0]
+    assert rooms["living"].covers(Point(route["points"][-1]))
 
 
 def test_closest_bathroom_and_determinism(results):
