@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ...model import ModelContext
-from ..base import ConstraintSettings, PenaltyTerm
+from ..model import ModelContext
+from .base import ConstraintSettings, PenaltyTerm
 
 
 class DeadSpaceConstraint:

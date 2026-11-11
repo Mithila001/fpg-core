@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import math
 
-from ....domain import RoomType
-from ...exceptions import InvalidProfileError
-from ...model import ModelContext
-from ..base import ConstraintSettings, require_room_types
+from ...domain import RoomType
+from ..exceptions import InvalidProfileError
+from ..model import ModelContext
+from .base import ConstraintSettings, require_room_types
 
 
 class BackExposureConstraint:
