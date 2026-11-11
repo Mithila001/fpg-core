@@ -113,7 +113,7 @@ def _default_hard_constraints(
             "hallway_dimensions",
             {
                 "hallway_room_types": (RoomType.HALLWAY,),
-                "minimum_width": 8,
+                "minimum_width": 10,
                 "maximum_width": 10,
             },
         ),

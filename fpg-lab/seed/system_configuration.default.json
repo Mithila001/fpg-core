@@ -278,7 +278,7 @@
       "floor_area_buffer": 200.0,
       "hallway_area_buffer": 120.0,
       "max_hallway_room_count": 3,
-      "hallway_min_width": 8.0,
+      "hallway_min_width": 10.0,
       "candidate_search_grid_spacing": 10,
       "default_room_size": "medium",
       "max_aspect_residual_units": 20.0,
@@ -793,7 +793,7 @@
               "hallway_room_types": [
                 "hallway"
               ],
-              "minimum_width": 8,
+              "minimum_width": 10,
               "maximum_width": 10
             }
           },
@@ -980,7 +980,7 @@
               "hallway_room_types": [
                 "hallway"
               ],
-              "minimum_width": 8,
+              "minimum_width": 10,
               "maximum_width": 10
             }
           },
@@ -1175,7 +1175,7 @@
               "hallway_room_types": [
                 "hallway"
               ],
-              "minimum_width": 8,
+              "minimum_width": 10,
               "maximum_width": 10
             }
           },
@@ -1418,7 +1418,7 @@
         "window_spacing": 5.0
       },
       "dimensions": {
-        "door_width": 8.0,
+        "door_width": 10.0,
         "window_width": 16.0,
         "minimum_shared_wall": 10.0
       },
@@ -1748,10 +1748,6 @@
         }
       ]
     },
-    "experiments": {
-      "p01c": {
-        "floor_plan_generation_score_threshold": 80.0
-      }
-    }
+    "experiments": {}
   }
 }

@@ -68,6 +68,9 @@ class LabRuntime:
         if get_settings().auto_create_schema:
             self.database.create_schema()
         with self.database.session_factory() as session:
+            from fpg_lab.integrations.fpg_core.profile_migration import migrate_profiles
+
+            migrate_profiles(session, self.codec)
             seed_namespace_registry(session)
             recover_interrupted_experiments(session)
         self._started = True
@@ -151,6 +154,8 @@ class LabRuntime:
                     for experiment in session.scalars(
                         select(P01Experiment).where(P01Experiment.status.in_(ACTIVE_STATUSES))
                     ):
+                        if experiment.flow_type == "p01c" and not (experiment.hint_points or {}).get("preset"):
+                            continue
                         FLOW_SERVICES[experiment.flow_type](session).request_termination(
                             experiment.id
                         )

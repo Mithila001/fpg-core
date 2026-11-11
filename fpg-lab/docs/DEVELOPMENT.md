@@ -28,7 +28,8 @@ execution behavior differs. A new family gets one focused document and navigatio
 entry, without a generic registry framework.
 
 Validate Lab-controlled IDs, ranges, finite coordinates, and relationships at the
-input boundary. Use Core's shared types for Core-owned values. Map saved Lab JSON
+input boundary. Use Core's shared types for Core-owned values. E-family fixtures may mirror their serialized shape
+without invoking Core features. Map saved Lab JSON
 through `integrations/fpg_core/`; never import private Core modules or duplicate
 algorithms. Reuse applicable worker, session, snapshot, error, and serialization
 patterns. `to_jsonable` retains new Core output fields without a second response
@@ -48,8 +49,9 @@ keyword arguments and validate Pydantic models explicitly at their boundaries.
 The editable repository is the supported Lab installation. `seed/` contains the
 single current starter profile. New drafts, setup and headless defaults use it.
 The codec validates Lab schema 6 and maps it to Core aggregate schema 2; those
-versions describe different models. Old Lab schemas fail validation. Reset and
-reseed after deliberately replacing local data; no legacy importer is maintained.
+versions describe different models. Old Lab schemas fail validation. Existing schema 6
+profiles are migrated at startup to the 10-unit hallway rule and 10-unit default doors;
+stored experiment snapshots are preserved. Narrow hallway presets must be regenerated.
 Core defaults and Lab policy may differ intentionally. Review changed public Core
 settings before updating a research profile; the seed-export script validates and
 normalizes the starter, it does not discover new Core defaults automatically.

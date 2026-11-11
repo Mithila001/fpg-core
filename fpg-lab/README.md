@@ -53,7 +53,8 @@ FPG_LAB_PORT=8080
 The environment file, local databases, exports, caches, and environments are ignored.
 `seed/` holds tracked research policy and example requests. Lab profile schema 6
 maps to Core aggregate schema 2; they are distinct formats. Old Lab schemas are
-rejected. There is no automatic migration of prior databases/profiles.
+rejected. Current-schema saved profiles are upgraded at startup for 10-unit hallways
+and the new door default; stored experiment snapshots are not modified.
 
 Normal setup preserves `.env` and experiment history, but upserts the named starter
 profile and five shipped templates, and activates the starter profile. To rebuild local tables deliberately,
@@ -79,6 +80,8 @@ used; stored experiment snapshots remain unchanged.
   Python, save, activate or delete profiles. Reset restores the loaded draft.
 - Templates: save requests and load them into experiments; Core preprocessing
   checks them against the selected profile.
+- E01A explores walking paths and traffic coverage on four preset plans. See the
+  [E01 guide](docs/experiments/e01.md).
 - P01A searches and scores candidate maps.
 - After a P01A run stops, replay saved hints with play/pause, speed, scrubbing,
   adjustable onion skins, room filtering, an animated single-room placement heatmap,
@@ -92,15 +95,15 @@ used; stored experiment snapshots remain unchanged.
   a compact row above the canvas on wide screens and stack on narrow screens.
 - P01B imports a P01A cleaned candidate preset, then runs independent initial solves,
   repeated refinements, post-processing and final scoring without openings.
-- P01C branches into floor-plan generation when candidate score is strictly greater
-  than its configured threshold; branch failure does not stop candidate search.
+- P01C repeats the P01B flow, then generates openings and scores the final plan.
+  Copy a final plan from the run page and paste it into E01A.
 
-Run pages show live status, counters, scores, stored stages, provenance and errors.
+P01 run pages show live status, counters, scores, stored stages, provenance and errors.
 Plotly supports zoom/pan/hover, legend toggles and image export; geometry uses equal
 axes and project units. History is paged rather than loading all trial geometry.
 The [P01 guide](docs/experiments/p01.md) explains shared behavior and retention.
 "Store debug data" controls detailed recording: P01A skips individual trial records
-when disabled; P01C retains score/status metadata. Termination is cooperative at
+when disabled. P01B and P01C retain their iteration stages. Termination is cooperative at
 stage boundaries. Interrupted runs are not automatically resumed.
 
 ## Research request templates
@@ -130,18 +133,17 @@ From `fpg-lab/`, use a separate database when the UI is running:
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01a --trial-count 1 --database-url sqlite:///./data/smoke.db --timeout 60 --output data/p01a.json
 .\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01b --preset-id 1 --database-url sqlite:///./data/smoke.db --timeout 120 --output data/p01b.json
-.\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01c --trial-count 1 --threshold 0 --database-url sqlite:///./data/smoke.db --timeout 120 --output data/p01c.json
+.\.venv\Scripts\python.exe -m scripts.run_experiment --flow p01c --preset-id 1 --iterations 1 --database-url sqlite:///./data/smoke.db --timeout 120 --output data/p01c.json
 ```
 
 Ubuntu uses `.venv/bin/python`. Create a P01B preset in the UI before using its ID
-in the headless runner. P01A and P01C accept `--request request.json`; all flows
-accept `--configuration-id` for a saved profile. `--threshold` creates a
-separate scenario profile without changing an existing one. Explicit input/output
+in the headless runner. P01A accepts `--request request.json`; all flows
+accept `--configuration-id` for a saved profile. Explicit input/output
 paths and a relative database override are relative to the invoking directory;
 use the documented Lab working directory. Run `--help` for other options.
 
 Inspect both experiment status and `floor_plan_runs[*].status` / `error_data`
-for P01C, or `iterations[*].status` / `error` for P01B.
+or `iterations[*].status` / `error` for P01B and P01C.
 Candidate completion alone does not establish floor-plan success. These are real
 experiments and may be infeasible; they are separate from automated checks.
 

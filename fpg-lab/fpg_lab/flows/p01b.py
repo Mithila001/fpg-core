@@ -23,7 +23,7 @@ def run_p01b(runner, session, experiment):
         preset = settings["preset"]
         spec = validate_export(preset)
         adapter = runner.adapter_factory(
-            runner.config_codec.decode_for_flow(experiment.system_configuration_snapshot, "p01b")
+            runner.config_codec.decode_for_flow(experiment.system_configuration_snapshot, experiment.flow_type)
         )
         refinement_document = adapter.core_config.document.experiments.p01b_refinement
         if refinement_document is None:
@@ -137,11 +137,24 @@ def run_p01b(runner, session, experiment):
                 session.commit()
                 if getattr(execution.result.status, "value", execution.result.status) != "success":
                     raise RuntimeError(str(execution.result.failure))
+                plan = execution.result.floor_plan
+                if experiment.flow_type == "p01c":
+                    runner._check_termination(experiment.id)
+                    stage = "openings"
+                    stage_started = perf_counter()
+                    execution = adapter.generate_floor_plan_openings(plan, debug=True)
+                    stages.append({"name": "Openings", "data": result_document(execution),
+                                   "duration_ms": int((perf_counter() - stage_started) * 1000)})
+                    row.stages = stages[:]
+                    session.commit()
+                    if getattr(execution.result.status, "value", execution.result.status) not in ("optimal", "feasible") or execution.result.floor_plan is None:
+                        raise RuntimeError(str(execution.result.message))
+                    plan = execution.result.floor_plan
                 runner._check_termination(experiment.id)
                 stage = "scoring"
                 row.scoring = result_document(
                     adapter.score_completed_floor_plan(
-                        execution.result.floor_plan, spec, debug=True
+                        plan, spec, debug=True
                     )
                 )
                 row.status = "completed"
@@ -159,6 +172,7 @@ def run_p01b(runner, session, experiment):
                     != (
                         "Initial"
                         if stage == "initial"
+                        else "Openings" if stage == "openings"
                         else "Post-process"
                         if stage == "post_processing"
                         else stage.replace("refinement_", "Refinement ")
@@ -169,6 +183,7 @@ def run_p01b(runner, session, experiment):
                         {
                             "name": "Initial"
                             if stage == "initial"
+                            else "Openings" if stage == "openings"
                             else "Post-process"
                             if stage == "post_processing"
                             else stage.replace("refinement_", "Refinement "),

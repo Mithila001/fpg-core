@@ -80,3 +80,22 @@ def test_invalid_mode_is_rejected(generation_spec: FloorPlanGenerationSpec) -> N
             FloorPlanSolveRequest(generation_spec, _profile()),
             mode="debug",  # type: ignore[arg-type]
         )
+
+
+def test_hallway_minimum_in_project_units_at_nondefault_scale() -> None:
+    from fpg_core.domain import RoomId, RoomSpec, RoomType
+    from fpg_core.floor_plan_solver import HardConstraintUse
+    from fpg_core.floor_plan_solver.exceptions import InvalidProfileError
+
+    room = RoomSpec(id=RoomId("hall"), name="Hall", room_type=RoomType.HALLWAY,
+                    size=RoomSizeSpec(5, 15, 50, 400))
+    spec = FloorPlanGenerationSpec(floor=FloorSpec(20, 20), rooms=(room,), room_relations=())
+    config = replace(_profile(), preparation=PreparationConfig(coordinate_scale=10))
+    solved = generate_floor_plan(FloorPlanSolveRequest(spec, config))
+    assert solved.result.solved
+    points = solved.result.floor_plan.rooms[0].boundary.points
+    assert max(p.x for p in points) - min(p.x for p in points) >= 10
+    assert max(p.y for p in points) - min(p.y for p in points) >= 10
+    invalid = replace(config, hard_constraints=(HardConstraintUse("hallway_dimensions", {"minimum_width": 8}),))
+    with pytest.raises(InvalidProfileError, match="at least 10"):
+        generate_floor_plan(FloorPlanSolveRequest(spec, invalid))

@@ -76,7 +76,7 @@ def collect(runtime: LabRuntime, flow: str, experiment_id: int) -> dict[str, Any
                     .order_by(P01BIteration.number)
                 )
             ]
-            if flow == "p01b"
+            if flow in ("p01b", "p01c")
             else [],
         }
 
@@ -95,11 +95,6 @@ def main() -> None:
     parser.add_argument("--disable-hints", action="store_true")
     parser.add_argument("--configuration-id", type=int)
     parser.add_argument(
-        "--threshold",
-        type=float,
-        help="P01C candidate-score threshold for a temporary scenario profile",
-    )
-    parser.add_argument(
         "--database-url", help="Override the configured database, useful for isolated smoke runs"
     )
     parser.add_argument("--no-debug", action="store_true")
@@ -108,10 +103,8 @@ def main() -> None:
     args = parser.parse_args()
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("--timeout must be positive and finite")
-    if args.flow != "p01c" and args.threshold is not None:
-        parser.error("--threshold is only used by P01C")
-    if args.flow == "p01b" and args.preset_id is None:
-        parser.error("--preset-id is required for P01B")
+    if args.flow in ("p01b", "p01c") and args.preset_id is None:
+        parser.error("--preset-id is required for P01B and P01C")
     try:
         with LabRuntime(database_url=args.database_url) as runtime:
             configuration_id = args.configuration_id
@@ -119,14 +112,10 @@ def main() -> None:
                 with runtime.database.session_factory() as session:
                     service = SystemConfigurationService(session, runtime.codec)
                     configs, _ = service.list(limit=1, offset=0)
-                    if configs and args.threshold is None:
+                    if configs:
                         configuration_id = configs[0].id
                     else:
                         data = deepcopy(runtime.codec.default_configuration().payload)
-                        if args.threshold is not None:
-                            data["experiments"]["p01c"]["floor_plan_generation_score_threshold"] = (
-                                args.threshold
-                            )
                         record = service.create(
                             SystemConfigurationCreate(
                                 name=f"scenario-{time.time_ns()}",
@@ -134,10 +123,6 @@ def main() -> None:
                             )
                         )
                         configuration_id = record.id
-            elif args.threshold is not None:
-                raise ValueError(
-                    "Use either --configuration-id or --threshold; saved profiles are never modified by the runner"
-                )
             request = (
                 json.loads(args.request.read_text(encoding="utf-8"))
                 if args.request
@@ -148,7 +133,7 @@ def main() -> None:
                 "system_configuration_id": configuration_id,
                 "should_save": not args.no_debug,
             }
-            if args.flow == "p01b":
+            if args.flow in ("p01b", "p01c"):
                 payload = {
                     "preset_id": args.preset_id,
                     "system_configuration_id": configuration_id,

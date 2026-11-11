@@ -49,6 +49,8 @@ class ConstraintRegistry:
     def validate_config(self, config: FloorPlanSolverConfig) -> None:
         for hard_use in config.hard_constraints:
             self.get_hard(hard_use.key)
+            if hard_use.key == "hallway_dimensions" and hard_use.settings.get("minimum_width", 10) < 10:
+                raise InvalidProfileError("hallway_dimensions.minimum_width must be at least 10 project units")
         for soft_use in config.soft_constraints:
             self.get_soft(soft_use.key)
 

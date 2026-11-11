@@ -78,6 +78,8 @@ def _validate_preprocessing(config: PreprocessingConfig) -> None:
         raise FpgCoreConfigError("aspect-ratio rules must be unambiguous")
     _finite_positive("hallway_area_buffer", config.hallway_area_buffer)
     _finite_positive("hallway_min_width", config.hallway_min_width)
+    if config.hallway_min_width < 10:
+        raise FpgCoreConfigError("hallway_min_width must be at least 10 project units")
     if (
         isinstance(config.max_aspect_residual_units, bool)
         or not math.isfinite(float(config.max_aspect_residual_units))

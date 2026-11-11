@@ -161,7 +161,7 @@ class P01FlowRunner:
             experiment.started_at = utc_now()
             experiment.stop_reason = None
             session.commit()
-            if experiment.flow_type == "p01b":
+            if experiment.flow_type in ("p01b", "p01c"):
                 from fpg_lab.flows.p01b import run_p01b
 
                 run_p01b(self, session, experiment)
@@ -191,11 +191,6 @@ class P01FlowRunner:
             search = adapter.create_candidate_search(
                 prepared, trial_count=experiment.requested_trial_count or 0
             )
-            threshold = None
-            if experiment.flow_type == "p01c":
-                threshold = (
-                    adapter.config_document.experiments.p01c.floor_plan_generation_score_threshold
-                )
         except Exception as exc:
             self._finish_failed(session, experiment, error_payload(exc, stage="preprocessing"))
             return
@@ -279,7 +274,7 @@ class P01FlowRunner:
                 final_score = adapter.final_score(scoring)
                 search.record_score(trial, final_score)
                 candidate_data = search_trial_document(trial)
-                trial_row = self._record_completed_trial(
+                self._record_completed_trial(
                     session,
                     experiment,
                     trial.trial_no,
@@ -290,20 +285,6 @@ class P01FlowRunner:
                     scoring_data,
                     None,
                 )
-                if (
-                    experiment.flow_type == "p01c"
-                    and threshold is not None
-                    and final_score > threshold
-                ):
-                    self._run_floor_plan_pipeline(
-                        session,
-                        experiment,
-                        adapter,
-                        prepared,
-                        circulation.result.candidate,
-                        source_trial_id=trial_row.id if trial_row is not None else None,
-                        circulation_data=circulation_data,
-                    )
                 if self._termination_requested(experiment.id):
                     self._finish_terminated(session, experiment)
                     return
@@ -350,227 +331,6 @@ class P01FlowRunner:
             experiment.finished_at = utc_now()
             session.commit()
 
-    def _run_p01b(self, session: Session, experiment: P01Experiment) -> None:
-        try:
-            requested_ids = [
-                room.get("id")
-                for room in experiment.floor_plan_request.get("rooms", [])
-                if room.get("room_type") != "hallway"
-            ]
-            if (
-                not requested_ids
-                or any(not item for item in requested_ids)
-                or len(requested_ids) != len(set(requested_ids))
-            ):
-                raise StructuredStageFailure(
-                    "manual_candidate_validation",
-                    "p01b_explicit_room_ids_required",
-                    "Every P01B room must have a unique explicit request ID.",
-                )
-            adapter, prepared, _ = self._initialize(session, experiment)
-            self._check_termination(experiment.id)
-            candidate = adapter.build_manual_candidate(prepared, experiment.hint_points or {})
-            self._check_termination(experiment.id)
-            circulation = adapter.run_circulation(candidate, debug=experiment.persist_trial_data)
-            circulated = circulation.result.candidate
-            if not any(
-                getattr(point.room_type, "value", point.room_type) == "hallway"
-                for point in circulated.points
-            ):
-                raise StructuredStageFailure(
-                    "candidate_circulation",
-                    "no_hallway_after_circulation",
-                    "Candidate Circulation removed every hallway.",
-                )
-            self._run_floor_plan_pipeline(
-                session,
-                experiment,
-                adapter,
-                prepared,
-                circulated,
-                source_trial_id=None,
-                circulation_data=result_document(circulation),
-            )
-        except PipelineTerminated:
-            self._finish_terminated(session, experiment)
-            return
-        except StructuredStageFailure as exc:
-            self._finish_failed(
-                session, experiment, error_payload(exc, stage=exc.stage, code=exc.code)
-            )
-            return
-        except Exception as exc:
-            self._finish_failed(
-                session, experiment, error_payload(exc, stage="manual_candidate_validation")
-            )
-            return
-        if experiment.failed_floor_plan_run_count:
-            self._finish_failed(
-                session,
-                experiment,
-                error_payload(
-                    RuntimeError("The P01B floor-plan run failed."),
-                    stage="experiment",
-                    code="p01b_floor_plan_run_failed",
-                ),
-            )
-        else:
-            experiment.status = "completed"
-            experiment.stop_reason = "floor_plan_generated"
-            experiment.finished_at = utc_now()
-            session.commit()
-
-    def _run_floor_plan_pipeline(
-        self,
-        session: Session,
-        experiment: P01Experiment,
-        adapter: FpgCoreAdapter,
-        prepared: Any,
-        candidate: Any,
-        *,
-        source_trial_id: int | None,
-        circulation_data: dict[str, Any],
-    ) -> None:
-        started = perf_counter()
-        run = P01FloorPlanRun(
-            experiment_id=experiment.id,
-            source_trial_id=source_trial_id,
-            status="running",
-            source_candidate_data=result_document(candidate),
-            circulation_data=circulation_data if experiment.persist_trial_data else None,
-        )
-        experiment.floor_plan_run_count += 1
-        session.add(run)
-        session.commit()
-        try:
-            self._check_termination(experiment.id)
-            specification = adapter.generation_specification_for_candidate(prepared, candidate)
-            run.generation_specification = result_document(specification)
-            session.commit()
-
-            initial = adapter.solve_initial_floor_plan(
-                specification, candidate, debug=experiment.persist_trial_data
-            )
-            run.initial_solver_data = result_document(initial)
-            session.commit()
-            if not initial.result.solved:
-                raise StructuredStageFailure(
-                    "floor_plan_solver_initial",
-                    f"solver_{initial.result.status.value}",
-                    initial.result.message,
-                )
-            self._check_termination(experiment.id)
-
-            refinement_a = adapter.refine_floor_plan(
-                specification,
-                initial.result.floor_plan,
-                profile="refinement_a",
-                debug=experiment.persist_trial_data,
-            )
-            run.refinement_a_data = result_document(refinement_a)
-            session.commit()
-            if not refinement_a.result.solved:
-                raise StructuredStageFailure(
-                    "floor_plan_solver_refinement_a",
-                    f"solver_{refinement_a.result.status.value}",
-                    refinement_a.result.message,
-                )
-            self._check_termination(experiment.id)
-
-            refinement_b = adapter.refine_floor_plan(
-                specification,
-                refinement_a.result.floor_plan,
-                profile="refinement_b",
-                debug=experiment.persist_trial_data,
-            )
-            run.refinement_b_data = result_document(refinement_b)
-            session.commit()
-            if not refinement_b.result.solved:
-                raise StructuredStageFailure(
-                    "floor_plan_solver_refinement_b",
-                    f"solver_{refinement_b.result.status.value}",
-                    refinement_b.result.message,
-                )
-            self._check_termination(experiment.id)
-
-            post = adapter.post_process_floor_plan(
-                specification, refinement_b.result.floor_plan, debug=experiment.persist_trial_data
-            )
-            run.post_processing_data = result_document(post)
-            session.commit()
-            if getattr(post.result.status, "value", post.result.status) != "success":
-                failure = post.result.failure
-                raise StructuredStageFailure(
-                    "floor_plan_post_processing",
-                    getattr(failure, "code", "post_processing_failed"),
-                    getattr(failure, "message", "Post-processing failed."),
-                )
-            self._check_termination(experiment.id)
-
-            openings = adapter.generate_floor_plan_openings(
-                post.result.floor_plan, debug=experiment.persist_trial_data
-            )
-            run.opening_generation_data = result_document(openings)
-            session.commit()
-            if not openings.result.solved:
-                raise StructuredStageFailure(
-                    "floor_plan_openings",
-                    f"openings_{openings.result.status.value}",
-                    openings.result.message,
-                )
-            self._check_termination(experiment.id)
-
-            scoring = adapter.score_completed_floor_plan(
-                openings.result.floor_plan, specification, debug=experiment.persist_trial_data
-            )
-            run.floor_plan_scoring_data = result_document(scoring)
-            run.final_floor_plan = result_document(openings.result.floor_plan)
-            final_score = float(scoring.result.total_score)
-            run.final_score = final_score
-            run.status = "completed"
-            run.finished_at = utc_now()
-            run.duration_ms = round((perf_counter() - started) * 1000)
-            experiment.successful_floor_plan_run_count += 1
-            if (
-                experiment.best_floor_plan_score is None
-                or final_score > experiment.best_floor_plan_score
-            ):
-                experiment.best_floor_plan_score = final_score
-            session.commit()
-        except PipelineTerminated:
-            run.status = "terminated"
-            run.finished_at = utc_now()
-            run.duration_ms = round((perf_counter() - started) * 1000)
-            session.commit()
-            raise
-        except StructuredStageFailure as exc:
-            self._fail_run(
-                session,
-                experiment,
-                run,
-                started,
-                error_payload(exc, stage=exc.stage, code=exc.code),
-            )
-        except Exception as exc:
-            self._fail_run(
-                session, experiment, run, started, error_payload(exc, stage="floor_plan_pipeline")
-            )
-
-    @staticmethod
-    def _fail_run(
-        session: Session,
-        experiment: P01Experiment,
-        run: P01FloorPlanRun,
-        started: float,
-        error: dict[str, Any],
-    ) -> None:
-        run.status = "failed"
-        run.error_data = error
-        run.finished_at = utc_now()
-        run.duration_ms = round((perf_counter() - started) * 1000)
-        experiment.failed_floor_plan_run_count += 1
-        session.commit()
-
     def _record_completed_trial(
         self,
         session: Session,
@@ -588,7 +348,7 @@ class P01FlowRunner:
         if experiment.best_candidate_score is None or final_score > experiment.best_candidate_score:
             experiment.best_candidate_score = final_score
             experiment.best_trial_no = trial_no
-        should_store = experiment.persist_trial_data or experiment.flow_type == "p01c"
+        should_store = experiment.persist_trial_data
         row = None
         if should_store:
             row = self._store_trial(

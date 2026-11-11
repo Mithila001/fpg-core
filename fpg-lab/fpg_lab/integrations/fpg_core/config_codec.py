@@ -47,16 +47,7 @@ FLOW_REQUIRED_SECTIONS: dict[str, tuple[str, ...]] = {
         "post_processing",
         "floor_plan_scoring",
     ),
-    "p01c": (
-        "preprocessing",
-        "candidate_search",
-        "candidate_circulation",
-        "candidate_scoring",
-        "floor_plan_solver",
-        "post_processing",
-        "openings",
-        "floor_plan_scoring",
-    ),
+    "p01c": ("floor_plan_solver", "post_processing", "openings", "floor_plan_scoring"),
 }
 
 
@@ -111,18 +102,12 @@ class CoreConfigCodec:
         if required is None:
             raise CoreConfigurationError(f"Unknown experiment flow {flow_type!r}")
         missing = [name for name in required if getattr(validated.config, name) is None]
-        if flow_type == "p01c":
-            threshold = (
-                validated.config.document.experiments.p01c.floor_plan_generation_score_threshold
-            )
-            if threshold is None:
-                missing.append("experiments.p01c.floor_plan_generation_score_threshold")
         if missing:
             raise CoreConfigurationError(
                 f"{flow_type.upper()} requires configuration section(s): {', '.join(missing)}"
             )
         if (
-            flow_type == "p01b"
+            flow_type in ("p01b", "p01c")
             and validated.config.document.experiments.p01b_refinement is not None
         ):
             solver = validated.config.document.floor_plan_solver

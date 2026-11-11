@@ -12,12 +12,14 @@ from fpg_lab.integrations.fpg_core.p01b_input import validate_export
 from fpg_lab.runtime import row_document
 from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01b import P01BService
+from fpg_lab.services.p01c import P01CService
 from fpg_lab.ui.components import db_call, json_panel, notify_error, shell
 from fpg_lab.visualization import figures
 
 
-async def main_page(runtime):
-    shell("P01B experiments", "Inspect repeated floor-plan generation and refinement.")
+async def main_page(runtime, flow="p01b"):
+    service_type = P01CService if flow == "p01c" else P01BService
+    shell(f"{flow.upper()} experiments", "Inspect repeated floor-plan generation and refinement.")
     state: dict[str, Any] = {"data": None}
     with ui.element("div").classes("w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"):
         with ui.column().classes("w-full gap-4") as controls:
@@ -100,7 +102,7 @@ async def main_page(runtime):
                 ],
                 [
                     row_document(e)
-                    for e in P01BService(session).list_experiments(
+                    for e in service_type(session).list_experiments(
                         status=None,
                         limit=100,
                         offset=(max(1, int(history_page.value or 1)) - 1) * 100,
@@ -124,7 +126,7 @@ async def main_page(runtime):
             for experiment in experiments:
                 ui.link(
                     f"#{experiment['id']} · {experiment['status']} · {experiment['completed_trial_count']}/{experiment['requested_trial_count'] or 0} iterations",
-                    f"/experiments/p01b/runs/{experiment['id']}",
+                    f"/experiments/{flow}/runs/{experiment['id']}",
                 )
         show_preset()
 
@@ -182,8 +184,8 @@ async def main_page(runtime):
                 "iterations": int(iterations.value),
                 "initial_time_limit": seconds.value,
             }
-            experiment_id = await run.io_bound(runtime.start_experiment, "p01b", payload)
-            ui.navigate.to(f"/experiments/p01b/runs/{experiment_id}")
+            experiment_id = await run.io_bound(runtime.start_experiment, flow, payload)
+            ui.navigate.to(f"/experiments/{flow}/runs/{experiment_id}")
         except Exception as exc:
             notify_error(exc)
 
@@ -198,8 +200,9 @@ async def main_page(runtime):
     await refresh()
 
 
-async def run_page(runtime, experiment_id):
-    shell(f"P01B run #{experiment_id}", compact=True, back_link="/experiments/p01b")
+async def run_page(runtime, experiment_id, flow="p01b"):
+    service_type = P01CService if flow == "p01c" else P01BService
+    shell(f"{flow.upper()} run #{experiment_id}", compact=True, back_link=f"/experiments/{flow}")
     state: dict[str, Any] = {"iteration": 0, "stage": 0, "rows": [], "experiment": None}
     status = ui.label()
     with ui.row().classes("items-center"):
@@ -287,6 +290,15 @@ async def run_page(runtime, experiment_id):
                             ui.label(room.get("name") or room["id"])
                     if not plan:
                         ui.label("No floor plan available for this stage.").classes("lab-muted")
+            if flow == "p01c":
+                opening_stage = next((stage for stage in stages if stage["name"] == "Openings"), None)
+                final_plan = (((opening_stage or {}).get("data") or {}).get("result") or {}).get("floor_plan")
+                if final_plan:
+                    document = {"version": 1, "project_units_per_meter": item["system_configuration_snapshot"]["project_units_per_meter"], "floor_plan": final_plan}
+                    def copy_plan():
+                        ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})")
+                        ui.notify("Floor plan and openings copied")
+                    ui.button("Copy final floor plan", icon="content_copy", on_click=copy_plan).props("outline")
             if data:
                 json_panel("Stage details", data)
             if row.get("scoring"):
@@ -305,7 +317,7 @@ async def run_page(runtime, experiment_id):
         try:
 
             def read(session):
-                experiment = P01BService(session).get_experiment(experiment_id)
+                experiment = service_type(session).get_experiment(experiment_id)
                 rows = session.scalars(
                     select(P01BIteration)
                     .where(P01BIteration.experiment_id == experiment_id)
@@ -323,7 +335,7 @@ async def run_page(runtime, experiment_id):
 
     async def terminate():
         await db_call(
-            runtime, lambda session: P01BService(session).request_termination(experiment_id)
+            runtime, lambda session: service_type(session).request_termination(experiment_id)
         )
 
     previous.on_click(lambda: move(-1))

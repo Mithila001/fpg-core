@@ -129,7 +129,7 @@ class PreprocessingDocument(StrictModel):
     floor_area_buffer: float = Field(ge=0, allow_inf_nan=False)
     hallway_area_buffer: float = Field(gt=0, allow_inf_nan=False)
     max_hallway_room_count: int = Field(ge=1)
-    hallway_min_width: float = Field(gt=0, allow_inf_nan=False)
+    hallway_min_width: float = Field(ge=10, allow_inf_nan=False)
     candidate_search_grid_spacing: int = Field(ge=1)
     default_room_size: str = Field(min_length=1, max_length=64)
     max_aspect_residual_units: float = Field(default=20.0, ge=0, allow_inf_nan=False)
@@ -595,14 +595,7 @@ class FloorPlanScoringDocument(StrictModel):
     evaluators: list[FloorEvaluatorDocument] = Field(min_length=1)
 
 
-class P01COrchestrationDocument(StrictModel):
-    floor_plan_generation_score_threshold: float | None = Field(
-        default=None, ge=0, le=100, allow_inf_nan=False
-    )
-
-
 class ExperimentsDocument(StrictModel):
-    p01c: P01COrchestrationDocument = Field(default_factory=P01COrchestrationDocument)
     p01b_refinement: SolverStageDocument | None = None
 
 

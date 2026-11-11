@@ -28,7 +28,7 @@ class GeometryConfig:
 
 @dataclass(frozen=True, slots=True)
 class DimensionConfig:
-    door_width: float = 8.0
+    door_width: float = 10.0
     window_width: float = 16.0
     minimum_shared_wall: float = 10.0
 

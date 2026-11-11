@@ -53,7 +53,7 @@ The feature root also exports all request/config/result dataclasses, enums,
 - `mandatory_room_types` inserts/validates required types.
 - `floor_area_buffer` and `hallway_area_buffer` add square project units to sizing.
 - `max_hallway_room_count` creates that many potential hallway specs; minimum is
-  always one. `hallway_min_width` sets their width constraint.
+  always one. `hallway_min_width` sets their width constraint and must be at least 10 project units.
 - `candidate_search_grid_spacing` sets the uniform candidate grid interval; it must
   be an even integer at least 1 and fit at least two intervals on both floor axes.
 - `max_aspect_residual_units` limits floor dimension residual from the requested
@@ -107,7 +107,7 @@ preprocessing_config = PreprocessingConfig(
     floor_area_buffer=1,
     hallway_area_buffer=1,
     max_hallway_room_count=1,
-    hallway_min_width=8,
+    hallway_min_width=10,
     candidate_search_grid_spacing=2,
     default_room_size="medium",
     max_aspect_residual_units=10,

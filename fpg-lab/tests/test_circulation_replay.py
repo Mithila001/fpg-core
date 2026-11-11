@@ -33,7 +33,7 @@ from fpg_lab.visualization import circulation
 
 
 @pytest.mark.parametrize("debug", [False, True])
-@pytest.mark.parametrize("flow", ["p01a", "p01c"])
+@pytest.mark.parametrize("flow", ["p01a"])
 def test_diagnostic_retention_is_p01a_debug_only(tmp_path: Path, debug: bool, flow: str) -> None:
     class DiagnosticAdapter(RecordingAdapter):
         def final_circulation_routing(self, circulation: Any) -> dict[str, Any]:

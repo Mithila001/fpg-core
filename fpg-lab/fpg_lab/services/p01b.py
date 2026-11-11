@@ -6,8 +6,8 @@ from fpg_lab.services.p01_common import P01Service
 
 
 class P01BService(P01Service):
-    def __init__(self, session: Session, codec: object | None = None) -> None:
-        super().__init__(session, "p01b", codec)
+    def __init__(self, session: Session, codec: object | None = None, *, flow: str = "p01b") -> None:
+        super().__init__(session, flow, codec)
 
     def create_experiment(self, payload: P01BInput) -> P01Experiment:
         from fpg_lab.integrations.fpg_core.p01b_input import validate_export

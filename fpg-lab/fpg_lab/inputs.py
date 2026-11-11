@@ -81,7 +81,7 @@ class P01BInput(StrictModel):
     system_configuration_id: int | None = Field(default=None, gt=0)
 
 
-P01CInput = P01AInput
+P01CInput = P01BInput
 
 
 class FloorPlanTemplateCreate(StrictModel):

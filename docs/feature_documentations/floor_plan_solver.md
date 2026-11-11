@@ -141,7 +141,7 @@ The shipped default profiles enable:
 | `attached_bathroom_pairing` | minimum shared wall `10`; attached-bathroom type paired with bedroom type |
 | `minimum_coverage` | `ratio=0.6` |
 | `hallway_connectivity` | `minimum_overlap=10`; hallway type must touch an anchor type and a non-hallway/non-anchor destination; default anchor is living room |
-| `hallway_dimensions` | hallway corridor width is constrained to `8..10`; the other dimension may extend as needed |
+| `hallway_dimensions` | hallway corridor width is constrained to `10..10`; the other dimension may extend as needed |
 | `hallway_shared_wall` | hallway pairs may touch/connect, but their collinear shared-wall overlap may not exceed `maximum_shared_wall=12.0` project units; corner-only contact has zero shared-wall length |
 | `front_anchor` | veranda, living room, bedroom, garage |
 | `back_exposure` | hallway and kitchen; minimum exposure `10.0` |

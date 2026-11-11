@@ -9,6 +9,7 @@ description = "Local Python research environment for fpg-core experiments"
 requires-python = ">=3.11"
 dependencies = [
     "fpg-core",
+    "shapely>=2.0",
     "nicegui[plotly]==3.17.1",
     "plotly==6.9.0",
     "SQLAlchemy>=2.0,<3",
@@ -48,5 +49,5 @@ module = ["fpg_core", "fpg_core.*"]
 follow_imports = "normal"
 
 [[tool.mypy.overrides]]
-module = ["plotly", "plotly.*"]
+module = ["plotly", "plotly.*", "shapely", "shapely.*"]
 ignore_missing_imports = true

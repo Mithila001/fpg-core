@@ -181,7 +181,7 @@ def build_preprocessing_config() -> PreprocessingConfig:
         floor_area_buffer=500.0,
         hallway_area_buffer=120.0,
         max_hallway_room_count=4,
-        hallway_min_width=8.0,
+        hallway_min_width=10.0,
         candidate_search_grid_spacing=20,
         default_room_size="regular",
         max_aspect_residual_units=20.0,

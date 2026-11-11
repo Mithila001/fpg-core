@@ -14,12 +14,13 @@ from fpg_lab.ui.components import db_call, editor_value, notify_error, set_edito
 from fpg_lab.ui.experiments import register_experiments
 
 EXPERIMENTS = {
+    "e01a": ("Floor Traffic", "Preset floor plans → walking paths → traffic heatmap"),
     "p01a": ("Candidate search", "Preprocess → search → circulation → candidate score"),
     "p01b": (
         "Manual hint floor plan",
-        "Manual hints → solve → refine → post-process → openings → score",
+        "Manual hints → solve → refine → post-process → score",
     ),
-    "p01c": ("Conditional full flow", "Candidate search → threshold → floor-plan branches"),
+    "p01c": ("Floor plan with openings", "Repeated floor-plan generation → openings → scoring"),
 }
 
 
@@ -28,7 +29,7 @@ def register_pages(runtime: LabRuntime) -> None:
     async def home() -> None:
         shell(
             "Experiment workspace",
-            "Run and inspect floor-plan generation experiments directly in Python.",
+            "Run and inspect floor-plan prototypes and experiments directly in Python.",
         )
         with ui.row().classes("w-full gap-5"):
             for flow, (title, description) in EXPERIMENTS.items():

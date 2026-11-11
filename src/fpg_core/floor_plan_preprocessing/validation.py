@@ -170,6 +170,8 @@ def validate_policy(policy: PreprocessingPolicy) -> None:
         "max_hallway_room_count",
     )
     _finite_number(policy.hallway_min_width, "hallway_min_width", positive=True)
+    if policy.hallway_min_width < 10:
+        raise InputValidationError("hallway_min_width must be at least 10 project units")
 
     spacing = _positive_integer(
         policy.candidate_search_grid_spacing,

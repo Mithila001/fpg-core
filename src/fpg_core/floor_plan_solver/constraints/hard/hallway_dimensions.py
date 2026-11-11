@@ -20,12 +20,12 @@ class HallwayDimensionsConstraint:
             settings.get("hallway_room_types", (RoomType.HALLWAY,)),
             "hallway_dimensions.hallway_room_types",
         )
-        minimum_width = int(settings.get("minimum_width", 8))
+        minimum_width = int(settings.get("minimum_width", 10))
         maximum_width = int(settings.get("maximum_width", 10))
 
-        if minimum_width <= 0:
+        if minimum_width < 10:
             raise InvalidProfileError(
-                "hallway_dimensions.minimum_width must be positive"
+                "hallway_dimensions.minimum_width must be at least 10 project units"
             )
         if maximum_width < minimum_width:
             raise InvalidProfileError(
@@ -33,6 +33,8 @@ class HallwayDimensionsConstraint:
                 "equal to minimum_width"
             )
 
+        minimum_width = context.problem.scale.minimum_length(minimum_width)
+        maximum_width = context.problem.scale.maximum_length(maximum_width)
         for variables in context.room_variables.values():
             if variables.room.room_type not in hallway_types:
                 continue

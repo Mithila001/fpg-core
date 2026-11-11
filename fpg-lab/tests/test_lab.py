@@ -148,7 +148,6 @@ class RecordingAdapter(FpgCoreAdapter):
 
 def create_profile(runtime: LabRuntime, *, threshold: float = 79) -> int:
     document = runtime.codec.default_configuration().payload
-    document["experiments"]["p01c"]["floor_plan_generation_score_threshold"] = threshold
     with runtime.database.session_factory() as session:
         profile = SystemConfigurationService(session, runtime.codec).create(
             SystemConfigurationCreate(
@@ -198,7 +197,7 @@ def test_current_core_configuration() -> None:
         codec.validate_payload(encoded)
 
 
-@pytest.mark.parametrize("flow", ["p01a", "p01c"])
+@pytest.mark.parametrize("flow", ["p01a"])
 @pytest.mark.parametrize("debug", [True, False])
 def test_flows_and_persistence(tmp_path: Path, flow: str, debug: bool) -> None:
     adapters = []
@@ -253,28 +252,6 @@ def test_flows_and_persistence(tmp_path: Path, flow: str, debug: bool) -> None:
             == 10
         )
 
-
-@pytest.mark.parametrize("threshold,fail_branch,count", [(80, False, 0), (79, True, 2)])
-def test_threshold_and_branch_failure(
-    tmp_path: Path, threshold: float, fail_branch: bool, count: int
-) -> None:
-    class Adapter(RecordingAdapter):
-        pass
-
-    Adapter.fail_branch = fail_branch
-    with LabRuntime(
-        database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=Adapter
-    ) as runtime:
-        create_profile(runtime, threshold=threshold)
-        experiment_id = runtime.start_experiment("p01c", payload("p01c"))
-        result = wait(runtime, "p01c", experiment_id)
-        assert result["experiment"]["status"] == "completed"
-        assert result["experiment"]["completed_trial_count"] == 2
-        assert len(result["floor_plan_runs"]) == count
-        if fail_branch:
-            assert all(
-                run["status"] == "failed" and run["error_data"] for run in result["floor_plan_runs"]
-            )
 
 
 def test_rejected_candidate(tmp_path: Path) -> None:

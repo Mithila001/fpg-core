@@ -25,6 +25,8 @@ from fpg_lab.integrations.fpg_core.config_codec import (
 )
 
 NAMESPACE_SEEDS = (
+    {"tag": "E01A", "name": "floor-traffic-experiment",
+     "description": "Preset floor-plan walking routes and traffic coverage.", "kind": "experiment"},
     {
         "tag": "COMM",
         "name": "common",
@@ -48,8 +50,8 @@ NAMESPACE_SEEDS = (
     },
     {
         "tag": "P01C",
-        "name": "conditional-floor-plan-experiment",
-        "description": "Candidate search with conditional floor-plan generation.",
+        "name": "floor-plan-openings-experiment",
+        "description": "Repeated floor-plan generation with openings and scoring.",
         "kind": "experiment",
     },
 )

@@ -168,3 +168,99 @@ def test_scoring_failure_retains_post_processed_plan(tmp_path, monkeypatch):
             assert row.error["stage"] == "scoring"
             assert [stage["name"] for stage in row.stages] == ["Initial", "Post-process"]
             assert row.stages[-1]["data"]["result"]["floor_plan"] == PLAN
+
+
+def test_p01c_scores_the_opening_plan_and_keeps_it_on_score_failure(tmp_path, monkeypatch):
+    class OpeningsAdapter(RecordingAdapter):
+        def generate_floor_plan_openings(self, floor_plan, *, debug):
+            return Execution(Solve({**floor_plan, "openings": [{"id": "door"}]}))
+
+        def score_completed_floor_plan(self, floor_plan, specification, *, debug):
+            assert floor_plan["openings"] == [{"id": "door"}]
+            raise RuntimeError("scoring unavailable")
+
+    monkeypatch.setattr("fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN)))
+    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'p01c.db'}", adapter_factory=OpeningsAdapter) as runtime:
+        create_profile(runtime)
+        source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
+        document = export_trial(source["experiment"], source["trials"][0])
+        with runtime.database.session_factory() as session:
+            preset = P01BPreset(name="for-p01c", data=document)
+            session.add(preset)
+            session.commit()
+            preset_id = preset.id
+        experiment_id = runtime.start_experiment("p01c", {"preset_id": preset_id, "initial_time_limit": 1})
+        result = wait(runtime, "p01c", experiment_id)
+        assert result["experiment"]["failed_trial_count"] == 1
+        with runtime.database.session_factory() as session:
+            row = session.scalar(select(P01BIteration).where(P01BIteration.experiment_id == experiment_id))
+            assert [stage["name"] for stage in row.stages] == ["Initial", "Post-process", "Openings"]
+            assert row.stages[-1]["data"]["result"]["floor_plan"]["openings"] == [{"id": "door"}]
+            assert row.error["stage"] == "scoring"
+
+
+def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
+    from copy import deepcopy
+
+    from fpg_lab.database.models import P01Experiment, SystemConfiguration
+
+    database_url = f"sqlite:///{tmp_path / 'migration.db'}"
+    runtime = LabRuntime(database_url=database_url)
+    runtime.database.create_schema()
+    old = deepcopy(runtime.codec.default_configuration().payload)
+    old["preprocessing"]["hallway_min_width"] = 8
+    old["openings"]["dimensions"]["door_width"] = 8
+    old["experiments"]["p01c"] = {"floor_plan_generation_score_threshold": 80}
+    for stage in old["floor_plan_solver"].values():
+        if isinstance(stage, dict):
+            for constraint in stage.get("hard_constraints", []):
+                if constraint["key"] == "hallway_dimensions":
+                    constraint["settings"]["minimum_width"] = 8
+    with runtime.database.session_factory() as session:
+        config = SystemConfiguration(name="old", configuration_data=deepcopy(old),
+                                     schema_version="6", config_hash="old", fpg_core_version="old", is_active=True)
+        session.add(config)
+        session.flush()
+        experiment = P01Experiment(flow_type="p01a", status="completed", floor_plan_request={},
+                                   system_configuration_id=config.id, system_configuration_snapshot=deepcopy(old),
+                                   system_configuration_hash="old", fpg_core_version="old")
+        session.add(experiment)
+        session.commit()
+        config_id, experiment_id = config.id, experiment.id
+    runtime.start()
+    with runtime.database.session_factory() as session:
+        migrated = session.get(SystemConfiguration, config_id)
+        assert migrated.configuration_data["preprocessing"]["hallway_min_width"] == 10
+        assert migrated.configuration_data["openings"]["dimensions"]["door_width"] == 10
+        assert "p01c" not in migrated.configuration_data["experiments"]
+        assert migrated.config_hash != "old"
+        assert session.get(P01Experiment, experiment_id).system_configuration_snapshot == old
+    runtime.close()
+
+
+def test_p01c_opening_failure_stops_iteration(tmp_path, monkeypatch):
+    class FailedOpenings(RecordingAdapter):
+        def generate_floor_plan_openings(self, floor_plan, *, debug):
+            raise RuntimeError("cannot place openings")
+
+        def score_completed_floor_plan(self, floor_plan, specification, *, debug):
+            raise AssertionError("scoring must not run after opening failure")
+
+    monkeypatch.setattr("fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN)))
+    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'openings.db'}", adapter_factory=FailedOpenings) as runtime:
+        create_profile(runtime)
+        source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
+        document = export_trial(source["experiment"], source["trials"][0])
+        with runtime.database.session_factory() as session:
+            preset = P01BPreset(name="p01c-opening-failure", data=document)
+            session.add(preset)
+            session.commit()
+            preset_id = preset.id
+        experiment_id = runtime.start_experiment("p01c", {"preset_id": preset_id, "initial_time_limit": 1})
+        wait(runtime, "p01c", experiment_id)
+        with runtime.database.session_factory() as session:
+            row = session.scalar(select(P01BIteration).where(P01BIteration.experiment_id == experiment_id))
+            assert row.status == "failed"
+            assert row.error["stage"] == "openings"
+            assert row.stages[-1]["name"] == "Openings"
+            assert row.scoring is None

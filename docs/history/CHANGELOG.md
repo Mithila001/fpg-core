@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Hallways now require at least 10 project units; default door width is 10.
+  Custom profiles below the hallway minimum must be updated.
+
+
 ### Repository and Lab integration
 
 - Added FPG Lab under `fpg-lab/` as an experimental consumer of this checkout's

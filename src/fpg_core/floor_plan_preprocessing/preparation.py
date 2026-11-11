@@ -197,10 +197,7 @@ def _add_hallways(
                 room_type=RoomType.HALLWAY,
                 name=room.name,
                 size=RoomSizeSpec(
-                    min_width=min(
-                        policy.hallway_min_width,
-                        hallway_min_area / policy.hallway_min_width,
-                    ),
+                    min_width=policy.hallway_min_width,
                     max_width=max(
                         policy.hallway_min_width,
                         hallway_min_area / policy.hallway_min_width,

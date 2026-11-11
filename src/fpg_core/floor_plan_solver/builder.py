@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ortools.sat.python import cp_model
 
+from ..domain import RoomType
 from .config import FloorPlanSolverConfig
 from .constraints.base import PenaltyTerm
 from .constraints.registry import ConstraintRegistry
@@ -17,6 +18,10 @@ def build_model(
     registry.validate_config(config)
     context = create_model_context(problem, config)
     apply_seed_policy(context)
+    for variables in context.room_variables.values():
+        if variables.room.room_type == RoomType.HALLWAY:
+            context.model.Add(variables.width >= problem.scale.minimum_length(10)).OnlyEnforceIf(variables.present)
+            context.model.Add(variables.length >= problem.scale.minimum_length(10)).OnlyEnforceIf(variables.present)
 
     applied_hard: list[str] = []
     for hard_use in config.hard_constraints:
