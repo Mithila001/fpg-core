@@ -17,6 +17,11 @@ from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter, FpgCoreCandida
 ACTIVE_STATUSES = ("queued", "running", "termination_requested")
 
 
+def score_candidate(adapter, specification, circulation, *, debug):
+    scoring = adapter.score_candidate(specification, circulation, debug=debug)
+    return scoring, adapter.final_score(scoring)
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -267,11 +272,10 @@ class P01FlowRunner:
                         )
                     except Exception as exc:
                         circulation_data["lab_generation_specification_error"] = str(exc)
-                scoring = adapter.score_candidate(
-                    specification, circulation, debug=experiment.persist_trial_data
+                scoring, final_score = score_candidate(
+                    adapter, specification, circulation, debug=experiment.persist_trial_data
                 )
                 scoring_data = result_document(scoring)
-                final_score = adapter.final_score(scoring)
                 search.record_score(trial, final_score)
                 candidate_data = search_trial_document(trial)
                 self._record_completed_trial(

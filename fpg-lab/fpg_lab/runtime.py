@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from copy import deepcopy
+from threading import Event, Lock
 from typing import Any
 
 from sqlalchemy import inspect, select
@@ -59,6 +60,56 @@ class LabRuntime:
         )
         self._started = False
         self._closed = False
+        self._quick_cancels: set[Event] = set()
+        self._quick_lock = Lock()
+
+    def start_quick_hint(
+        self, template_id: int, configuration_id: int, count: int, threshold: float
+    ):
+        from math import isfinite
+
+        from fpg_lab.database.models import FloorPlanTemplate, SystemConfiguration
+        from fpg_lab.flows.quick_hint import search_hint_map
+
+        if not self._started or self._closed:
+            raise RuntimeError("Start the Lab runtime before submitting searches")
+        if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 100_000:
+            raise ValueError("Trial count must be an integer between 1 and 100000")
+        if not isfinite(threshold) or not 0 <= threshold <= 100:
+            raise ValueError("Required score must be between 0 and 100")
+        with self.database.session_factory() as session:
+            template = session.get(FloorPlanTemplate, template_id)
+            config = session.get(SystemConfiguration, configuration_id)
+            if template is None or config is None:
+                raise ValueError("Select an existing template and system configuration")
+            request = deepcopy(template.template_data)
+            configuration = deepcopy(config.configuration_data)
+        adapter = self.adapter_factory(self.codec.decode_for_flow(configuration, "p01a"))
+        state = {
+            "status": "running",
+            "completed": 0,
+            "count": count,
+            "best_score": None,
+            "result": None,
+        }
+        cancel = Event()
+        with self._quick_lock:
+            self._quick_cancels.add(cancel)
+        try:
+            future = self.jobs.submit_task(
+                search_hint_map, adapter, request, configuration, count, threshold, state, cancel
+            )
+        except Exception:
+            with self._quick_lock:
+                self._quick_cancels.discard(cancel)
+            raise
+
+        def finished(_future):
+            with self._quick_lock:
+                self._quick_cancels.discard(cancel)
+
+        future.add_done_callback(finished)
+        return state, cancel
 
     def start(self) -> None:
         if self._closed:
@@ -148,13 +199,18 @@ class LabRuntime:
         if self._closed:
             return
         self._closed = True
+        with self._quick_lock:
+            for cancel in self._quick_cancels:
+                cancel.set()
         try:
             if self._started:
                 with self.database.session_factory() as session:
                     for experiment in session.scalars(
                         select(P01Experiment).where(P01Experiment.status.in_(ACTIVE_STATUSES))
                     ):
-                        if experiment.flow_type == "p01c" and not (experiment.hint_points or {}).get("preset"):
+                        if experiment.flow_type == "p01c" and not (
+                            experiment.hint_points or {}
+                        ).get("preset"):
                             continue
                         FLOW_SERVICES[experiment.flow_type](session).request_termination(
                             experiment.id

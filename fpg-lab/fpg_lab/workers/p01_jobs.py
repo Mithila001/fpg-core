@@ -36,6 +36,12 @@ class P01JobManager:
             self._closed = True
         self._executor.shutdown(wait=wait, cancel_futures=False)
 
+    def submit_task(self, function, *args):
+        with self._lock:
+            if self._closed:
+                raise RuntimeError("The P01 job manager is closed")
+            return self._executor.submit(function, *args)
+
     def active_ids(self) -> tuple[int, ...]:
         with self._lock:
             return tuple(key for key, future in self._futures.items() if not future.done())

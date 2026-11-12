@@ -1,17 +1,18 @@
 """Preset management and geometry inspection for P01B."""
 
 import json
+import math
 from typing import Any
 
 import plotly.graph_objects as go
 from nicegui import run, ui
 from sqlalchemy import select
 
-from fpg_lab.database.models import P01BIteration, P01BPreset
+from fpg_lab.database.models import FloorPlanTemplate, P01BIteration, P01BPreset
 from fpg_lab.integrations.fpg_core.p01b_input import validate_export
 from fpg_lab.runtime import row_document
 from fpg_lab.services.common import SystemConfigurationService
-from fpg_lab.services.p01b import P01BService
+from fpg_lab.services.p01b import P01BService, next_preset_name, save_preset
 from fpg_lab.services.p01c import P01CService
 from fpg_lab.ui.components import db_call, json_panel, notify_error, shell
 from fpg_lab.visualization import figures
@@ -71,10 +72,7 @@ async def main_page(runtime, flow="p01b"):
                     raise ValueError("Enter a name and a valid hint map")
 
                 def create(session):
-                    row = P01BPreset(name=name.value.strip(), data=state["data"])
-                    session.add(row)
-                    session.commit()
-                    return row.id
+                    return save_preset(session, name.value, state["data"])
 
                 selected = await db_call(runtime, create)
                 dialog.close()
@@ -84,6 +82,150 @@ async def main_page(runtime, flow="p01b"):
                 notify_error(exc)
 
         ui.button("Save preset", on_click=save)
+
+    quick = {"job": None, "cancel": None, "suggested": None, "timer": None}
+    with (
+        ui.dialog() as quick_dialog,
+        ui.card().classes("w-[80vw] h-[80vh] max-w-none overflow-auto"),
+    ):
+        ui.label("Quick Hint Map").classes("text-xl")
+        quick_config = ui.label()
+        templates = ui.select({}, label="Existing template").classes("w-full")
+        count = ui.number("Trial count", value=100, min=1, max=100000, precision=0)
+        score = ui.number("Required Best Score", value=70, min=0, max=100)
+        progress = ui.linear_progress(value=0).classes("w-full")
+        status = ui.label()
+        quick_name = ui.input("Preset name (optional)").classes("w-full")
+
+        async def open_quick():
+            try:
+                if quick.get("job") and quick["job"]["status"] == "running":
+                    raise ValueError("The previous search is still stopping")
+                selected = next(
+                    (c for c in state.get("configurations", []) if c["id"] == configs.value), None
+                )
+                if selected is None:
+                    raise ValueError("Select a system configuration first")
+                rows, suggested = await db_call(
+                    runtime,
+                    lambda session: (
+                        [
+                            (t.id, t.name)
+                            for t in session.scalars(
+                                select(FloorPlanTemplate).order_by(FloorPlanTemplate.name)
+                            )
+                        ],
+                        next_preset_name(session),
+                    ),
+                )
+                templates.options = dict(rows)
+                templates.value = None
+                templates.update()
+                quick_config.set_text(f"System configuration: {selected['name']}")
+                quick["suggested"] = suggested
+                quick_name.set_value(suggested)
+                stored = await ui.run_javascript("sessionStorage.getItem('fpg_quick_hint_score')")
+                score.set_value(float(stored) if stored is not None else 70)
+                status.set_text("")
+                progress.set_value(0)
+                quick["job"] = None
+                apply_button.disable()
+                save_button.disable()
+                start_button.enable()
+                quick_dialog.open()
+            except Exception as exc:
+                notify_error(exc)
+
+        async def start_quick():
+            try:
+                if (
+                    templates.value is None
+                    or count.value is None
+                    or int(count.value) != count.value
+                ):
+                    raise ValueError("Select a template and enter a whole trial count")
+                if score.value is None:
+                    raise ValueError("Enter a required score")
+                job, cancel = await run.io_bound(
+                    runtime.start_quick_hint,
+                    templates.value,
+                    configs.value,
+                    int(count.value),
+                    float(score.value),
+                )
+                quick.update(job=job, cancel=cancel)
+                await ui.run_javascript(
+                    f"sessionStorage.setItem('fpg_quick_hint_score', {json.dumps(str(score.value))})"
+                )
+                for item in (templates, count, score, start_button):
+                    item.disable()
+                apply_button.disable()
+                save_button.disable()
+                quick["timer"].active = True
+            except Exception as exc:
+                notify_error(exc)
+
+        def poll_quick():
+            job = quick["job"]
+            if job is None:
+                return
+            progress.set_value(job["completed"] / job["count"])
+            status.set_text(
+                f"{job['completed']} / {job['count']} trials · Best: {job['best_score'] if job['best_score'] is not None else '—'} · {job.get('stop_reason') or job.get('error') or job['status']}"
+            )
+            if job["status"] != "running":
+                quick["timer"].active = False
+                for item in (templates, count, score, start_button):
+                    item.enable()
+                if job["status"] == "completed":
+                    apply_button.enable()
+                    save_button.enable()
+
+        def cancel_quick():
+            if quick.get("cancel") and quick.get("job", {}).get("status") == "running":
+                quick["cancel"].set()
+            apply_button.disable()
+            save_button.disable()
+
+        def remember_score(e):
+            if e.value is not None and math.isfinite(e.value) and 0 <= e.value <= 100:
+                ui.run_javascript(
+                    f"sessionStorage.setItem('fpg_quick_hint_score', {json.dumps(str(e.value))})"
+                )
+
+        score.on_value_change(remember_score)
+
+        def apply_quick():
+            state["temporary_preset"] = quick["job"]["result"]
+            presets.options = {**presets.options, "temporary": "Unsaved hint map"}
+            presets.update()
+            presets.set_value("temporary")
+            quick_dialog.close()
+
+        async def save_quick():
+            try:
+                selected = await db_call(
+                    runtime,
+                    lambda session: save_preset(
+                        session, quick_name.value, quick["job"]["result"], quick["suggested"]
+                    ),
+                )
+                state.pop("temporary_preset", None)
+                await refresh()
+                presets.set_value(selected)
+                quick_dialog.close()
+            except Exception as exc:
+                notify_error(exc)
+
+        with ui.row():
+            start_button = ui.button("Start", on_click=start_quick)
+            ui.button("Cancel", on_click=lambda: (cancel_quick(), quick_dialog.close())).props(
+                "outline"
+            )
+            apply_button = ui.button("Quick Apply", on_click=apply_quick)
+            save_button = ui.button("Save and Apply", on_click=save_quick)
+        quick["timer"] = ui.timer(0.5, poll_quick, active=False)
+        quick_dialog.on("hide", cancel_quick)
 
     async def refresh():
         def read(session):
@@ -113,6 +255,8 @@ async def main_page(runtime, flow="p01b"):
         saved, configurations, experiments = await db_call(runtime, read)
         state["presets"] = saved
         presets.options = {p["id"]: p["name"] for p in saved}
+        if state.get("temporary_preset") is not None:
+            presets.options["temporary"] = "Unsaved hint map"
         presets.update()
         configs.options = {c["id"]: c["name"] for c in configurations}
         if configs.value is None:
@@ -133,6 +277,8 @@ async def main_page(runtime, flow="p01b"):
     def show_preset():
         preview.clear()
         selected = next((p for p in state.get("presets", []) if p["id"] == presets.value), None)
+        if presets.value == "temporary" and state.get("temporary_preset") is not None:
+            selected = {"data": state["temporary_preset"]}
         if selected:
             with preview:
                 ui.plotly(figures.candidate_map(selected["data"]["candidate"])).classes(
@@ -177,7 +323,10 @@ async def main_page(runtime, flow="p01b"):
             ):
                 raise ValueError("Refinement rounds and iterations must be integers")
             payload = {
-                "preset_id": presets.value,
+                "preset_id": None if presets.value == "temporary" else presets.value,
+                "preset_data": state.get("temporary_preset")
+                if presets.value == "temporary"
+                else None,
                 "system_configuration_id": configs.value,
                 "disable_hints": disable.value,
                 "refinement_rounds": int(rounds.value),
@@ -189,10 +338,17 @@ async def main_page(runtime, flow="p01b"):
         except Exception as exc:
             notify_error(exc)
 
-    presets.on_value_change(show_preset)
+    def preset_changed():
+        if presets.value != "temporary" and state.pop("temporary_preset", None) is not None:
+            presets.options.pop("temporary", None)
+            presets.update()
+        show_preset()
+
+    presets.on_value_change(preset_changed)
     configs.on_value_change(update_time)
     history_page.on_value_change(refresh)
     with controls, ui.row():
+        ui.button("Quick Hint Map", on_click=open_quick)
         ui.button("Import preset", on_click=dialog.open)
         ui.button("Delete preset", on_click=delete).props("outline")
         ui.button("Start experiment", on_click=start)
@@ -291,14 +447,30 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                     if not plan:
                         ui.label("No floor plan available for this stage.").classes("lab-muted")
             if flow == "p01c":
-                opening_stage = next((stage for stage in stages if stage["name"] == "Openings"), None)
-                final_plan = (((opening_stage or {}).get("data") or {}).get("result") or {}).get("floor_plan")
+                opening_stage = next(
+                    (stage for stage in stages if stage["name"] == "Openings"), None
+                )
+                final_plan = (((opening_stage or {}).get("data") or {}).get("result") or {}).get(
+                    "floor_plan"
+                )
                 if final_plan:
-                    document = {"version": 1, "project_units_per_meter": item["system_configuration_snapshot"]["project_units_per_meter"], "floor_plan": final_plan}
+                    document = {
+                        "version": 1,
+                        "project_units_per_meter": item["system_configuration_snapshot"][
+                            "project_units_per_meter"
+                        ],
+                        "floor_plan": final_plan,
+                    }
+
                     def copy_plan():
-                        ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})")
+                        ui.run_javascript(
+                            f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})"
+                        )
                         ui.notify("Floor plan and openings copied")
-                    ui.button("Copy final floor plan", icon="content_copy", on_click=copy_plan).props("outline")
+
+                    ui.button(
+                        "Copy final floor plan", icon="content_copy", on_click=copy_plan
+                    ).props("outline")
             if data:
                 json_panel("Stage details", data)
             if row.get("scoring"):

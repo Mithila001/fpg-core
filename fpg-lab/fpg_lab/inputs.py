@@ -73,12 +73,19 @@ class P01AInput(RunInput):
 
 
 class P01BInput(StrictModel):
-    preset_id: int = Field(gt=0)
+    preset_id: int | None = Field(default=None, gt=0)
+    preset_data: dict | None = None
     disable_hints: bool = False
     refinement_rounds: int = Field(default=0, ge=0, le=5, strict=True)
     iterations: int = Field(default=1, ge=1, le=100, strict=True)
     initial_time_limit: PositiveFinite
     system_configuration_id: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def exactly_one_preset(self) -> P01BInput:
+        if (self.preset_id is None) == (self.preset_data is None):
+            raise ValueError("Provide exactly one preset ID or preset document")
+        return self
 
 
 P01CInput = P01BInput
