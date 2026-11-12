@@ -71,4 +71,4 @@ fi
 echo
 echo "FPG Lab initialization completed."
 echo "Start the Lab with:"
-echo ".venv/bin/python -m fpg_lab"
+echo ".venv/bin/python run_lab.py"

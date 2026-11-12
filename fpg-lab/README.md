@@ -10,18 +10,18 @@ Python 3.11+ is required. From `fpg-lab/` on Windows:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows.ps1
-.\.venv\Scripts\python.exe -m fpg_lab
+.\.venv\Scripts\python.exe run_lab.py
 ```
 or if already in the environment
 ```
-python -m fpg_lab
+python run_lab.py
 ```
 
 On Ubuntu with Python and venv support installed:
 
 ```bash
 bash scripts/setup_ubuntu.sh
-.venv/bin/python -m fpg_lab
+.venv/bin/python run_lab.py
 ```
 
 Open **http://127.0.0.1:8080**. Setup creates `fpg-lab/.venv`, installs this Lab and

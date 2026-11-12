@@ -16,7 +16,7 @@ def main() -> None:
     ui.run(
         host=settings.host,
         port=settings.port,
-        reload=False,
+        reload=True,
         show=False,
         title="FPG Lab",
         dark=True,

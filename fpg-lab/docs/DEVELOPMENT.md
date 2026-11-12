@@ -10,7 +10,9 @@ translation. No server API or Node build is required.
 
 Run one process per database. Startup marks abandoned active experiments interrupted;
 it cannot distinguish another process's active jobs. Workers default to one and
-UI reload is disabled. Each operation owns its session. Shutdown requests
+UI reload is enabled through `run_lab.py`; NiceGUI reload does not support
+`python -m fpg_lab`. File changes restart the server; active work may be
+interrupted during shutdown. Each operation owns its session. Shutdown requests
 cooperative termination, waits for an active Core stage to return, then disposes
 the database. Saved snapshots and hashes describe submitted inputs, not later edits.
 

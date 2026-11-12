@@ -70,7 +70,7 @@ try {
     Write-Host ""
     Write-Host "FPG Lab initialization completed."
     Write-Host "Start the Lab with:"
-    Write-Host ".\.venv\Scripts\python.exe -m fpg_lab"
+    Write-Host ".\.venv\Scripts\python.exe run_lab.py"
 }
 finally {
     Pop-Location
