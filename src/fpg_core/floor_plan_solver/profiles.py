@@ -193,6 +193,7 @@ def build_default_profiles(
         name="initial_generation",
         hard_constraints=hard,
         soft_constraints=(
+            SoftConstraintUse("room_size_relations", weight=1),
             SoftConstraintUse(
                 "room_relations",
                 weight=40,
@@ -228,6 +229,7 @@ def build_default_profiles(
         name="refinement_a",
         hard_constraints=hard,
         soft_constraints=(
+            SoftConstraintUse("room_size_relations", weight=1),
             SoftConstraintUse(
                 "room_relations",
                 weight=50,
@@ -270,6 +272,7 @@ def build_default_profiles(
         name="refinement_b",
         hard_constraints=hard,
         soft_constraints=(
+            SoftConstraintUse("room_size_relations", weight=1),
             SoftConstraintUse(
                 "room_relations",
                 weight=60,

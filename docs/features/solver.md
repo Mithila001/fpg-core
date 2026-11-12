@@ -21,7 +21,7 @@ Every room supplied in `FloorPlanGenerationSpec.rooms` must be placed. The solve
 
 `room_size_hierarchy` is registered for custom configurations but not enabled by the defaults. Hard constraints determine feasibility and may not be relaxed to improve the objective.
 
-The soft objective combines weighted penalties: `room_relations`, `floor_cluster_position`, `dead_space`, `hallway_efficiency`, `bathroom_depth`, `kitchen_back_exposure`, and (in refinement) `seed_stability`.
+The soft objective combines weighted penalties: `room_relations`, `room_size_relations`, `floor_cluster_position`, `dead_space`, `hallway_efficiency`, `bathroom_depth`, `kitchen_back_exposure`, and (in refinement) `seed_stability`.
 
 Built-in profiles: `INITIAL_GENERATION_PROFILE` (candidate hints), `REFINEMENT_A_PROFILE` and `REFINEMENT_B_PROFILE` (existing floor-plan seed, with tighter stabilization). Construct tuned versions using `build_default_profiles(DefaultProfileSettings(...))`; default time limits are 5 seconds initial, 2 seconds per refinement. Maintain bounded solves and configurable seeds.
 

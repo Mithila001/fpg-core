@@ -166,6 +166,7 @@ are preserved.
 The default registry provides:
 
 - `room_relations`
+- `room_size_relations`
 - `floor_cluster_position`
 - `dead_space`
 - `hallway_efficiency`
@@ -175,6 +176,26 @@ The default registry provides:
 
 The solver minimizes the weighted sum of enabled soft-constraint penalties. Hard
 constraints always determine feasibility.
+
+### Room-size relationships
+
+The built-in profiles enable `room_size_relations` with weight 1. Its 12 default
+soft rules prefer bathrooms and attached bathrooms no larger than bedrooms,
+living rooms, dining rooms, kitchens, or garages, and bedrooms and kitchens no
+larger than living rooms. A rule is skipped when either room type is absent.
+These preferences cannot guarantee a size ordering; hard constraints and other
+objective terms can outweigh them. Refinement seed tolerances also restrict movement.
+
+Custom settings use `rules`, a sequence of mappings containing `compared_type`,
+`reference_type` (both `RoomType` members), optional `min_ratio` and `max_ratio`,
+and optional positive integer `penalty_multiplier`. Ratios mean compared area /
+reference area. `precision` defaults to 1000. Upper bounds compare the largest
+compared room to the smallest reference room; lower bounds compare the smallest
+compared room to the largest reference room. The penalty measures the worst
+violation normalized by reference area capacity and is multiplied by the rule
+multiplier and the `SoftConstraintUse` weight. Final scoring uses the same default pairs and upper-bound aggregation, but has
+independent settings and adjusts infeasible thresholds; custom rules do not
+automatically synchronize between the features.
 
 ### Hallway efficiency
 

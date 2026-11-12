@@ -187,42 +187,18 @@ individual `weight` values.
 
 ### Exact default room-size rules
 
-The default config uses `RoomSizeConsistencySettings` with:
+The default scoring configuration uses the same 12 upper-bound relationships as
+[the solver](floor_plan_solver.md#room-size-relationships), each with maximum
+ratio `1.0`. Bathrooms and attached bathrooms are compared with bedrooms, living
+rooms, dining rooms, kitchens, and garages; bedrooms and kitchens are compared
+with living rooms. Each rule compares the largest compared room with the smallest
+reference room. The separate bedroom consistency rule permits a maximum spread
+ratio of `0.25`; the default full-penalty ratio delta is `0.50`.
 
-```python
-relation_rules=(
-    RoomSizeRelationRule(
-        reference_type=RoomType.LIVING_ROOM,
-        compared_type=RoomType.KITCHEN,
-        max_ratio=0.80,
-        reference_aggregation=RoomAreaAggregation.MAX,
-        compared_aggregation=RoomAreaAggregation.MAX,
-    ),
-    RoomSizeRelationRule(
-        reference_type=RoomType.KITCHEN,
-        compared_type=RoomType.DINING_ROOM,
-        max_ratio=1.00,
-        reference_aggregation=RoomAreaAggregation.MAX,
-        compared_aggregation=RoomAreaAggregation.MAX,
-    ),
-    RoomSizeRelationRule(
-        reference_type=RoomType.LIVING_ROOM,
-        compared_type=RoomType.BEDROOM,
-        max_ratio=0.90,
-        reference_aggregation=RoomAreaAggregation.MAX,
-        compared_aggregation=RoomAreaAggregation.MAX,
-    ),
-)
-consistency_rules=(
-    RoomTypeConsistencyRule(
-        room_type=RoomType.BEDROOM,
-        maximum_spread_ratio=0.25,
-    ),
-)
-default_full_penalty_ratio_delta=0.50
-```
-
-These are **scoring preferences**, not solver constraints.
+The evaluator and solver use independent configurations and different penalty
+calculations. The scorer also adjusts impossible thresholds using the supplied
+room specifications; sharing default values does not guarantee identical scores
+or automatically synchronize custom rules.
 
 ## Exact default scoring config
 

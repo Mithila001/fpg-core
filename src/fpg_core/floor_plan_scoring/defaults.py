@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..domain import RoomType
+from ..domain.room_size_preferences import DEFAULT_ROOM_SIZE_MAX_RATIO, DEFAULT_ROOM_SIZE_PAIRS
 from .config import (
     EvaluatorRule,
     FloorPlanScoringConfig,
@@ -100,28 +101,14 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
             ROOM_SIZE_CONSISTENCY_KEY,
             FUNCTIONAL_GROUP,
             RoomSizeConsistencySettings(
-                relation_rules=(
+                relation_rules=tuple(
                     RoomSizeRelationRule(
-                        reference_type=RoomType.LIVING_ROOM,
-                        compared_type=RoomType.KITCHEN,
-                        max_ratio=0.80,
-                        reference_aggregation=RoomAreaAggregation.MAX,
+                        reference_type=reference, compared_type=compared,
+                        max_ratio=DEFAULT_ROOM_SIZE_MAX_RATIO,
+                        reference_aggregation=RoomAreaAggregation.MIN,
                         compared_aggregation=RoomAreaAggregation.MAX,
-                    ),
-                    RoomSizeRelationRule(
-                        reference_type=RoomType.KITCHEN,
-                        compared_type=RoomType.DINING_ROOM,
-                        max_ratio=1.00,
-                        reference_aggregation=RoomAreaAggregation.MAX,
-                        compared_aggregation=RoomAreaAggregation.MAX,
-                    ),
-                    RoomSizeRelationRule(
-                        reference_type=RoomType.LIVING_ROOM,
-                        compared_type=RoomType.BEDROOM,
-                        max_ratio=0.90,
-                        reference_aggregation=RoomAreaAggregation.MAX,
-                        compared_aggregation=RoomAreaAggregation.MAX,
-                    ),
+                    )
+                    for compared, reference in DEFAULT_ROOM_SIZE_PAIRS
                 ),
                 consistency_rules=(
                     RoomTypeConsistencyRule(

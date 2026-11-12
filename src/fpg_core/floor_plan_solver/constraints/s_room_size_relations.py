@@ -5,14 +5,14 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ...domain import RoomType
-from ...domain.room_size_preferences import DEFAULT_ROOM_SIZE_PAIRS
+from ...domain.room_size_preferences import DEFAULT_ROOM_SIZE_MAX_RATIO, DEFAULT_ROOM_SIZE_PAIRS
 from ..exceptions import InvalidProfileError
 from ..model import ModelContext
 from .base import ConstraintSettings, PenaltyTerm
 
 DEFAULT_RULES = tuple(
     {"compared_type": compared, "reference_type": reference,
-     "max_ratio": 1.0, "penalty_multiplier": 20}
+     "max_ratio": DEFAULT_ROOM_SIZE_MAX_RATIO, "penalty_multiplier": 20}
     for compared, reference in DEFAULT_ROOM_SIZE_PAIRS
 )
 
