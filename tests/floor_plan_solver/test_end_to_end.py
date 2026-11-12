@@ -82,6 +82,28 @@ def test_invalid_mode_is_rejected(generation_spec: FloorPlanGenerationSpec) -> N
         )
 
 
+def test_custom_profiles_control_bathroom_hallway_rule() -> None:
+    from fpg_core.domain import RoomId, RoomSpec, RoomType
+
+    bathroom = RoomSpec(
+        id=RoomId("bathroom"),
+        name="Bathroom",
+        room_type=RoomType.BATHROOM,
+        size=RoomSizeSpec(10, 20, 100, 400),
+    )
+    specification = FloorPlanGenerationSpec(
+        floor=FloorSpec(30, 30), rooms=(bathroom,), room_relations=()
+    )
+    execution = generate_floor_plan(
+        FloorPlanSolveRequest(specification, _profile()),
+        mode=ExecutionMode.DEBUG,
+    )
+
+    assert execution.result.solved
+    assert execution.details is not None
+    assert "bathroom_hallway_shared_wall" not in execution.details.applied_hard_constraints
+
+
 def test_hallway_minimum_in_project_units_at_nondefault_scale() -> None:
     from fpg_core.domain import RoomId, RoomSpec, RoomType
     from fpg_core.floor_plan_solver import HardConstraintUse

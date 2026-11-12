@@ -7,7 +7,11 @@ from .h_front_anchor import FrontAnchorConstraint
 from .h_minimum_coverage import MinimumCoverageConstraint
 from .h_room_relations import HardRoomRelationsConstraint
 from .h_room_size_hierarchy import RoomSizeHierarchyConstraint
+from .registry import ConstraintRegistry
 from .room_specific.h_attached_bathroom_pairing import AttachedBathroomPairingConstraint
+from .room_specific.h_bathroom_hallway_shared_wall import (
+    BathroomHallwaySharedWallConstraint,
+)
 from .room_specific.h_garage_placement import GaragePlacementConstraint
 from .room_specific.h_hallway_connectivity import HallwayConnectivityConstraint
 from .room_specific.h_hallway_dimensions import HallwayDimensionsConstraint
@@ -18,14 +22,14 @@ from .room_specific.s_kitchen_back_exposure import KitchenBackExposureConstraint
 from .s_dead_space import DeadSpaceConstraint
 from .s_floor_cluster_position import FloorClusterPositionConstraint
 from .s_room_relations import SoftRoomRelationsConstraint
-from .s_seed_stability import SeedStabilityConstraint
-from .registry import ConstraintRegistry
 from .s_room_size_relations import RoomSizeRelationsConstraint
+from .s_seed_stability import SeedStabilityConstraint
 
 
 def build_default_registry() -> ConstraintRegistry:
     registry = ConstraintRegistry()
 
+    registry.register_hard(BathroomHallwaySharedWallConstraint())
     registry.register_hard(AspectRatioConstraint())
     registry.register_hard(AttachedBathroomPairingConstraint())
     registry.register_hard(BackExposureConstraint())

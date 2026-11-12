@@ -151,6 +151,16 @@ The shipped default profiles enable:
 `room_size_hierarchy` is registered for custom configurations but is not enabled by
 the built-in profiles.
 
+`bathroom_hallway_shared_wall` is a registered hard constraint enabled in the
+built-in profiles. Custom profiles must include its key explicitly. Settings:
+`maximum_shared_sides` is an integer from 0 to 4 (default 1), and
+`additional_shared_length` is a finite non-negative project-unit length (default
+10). All hallway rooms are aggregated by bathroom side; the selected number of
+sides may share freely, and total sharing on the other sides is capped by the
+extra length. Only regular bathrooms are affected. Existing saved Lab profiles
+must add this hard-constraint entry to enable it. Existing experiment snapshots
+are preserved.
+
 ## Built-in soft constraints
 
 The default registry provides:

@@ -732,6 +732,13 @@
         "name": "initial_generation",
         "hard_constraints": [
           {
+            "key": "bathroom_hallway_shared_wall",
+            "settings": {
+              "maximum_shared_sides": 1,
+              "additional_shared_length": 10.0
+            }
+          },
+          {
             "key": "aspect_ratio",
             "settings": {
               "min_ratio": 0.6,
@@ -918,6 +925,13 @@
       "refinement_a": {
         "name": "refinement_a",
         "hard_constraints": [
+          {
+            "key": "bathroom_hallway_shared_wall",
+            "settings": {
+              "maximum_shared_sides": 1,
+              "additional_shared_length": 10.0
+            }
+          },
           {
             "key": "aspect_ratio",
             "settings": {
@@ -1113,6 +1127,13 @@
       "refinement_b": {
         "name": "refinement_b",
         "hard_constraints": [
+          {
+            "key": "bathroom_hallway_shared_wall",
+            "settings": {
+              "maximum_shared_sides": 1,
+              "additional_shared_length": 10.0
+            }
+          },
           {
             "key": "aspect_ratio",
             "settings": {

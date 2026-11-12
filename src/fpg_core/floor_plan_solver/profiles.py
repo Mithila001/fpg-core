@@ -67,6 +67,7 @@ def _default_hard_constraints(
     settings: DefaultProfileSettings,
 ) -> tuple[HardConstraintUse, ...]:
     return (
+        HardConstraintUse("bathroom_hallway_shared_wall", {"maximum_shared_sides": 1, "additional_shared_length": 10.0}),
         HardConstraintUse(
             "aspect_ratio",
             {
