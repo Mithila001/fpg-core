@@ -22,6 +22,29 @@ snapshots. Workers never access page elements. Use `db_call` for short session w
 and `run.io_bound` for potentially expensive preprocessing/submission; keep page
 drafts and selections local to their page and stop timers at terminal states.
 
+## UI page ownership and result layout
+
+Follow the [Lab UI standards](UI_STANDARDS.md) for every new or updated experiment.
+The main listing is `ui/pages.py`; setup and result route registration is in
+`ui/experiments.py`; E01A and P01B/C have their own page modules and P01A's
+interactive replay is in `ui/replay.py`. The global header/theme and CSS belong
+in `ui/components.py`. The shared desktop result workspace is
+`ui/result_layout.py::ResultWorkspace`.
+
+Create distinct setup and run-result routes. Results should target a single run,
+using a persistent run ID only when that experiment saves its history. Populate
+`ResultWorkspace`'s main-view and contextual-sidebar containers per view; do not
+force a universal control schema on experiments. Use a large resizable canvas as
+default when present, and move alternative charts/tables/diagnostics into primary
+views rather than stacking them below the canvas. Independently scroll both
+workspace columns. Keep result-page state local and preserve zoom/selection
+through polling; avoid rebuilding plots when snapshots have not changed.
+
+E01A is intentionally ephemeral: a one-time per-tab NiceGUI memory handoff
+transfers the result from setup to its dedicated result page. The result page
+consumes that handoff, so leaving/reloading loses it. There is no database run
+or history; other P01 experiments keep saved-run behavior.
+
 ## Extend an experiment
 
 Read the relevant [family document](experiments/p01.md) and inspect current callers.

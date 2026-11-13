@@ -1,16 +1,18 @@
-"""Floor-traffic page; all results belong to the current browser session."""
+"""E01A floor traffic setup and temporary, per-tab run results."""
 from __future__ import annotations
 
 import json
 from typing import Any
+from uuid import uuid4
 
 import plotly.graph_objects as go
-from nicegui import run, ui
+from nicegui import app, run, ui
 
 from fpg_lab.flows.e01a import simulate
 from fpg_lab.flows.e01a_plans import plans
 from fpg_lab.integrations.fpg_core.traffic_plan import import_traffic_plan
 from fpg_lab.ui.components import notify_error, shell
+from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
 
 
@@ -62,86 +64,32 @@ def traffic_figure(plan: dict, result: dict | None, mode: str, selected: set[int
 
 
 async def main_page() -> None:
-    shell("E01A · Floor Traffic", "Explore preset walking routes and their accumulated floor coverage.",
-          back_link="/")
+    """Choose a plan and start one tab-local traffic run."""
+    shell("E01A · Floor Traffic", "Choose a plan to simulate its preset walking trips.", back_link="/")
     fixtures = plans()
-    state: dict[str, Any] = {"result": None, "mode": "Floor plan", "selected": set(), "syncing": False}
     with ui.element("div").classes(
-        "w-full grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] gap-5 items-start"
+        "w-full grid grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)] gap-4 items-start"
     ):
-        with ui.card().classes("w-full min-w-0 p-3"):
-            chart = ui.plotly(traffic_figure(fixtures["compact"], None, "Floor plan")).classes(
-                "w-full h-[42rem] min-w-0")
-        with ui.card().classes("w-full min-w-0 p-5 gap-4"):
-            ui.label("Floor traffic").classes("text-lg font-semibold")
-            picker = ui.select({k: p["name"] for k, p in fixtures.items()}, value="compact",
-                               label="Floor plan").classes("w-full")
-            with ui.expansion("Paste floor plan").classes("w-full"):
-                pasted = ui.textarea("Paste copied floor-plan JSON").classes("w-full")
+        with ui.card().classes("w-full p-4 gap-3"):
+            picker = ui.select(
+                {key: plan["name"] for key, plan in fixtures.items()},
+                value="compact", label="Floor plan",
+            ).classes("w-full")
+            with ui.expansion("Paste a floor plan").classes("w-full"):
+                pasted = ui.textarea("Copied floor-plan JSON").classes("w-full")
                 ui.button("Load pasted plan", on_click=lambda: load_pasted()).props("outline")
             button = ui.button("Simulate traffic").classes("w-full")
-            status = ui.label("Select a plan and simulate to see paths and traffic.").classes("lab-muted text-sm")
-            ui.label("View mode").classes("font-semibold")
-            with ui.row().classes("w-full gap-x-2 gap-y-0"):
-                mode_checks = {name: ui.checkbox(name, value=name == "Floor plan").props("dense")
-                               for name in ("Floor plan", "Paths", "Heatmap")}
-            routes_panel = ui.column().classes("w-full gap-1")
-            details = ui.column().classes("w-full gap-2")
+            status = ui.label("Results will be available in this browser tab only.").classes(
+                "text-sm lab-muted"
+            )
+        with ui.card().classes("w-full min-w-0 p-3"):
+            preview = ui.plotly(traffic_figure(fixtures["compact"], None, "Floor plan")).classes(
+                "w-full h-[32rem]"
+            )
 
-    def redraw() -> None:
-        chart.figure = traffic_figure(fixtures[picker.value], state["result"], state["mode"], state["selected"])
-        chart.update()
-        routes_panel.set_visibility(state["mode"] == "Paths")
-
-    def set_mode(name: str) -> None:
-        state["syncing"] = True
-        state["mode"] = name
-        for key, checkbox in mode_checks.items():
-            checkbox.value = key == name
-        state["syncing"] = False
-        redraw()
-
-    def mode_changed(name: str, value: bool) -> None:
-        if state["syncing"]:
-            return
-        if value:
-            set_mode(name)
-        elif state["mode"] == name:
-            state["syncing"] = True
-            mode_checks[name].value = True
-            state["syncing"] = False
-
-    def show_routes() -> None:
-        routes_panel.clear()
-        result = state["result"]
-        with routes_panel:
-            ui.label("Paths").classes("font-semibold")
-            if result is None:
-                ui.label("Run the simulation to choose paths.").classes("lab-muted text-sm")
-                return
-            labels = {r["id"]: r["name"] for r in fixtures[picker.value]["rooms"]}
-            with ui.row().classes("gap-2"):
-                ui.button("Select all", on_click=lambda: select_paths(True)).props("dense flat")
-                ui.button("Clear all", on_click=lambda: select_paths(False)).props("dense flat")
-            for i, route in enumerate(result["routes"]):
-                label = f"{labels[route['source']]} → {labels[route['destination']]} · {route['length']:.1f} units"
-                check = ui.checkbox(label, value=i in state["selected"]).props("dense").classes("w-full")
-                check.on_value_change(lambda event, index=i: path_changed(index, event.value))
-            for failure in result["failures"]:
-                ui.label(f"{failure['source']} → {failure['destination']}: {failure['reason']}").classes("text-orange-300")
-
-    def path_changed(index: int, checked: bool) -> None:
-        if checked:
-            state["selected"].add(index)
-        else:
-            state["selected"].discard(index)
-        redraw()
-
-    def select_paths(all_paths: bool) -> None:
-        result = state["result"]
-        state["selected"] = set(range(len(result["routes"]))) if all_paths and result else set()
-        show_routes()
-        redraw()
+    def update_preview() -> None:
+        preview.figure = traffic_figure(fixtures[picker.value], None, "Floor plan")
+        preview.update()
 
     def load_pasted() -> None:
         try:
@@ -149,64 +97,150 @@ async def main_page() -> None:
             fixtures["pasted"] = plan
             picker.options = {key: value["name"] for key, value in fixtures.items()}
             picker.update()
-            if picker.value == "pasted":
-                changed_plan()
-            else:
-                picker.value = "pasted"
-            ui.notify("Floor plan loaded for this session", type="positive")
+            picker.set_value("pasted")
+            update_preview()
+            ui.notify("Plan loaded in this tab", type="positive")
         except Exception as exc:
             notify_error(exc)
-
-    def changed_plan() -> None:
-        state["result"] = None
-        state["selected"] = set()
-        details.clear()
-        status.set_text("Select a plan and simulate to see paths and traffic.")
-        show_routes()
-        set_mode("Floor plan")
 
     async def execute() -> None:
         button.disable()
         picker.disable()
-        status.set_text("Calculating routes and traffic…")
+        status.set_text("Calculating routes and floor coverage…")
         try:
-            result = await run.io_bound(simulate, fixtures[picker.value])
-            state["result"] = result
-            state["selected"] = set(range(len(result["routes"])))
-            status.set_text(f"{len(result['routes'])} routes calculated · {len(result['failures'])} unreachable · "
-                            "10 units per metre · 8-unit walking width")
-            details.clear()
-            with details:
-                if result["missing_room_types"]:
-                    names = ", ".join(name.replace("_", " ") for name in result["missing_room_types"])
-                    ui.label(f"Trips requiring these missing room types were skipped: {names}.").classes("lab-muted text-sm")
-                if not result["routes"] and not result["failures"]:
-                    ui.label("No preset trip pairs match the rooms in this plan.").classes("lab-muted")
-                ui.label("Room coverage · all preset trips").classes("font-semibold")
-                labels = {r["id"]: r["name"] for r in fixtures[picker.value]["rooms"]}
-                ui.table(columns=[{"name": k, "label": title, "field": k, "align": "left"}
-                                  for k, title in (("room", "Room"), ("mean", "Mean"),
-                                                   ("peak", "Peak"), ("untouched", "Untouched"))],
-                         rows=[{"room": labels[r["id"]], "mean": f"{r['mean']:.2f}",
-                                "peak": f"{r['peak']:.2f}", "untouched": f"{r['untouched_percent']:.1f}%"}
-                               for r in result["rooms"]], row_key="room").classes("w-full")
-            show_routes()
-            set_mode("Paths")
+            plan = fixtures[picker.value]
+            result = await run.io_bound(simulate, plan)
+            # A new run replaces any pending tab-local handoff; no database/history.
+            run_id = uuid4().hex
+            app.storage.tab["e01a_result"] = {
+                "run_id": run_id, "plan": plan, "result": result,
+            }
+            ui.navigate.to(f"/experiments/e01a/runs/{run_id}")
         except Exception as exc:
-            state["result"] = None
-            state["selected"] = set()
-            details.clear()
-            show_routes()
             status.set_text(f"Simulation failed: {exc}")
-            redraw()
             notify_error(exc)
         finally:
             button.enable()
             picker.enable()
 
-    for name, checkbox in mode_checks.items():
-        checkbox.on_value_change(lambda event, view=name: mode_changed(view, event.value))
-    picker.on_value_change(lambda _: changed_plan())
+    picker.on_value_change(lambda _: update_preview())
     button.on_click(execute)
+
+
+async def result_page(run_id: str) -> None:
+    """Inspect the latest run in this browser tab; no persisted E01A records."""
+    await ui.context.client.connected()
+    # Consume the one-time handoff: reloading or revisiting the result loses it,
+    # exactly as the earlier single-page simulation did.
+    saved = app.storage.tab.pop("e01a_result", None)
+    if not saved or saved.get("run_id") != run_id:
+        shell("E01A · Result unavailable", back_link="/experiments/e01a")
+        ui.label("This temporary result is no longer available in this browser tab.")
+        ui.link("Start another simulation", "/experiments/e01a")
+        return
+
+    plan: dict[str, Any] = saved["plan"]
+    result: dict[str, Any] = saved["result"]
+    selected: set[int] = set(range(len(result["routes"])))
+    labels = {room["id"]: room["name"] for room in plan["rooms"]}
+    workspace = ResultWorkspace(
+        "E01A · Floor traffic result", back_link="/experiments/e01a",
+        views=("Canvas", "Room statistics"),
+    )
+    with workspace.main("Canvas"):
+        chart = ui.plotly(traffic_figure(plan, result, "Paths", selected)).classes(
+            "lab-primary-plot"
+        )
+    with workspace.main("Room statistics"):
+        ui.label("Room coverage · all preset trips").classes("text-base font-semibold")
+        ui.table(
+            columns=[
+                {"name": key, "label": title, "field": key, "align": "left", "sortable": True}
+                for key, title in (("room", "Room"), ("mean", "Mean"),
+                                   ("peak", "Peak"), ("untouched", "Untouched"))
+            ],
+            rows=[
+                {"room": labels[row["id"]], "mean": f"{row['mean']:.2f}",
+                 "peak": f"{row['peak']:.2f}",
+                 "untouched": f"{row['untouched_percent']:.1f}%"}
+                for row in result["rooms"]
+            ],
+            row_key="room",
+        ).classes("w-full")
+    with workspace.controls:
+        ui.label("Canvas mode").classes("font-semibold text-sm")
+        mode = ui.toggle(("Floor plan", "Paths", "Heatmap"), value="Paths").props(
+            "dense no-caps"
+        ).classes("w-full")
+        with ui.row().classes("w-full gap-1"):
+            ui.button("Select all paths", on_click=lambda: select_paths(True)).props(
+                "dense outline"
+            )
+            ui.button("Clear paths", on_click=lambda: select_paths(False)).props("dense flat")
+        ui.label("10 project units / metre · 8-unit walking width").classes("lab-muted text-xs")
+        ui.link("New simulation", "/experiments/e01a").classes("text-sm")
+    with workspace.context("Canvas"):
+        ui.label(f"{len(result['routes'])} routes · {len(result['failures'])} unreachable").classes(
+            "font-medium text-sm"
+        )
+        routes_panel = ui.column().classes("w-full gap-1")
+        failures_panel = ui.column().classes("w-full gap-1")
+        if result["missing_room_types"]:
+            ui.label("Missing trip room types: " + ", ".join(
+                name.replace("_", " ") for name in result["missing_room_types"]
+            )).classes("text-sm text-amber-300")
+    with workspace.context("Room statistics"):
+        ui.label("Coverage uses all preset trips, regardless of the displayed path filters.").classes(
+            "text-sm lab-muted"
+        )
+        for room in result["rooms"]:
+            ui.label(
+                f"{labels[room['id']]}: {room['untouched_percent']:.1f}% untouched"
+            ).classes("text-sm")
+
+    def redraw() -> None:
+        chart.figure = traffic_figure(plan, result, mode.value, selected)
+        chart.update()
+        routes_panel.set_visibility(mode.value == "Paths")
+
+    def path_changed(index: int, checked: bool) -> None:
+        if checked:
+            selected.add(index)
+        else:
+            selected.discard(index)
+        redraw()
+
+    def show_routes() -> None:
+        routes_panel.clear()
+        with routes_panel:
+            ui.label("Visible routes").classes("font-semibold text-sm")
+            if not result["routes"]:
+                ui.label("No matching routes. Handle failures below.").classes("lab-muted text-sm")
+            for i, route in enumerate(result["routes"]):
+                name = (
+                    f"{labels[route['source']]} → {labels[route['destination']]}"
+                    f" · {route['length']:.1f} units"
+                )
+                ui.checkbox(name, value=i in selected).props("dense").classes(
+                    "w-full"
+                ).on_value_change(
+                    lambda event, index=i: path_changed(index, event.value)
+                )
+
+    def select_paths(choose_all: bool) -> None:
+        selected.clear()
+        if choose_all:
+            selected.update(range(len(result["routes"])))
+        show_routes()
+        redraw()
+
+    with failures_panel:
+        for failure in result["failures"]:
+            ui.label(
+                f"{failure['source']} → {failure['destination']}: {failure['reason']}"
+            ).classes("text-sm text-amber-300")
+        if not result["routes"] and not result["failures"]:
+            ui.label("No preset trips match the rooms in this plan.").classes("lab-muted")
+    mode.on_value_change(lambda _: redraw())
     show_routes()
-    routes_panel.set_visibility(False)
+    redraw()

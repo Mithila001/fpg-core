@@ -15,12 +15,13 @@ from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01b import P01BService, next_preset_name, save_preset
 from fpg_lab.services.p01c import P01CService
 from fpg_lab.ui.components import db_call, json_panel, notify_error, shell
+from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
 
 
 async def main_page(runtime, flow="p01b"):
     service_type = P01CService if flow == "p01c" else P01BService
-    shell(f"{flow.upper()} experiments", "Inspect repeated floor-plan generation and refinement.")
+    shell(f"{flow.upper()} · Setup", "Configure repeated floor-plan generation and refinement.")
     state: dict[str, Any] = {"data": None}
     with ui.element("div").classes("w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"):
         with ui.column().classes("w-full gap-4") as controls:
@@ -357,98 +358,132 @@ async def main_page(runtime, flow="p01b"):
 
 
 async def run_page(runtime, experiment_id, flow="p01b"):
+    """Inspect a saved P01B/P01C run without shrinking the primary floor plan."""
     service_type = P01CService if flow == "p01c" else P01BService
-    shell(f"{flow.upper()} run #{experiment_id}", compact=True, back_link=f"/experiments/{flow}")
-    state: dict[str, Any] = {"iteration": 0, "stage": 0, "rows": [], "experiment": None}
-    status = ui.label()
-    with ui.row().classes("items-center"):
-        previous = ui.button("Previous")
-        position = ui.label()
-        following = ui.button("Next")
-        overlay = ui.checkbox("Show original hint points", value=False)
-    stages_area = ui.row()
-    result_area = ui.column().classes("w-full")
+    state: dict[str, Any] = {
+        "iteration": 0, "stage": 0, "rows": [], "experiment": None,
+        "selected_stage": "Initial",
+    }
+    workspace = ResultWorkspace(
+        f"{flow.upper()} run #{experiment_id}",
+        back_link=f"/experiments/{flow}",
+        views=("Canvas", "Scores", "Diagnostics"),
+    )
+    with workspace.main("Canvas"):
+        chart = ui.plotly(figures.floor_plan(None)).classes("lab-primary-plot")
+    with workspace.main("Scores"):
+        score_area = ui.column().classes("w-full min-w-0 gap-3")
+    with workspace.main("Diagnostics"):
+        diagnostics_area = ui.column().classes("w-full min-w-0 gap-3")
+    with workspace.controls:
+        status = ui.label("Loading run…").classes("text-sm lab-muted")
+        with ui.row().classes("items-center gap-2 w-full"):
+            previous = ui.button("Previous").props("dense outline")
+            position = ui.label().classes("text-sm font-medium")
+            following = ui.button("Next").props("dense outline")
+        stages_area = ui.column().classes("w-full gap-1")
+        overlay = ui.checkbox("Show original hint points", value=False).props("dense")
+        ui.button("Refresh", on_click=lambda: timer.activate()).props("dense flat")
+        terminate_button = ui.button("Terminate run").props("dense outline")
+    with workspace.context("Canvas"):
+        details_area = ui.column().classes("w-full gap-2")
+        room_area = ui.column().classes("w-full gap-1")
+    with workspace.context("Scores"):
+        ui.label("Stored scoring data for the selected iteration.").classes("lab-muted text-sm")
+    with workspace.context("Diagnostics"):
+        ui.label("Saved stage data, errors and iteration provenance.").classes(
+            "lab-muted text-sm"
+        )
 
-    def render():
-        rows = state["rows"]
+    def render() -> None:
         item = state["experiment"]
         if not item:
             return
-        if not item.get("hint_points") or "preset" not in item["hint_points"]:
-            status.set_text("This is a legacy P01B run and cannot be displayed by the replacement.")
-            return
+        rows = state["rows"]
         status.set_text(
             f"{item['status']} · {item['completed_trial_count']}/{item['requested_trial_count']} iterations"
         )
-        overlay.set_enabled(not item["hint_points"]["disable_hints"])
-        previous.set_enabled(state["iteration"] > 0)
-        following.set_enabled(state["iteration"] + 1 < len(rows))
-        position.set_text(f"Iteration {state['iteration'] + 1} / {item['requested_trial_count']}")
-        stages_area.clear()
-        result_area.clear()
-        if not rows:
-            return
-        row = rows[state["iteration"]]
-        stages = row["stages"]
-        selected_name = state.get("selected_stage", "Initial")
-        state["stage"] = next(
-            (i for i, stage in enumerate(stages) if stage["name"] == selected_name), 0
-        )
-        with stages_area:
-            for index, stage in enumerate(stages):
-                ui.button(stage["name"], on_click=lambda index=index: select_stage(index)).props(
-                    "outline" if index != state["stage"] else ""
-                )
-        with result_area:
-            score = ((row.get("scoring") or {}).get("result") or {}).get("total_score")
-            ui.label(
-                f"{row['status']} · score: {score if score is not None else 'unavailable'} · {row['duration_ms']} ms"
-            )
-            if row.get("error"):
-                ui.label(f"{row['error']['stage']}: {row['error']['message']}").classes(
+        terminate_button.set_enabled(item["status"] in ("queued", "running", "termination_requested"))
+        if not item.get("hint_points") or "preset" not in item["hint_points"]:
+            details_area.clear()
+            with details_area:
+                ui.label("Legacy run: its original hint data cannot be displayed here.").classes(
                     "text-amber-300"
                 )
-            data = stages[state["stage"]]["data"] if stages else None
-            if stages:
-                ui.label(
-                    f"Stage duration: {stages[state['stage']].get('duration_ms', 0)} ms"
-                ).classes("text-sm")
-            plan = ((data or {}).get("result") or {}).get("floor_plan")
-            chart = figures.floor_plan(plan)
-            if overlay.value and not item["hint_points"]["disable_hints"]:
-                for trace in chart.data:
-                    trace.opacity = 0.35
-                for point in item["hint_points"]["preset"]["candidate"]["points"]:
-                    chart.add_trace(
-                        go.Scatter(
-                            x=[point["x"]],
-                            y=[point["y"]],
-                            mode="markers+text",
-                            text=[point["room_id"]],
-                            textposition="top center",
-                            name=point["room_id"],
-                            marker={"size": 12, "color": figures.color(point["room_id"])},
-                        )
+            return
+        overlay.set_enabled(not item["hint_points"]["disable_hints"])
+        if rows:
+            state["iteration"] = max(0, min(state["iteration"], len(rows) - 1))
+        previous.set_enabled(bool(rows) and state["iteration"] > 0)
+        following.set_enabled(state["iteration"] + 1 < len(rows))
+        position.set_text(
+            f"{state['iteration'] + 1} / {item['requested_trial_count']}"
+            if rows else "No iterations yet"
+        )
+        stages_area.clear()
+        score_area.clear()
+        diagnostics_area.clear()
+        details_area.clear()
+        room_area.clear()
+        if not rows:
+            chart.figure = figures.floor_plan(None)
+            chart.update()
+            with details_area:
+                ui.label("Waiting for the first completed stage.").classes("lab-muted")
+            return
+
+        row = rows[state["iteration"]]
+        stages = row["stages"]
+        state["stage"] = next(
+            (index for index, stage in enumerate(stages)
+             if stage["name"] == state["selected_stage"]), 0,
+        )
+        if stages:
+            state["selected_stage"] = stages[state["stage"]]["name"]
+        with stages_area:
+            ui.label("Pipeline stage").classes("font-semibold text-sm")
+            with ui.row().classes("w-full gap-1"):
+                for index, stage in enumerate(stages):
+                    ui.button(
+                        stage["name"], on_click=lambda index=index: select_stage(index)
+                    ).props("dense " + ("" if index == state["stage"] else "outline"))
+        stage = stages[state["stage"]] if stages else None
+        data = stage["data"] if stage else None
+        plan = ((data or {}).get("result") or {}).get("floor_plan")
+        figure = figures.floor_plan(plan)
+        if overlay.value and not item["hint_points"]["disable_hints"]:
+            for trace in figure.data:
+                trace.opacity = 0.35
+            for point in item["hint_points"]["preset"]["candidate"]["points"]:
+                figure.add_trace(
+                    go.Scatter(
+                        x=[point["x"]], y=[point["y"]], mode="markers+text",
+                        text=[point["room_id"]], textposition="top center",
+                        name=point["room_id"],
+                        marker={"size": 12, "color": figures.color(point["room_id"])},
                     )
-            chart.update_layout(showlegend=False)
-            with ui.element("div").classes(
-                "w-full grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)] gap-5 items-start"
-            ):
-                ui.plotly(chart).classes("w-full h-[36rem] min-w-0")
-                with ui.column().classes("w-full gap-2"):
-                    ui.label("Rooms").classes("text-lg font-semibold")
-                    for room in (plan or {}).get("rooms", []):
-                        with ui.row().classes("items-center gap-2"):
-                            ui.icon(
-                                "square",
-                                color=figures.color(str(room.get("room_type", room["id"]))),
-                            )
-                            ui.label(room.get("name") or room["id"])
-                    if not plan:
-                        ui.label("No floor plan available for this stage.").classes("lab-muted")
+                )
+        figure.update_layout(showlegend=False)
+        chart.figure = figure
+        chart.update()
+        score = ((row.get("scoring") or {}).get("result") or {}).get("total_score")
+        with details_area:
+            ui.label(f"{row['status']} · score {score if score is not None else '—'}").classes(
+                "text-sm font-medium"
+            )
+            ui.label(
+                f"Iteration {row['duration_ms']} ms · "
+                f"stage {(stage or {}).get('duration_ms', 0)} ms"
+            ).classes("lab-muted text-sm")
+            if row.get("error"):
+                ui.label(
+                    f"{row['error']['stage']}: {row['error']['message']}"
+                ).classes("text-amber-300 text-sm")
+            if not plan:
+                ui.label("No floor plan saved for this stage.").classes("lab-muted text-sm")
             if flow == "p01c":
                 opening_stage = next(
-                    (stage for stage in stages if stage["name"] == "Openings"), None
+                    (candidate for candidate in stages if candidate["name"] == "Openings"), None
                 )
                 final_plan = (((opening_stage or {}).get("data") or {}).get("result") or {}).get(
                     "floor_plan"
@@ -462,32 +497,53 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                         "floor_plan": final_plan,
                     }
 
-                    def copy_plan():
+                    def copy_plan() -> None:
                         ui.run_javascript(
                             f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})"
                         )
                         ui.notify("Floor plan and openings copied")
 
-                    ui.button(
-                        "Copy final floor plan", icon="content_copy", on_click=copy_plan
-                    ).props("outline")
-            if data:
-                json_panel("Stage details", data)
+                    ui.button("Copy final floor plan", icon="content_copy", on_click=copy_plan).props(
+                        "dense outline"
+                    )
+        with room_area:
+            if plan:
+                ui.label("Rooms").classes("font-semibold text-sm")
+                for room in plan.get("rooms", []):
+                    with ui.row().classes("items-center gap-2"):
+                        ui.icon("square", color=figures.color(str(room.get("room_type", room["id"]))))
+                        ui.label(room.get("name") or room["id"]).classes("text-sm")
+        with score_area:
             if row.get("scoring"):
-                json_panel("Scoring details", row["scoring"])
+                scoring = row["scoring"].get("result") or row["scoring"]
+                ui.plotly(figures.score_breakdown(scoring)).classes("w-full h-[32rem]")
+                json_panel("Saved scoring details", row["scoring"])
+            else:
+                ui.label("Scoring has not been recorded for this iteration.").classes("lab-muted")
+        with diagnostics_area:
+            if data:
+                json_panel(f"{(stage or {}).get('name', 'Stage')} details", data)
+            if row.get("error"):
+                json_panel("Iteration error", row["error"])
+            if row.get("scoring"):
+                json_panel("Iteration scoring", row["scoring"])
+            json_panel("Run input and configuration", {
+                "hint_points": item.get("hint_points"),
+                "system_configuration_snapshot": item.get("system_configuration_snapshot"),
+            })
 
-    def select_stage(index):
+    def select_stage(index: int) -> None:
+        stages = state["rows"][state["iteration"]]["stages"]
         state["stage"] = index
-        state["selected_stage"] = state["rows"][state["iteration"]]["stages"][index]["name"]
+        state["selected_stage"] = stages[index]["name"]
         render()
 
-    def move(delta):
+    def move(delta: int) -> None:
         state["iteration"] += delta
         render()
 
-    async def refresh():
+    async def refresh() -> None:
         try:
-
             def read(session):
                 experiment = service_type(session).get_experiment(experiment_id)
                 rows = session.scalars(
@@ -497,22 +553,28 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                 )
                 return row_document(experiment), [row_document(row) for row in rows]
 
+            old = (state["experiment"], state["rows"])
             state["experiment"], state["rows"] = await db_call(runtime, read)
-            render()
+            if old != (state["experiment"], state["rows"]):
+                render()
             if state["experiment"]["status"] not in ("queued", "running", "termination_requested"):
                 timer.deactivate()
         except Exception as exc:
             timer.deactivate()
             notify_error(exc)
 
-    async def terminate():
-        await db_call(
-            runtime, lambda session: service_type(session).request_termination(experiment_id)
-        )
+    async def terminate() -> None:
+        try:
+            await db_call(
+                runtime, lambda session: service_type(session).request_termination(experiment_id)
+            )
+            timer.activate()
+        except Exception as exc:
+            notify_error(exc)
 
     previous.on_click(lambda: move(-1))
     following.on_click(lambda: move(1))
-    overlay.on_value_change(render)
-    ui.button("Terminate", on_click=terminate).props("outline")
+    overlay.on_value_change(lambda _: render())
+    terminate_button.on_click(terminate)
     timer = ui.timer(1, refresh, immediate=False)
     await refresh()

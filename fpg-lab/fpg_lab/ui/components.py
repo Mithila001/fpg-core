@@ -12,7 +12,7 @@ from fpg_lab.runtime import LabRuntime
 
 
 def shell(
-    title: str, subtitle: str = "", *, compact: bool = False, back_link: str | None = None
+    title: str | None, subtitle: str = "", *, compact: bool = False, back_link: str | None = None
 ) -> None:
     ui.colors(
         primary="#75beff",
@@ -40,6 +40,52 @@ def shell(
         .q-btn.bg-primary, .q-btn.bg-negative, .q-btn.bg-positive { color: #ffffff !important; }
         .q-field--outlined .q-field__control:before { border-color: #6b6b6b; }
         a:focus-visible, .q-btn:focus-visible { outline: 2px solid #75beff; outline-offset: 3px; }
+
+        /* Shared desktop result workspace; avoid document-level scrolling. */
+        .lab-result-root {
+            width: 100%; max-width: none !important;
+            padding: 0 12px 12px !important;
+            height: calc(100dvh - 50px);
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .lab-result-frame { width: 100%; height: 100%; min-height: 0; gap: 0; }
+        .lab-result-toolbar {
+            width: 100%; flex: 0 0 auto; min-height: 50px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; padding: 6px 4px; border-bottom: 1px solid #3c3c3c;
+        }
+        .lab-result-view-switch { flex: 0 0 auto; }
+        .lab-result-grid {
+            display: grid; width: 100%; flex: 1 1 auto; min-height: 0; min-width: 0;
+            grid-template-columns: minmax(0, 1fr) clamp(290px, 26.5vw, 390px);
+            gap: 12px; padding-top: 10px;
+        }
+        .lab-result-main, .lab-result-sidebar {
+            min-height: 0; min-width: 0; overflow-y: auto;
+            overscroll-behavior: contain; scrollbar-gutter: stable;
+            border: 1px solid #3c3c3c; border-radius: 5px;
+            background: #252526;
+        }
+        .lab-result-main { overflow-x: hidden; }
+        .lab-result-sidebar { padding: 12px; gap: 12px; align-items: stretch; }
+        .lab-result-controls, .lab-result-context {
+            width: 100%; min-width: 0; align-items: stretch; gap: 10px;
+        }
+        .lab-result-divider { background: #3c3c3c; }
+        .lab-result-pane { width: 100%; min-width: 0; min-height: 100%; gap: 10px; padding: 10px; }
+        .lab-primary-plot { width: 100%; min-width: 0; height: 100%; min-height: 420px; flex: 1 1 auto; }
+        /* P01A's replay is nested one level deeper than the other canvas views.
+           Give both containers a definite height so Plotly can use the full pane. */
+        .lab-replay-pane { height: 100%; }
+        .lab-replay-canvas { width: 100%; height: 100%; min-width: 0; min-height: 0; flex: 1 1 auto; }
+        .lab-replay-canvas > .lab-primary-plot { height: 100% !important; }
+        .lab-result-pane .q-table__container { max-width: 100%; }
+        @media (max-width: 900px) {
+            .lab-result-root { min-width: 850px; }
+        }
         .nicegui-json-editor {
             --jse-background-color: #1e1e1e;
             --jse-text-color: #d4d4d4;
@@ -89,12 +135,13 @@ def shell(
             ui.link(name, path).classes("lab-text no-underline hover:underline")
         ui.label("Local research workspace").classes("ml-auto text-xs lab-muted")
     ui.query("body").classes("lab-workspace")
-    with ui.row().classes("w-full items-center justify-between"):
-        ui.label(title).classes(
-            "text-2xl font-semibold" if compact else "text-3xl font-semibold mt-5"
-        )
-        if back_link:
-            ui.link("Back to experiments", back_link).classes("text-sm")
+    if title is not None:
+        with ui.row().classes("w-full items-center justify-between"):
+            ui.label(title).classes(
+                "text-2xl font-semibold" if compact else "text-3xl font-semibold mt-5"
+            )
+            if back_link:
+                ui.link("Back to experiments", back_link).classes("text-sm")
     if subtitle:
         ui.label(subtitle).classes("lab-muted mb-4")
 

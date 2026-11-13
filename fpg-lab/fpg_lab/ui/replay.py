@@ -16,7 +16,14 @@ from fpg_lab.visualization import circulation, figures, replay
 
 
 async def candidate_replay(
-    runtime: LabRuntime, item: dict[str, Any]
+    runtime: LabRuntime,
+    item: dict[str, Any],
+    *,
+    canvas_area: ui.column,
+    controls_area: ui.column,
+    context_area: ui.column,
+    charts_area: ui.column,
+    on_seek: Callable[[], None],
 ) -> Callable[[int], None] | None:
     # ponytail: eager page-local cache targets 100–500 trials; use a sliding cache for larger replays.
     trials: list[dict[str, Any]] = []
@@ -34,9 +41,10 @@ async def candidate_replay(
         if len(page) < 100:
             break
     if not any(t.get("candidate_search_data") for t in trials):
-        ui.label("No saved candidate geometry. Rerun P01A with Store debug data enabled.").classes(
-            "text-amber-300"
-        )
+        with canvas_area:
+            ui.label("No saved candidate geometry. Rerun P01A with Store debug data enabled.").classes(
+                "text-amber-300"
+            )
         return None
     prepared = (item.get("preprocessing_result") or {}).get("result") or {}
     rooms = list((prepared.get("generation_spec") or {}).get("rooms", []))
@@ -63,84 +71,61 @@ async def candidate_replay(
     }
     selected_paths = set(all_path_keys)
     syncing_rooms = False
-    with ui.element("div").classes(
-        "w-full grid grid-cols-1 lg:grid-cols-5 gap-4 scroll-mt-20"
-    ) as heading:
-        with ui.column().classes("lg:col-span-3 gap-2 min-w-0"):
-            with ui.row().classes("items-center gap-2"):
-                play = ui.button("Play").props("dense")
-                previous = ui.button("Previous").props("dense outline")
-                following = ui.button("Next").props("dense outline")
-                restart = ui.button("Restart").props("dense flat")
-                jump = ui.button("Jump to best").props("dense flat")
-                copy_hint = ui.button(icon="content_copy").props("dense flat")
-                copy_hint.tooltip("Copy selected trial's cleaned hint map")
-            with ui.element("div").classes("w-full grid grid-cols-2 sm:grid-cols-4 gap-3"):
-                speed = (
-                    ui.select([1, 2, 5, 10], value=2, label="Frames / second")
-                    .props("dense")
-                    .classes("min-w-0")
-                )
-                mode = (
-                    ui.select(
-                        ["All trials", "Improvements only"], value="All trials", label="Frames"
-                    )
-                    .props("dense")
-                    .classes("min-w-0")
-                )
-                source = ui.switch("Cleaned hints", value=False).props("dense")
-                onion = (
-                    ui.number(
-                        "Previous frames",
-                        value=min(4, len(all_frames) - 1),
-                        min=0,
-                        max=len(all_frames) - 1,
-                        precision=0,
-                        step=1,
-                    )
-                    .props("dense")
-                    .classes("min-w-0")
-                )
-        with ui.column().classes("lg:col-span-2 w-full gap-2 min-w-0"):
-            view = ui.toggle(["Hints", "Heatmap", "Circulation"], value="Hints").props("dense")
-            with ui.expansion(f"Rooms · {len(room_ids)} selected").classes("w-full") as rooms_panel:
-                with ui.row().classes("w-full items-center gap-3"):
-                    single = ui.switch("Select one", value=False).props("dense")
-                    all_rooms = ui.button("Deselect all").props("dense flat")
-                checks = {}
-                with ui.element("div").classes(
-                    "w-full grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1"
-                ):
-                    for key, style in styles.items():
-                        checks[key] = (
-                            ui.checkbox(f"{style['label']} · {style['name']}", value=True)
-                            .props("dense")
-                            .classes("min-w-0")
-                        )
-                        checks[key].tooltip(key)
-            heatmap = ui.button("Show placement heatmap").props("dense outline")
-            before_cleanup = ui.switch("Before cleanup", value=False).props("dense")
-            route_panel = ui.column().classes("w-full max-h-72 overflow-auto gap-1")
-    slider = ui.slider(min=0, max=max(1, len(sequence) - 1), step=1, value=0).props(
-        'label-always aria-label="Replay frame"'
-    )
-    summary = ui.label().classes("text-sm")
-    with ui.element("div").classes(
-        "w-full grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] gap-5 items-start"
-    ):
+    with controls_area:
+        ui.label("Replay").classes("font-semibold text-sm")
+        with ui.row().classes("w-full items-center gap-1"):
+            play = ui.button("Play").props("dense")
+            previous = ui.button("Previous").props("dense outline")
+            following = ui.button("Next").props("dense outline")
+            restart = ui.button("Restart").props("dense flat")
+            jump = ui.button("Jump to best").props("dense flat")
+            copy_hint = ui.button(icon="content_copy").props("dense flat")
+            copy_hint.tooltip("Copy selected trial's cleaned hint map")
+        with ui.element("div").classes("w-full grid grid-cols-2 gap-2"):
+            speed = ui.select([1, 2, 5, 10], value=2, label="Frames / second").props(
+                "dense"
+            ).classes("min-w-0")
+            mode = ui.select(
+                ["All trials", "Improvements only"], value="All trials", label="Frames"
+            ).props("dense").classes("min-w-0")
+            source = ui.switch("Cleaned hints", value=False).props("dense")
+            onion = ui.number(
+                "Previous frames", value=min(4, len(all_frames) - 1),
+                min=0, max=len(all_frames) - 1, precision=0, step=1,
+            ).props("dense").classes("min-w-0")
+        slider = ui.slider(min=0, max=max(1, len(sequence) - 1), step=1, value=0).props(
+            'label-always aria-label="Replay frame"'
+        ).classes("w-full")
+        summary = ui.label().classes("text-sm")
+    with context_area:
+        view = ui.toggle(["Hints", "Heatmap", "Circulation"], value="Hints").props("dense")
+        with ui.expansion(f"Rooms · {len(room_ids)} selected").classes("w-full") as rooms_panel:
+            with ui.row().classes("w-full items-center gap-2"):
+                single = ui.switch("Select one", value=False).props("dense")
+                all_rooms = ui.button("Deselect all").props("dense flat")
+            checks = {}
+            with ui.element("div").classes("w-full grid grid-cols-2 gap-x-2 gap-y-1"):
+                for key, style in styles.items():
+                    checks[key] = ui.checkbox(
+                        f"{style['label']} · {style['name']}", value=True
+                    ).props("dense").classes("min-w-0")
+                    checks[key].tooltip(key)
+        heatmap = ui.button("Show placement heatmap").props("dense outline")
+        before_cleanup = ui.switch("Before cleanup", value=False).props("dense")
+        route_panel = ui.column().classes("w-full gap-1")
+        diagnostics = ui.column().classes("w-full min-w-0")
+    with canvas_area:
         canvas = ui.plotly(figures.figure("Hint-map replay", geometry=True)).classes(
-            "w-full h-[36rem] min-w-0"
+            "lab-primary-plot"
         )
-        with ui.column().classes("w-full min-w-0") as sidebar:
-            diagnostics = ui.column().classes("w-full min-w-0")
-    heading.move(sidebar, target_index=0)
-    history = ui.plotly(
-        figures.score_history(all_frames, trial_no=all_frames[0]["trial_no"])
-    ).classes("w-full h-64")
-    evaluator_plots = []
-    with ui.element("div").classes("w-full grid grid-cols-1 lg:grid-cols-3 gap-3"):
-        for chart in figures.evaluator_histories(all_frames).values():
-            evaluator_plots.append(ui.plotly(chart).classes("w-full min-w-0 h-72"))
+    with charts_area:
+        history = ui.plotly(
+            figures.score_history(all_frames, trial_no=all_frames[0]["trial_no"])
+        ).classes("w-full h-72")
+        evaluator_plots = []
+        with ui.element("div").classes("w-full grid grid-cols-2 gap-3"):
+            for chart in figures.evaluator_histories(all_frames).values():
+                evaluator_plots.append(ui.plotly(chart).classes("w-full min-w-0 h-72"))
     viewport: dict[str, list[float]] = {}
     heatmap_active = False
     observations: dict[tuple[str, bool], dict[tuple[float, float], list[int]]] = {}
@@ -432,9 +417,7 @@ async def candidate_replay(
         if not any(f["trial_no"] == trial_no for f in sequence):
             mode.set_value("All trials")
         seek(next(i for i, f in enumerate(sequence) if f["trial_no"] == trial_no))
-        ui.run_javascript(
-            f"document.getElementById('c{heading.id}').scrollIntoView({{block: 'start'}})"
-        )
+        on_seek()
 
     timer = ui.timer(0.5, tick, active=False, immediate=False)
     ui.context.client.on_disconnect(pause)

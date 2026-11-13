@@ -31,19 +31,21 @@ def register_pages(runtime: LabRuntime) -> None:
             "Experiment workspace",
             "Run and inspect floor-plan prototypes and experiments directly in Python.",
         )
-        with ui.row().classes("w-full gap-5"):
+        with ui.element("div").classes(
+            "w-full grid gap-3 items-stretch"
+        ).style("grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))"):
             for flow, (title, description) in EXPERIMENTS.items():
-                with ui.card().classes("flex-1 min-w-72 p-6 gap-4"):
-                    ui.label(flow.upper()).classes("text-sm font-bold lab-accent")
-                    ui.label(title).classes("text-xl font-semibold")
-                    ui.label(description).classes("lab-muted")
+                with ui.card().classes("w-full h-full p-4 gap-2"):
+                    ui.label(flow.upper()).classes("text-xs font-bold lab-accent")
+                    ui.label(title).classes("text-lg font-semibold")
+                    ui.label(description).classes("lab-muted text-sm flex-1")
                     ui.button(
-                        "Open experiment",
+                        "Open setup",
                         on_click=lambda f=flow: ui.navigate.to(f"/experiments/{f}"),
-                    )
+                    ).props("dense outline")
         ui.label(
-            f"FPG Core {runtime.codec.fpg_core_version} · experiments continue when you close a tab"
-        ).classes("text-sm lab-muted mt-6")
+            f"FPG Core {runtime.codec.fpg_core_version} · P01 runs are saved; E01A runs are temporary"
+        ).classes("text-xs lab-muted mt-3")
 
     @ui.page("/configurations")
     async def configurations() -> None:

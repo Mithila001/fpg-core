@@ -9,6 +9,7 @@ belong here. Never add Lab imports or dependencies to Core.
 ## Read only relevant context
 
 - Setup or execution: [README](README.md).
+- Any Lab UI work: [UI standards](docs/UI_STANDARDS.md) (desktop-first; full available workspace; consistent setup/run pages; flexible view-specific layouts).
 - Runtime, workers, UI, data ownership, or adding an experiment:
   [development guide](docs/DEVELOPMENT.md).
 - E01A changes: [E01 family](docs/experiments/e01.md).

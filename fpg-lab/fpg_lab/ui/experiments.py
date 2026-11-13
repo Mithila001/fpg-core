@@ -16,6 +16,7 @@ from fpg_lab.runtime import FLOW_SERVICES, LabRuntime, row_document
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
 from fpg_lab.ui.components import db_call, editor_value, json_panel, notify_error, set_editor, shell
 from fpg_lab.ui.replay import candidate_replay
+from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
 
 STAGES = {
@@ -52,12 +53,11 @@ def table(
     ).classes("w-full")
     if on_trial is not None:
         widget.add_slot(
-            "body-cell-id",
+            "body-cell-trial_no",
             '<q-td :props="props"><q-btn flat dense color="primary" '
-            ':label="props.row.id" @click="$parent.$emit(\'seek-trial\', props.row.trial_no)" /></q-td>',
+            ':label="props.row.trial_no" @click="$parent.$emit(\'seek-trial\', props.row.trial_no)" /></q-td>',
         )
         widget.on("seek-trial", lambda event: on_trial(int(event.args)))
-        return
     widget.add_slot(
         "body-cell-id",
         '<q-td :props="props"><a class="text-primary underline" :href="\''
@@ -83,8 +83,8 @@ def register_experiments(runtime: LabRuntime) -> None:
             shell("Unknown experiment")
             return
         shell(
-            f"{flow.upper()} experiments",
-            "Choose a profile and request, then run the pipeline in the background.",
+            f"{flow.upper()} · Setup",
+            "Choose a configuration and request, then start a run.",
         )
         try:
             configurations, templates = await db_call(
@@ -348,6 +348,12 @@ def register_experiments(runtime: LabRuntime) -> None:
         timer = ui.timer(1.0, refresh_history, immediate=False)
         await refresh_history()
 
+    @ui.page("/experiments/e01a/runs/{run_id}")
+    async def e01a_run_page(run_id: str) -> None:
+        from fpg_lab.ui.e01a import result_page
+
+        await result_page(run_id)
+
     @ui.page("/experiments/{flow}/runs/{experiment_id}")
     async def run_page(flow: str, experiment_id: int) -> None:
         if flow in ("p01b", "p01c"):
@@ -358,20 +364,55 @@ def register_experiments(runtime: LabRuntime) -> None:
         if flow not in FLOW_SERVICES:
             shell("Unknown experiment")
             return
-        shell(
-            f"{flow.upper()} run #{experiment_id}", compact=True, back_link=f"/experiments/{flow}"
+        workspace = ResultWorkspace(
+            f"{flow.upper()} run #{experiment_id}",
+            back_link=f"/experiments/{flow}",
+            views=("Canvas", "Charts", "Trials", "Diagnostics"),
         )
-        replay_area = ui.column().classes("w-full gap-3")
+        workspace.main("Canvas").classes("lab-replay-pane")
+        with workspace.main("Canvas"):
+            replay_area = ui.column().classes("lab-replay-canvas")
+            with replay_area:
+                ui.label("Waiting for saved replay geometry…").classes("lab-muted text-sm")
+        with workspace.main("Charts"):
+            charts_area = ui.column().classes("w-full min-w-0")
+        with workspace.main("Trials"):
+            trial_area = ui.column().classes("w-full gap-3")
+        with workspace.main("Diagnostics"):
+            provenance_area = ui.column().classes("w-full gap-3")
+        with workspace.controls:
+            status = ui.label("Loading run…").classes("font-semibold text-sm")
+            counters = ui.label().classes("text-sm")
+            progress = ui.linear_progress(value=0).classes("w-full")
+            with ui.row().classes("w-full gap-2 items-center"):
+                ui.button("Refresh", on_click=lambda: timer.activate()).props("dense outline")
+                terminate_button = ui.button("Terminate").props("dense outline")
+            trial_page = ui.number(
+                "Trial history page", value=1, min=1, precision=0
+            ).classes("w-full").props("dense")
+            replay_controls = ui.column().classes("w-full gap-2")
+        with workspace.context("Canvas"):
+            replay_context = ui.column().classes("w-full gap-2")
+        with workspace.context("Charts"):
+            ui.label("Score histories and evaluator progression for this run.").classes(
+                "text-sm lab-muted"
+            )
+        with workspace.context("Trials"):
+            ui.label("Choose a trial to seek its replay frame, or open the saved trial record.").classes(
+                "text-sm lab-muted"
+            )
+        with workspace.context("Diagnostics"):
+            ui.label("Saved request, preprocessing, configuration and errors.").classes(
+                "text-sm lab-muted"
+            )
         replay_loaded = False
         replay_seek: Callable[[int], None] | None = None
+        last_snapshot: tuple[Any, ...] | None = None
 
         def seek_saved_trial(trial_no: int) -> None:
             if replay_seek is not None:
                 replay_seek(trial_no)
-
-        area = ui.column().classes("w-full gap-5")
-        trial_page = ui.number("Trial page", value=1, min=1, precision=0).classes("w-36")
-        timer: ui.timer
+                workspace.select_view("Canvas")
 
         async def terminate() -> None:
             try:
@@ -385,7 +426,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 notify_error(exc)
 
         async def refresh_run() -> None:
-            nonlocal replay_loaded, replay_seek
+            nonlocal replay_loaded, replay_seek, last_snapshot
             try:
                 item, trials, scores, runs = await db_call(
                     runtime,
@@ -393,76 +434,88 @@ def register_experiments(runtime: LabRuntime) -> None:
                         session, flow, experiment_id, int(trial_page.value or 1)
                     ),
                 )
-                if item["status"] not in ACTIVE_STATUSES and flow == "p01a" and not replay_loaded:
+                snapshot = (item, trials, scores, runs)
+                if snapshot == last_snapshot:
+                    if item["status"] not in ACTIVE_STATUSES:
+                        timer.deactivate()
+                    return
+                last_snapshot = snapshot
+                status.set_text(item["status"].replace("_", " ").title())
+                counters.set_text(
+                    f"Trials {item['completed_trial_count']}/{item['requested_trial_count'] or '—'}"
+                    f" · best candidate {item['best_candidate_score']}"
+                    f" · floor {item['best_floor_plan_score']}"
+                )
+                progress.set_visibility(bool(item["requested_trial_count"]))
+                if item["requested_trial_count"]:
+                    progress.value = min(
+                        1, item["completed_trial_count"] / item["requested_trial_count"]
+                    )
+                terminate_button.set_enabled(item["status"] in ACTIVE_STATUSES)
+                if item["status"] not in ACTIVE_STATUSES and not replay_loaded:
                     replay_area.clear()
-                    with replay_area:
-                        replay_seek = await candidate_replay(runtime, item)
+                    charts_area.clear()
+                    replay_seek = await candidate_replay(
+                        runtime, item,
+                        canvas_area=replay_area,
+                        controls_area=replay_controls,
+                        context_area=replay_context,
+                        charts_area=charts_area,
+                        on_seek=lambda: workspace.select_view("Canvas"),
+                    )
                     replay_loaded = True
-                area.clear()
-                with area:
-                    with ui.card().classes("w-full p-5"):
-                        ui.label(item["status"].replace("_", " ").title()).classes(
-                            "text-2xl font-semibold lab-accent"
-                        )
+                    if replay_seek is None:
+                        with charts_area:
+                            if scores:
+                                ui.plotly(figures.score_history(scores)).classes("w-full h-72")
+                                ui.plotly(figures.score_distribution(scores)).classes("w-full h-72")
+                            else:
+                                ui.label("No saved scores are available.").classes("lab-muted")
+                        workspace.select_view("Charts" if scores else "Trials")
+                    elif scores:
+                        with charts_area:
+                            ui.plotly(figures.score_distribution(scores)).classes("w-full h-72")
+                if not replay_loaded:
+                    charts_area.clear()
+                    with charts_area:
+                        if scores:
+                            ui.plotly(figures.score_history(scores)).classes("w-full h-72")
+                            ui.plotly(figures.score_distribution(scores)).classes("w-full h-72")
+                        else:
+                            ui.label("Scores will appear as trials complete.").classes(
+                                "lab-muted text-sm"
+                            )
+                trial_area.clear()
+                with trial_area:
+                    if not item["persist_trial_data"]:
                         ui.label(
-                            f"Trials {item['completed_trial_count']}/{item['requested_trial_count'] or '—'} · best candidate {item['best_candidate_score']} · best floor plan {item['best_floor_plan_score']}"
-                        )
-                        if item["requested_trial_count"]:
-                            ui.linear_progress(
-                                value=min(
-                                    1, item["completed_trial_count"] / item["requested_trial_count"]
-                                )
-                            )
-                        if item["status"] in ACTIVE_STATUSES:
-                            ui.button("Terminate", on_click=terminate, color="negative").props(
-                                "outline"
-                            )
-                        ui.label(
-                            f"Stop reason: {item['stop_reason'] or '—'} · core {item['fpg_core_version']}"
-                        ).classes("text-sm lab-muted")
-                    if scores:
-                        with ui.row().classes("w-full"):
-                            if replay_seek is None:
-                                ui.plotly(figures.score_history(scores)).classes(
-                                    "flex-1 min-w-80 h-72"
-                                )
-                            ui.plotly(figures.score_distribution(scores)).classes(
-                                "flex-1 min-w-80 h-72"
-                            )
-                    if flow != "p01b":
-                        ui.label("Stored candidate trials · 100 per history page").classes(
-                            "text-lg font-semibold"
-                        )
-                        if not item["persist_trial_data"]:
-                            ui.label(
-                                "Debug data was disabled; P01A has no stored trials and P01C retains score/status metadata."
-                            ).classes("text-amber-300")
-                        table(
-                            trials,
-                            ("id", "trial_no", "status", "final_score", "duration_ms"),
-                            f"/experiments/{flow}/runs/{experiment_id}/trials/",
-                            on_trial=seek_saved_trial if replay_seek else None,
-                        )
+                            "Debug data was disabled; no saved candidate trials are available."
+                        ).classes("text-amber-300")
+                    table(
+                        trials,
+                        ("id", "trial_no", "status", "final_score", "duration_ms"),
+                        f"/experiments/{flow}/runs/{experiment_id}/trials/",
+                        on_trial=seek_saved_trial if replay_seek else None,
+                    )
                     if runs:
-                        ui.label("Floor-plan runs").classes("text-lg font-semibold")
+                        ui.label("Floor-plan branches").classes("font-semibold")
                         table(
                             runs,
                             ("id", "source_trial_id", "status", "final_score", "duration_ms"),
                             f"/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/",
                         )
-                    json_panel(
-                        "Request and configuration provenance",
-                        {
-                            k: item[k]
-                            for k in (
-                                "floor_plan_request",
-                                "system_configuration_snapshot",
-                                "system_configuration_hash",
-                                "fpg_core_version",
-                                "hint_points",
-                            )
-                        },
-                    )
+                provenance_area.clear()
+                with provenance_area:
+                    ui.label(
+                        f"Stop reason: {item['stop_reason'] or '—'}"
+                        f" · Core {item['fpg_core_version']}"
+                    ).classes("text-sm lab-muted")
+                    json_panel("Request and configuration provenance", {
+                        key: item[key] for key in (
+                            "floor_plan_request", "system_configuration_snapshot",
+                            "system_configuration_hash", "fpg_core_version", "hint_points",
+                        )
+                    })
                     json_panel("Preprocessing", item["preprocessing_result"])
                     if item["error_data"]:
                         json_panel("Experiment error", item["error_data"])
@@ -470,23 +523,19 @@ def register_experiments(runtime: LabRuntime) -> None:
                     timer.deactivate()
             except Exception as exc:
                 timer.deactivate()
-                area.clear()
-                with area:
-                    ui.label(str(exc)).classes("text-rose-300")
+                notify_error(exc)
 
-        ui.button("Refresh results", on_click=lambda: timer.activate()).props("outline")
         trial_page.on_value_change(refresh_run)
-        timer = ui.timer(1.0, refresh_run, immediate=False)
+        terminate_button.on_click(terminate)
+        timer = ui.timer(1, refresh_run, immediate=False)
         await refresh_run()
 
     @ui.page("/experiments/{flow}/runs/{experiment_id}/trials/{trial_id}")
     async def trial_page(flow: str, experiment_id: int, trial_id: int) -> None:
-        shell(f"Candidate trial #{trial_id}")
-        ui.link("Back to run", f"/experiments/{flow}/runs/{experiment_id}")
+        if flow not in ("p01a", "p01c"):
+            shell("This experiment has no candidate trials")
+            return
         try:
-            if flow not in ("p01a", "p01c"):
-                raise ValueError("This flow has no candidate trials")
-
             def read(session: Any) -> Any:
                 trial, linked = FLOW_SERVICES[flow](session).get_trial(trial_id)
                 if trial.experiment_id != experiment_id:
@@ -494,6 +543,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 return row_document(trial), linked
 
             item, linked = await db_call(runtime, read)
+            exported = None
             if flow == "p01a":
                 from fpg_lab.integrations.fpg_core.p01b_input import export_trial
 
@@ -505,47 +555,92 @@ def register_experiments(runtime: LabRuntime) -> None:
                 )
                 try:
                     exported = export_trial(experiment, item)
+                except (ValueError, KeyError, TypeError):
+                    pass
+            candidate = item["candidate_search_data"]
+            workspace = ResultWorkspace(
+                f"Candidate trial #{trial_id}",
+                back_link=f"/experiments/{flow}/runs/{experiment_id}",
+                back_label="Back to run",
+                views=("Canvas", "Scores", "Diagnostics"),
+                default="Canvas" if candidate else (
+                    "Scores" if item["candidate_scoring_data"] else "Diagnostics"
+                ),
+            )
+            with workspace.main("Canvas"):
+                if candidate:
+                    ui.plotly(figures.candidate_map(candidate)).classes("lab-primary-plot")
+                else:
+                    ui.label("Candidate geometry was not stored.").classes("text-amber-300")
+            with workspace.main("Scores"):
+                if item["candidate_scoring_data"]:
+                    ui.plotly(figures.score_breakdown(item["candidate_scoring_data"])).classes(
+                        "w-full h-[32rem]"
+                    )
+                else:
+                    ui.label("No candidate scoring data was stored.").classes("lab-muted")
+            with workspace.main("Diagnostics"):
+                json_panel("Candidate, circulation, scoring and errors", item)
+            with workspace.controls:
+                ui.label(
+                    f"Trial {item['trial_no']} · {item['status']}"
+                ).classes("font-semibold text-sm")
+                ui.label(f"Score: {item['final_score'] if item['final_score'] is not None else '—'}").classes(
+                    "text-sm"
+                )
+                if exported is not None:
                     ui.button(
-                        icon="content_copy",
+                        "Copy cleaned hint map", icon="content_copy",
                         on_click=lambda: ui.run_javascript(
                             f"navigator.clipboard.writeText({json.dumps(json.dumps(exported))})"
                         ),
-                    ).props("flat dense").tooltip("Copy cleaned hint map")
-                except Exception:
-                    ui.button(icon="content_copy").props("flat dense disable").tooltip(
-                        "Cleaned candidate specification was not saved"
+                    ).props("dense outline")
+                if linked:
+                    ui.link(
+                        "Open floor-plan branch",
+                        f"/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/{linked}",
                     )
-            candidate = item["candidate_search_data"]
-            if candidate:
-                ui.plotly(figures.candidate_map(candidate)).classes("w-full h-[32rem]")
-            else:
-                ui.label("Candidate geometry was not stored.").classes("text-amber-300")
-            if linked:
-                ui.link(
-                    "Open floor-plan branch",
-                    f"/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/{linked}",
+            with workspace.context("Canvas"):
+                ui.label("Saved candidate hints and their prepared grid.").classes(
+                    "text-sm lab-muted"
                 )
-            if item["candidate_scoring_data"]:
-                ui.plotly(figures.score_breakdown(item["candidate_scoring_data"])).classes(
-                    "w-full h-72"
-                )
-            json_panel("Candidate, circulation, scoring, and errors", item)
+            with workspace.context("Scores"):
+                ui.label("Raw evaluator scores and contributions.").classes("text-sm lab-muted")
+            with workspace.context("Diagnostics"):
+                ui.label("Full saved trial data and errors.").classes("text-sm lab-muted")
         except Exception as exc:
+            shell("Candidate trial unavailable", back_link=f"/experiments/{flow}/runs/{experiment_id}")
             ui.label(str(exc)).classes("text-rose-300")
 
     @ui.page("/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/{run_id}")
     async def floor_page(flow: str, experiment_id: int, run_id: int) -> None:
-        shell(f"Floor-plan run #{run_id}")
-        ui.link("Back to experiment", f"/experiments/{flow}/runs/{experiment_id}")
         if flow not in ("p01b", "p01c"):
-            ui.label("This flow has no floor-plan runs")
+            shell("This experiment has no floor-plan branches")
             return
-        state: dict[str, Any] = {"run": None}
-        selector = ui.select(STAGES, value="final_floor_plan", label="Pipeline stage").classes(
-            "w-64"
+        workspace = ResultWorkspace(
+            f"Floor-plan run #{run_id}",
+            back_link=f"/experiments/{flow}/runs/{experiment_id}",
+            back_label="Back to run",
+            views=("Canvas", "Scores", "Diagnostics"),
         )
-        area = ui.column().classes("w-full")
-        timer: ui.timer
+        state: dict[str, Any] = {"run": None}
+        with workspace.main("Canvas"):
+            chart = ui.plotly(figures.floor_plan(None)).classes("lab-primary-plot")
+        with workspace.main("Scores"):
+            scores_area = ui.column().classes("w-full")
+        with workspace.main("Diagnostics"):
+            raw_area = ui.column().classes("w-full gap-3")
+        with workspace.controls:
+            selector = ui.select(
+                STAGES, value="final_floor_plan", label="Pipeline stage"
+            ).classes("w-full").props("dense")
+            ui.button("Refresh", on_click=lambda: timer.activate()).props("dense outline")
+        with workspace.context("Canvas"):
+            details = ui.column().classes("w-full gap-2")
+        with workspace.context("Scores"):
+            ui.label("Final floor-plan evaluator breakdown, if stored.").classes("lab-muted text-sm")
+        with workspace.context("Diagnostics"):
+            ui.label("Stage data, errors and saved pipeline records.").classes("lab-muted text-sm")
 
         def render() -> None:
             item = state["run"]
@@ -554,41 +649,51 @@ def register_experiments(runtime: LabRuntime) -> None:
             stage = selector.value
             data = item.get(stage)
             plan = (
-                data
-                if stage == "final_floor_plan"
+                data if stage == "final_floor_plan"
                 else ((data or {}).get("result") or {}).get("floor_plan")
             )
-            area.clear()
-            with area:
+            chart.figure = figures.floor_plan(plan, title=STAGES[stage])
+            chart.update()
+            details.clear()
+            with details:
                 ui.label(
-                    f"{item['status']} · final score {item['final_score']} · {item['duration_ms']} ms"
-                ).classes("text-lg")
-                if plan:
-                    ui.plotly(figures.floor_plan(plan, title=STAGES[stage])).classes(
-                        "w-full h-[36rem]"
+                    f"{item['status']} · final score {item['final_score']}"
+                    f" · {item['duration_ms']} ms"
+                ).classes("text-sm font-medium")
+                if not plan:
+                    ui.label("No plan for this stage. Try another stage or Diagnostics.").classes(
+                        "text-sm text-amber-300"
                     )
                 else:
-                    ui.label(
-                        "No floor plan is available at this stage; choose another stage or inspect diagnostics."
-                    ).classes("text-amber-300")
+                    for room in plan.get("rooms", []):
+                        with ui.row().classes("items-center gap-2"):
+                            ui.icon("square", color=figures.color(str(room.get("room_type", room["id"]))))
+                            ui.label(room.get("name") or room["id"]).classes("text-sm")
+            scores_area.clear()
+            with scores_area:
                 if item["floor_plan_scoring_data"]:
                     ui.plotly(figures.score_breakdown(item["floor_plan_scoring_data"])).classes(
-                        "w-full h-72"
+                        "w-full h-[32rem]"
                     )
+                else:
+                    ui.label("No final scoring data was stored.").classes("lab-muted")
+            raw_area.clear()
+            with raw_area:
                 json_panel(f"{STAGES[stage]} result and diagnostics", data)
                 json_panel("All saved pipeline stages", item)
 
         async def refresh_floor() -> None:
             try:
-
                 def read(session: Any) -> Any:
                     item = FLOW_SERVICES[flow](session).get_floor_plan_run(run_id)
                     if item.experiment_id != experiment_id:
                         raise ValueError("Floor-plan run does not belong to this experiment")
                     return row_document(item)
 
-                state["run"] = await db_call(runtime, read)
-                render()
+                updated = await db_call(runtime, read)
+                if state["run"] != updated:
+                    state["run"] = updated
+                    render()
                 if state["run"]["status"] != "running":
                     timer.deactivate()
             except Exception as exc:
@@ -596,8 +701,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 notify_error(exc)
 
         selector.on_value_change(render)
-        ui.button("Refresh", on_click=lambda: timer.activate()).props("outline")
-        timer = ui.timer(1.0, refresh_floor, immediate=False)
+        timer = ui.timer(1, refresh_floor, immediate=False)
         await refresh_floor()
 
 

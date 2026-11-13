@@ -5,6 +5,7 @@ its environment, data, orchestration and presentation; Core stays independent.
 
 - [Setup and use](../README.md).
 - [Development and architecture](DEVELOPMENT.md).
+- [Desktop-first UI standards](UI_STANDARDS.md): required setup/results workflow, shared result workspace and flexible experiment-specific views.
 - [E01 experiment family](experiments/e01.md): E01A floor traffic.
 - [P01 experiment family](experiments/p01.md): P01A, P01B and P01C.
 - [Agent instructions](../AGENTS.md).

@@ -80,7 +80,9 @@ used; stored experiment snapshots remain unchanged.
   Python, save, activate or delete profiles. Reset restores the loaded draft.
 - Templates: save requests and load them into experiments; Core preprocessing
   checks them against the selected profile.
-- E01A explores walking paths and traffic coverage on four preset plans. See the
+- E01A has a setup page for selecting/pasting a plan and a separate temporary
+  result page for Canvas (floor plan/paths/heatmap) and Room statistics. Results
+  belong to the current browser tab, not saved history. See the
   [E01 guide](docs/experiments/e01.md).
 - P01A searches and scores candidate maps.
 - After a P01A run stops, replay saved hints with play/pause, speed, scrubbing,
@@ -89,16 +91,19 @@ used; stored experiment snapshots remain unchanged.
   evaluator progression charts follow its playhead. Keep
   **Store debug data** enabled. Start with 100 trials, then try 500; raw/cleaned
   hints and evaluator contributions help inspect guidance before tuning settings.
-  Rooms appear in an aligned checkbox grid. **Select one** makes room choices
-  exclusive; **Select all / Deselect all** toggles the complete set and selecting
-  all turns off exclusive selection. Playback/settings and room controls share
-  a compact row above the canvas on wide screens and stack on narrow screens.
+  Rooms appear in a compact sidebar checkbox grid. **Select one** makes room
+  choices exclusive; **Select all / Deselect all** toggles the complete set and
+  selecting all turns off exclusive selection. Playback/settings live in the
+  right sidebar; Charts, Trials and Diagnostics replace the primary Canvas view.
 - P01B imports a P01A cleaned candidate preset, then runs independent initial solves,
   repeated refinements, post-processing and final scoring without openings.
 - P01C repeats the P01B flow, then generates openings and scores the final plan.
   Copy a final plan from the run page and paste it into E01A.
 
 P01 run pages show live status, counters, scores, stored stages, provenance and errors.
+Their desktop-first result workspace fills available space, has an independently
+scrollable primary view and sidebar, and switches among Canvas/Charts or Scores,
+Trials and Diagnostics as appropriate. See [UI standards](docs/UI_STANDARDS.md).
 Plotly supports zoom/pan/hover, legend toggles and image export; geometry uses equal
 axes and project units. History is paged rather than loading all trial geometry.
 The [P01 guide](docs/experiments/p01.md) explains shared behavior and retention.
