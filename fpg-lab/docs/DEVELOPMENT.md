@@ -71,6 +71,10 @@ keyword arguments and validate Pydantic models explicitly at their boundaries.
 
 ## Configuration and local files
 
+E02A owns its version-controlled configuration and hint maps under
+`experiments/e02a/`; they are independent of stored profiles and P01B presets.
+See the [E02 guide](experiments/e02.md) for its snapshot and mapping rules.
+
 The editable repository is the supported Lab installation. `seed/` contains the
 single current starter profile. New drafts, setup and headless defaults use it.
 The codec validates Lab schema 6 and maps it to Core aggregate schema 2; those

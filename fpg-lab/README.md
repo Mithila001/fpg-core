@@ -167,3 +167,9 @@ The verifier checks the local Core origin and public configuration/import contra
 without running an experiment. Choose focused tests and use real experiments only
 when relevant. See [development](docs/DEVELOPMENT.md), the [documentation map](docs/README.md),
 [agent instructions](AGENTS.md), and [repository verification policy](../docs/development/verification.md).
+# E02A quick solver inspection
+
+E02A runs the floor-plan solver pipeline using files rather than saved system
+profiles. Add cleaned hint maps and configure the stages as described in the
+[E02 guide](docs/experiments/e02.md), then open E-02-A in the experiment list.
+

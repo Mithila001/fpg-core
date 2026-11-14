@@ -1,0 +1,1260 @@
+{
+  "hint_map_01": {
+    "version": 1,
+    "candidate": {
+      "grid": {
+        "x_positions": [
+          6,
+          26,
+          46,
+          66,
+          86,
+          106
+        ],
+        "y_positions": [
+          7.5,
+          27.5,
+          47.5,
+          67.5,
+          87.5,
+          107.5,
+          127.5,
+          147.5
+        ]
+      },
+      "points": [
+        {
+          "room_id": "bedroom_1",
+          "x": 26.0,
+          "y": 127.5,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bedroom_2",
+          "x": 46.0,
+          "y": 107.5,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bedroom_3",
+          "x": 46.0,
+          "y": 47.5,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bathroom_1",
+          "x": 26.0,
+          "y": 87.5,
+          "room_type": "bathroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "attached_bathroom_1",
+          "x": 66.0,
+          "y": 47.5,
+          "room_type": "attached_bathroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "living_room_1",
+          "x": 46.0,
+          "y": 27.5,
+          "room_type": "living_room",
+          "hint_index": 1
+        },
+        {
+          "room_id": "kitchen_1",
+          "x": 66.0,
+          "y": 127.5,
+          "room_type": "kitchen",
+          "hint_index": 1
+        },
+        {
+          "room_id": "dining_room_1",
+          "x": 66.0,
+          "y": 107.5,
+          "room_type": "dining_room",
+          "hint_index": 1
+        },
+        {
+          "room_id": "veranda_1",
+          "x": 86.0,
+          "y": 67.5,
+          "room_type": "veranda",
+          "hint_index": 1
+        },
+        {
+          "room_id": "garage_1",
+          "x": 26.0,
+          "y": 27.5,
+          "room_type": "garage",
+          "hint_index": 1
+        },
+        {
+          "room_id": "hallway_1",
+          "x": 26.0,
+          "y": 107.5,
+          "room_type": "hallway",
+          "hint_index": 1
+        },
+        {
+          "room_id": "hallway_2",
+          "x": 86.0,
+          "y": 87.5,
+          "room_type": "hallway",
+          "hint_index": 1
+        }
+      ]
+    },
+    "specification": {
+      "floor": {
+        "width": 112,
+        "length": 155
+      },
+      "rooms": [
+        {
+          "id": "bedroom_1",
+          "room_type": "bedroom",
+          "name": "Bedroom 1",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bedroom_2",
+          "room_type": "bedroom",
+          "name": "Bedroom 2",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bedroom_3",
+          "room_type": "bedroom",
+          "name": "Bedroom 3",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bathroom_1",
+          "room_type": "bathroom",
+          "name": "Bathroom",
+          "size": {
+            "min_width": 16.0,
+            "max_width": 28.0,
+            "min_area": 300.0,
+            "max_area": 700.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "attached_bathroom_1",
+          "room_type": "attached_bathroom",
+          "name": "Attached Bathroom 1",
+          "size": {
+            "min_width": 14.0,
+            "max_width": 24.0,
+            "min_area": 250.0,
+            "max_area": 500.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "living_room_1",
+          "room_type": "living_room",
+          "name": "Living Room",
+          "size": {
+            "min_width": 32.0,
+            "max_width": 60.0,
+            "min_area": 1400.0,
+            "max_area": 3000.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "kitchen_1",
+          "room_type": "kitchen",
+          "name": "Kitchen",
+          "size": {
+            "min_width": 24.0,
+            "max_width": 45.0,
+            "min_area": 800.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "dining_room_1",
+          "room_type": "dining_room",
+          "name": "Dining Room",
+          "size": {
+            "min_width": 24.0,
+            "max_width": 42.0,
+            "min_area": 800.0,
+            "max_area": 1600.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "veranda_1",
+          "room_type": "veranda",
+          "name": "Veranda",
+          "size": {
+            "min_width": 15.0,
+            "max_width": 45.0,
+            "min_area": 400.0,
+            "max_area": 1200.0,
+            "width_axis": "x"
+          }
+        },
+        {
+          "id": "garage_1",
+          "room_type": "garage",
+          "name": "Garage",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 45.0,
+            "min_area": 1600.0,
+            "max_area": 2600.0,
+            "width_axis": "x"
+          }
+        },
+        {
+          "id": "hallway_1",
+          "room_type": "hallway",
+          "name": "Hallway 1",
+          "size": {
+            "min_width": 10.0,
+            "max_width": 12.0,
+            "min_area": 120.0,
+            "max_area": 17360,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "hallway_2",
+          "room_type": "hallway",
+          "name": "Hallway 2",
+          "size": {
+            "min_width": 10.0,
+            "max_width": 12.0,
+            "min_area": 120.0,
+            "max_area": 17360,
+            "width_axis": "any"
+          }
+        }
+      ],
+      "room_relations": [
+        {
+          "source_room_id": "veranda_1",
+          "target_room_ids": [
+            "living_room_1"
+          ],
+          "match_policy": "and",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_2",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_3",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "kitchen_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "dining_room_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "dining_room_1",
+          "target_room_ids": [
+            "kitchen_1",
+            "hallway_1",
+            "hallway_2"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bathroom_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "attached_bathroom_1",
+          "target_room_ids": [
+            "bedroom_1"
+          ],
+          "match_policy": "and",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "garage_1",
+          "target_room_ids": [
+            "living_room_1",
+            "veranda_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "kitchen_1",
+          "target_room_ids": [
+            "dining_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "soft"
+        }
+      ]
+    },
+    "request": {
+      "floor_limits": {
+        "max_width": 240.0,
+        "max_length": 180.0
+      },
+      "aspect_ratio": "4:3",
+      "rooms": [
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_1",
+          "name": "Bedroom 1",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_2",
+          "name": "Bedroom 2",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_3",
+          "name": "Bedroom 3",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bathroom",
+          "id": "bathroom_1",
+          "name": "Bathroom",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "attached_bathroom",
+          "id": "attached_bathroom_1",
+          "name": "Attached Bathroom 1",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "living_room",
+          "id": "living_room_1",
+          "name": "Living Room",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "kitchen",
+          "id": "kitchen_1",
+          "name": "Kitchen",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "dining_room",
+          "id": "dining_room_1",
+          "name": "Dining Room",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "veranda",
+          "id": "veranda_1",
+          "name": "Veranda",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "garage",
+          "id": "garage_1",
+          "name": "Garage",
+          "requested_size": "medium"
+        }
+      ]
+    },
+    "project_units_per_meter": 10,
+    "source": {
+      "experiment_id": 53,
+      "trial_no": 46,
+      "core_version": "0.2.0"
+    }
+  },
+  "hint_map_02": {
+    "version": 1,
+    "candidate": {
+      "grid": {
+        "x_positions": [
+          6,
+          26,
+          46,
+          66,
+          86,
+          106
+        ],
+        "y_positions": [
+          7.5,
+          27.5,
+          47.5,
+          67.5,
+          87.5,
+          107.5,
+          127.5,
+          147.5
+        ]
+      },
+      "points": [
+        {
+          "room_id": "bedroom_1",
+          "x": 66.0,
+          "y": 127.5,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bedroom_2",
+          "x": 86.0,
+          "y": 127.5,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bedroom_3",
+          "x": 46.0,
+          "y": 87.5,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bathroom_1",
+          "x": 86.0,
+          "y": 47.5,
+          "room_type": "bathroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "attached_bathroom_1",
+          "x": 86.0,
+          "y": 27.5,
+          "room_type": "attached_bathroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "living_room_1",
+          "x": 26.0,
+          "y": 27.5,
+          "room_type": "living_room",
+          "hint_index": 1
+        },
+        {
+          "room_id": "kitchen_1",
+          "x": 26.0,
+          "y": 127.5,
+          "room_type": "kitchen",
+          "hint_index": 1
+        },
+        {
+          "room_id": "dining_room_1",
+          "x": 86.0,
+          "y": 87.5,
+          "room_type": "dining_room",
+          "hint_index": 1
+        },
+        {
+          "room_id": "veranda_1",
+          "x": 66.0,
+          "y": 87.5,
+          "room_type": "veranda",
+          "hint_index": 1
+        },
+        {
+          "room_id": "garage_1",
+          "x": 46.0,
+          "y": 27.5,
+          "room_type": "garage",
+          "hint_index": 1
+        },
+        {
+          "room_id": "hallway_1",
+          "x": 66.0,
+          "y": 107.5,
+          "room_type": "hallway",
+          "hint_index": 1
+        },
+        {
+          "room_id": "hallway_2",
+          "x": 26.0,
+          "y": 107.5,
+          "room_type": "hallway",
+          "hint_index": 1
+        }
+      ]
+    },
+    "specification": {
+      "floor": {
+        "width": 112,
+        "length": 155
+      },
+      "rooms": [
+        {
+          "id": "bedroom_1",
+          "room_type": "bedroom",
+          "name": "Bedroom 1",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bedroom_2",
+          "room_type": "bedroom",
+          "name": "Bedroom 2",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bedroom_3",
+          "room_type": "bedroom",
+          "name": "Bedroom 3",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bathroom_1",
+          "room_type": "bathroom",
+          "name": "Bathroom",
+          "size": {
+            "min_width": 16.0,
+            "max_width": 28.0,
+            "min_area": 300.0,
+            "max_area": 700.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "attached_bathroom_1",
+          "room_type": "attached_bathroom",
+          "name": "Attached Bathroom 1",
+          "size": {
+            "min_width": 14.0,
+            "max_width": 24.0,
+            "min_area": 250.0,
+            "max_area": 500.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "living_room_1",
+          "room_type": "living_room",
+          "name": "Living Room",
+          "size": {
+            "min_width": 32.0,
+            "max_width": 60.0,
+            "min_area": 1400.0,
+            "max_area": 3000.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "kitchen_1",
+          "room_type": "kitchen",
+          "name": "Kitchen",
+          "size": {
+            "min_width": 24.0,
+            "max_width": 45.0,
+            "min_area": 800.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "dining_room_1",
+          "room_type": "dining_room",
+          "name": "Dining Room",
+          "size": {
+            "min_width": 24.0,
+            "max_width": 42.0,
+            "min_area": 800.0,
+            "max_area": 1600.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "veranda_1",
+          "room_type": "veranda",
+          "name": "Veranda",
+          "size": {
+            "min_width": 15.0,
+            "max_width": 45.0,
+            "min_area": 400.0,
+            "max_area": 1200.0,
+            "width_axis": "x"
+          }
+        },
+        {
+          "id": "garage_1",
+          "room_type": "garage",
+          "name": "Garage",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 45.0,
+            "min_area": 1600.0,
+            "max_area": 2600.0,
+            "width_axis": "x"
+          }
+        },
+        {
+          "id": "hallway_1",
+          "room_type": "hallway",
+          "name": "Hallway 1",
+          "size": {
+            "min_width": 10.0,
+            "max_width": 12.0,
+            "min_area": 120.0,
+            "max_area": 17360,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "hallway_2",
+          "room_type": "hallway",
+          "name": "Hallway 2",
+          "size": {
+            "min_width": 10.0,
+            "max_width": 12.0,
+            "min_area": 120.0,
+            "max_area": 17360,
+            "width_axis": "any"
+          }
+        }
+      ],
+      "room_relations": [
+        {
+          "source_room_id": "veranda_1",
+          "target_room_ids": [
+            "living_room_1"
+          ],
+          "match_policy": "and",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_2",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_3",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "kitchen_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "dining_room_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "dining_room_1",
+          "target_room_ids": [
+            "kitchen_1",
+            "hallway_1",
+            "hallway_2"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bathroom_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "attached_bathroom_1",
+          "target_room_ids": [
+            "bedroom_1"
+          ],
+          "match_policy": "and",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "garage_1",
+          "target_room_ids": [
+            "living_room_1",
+            "veranda_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "kitchen_1",
+          "target_room_ids": [
+            "dining_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "soft"
+        }
+      ]
+    },
+    "request": {
+      "floor_limits": {
+        "max_width": 240.0,
+        "max_length": 180.0
+      },
+      "aspect_ratio": "4:3",
+      "rooms": [
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_1",
+          "name": "Bedroom 1",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_2",
+          "name": "Bedroom 2",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_3",
+          "name": "Bedroom 3",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bathroom",
+          "id": "bathroom_1",
+          "name": "Bathroom",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "attached_bathroom",
+          "id": "attached_bathroom_1",
+          "name": "Attached Bathroom 1",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "living_room",
+          "id": "living_room_1",
+          "name": "Living Room",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "kitchen",
+          "id": "kitchen_1",
+          "name": "Kitchen",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "dining_room",
+          "id": "dining_room_1",
+          "name": "Dining Room",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "veranda",
+          "id": "veranda_1",
+          "name": "Veranda",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "garage",
+          "id": "garage_1",
+          "name": "Garage",
+          "requested_size": "medium"
+        }
+      ]
+    },
+    "project_units_per_meter": 10,
+    "source": {
+      "experiment_id": 54,
+      "trial_no": 462,
+      "core_version": "0.2.0"
+    }
+  },
+  "hint_map_03": {
+    "version": 1,
+    "candidate": {
+      "grid": {
+        "x_positions": [
+          3,
+          23,
+          43,
+          63,
+          83,
+          103
+        ],
+        "y_positions": [
+          1,
+          21,
+          41,
+          61,
+          81,
+          101,
+          121,
+          141
+        ]
+      },
+      "points": [
+        {
+          "room_id": "bedroom_1",
+          "x": 23.0,
+          "y": 121.0,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bedroom_2",
+          "x": 43.0,
+          "y": 121.0,
+          "room_type": "bedroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "bathroom_1",
+          "x": 83.0,
+          "y": 101.0,
+          "room_type": "bathroom",
+          "hint_index": 1
+        },
+        {
+          "room_id": "living_room_1",
+          "x": 23.0,
+          "y": 41.0,
+          "room_type": "living_room",
+          "hint_index": 1
+        },
+        {
+          "room_id": "kitchen_1",
+          "x": 83.0,
+          "y": 21.0,
+          "room_type": "kitchen",
+          "hint_index": 1
+        },
+        {
+          "room_id": "dining_room_1",
+          "x": 43.0,
+          "y": 41.0,
+          "room_type": "dining_room",
+          "hint_index": 1
+        },
+        {
+          "room_id": "veranda_1",
+          "x": 63.0,
+          "y": 101.0,
+          "room_type": "veranda",
+          "hint_index": 1
+        },
+        {
+          "room_id": "garage_1",
+          "x": 23.0,
+          "y": 21.0,
+          "room_type": "garage",
+          "hint_index": 1
+        },
+        {
+          "room_id": "hallway_1",
+          "x": 83.0,
+          "y": 121.0,
+          "room_type": "hallway",
+          "hint_index": 1
+        },
+        {
+          "room_id": "hallway_2",
+          "x": 83.0,
+          "y": 81.0,
+          "room_type": "hallway",
+          "hint_index": 1
+        }
+      ]
+    },
+    "specification": {
+      "floor": {
+        "width": 106,
+        "length": 142
+      },
+      "rooms": [
+        {
+          "id": "bedroom_1",
+          "room_type": "bedroom",
+          "name": "Bedroom 1",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bedroom_2",
+          "room_type": "bedroom",
+          "name": "Bedroom 2",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 42.0,
+            "min_area": 900.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "bathroom_1",
+          "room_type": "bathroom",
+          "name": "Bathroom",
+          "size": {
+            "min_width": 16.0,
+            "max_width": 28.0,
+            "min_area": 300.0,
+            "max_area": 700.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "living_room_1",
+          "room_type": "living_room",
+          "name": "Living Room",
+          "size": {
+            "min_width": 32.0,
+            "max_width": 60.0,
+            "min_area": 1400.0,
+            "max_area": 3000.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "kitchen_1",
+          "room_type": "kitchen",
+          "name": "Kitchen",
+          "size": {
+            "min_width": 24.0,
+            "max_width": 45.0,
+            "min_area": 800.0,
+            "max_area": 1800.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "dining_room_1",
+          "room_type": "dining_room",
+          "name": "Dining Room",
+          "size": {
+            "min_width": 24.0,
+            "max_width": 42.0,
+            "min_area": 800.0,
+            "max_area": 1600.0,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "veranda_1",
+          "room_type": "veranda",
+          "name": "Veranda",
+          "size": {
+            "min_width": 15.0,
+            "max_width": 45.0,
+            "min_area": 400.0,
+            "max_area": 1200.0,
+            "width_axis": "x"
+          }
+        },
+        {
+          "id": "garage_1",
+          "room_type": "garage",
+          "name": "Garage",
+          "size": {
+            "min_width": 28.0,
+            "max_width": 45.0,
+            "min_area": 1600.0,
+            "max_area": 2600.0,
+            "width_axis": "x"
+          }
+        },
+        {
+          "id": "hallway_1",
+          "room_type": "hallway",
+          "name": "Hallway 1",
+          "size": {
+            "min_width": 10.0,
+            "max_width": 12.0,
+            "min_area": 120.0,
+            "max_area": 15052,
+            "width_axis": "any"
+          }
+        },
+        {
+          "id": "hallway_2",
+          "room_type": "hallway",
+          "name": "Hallway 2",
+          "size": {
+            "min_width": 10.0,
+            "max_width": 12.0,
+            "min_area": 120.0,
+            "max_area": 15052,
+            "width_axis": "any"
+          }
+        }
+      ],
+      "room_relations": [
+        {
+          "source_room_id": "veranda_1",
+          "target_room_ids": [
+            "living_room_1"
+          ],
+          "match_policy": "and",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bedroom_2",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "kitchen_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "dining_room_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2",
+            "living_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "dining_room_1",
+          "target_room_ids": [
+            "kitchen_1",
+            "hallway_1",
+            "hallway_2"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "bathroom_1",
+          "target_room_ids": [
+            "hallway_1",
+            "hallway_2"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "garage_1",
+          "target_room_ids": [
+            "living_room_1",
+            "veranda_1"
+          ],
+          "match_policy": "or",
+          "strength": "hard"
+        },
+        {
+          "source_room_id": "kitchen_1",
+          "target_room_ids": [
+            "dining_room_1"
+          ],
+          "match_policy": "or",
+          "strength": "soft"
+        }
+      ]
+    },
+    "request": {
+      "floor_limits": {
+        "max_width": 220.0,
+        "max_length": 165.0
+      },
+      "aspect_ratio": "4:3",
+      "rooms": [
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_1",
+          "name": "Bedroom 1",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bedroom",
+          "id": "bedroom_2",
+          "name": "Bedroom 2",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "bathroom",
+          "id": "bathroom_1",
+          "name": "Bathroom",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "living_room",
+          "id": "living_room_1",
+          "name": "Living Room",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "kitchen",
+          "id": "kitchen_1",
+          "name": "Kitchen",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "dining_room",
+          "id": "dining_room_1",
+          "name": "Dining Room",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "veranda",
+          "id": "veranda_1",
+          "name": "Veranda",
+          "requested_size": "medium"
+        },
+        {
+          "room_type": "garage",
+          "id": "garage_1",
+          "name": "Garage",
+          "requested_size": "medium"
+        }
+      ]
+    },
+    "project_units_per_meter": 10,
+    "source": {
+      "experiment_id": 55,
+      "trial_no": 266,
+      "core_version": "0.2.0"
+    }
+  }
+}

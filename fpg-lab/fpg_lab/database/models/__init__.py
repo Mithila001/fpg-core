@@ -3,6 +3,7 @@ from fpg_lab.database.models.common import (
     NamespaceRegistry,
     SystemConfiguration,
 )
+from fpg_lab.database.models.e02 import E02Run
 from fpg_lab.database.models.p01 import (
     P01BIteration,
     P01BPreset,

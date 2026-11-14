@@ -124,6 +124,10 @@ class LabRuntime:
             migrate_profiles(session, self.codec)
             seed_namespace_registry(session)
             recover_interrupted_experiments(session)
+            from sqlalchemy import update
+            from fpg_lab.database.models.e02 import E02Run
+            session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="interrupted"))
+            session.commit()
         self._started = True
 
     def start_experiment(self, flow_type: str, payload: Mapping[str, Any]) -> int:
@@ -205,6 +209,10 @@ class LabRuntime:
         try:
             if self._started:
                 with self.database.session_factory() as session:
+                    from sqlalchemy import update
+                    from fpg_lab.database.models.e02 import E02Run
+                    session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="termination_requested"))
+                    session.commit()
                     for experiment in session.scalars(
                         select(P01Experiment).where(P01Experiment.status.in_(ACTIVE_STATUSES))
                     ):
