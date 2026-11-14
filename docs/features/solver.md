@@ -16,8 +16,8 @@ Every room supplied in `FloorPlanGenerationSpec.rooms` must be placed. The solve
 | `attached_bathroom_pairing` | One-to-one bedroom/attached-bathroom wall pairing |
 | `minimum_coverage` | Required total covered fraction of floor |
 | `hallway_connectivity`, `hallway_dimensions`, `hallway_shared_wall` | Hallway anchors, corridor width, and hallway-to-hallway wall overlap cap |
-| `front_anchor`, `back_exposure` | Allowed front placement and eligible back-side exposure |
-| `garage_placement`, `boundary_placement` | Garage corners and selected boundary rules (veranda front) |
+| `veranda_front`, `living_room_front`, `back_exposure` | Clear front views and eligible back-side exposure |
+| `garage_placement` | Clear garage front and one side |
 
 `room_size_hierarchy` is registered for custom configurations but not enabled by the defaults. Hard constraints determine feasibility and may not be relaxed to improve the objective.
 

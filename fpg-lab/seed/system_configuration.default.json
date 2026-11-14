@@ -814,17 +814,6 @@
             }
           },
           {
-            "key": "front_anchor",
-            "settings": {
-              "anchor_room_types": [
-                "veranda",
-                "living_room",
-                "bedroom",
-                "garage"
-              ]
-            }
-          },
-          {
             "key": "back_exposure",
             "settings": {
               "room_types": [
@@ -843,18 +832,12 @@
             }
           },
           {
-            "key": "boundary_placement",
-            "settings": {
-              "rules": [
-                {
-                  "room_types": [
-                    "veranda"
-                  ],
-                  "side": "front",
-                  "offset": 0.0
-                }
-              ]
-            }
+            "key": "veranda_front",
+            "settings": {}
+          },
+          {
+            "key": "living_room_front",
+            "settings": {}
           }
         ],
         "soft_constraints": [
@@ -874,7 +857,7 @@
             "key": "floor_cluster_position",
             "settings": {
               "horizontal_multiplier": 1,
-              "front_multiplier": 2
+              "front_multiplier": 0
             },
             "weight": 1
           },
@@ -1013,17 +996,6 @@
             }
           },
           {
-            "key": "front_anchor",
-            "settings": {
-              "anchor_room_types": [
-                "veranda",
-                "living_room",
-                "bedroom",
-                "garage"
-              ]
-            }
-          },
-          {
             "key": "back_exposure",
             "settings": {
               "room_types": [
@@ -1042,18 +1014,12 @@
             }
           },
           {
-            "key": "boundary_placement",
-            "settings": {
-              "rules": [
-                {
-                  "room_types": [
-                    "veranda"
-                  ],
-                  "side": "front",
-                  "offset": 0.0
-                }
-              ]
-            }
+            "key": "veranda_front",
+            "settings": {}
+          },
+          {
+            "key": "living_room_front",
+            "settings": {}
           }
         ],
         "soft_constraints": [
@@ -1081,7 +1047,7 @@
             "key": "floor_cluster_position",
             "settings": {
               "horizontal_multiplier": 1,
-              "front_multiplier": 2
+              "front_multiplier": 0
             },
             "weight": 1
           },
@@ -1220,17 +1186,6 @@
             }
           },
           {
-            "key": "front_anchor",
-            "settings": {
-              "anchor_room_types": [
-                "veranda",
-                "living_room",
-                "bedroom",
-                "garage"
-              ]
-            }
-          },
-          {
             "key": "back_exposure",
             "settings": {
               "room_types": [
@@ -1249,18 +1204,12 @@
             }
           },
           {
-            "key": "boundary_placement",
-            "settings": {
-              "rules": [
-                {
-                  "room_types": [
-                    "veranda"
-                  ],
-                  "side": "front",
-                  "offset": 0.0
-                }
-              ]
-            }
+            "key": "veranda_front",
+            "settings": {}
+          },
+          {
+            "key": "living_room_front",
+            "settings": {}
           }
         ],
         "soft_constraints": [

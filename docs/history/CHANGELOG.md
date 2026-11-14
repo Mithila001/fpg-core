@@ -1,5 +1,7 @@
 # Changelog
 
+- Breaking: solver defaults use room-facing clearance; migrate saved profiles from `front_anchor` and veranda boundary placement to `veranda_front` and `living_room_front`. Garage placement now uses room clearance.
+
 ## Unreleased
 
 - Hallways now require at least 10 project units; default door width is 10.

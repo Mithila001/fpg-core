@@ -126,17 +126,6 @@ def _default_hard_constraints(
             },
         ),
         HardConstraintUse(
-            "front_anchor",
-            {
-                "anchor_room_types": (
-                    RoomType.VERANDA,
-                    RoomType.LIVING_ROOM,
-                    RoomType.BEDROOM,
-                    RoomType.GARAGE,
-                ),
-            },
-        ),
-        HardConstraintUse(
             "back_exposure",
             {
                 "room_types": (
@@ -152,18 +141,8 @@ def _default_hard_constraints(
                 "garage_room_types": (RoomType.GARAGE,),
             },
         ),
-        HardConstraintUse(
-            "boundary_placement",
-            {
-                "rules": (
-                    {
-                        "room_types": (RoomType.VERANDA,),
-                        "side": "front",
-                        "offset": 0.0,
-                    },
-                )
-            },
-        ),
+        HardConstraintUse("veranda_front"),
+        HardConstraintUse("living_room_front"),
     )
 
 
@@ -204,7 +183,7 @@ def build_default_profiles(
                 weight=1,
                 settings={
                     "horizontal_multiplier": 1,
-                    "front_multiplier": 2,
+                    "front_multiplier": 0,
                 },
             ),
             SoftConstraintUse("dead_space", weight=3),
@@ -245,7 +224,7 @@ def build_default_profiles(
                 weight=1,
                 settings={
                     "horizontal_multiplier": 1,
-                    "front_multiplier": 2,
+                    "front_multiplier": 0,
                 },
             ),
             SoftConstraintUse("dead_space", weight=4),

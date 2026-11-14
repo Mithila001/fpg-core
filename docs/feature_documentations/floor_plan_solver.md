@@ -143,10 +143,12 @@ The shipped default profiles enable:
 | `hallway_connectivity` | `minimum_overlap=10`; hallway type must touch an anchor type and a non-hallway/non-anchor destination; default anchor is living room |
 | `hallway_dimensions` | hallway corridor width is constrained to `10..10`; the other dimension may extend as needed |
 | `hallway_shared_wall` | hallway pairs may touch/connect, but their collinear shared-wall overlap may not exceed `maximum_shared_wall=12.0` project units; corner-only contact has zero shared-wall length |
-| `front_anchor` | veranda, living room, bedroom, garage |
+| `veranda_front`, `living_room_front` | Clear front walls for verandas, or living rooms when no veranda is present |
 | `back_exposure` | hallway and kitchen; minimum exposure `10.0` |
-| `garage_placement` | garage type |
-| `boundary_placement` | veranda on `front` with offset `0.0` |
+| `garage_placement` | Clear front and either side of each garage, including the adjacent front corner |
+
+
+The generic `boundary_placement` rule remains available for explicit boundary placement. `front_anchor` is no longer registered. Migrate saved configurations by replacing `front_anchor` and the veranda boundary rule with `veranda_front` and `living_room_front`; garage placement now uses room clearance. Set `floor_cluster_position.front_multiplier` to 0 to remove front-boundary bias.
 
 `room_size_hierarchy` is registered for custom configurations but is not enabled by
 the built-in profiles.
@@ -278,8 +280,8 @@ Exact built-in soft uses:
 
 | Profile | Exact soft uses (`key: weight`; important settings) | Runtime / seed |
 |---|---|---|
-| `initial_generation` | `room_relations:40` (overlap 10), `floor_cluster_position:1` (horizontal 1/front 2), `dead_space:3`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:2`, `kitchen_back_exposure:10` (exposure 10) | 5 s; candidate hints optional; coordinate scale 1 |
-| `refinement_a` | `room_relations:50`, `seed_stability:20` (position 2/size 1), `floor_cluster_position:1` (horizontal 1/front 2), `dead_space:4`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:3`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 10; coordinate scale 1 |
+| `initial_generation` | `room_relations:40` (overlap 10), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:3`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:2`, `kitchen_back_exposure:10` (exposure 10) | 5 s; candidate hints optional; coordinate scale 1 |
+| `refinement_a` | `room_relations:50`, `seed_stability:20` (position 2/size 1), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:4`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:3`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 10; coordinate scale 1 |
 | `refinement_b` | `room_relations:60`, `seed_stability:35` (position 2/size 2), `dead_space:6`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:4`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 5; coordinate scale 1 |
 
 ## Recommended values

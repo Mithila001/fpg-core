@@ -3,7 +3,6 @@ from __future__ import annotations
 from .h_aspect_ratio import AspectRatioConstraint
 from .h_back_exposure import BackExposureConstraint
 from .h_boundary_placement import BoundaryPlacementConstraint
-from .h_front_anchor import FrontAnchorConstraint
 from .h_minimum_coverage import MinimumCoverageConstraint
 from .h_room_relations import HardRoomRelationsConstraint
 from .h_room_size_hierarchy import RoomSizeHierarchyConstraint
@@ -13,6 +12,7 @@ from .room_specific.h_bathroom_hallway_shared_wall import (
     BathroomHallwaySharedWallConstraint,
 )
 from .room_specific.h_garage_placement import GaragePlacementConstraint
+from .room_specific.h_front_facing import VerandaFrontConstraint, LivingRoomFrontConstraint
 from .room_specific.h_hallway_connectivity import HallwayConnectivityConstraint
 from .room_specific.h_hallway_dimensions import HallwayDimensionsConstraint
 from .room_specific.h_hallway_shared_wall import HallwaySharedWallConstraint
@@ -39,7 +39,8 @@ def build_default_registry() -> ConstraintRegistry:
     registry.register_hard(HallwayConnectivityConstraint())
     registry.register_hard(HallwayDimensionsConstraint())
     registry.register_hard(HallwaySharedWallConstraint())
-    registry.register_hard(FrontAnchorConstraint())
+    registry.register_hard(VerandaFrontConstraint())
+    registry.register_hard(LivingRoomFrontConstraint())
     registry.register_hard(GaragePlacementConstraint())
     registry.register_hard(BoundaryPlacementConstraint())
     registry.register_hard(RoomSizeHierarchyConstraint())
