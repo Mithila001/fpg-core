@@ -168,6 +168,7 @@ The default registry provides:
 - `room_relations`
 - `room_size_relations`
 - `floor_cluster_position`
+- `room_center_line` (prefers each room center near the floor width midpoint; optional, not enabled by built-in profiles)
 - `dead_space`
 - `hallway_efficiency`
 - `bathroom_depth`

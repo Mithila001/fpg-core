@@ -870,10 +870,15 @@
           {
             "key": "floor_cluster_position",
             "settings": {
-              "horizontal_multiplier": 1,
+              "horizontal_multiplier": 0,
               "front_multiplier": 2
             },
             "weight": 1
+          },
+          {
+            "key": "room_center_line",
+            "settings": {},
+            "weight": 40
           },
           {
             "key": "dead_space",
@@ -1077,10 +1082,15 @@
           {
             "key": "floor_cluster_position",
             "settings": {
-              "horizontal_multiplier": 1,
+              "horizontal_multiplier": 0,
               "front_multiplier": 2
             },
             "weight": 1
+          },
+          {
+            "key": "room_center_line",
+            "settings": {},
+            "weight": 50
           },
           {
             "key": "dead_space",
