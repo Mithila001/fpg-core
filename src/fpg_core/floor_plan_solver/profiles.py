@@ -116,7 +116,13 @@ def _default_hard_constraints(
                 "hallway_room_types": (RoomType.HALLWAY,),
                 "minimum_width": 10,
                 "maximum_width": 10,
+                "horizontal_span_ratio": 0.5,
+                "vertical_span_ratio": 0.5,
             },
+        ),
+        HardConstraintUse(
+            "hallway_parallel_overlap",
+            {"horizontal_max_overlap": 40.0, "vertical_max_overlap": 30.0},
         ),
         HardConstraintUse(
             "hallway_shared_wall",
@@ -153,10 +159,6 @@ def _hallway_efficiency_use(settings: DefaultProfileSettings) -> SoftConstraintU
         settings={
             "hallway_room_types": (RoomType.HALLWAY,),
             "area_penalty_multiplier": settings.hallway_area_penalty_multiplier,
-            "preferred_max_length": settings.hallway_preferred_max_length,
-            "excess_length_penalty_multiplier": (
-                settings.hallway_excess_length_penalty_multiplier
-            ),
         },
     )
 

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import math
 
 from ....domain import RoomType
-from ...exceptions import InvalidProfileError
 from ...model import ModelContext
 from ..base import ConstraintSettings, PenaltyTerm, require_room_types
+from .h_hallway_shared_wall import _interval_overlap
 
 
 class HallwayEfficiencyConstraint:
@@ -14,8 +13,7 @@ class HallwayEfficiencyConstraint:
     The objective evaluates all configured hallway rooms together. It can:
 
     - penalize total hallway area; and
-    - add an extra penalty when a hallway's longest side exceeds a preferred
-      maximum length.
+    - penalize hallway wall length that is not shared with another room.
 
     The constraint never removes hallway rooms and does not decide whether a
     hallway is semantically necessary. Existing hard constraints remain
@@ -37,33 +35,6 @@ class HallwayEfficiencyConstraint:
             settings.get("area_penalty_multiplier", 1),
             "hallway_efficiency.area_penalty_multiplier",
         )
-        excess_length_penalty_multiplier = self._non_negative_int(
-            settings.get("excess_length_penalty_multiplier", 5),
-            "hallway_efficiency.excess_length_penalty_multiplier",
-        )
-
-        raw_preferred_max_length = settings.get("preferred_max_length", 40.0)
-        preferred_max_length: int | None
-        if raw_preferred_max_length is None:
-            preferred_max_length = None
-        else:
-            try:
-                preferred_max_length_value = float(raw_preferred_max_length)
-            except (TypeError, ValueError) as exc:
-                raise InvalidProfileError(
-                    "hallway_efficiency.preferred_max_length must be numeric or None"
-                ) from exc
-            if (
-                not math.isfinite(preferred_max_length_value)
-                or preferred_max_length_value <= 0
-            ):
-                raise InvalidProfileError(
-                    "hallway_efficiency.preferred_max_length must be positive and finite"
-                )
-            preferred_max_length = context.problem.scale.minimum_length(
-                preferred_max_length_value
-            )
-
         hallways = tuple(
             variables
             for variables in context.room_variables.values()
@@ -83,46 +54,25 @@ class HallwayEfficiencyConstraint:
                 )
             )
 
-        if excess_length_penalty_multiplier > 0 and preferred_max_length is not None:
-            floor = context.problem.floor
-            max_longest_side = max(floor.width, floor.length)
-            excess_lengths = []
-
-            for hallway in hallways:
-                longest_side = context.model.NewIntVar(
-                    0,
-                    max_longest_side,
-                    context.new_name(
-                        "hallway_longest_side",
-                        hallway.room.id_key,
-                    ),
-                )
-                context.model.AddMaxEquality(
-                    longest_side,
-                    [hallway.width, hallway.length],
-                )
-
-                excess_length = context.model.NewIntVar(
-                    0,
-                    max_longest_side,
-                    context.new_name(
-                        "hallway_excess_length",
-                        hallway.room.id_key,
-                    ),
-                )
-                context.model.AddMaxEquality(
-                    excess_length,
-                    [longest_side - preferred_max_length, 0],
-                )
-                excess_lengths.append(excess_length)
-
-            penalties.append(
-                PenaltyTerm(
-                    name="hallway_efficiency:excess_length",
-                    expression=sum(excess_lengths),
-                    multiplier=excess_length_penalty_multiplier,
-                )
-            )
+        for hallway in hallways:
+            perimeter = 2 * (hallway.width + hallway.length)
+            shared = []
+            for other in context.room_variables.values():
+                if other is hallway:
+                    continue
+                x_overlap = _interval_overlap(context, hallway.x, hallway.x_end, other.x, other.x_end, context.problem.floor.width, "wall_x_overlap", hallway, other)
+                y_overlap = _interval_overlap(context, hallway.y, hallway.y_end, other.y, other.y_end, context.problem.floor.length, "wall_y_overlap", hallway, other)
+                for first_face, second_face, overlap in ((hallway.x, other.x_end, y_overlap), (hallway.x_end, other.x, y_overlap), (hallway.y, other.y_end, x_overlap), (hallway.y_end, other.y, x_overlap)):
+                    touching = context.model.NewBoolVar(context.new_name("hallway_wall_touch"))
+                    context.model.Add(first_face == second_face).OnlyEnforceIf(touching)
+                    context.model.Add(first_face != second_face).OnlyEnforceIf(touching.Not())
+                    amount = context.model.NewIntVar(0, max(context.problem.floor.width, context.problem.floor.length), context.new_name("shared_wall_length"))
+                    context.model.Add(amount == overlap).OnlyEnforceIf(touching)
+                    context.model.Add(amount == 0).OnlyEnforceIf(touching.Not())
+                    shared.append(amount)
+            exposed = context.model.NewIntVar(0, 2 * (context.problem.floor.width + context.problem.floor.length), context.new_name("hallway_exposed_wall"))
+            context.model.Add(exposed == perimeter - sum(shared))
+            penalties.append(PenaltyTerm(name=f"hallway_efficiency:exposed_wall:{hallway.room.id_key}", expression=exposed))
 
         return tuple(penalties)
 

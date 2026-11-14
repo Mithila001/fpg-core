@@ -141,7 +141,8 @@ The shipped default profiles enable:
 | `attached_bathroom_pairing` | minimum shared wall `10`; attached-bathroom type paired with bedroom type |
 | `minimum_coverage` | `ratio=0.6` |
 | `hallway_connectivity` | `minimum_overlap=10`; hallway type must touch an anchor type and a non-hallway/non-anchor destination; default anchor is living room |
-| `hallway_dimensions` | hallway corridor width is constrained to `10..10`; the other dimension may extend as needed |
+| `hallway_dimensions` | corridor width is `10..10`; long dimension is capped at half the non-hallway room span, configurable by orientation |
+| `hallway_parallel_overlap` | projected overlap caps for same-orientation hallways: horizontal `40`, vertical `30` units, even when offset |
 | `hallway_shared_wall` | hallway pairs may touch/connect, but their collinear shared-wall overlap may not exceed `maximum_shared_wall=12.0` project units; corner-only contact has zero shared-wall length |
 | `veranda_front`, `living_room_front` | Clear front walls for verandas, or living rooms when no veranda is present |
 | `back_exposure` | hallway and kitchen; minimum exposure `10.0` |
@@ -202,15 +203,14 @@ automatically synchronize between the features.
 
 ### Hallway efficiency
 
-`hallway_efficiency` treats all configured hallway rooms as one circulation-geometry
-cost. It does not decide whether an individual hallway is semantically necessary.
+`hallway_efficiency` minimizes total hallway area and exposed hallway wall. It does not decide whether an individual hallway is semantically necessary.
 
 The objective components are:
 
 ```text
 hallway efficiency cost =
     total hallway area * area_penalty_multiplier
-  + total excess hallway length * excess_length_penalty_multiplier
+  + total exposed hallway wall length
 ```
 
 The complete penalty is then multiplied by the ordinary `SoftConstraintUse.weight`.
@@ -222,11 +222,7 @@ longest_side = max(width, length)
 excess_length = max(0, longest_side - preferred_max_length)
 ```
 
-`preferred_max_length` is a soft threshold, not a hard maximum. A longer hallway is
-still legal when hard constraints require it; it simply contributes more objective
-cost. Penalizing total hallway area also encourages the solver to shrink hallway
-geometry toward the smallest dimensions compatible with hard constraints and the
-other objective terms. It never removes the hallway room.
+Hard hallway length caps are enforced by `hallway_dimensions`; efficiency no longer adds a length penalty. The soft shared-wall term favors enclosing hallways with other rooms. It never removes a hallway room.
 
 Supported settings:
 
@@ -234,8 +230,7 @@ Supported settings:
 |---|---|---:|---|
 | `hallway_room_types` | iterable of `RoomType` | `(RoomType.HALLWAY,)` | room types included in the hallway-efficiency objective |
 | `area_penalty_multiplier` | `int` | `1` | must be `>= 0`; `0` disables the area component |
-| `preferred_max_length` | `float | None` | `40.0` | positive finite project-unit length; `None` disables excess-length threshold calculation |
-| `excess_length_penalty_multiplier` | `int` | `5` | must be `>= 0`; `0` disables the excess-length component |
+| `hallway_room_types` | iterable | hallway | room types whose exposed wall and area are scored |
 | `SoftConstraintUse.weight` | `int` | profile-defined | must be `> 0`; weights the whole hallway-efficiency penalty |
 
 With the project convention `10` units = `1 m`, the built-in

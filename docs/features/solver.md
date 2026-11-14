@@ -15,7 +15,7 @@ Every room supplied in `FloorPlanGenerationSpec.rooms` must be placed. The solve
 | `aspect_ratio`, `room_relations` | Per-type shape limits; enforce `HARD` relationships with wall overlap |
 | `attached_bathroom_pairing` | One-to-one bedroom/attached-bathroom wall pairing |
 | `minimum_coverage` | Required total covered fraction of floor |
-| `hallway_connectivity`, `hallway_dimensions`, `hallway_shared_wall` | Hallway anchors, corridor width, and hallway-to-hallway wall overlap cap |
+| `hallway_connectivity`, `hallway_dimensions`, `hallway_parallel_overlap`, `hallway_shared_wall` | Hallway anchors, corridor width, and hallway-to-hallway wall overlap cap |
 | `veranda_front`, `living_room_front`, `back_exposure` | Clear front views and eligible back-side exposure |
 | `garage_placement` | Clear garage front and one side |
 
@@ -29,15 +29,10 @@ Built-in profiles: `INITIAL_GENERATION_PROFILE` (candidate hints), `REFINEMENT_A
 
 - A hallway corridor width is constrained to `8..10` project units by default; its *length* is not hard-capped.
 - `hallway_shared_wall` limits touching hallway wall overlap to `12` project units by default, not contact at corners.
-- `hallway_efficiency` is a **soft penalty**, not a hallway-count/removal mechanism:
-
-```text
-cost = (sum hallway area * area_penalty_multiplier)
-     + (sum max(0, longest_side - preferred_max_length)
-        * excess_length_penalty_multiplier)
-```
-
-This cost is multiplied by the `SoftConstraintUse.weight`. Defaults are multipliers `1` and `5`, preferred maximum length `40` project units (4 m), and overall weight `1`. Length above 40 remains legal if hard rules require it. Compatible hallways can be merged later by post-processing; removing entire hallway rooms belongs upstream.
+- `hallway_dimensions` caps each hallway?s long dimension at half the matching span of non-hallway rooms by default.
+- `hallway_parallel_overlap` caps projected overlap between same-orientation hallway pairs at 40 horizontal and 30 vertical project units, including pairs separated by a gap.
+- `hallway_shared_wall` separately limits actual shared wall between touching hallways to 12 units.
+- `hallway_efficiency` penalizes total hallway area and exposed hallway wall; the length threshold is no longer part of its objective.
 
 ## Results and failures
 

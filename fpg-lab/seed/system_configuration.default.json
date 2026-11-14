@@ -801,7 +801,9 @@
                 "hallway"
               ],
               "minimum_width": 10,
-              "maximum_width": 10
+              "maximum_width": 10,
+              "horizontal_span_ratio": 0.5,
+              "vertical_span_ratio": 0.5
             }
           },
           {
@@ -838,6 +840,13 @@
           {
             "key": "living_room_front",
             "settings": {}
+          },
+          {
+            "key": "hallway_parallel_overlap",
+            "settings": {
+              "horizontal_max_overlap": 40.0,
+              "vertical_max_overlap": 30.0
+            }
           }
         ],
         "soft_constraints": [
@@ -872,9 +881,7 @@
               "hallway_room_types": [
                 "hallway"
               ],
-              "area_penalty_multiplier": 1,
-              "preferred_max_length": 40.0,
-              "excess_length_penalty_multiplier": 5
+              "area_penalty_multiplier": 1
             },
             "weight": 1
           },
@@ -983,7 +990,9 @@
                 "hallway"
               ],
               "minimum_width": 10,
-              "maximum_width": 10
+              "maximum_width": 10,
+              "horizontal_span_ratio": 0.5,
+              "vertical_span_ratio": 0.5
             }
           },
           {
@@ -1020,6 +1029,13 @@
           {
             "key": "living_room_front",
             "settings": {}
+          },
+          {
+            "key": "hallway_parallel_overlap",
+            "settings": {
+              "horizontal_max_overlap": 40.0,
+              "vertical_max_overlap": 30.0
+            }
           }
         ],
         "soft_constraints": [
@@ -1062,9 +1078,7 @@
               "hallway_room_types": [
                 "hallway"
               ],
-              "area_penalty_multiplier": 1,
-              "preferred_max_length": 40.0,
-              "excess_length_penalty_multiplier": 5
+              "area_penalty_multiplier": 1
             },
             "weight": 1
           },
@@ -1173,7 +1187,9 @@
                 "hallway"
               ],
               "minimum_width": 10,
-              "maximum_width": 10
+              "maximum_width": 10,
+              "horizontal_span_ratio": 0.5,
+              "vertical_span_ratio": 0.5
             }
           },
           {
@@ -1210,6 +1226,13 @@
           {
             "key": "living_room_front",
             "settings": {}
+          },
+          {
+            "key": "hallway_parallel_overlap",
+            "settings": {
+              "horizontal_max_overlap": 40.0,
+              "vertical_max_overlap": 30.0
+            }
           }
         ],
         "soft_constraints": [
@@ -1244,9 +1267,7 @@
               "hallway_room_types": [
                 "hallway"
               ],
-              "area_penalty_multiplier": 1,
-              "preferred_max_length": 40.0,
-              "excess_length_penalty_multiplier": 5
+              "area_penalty_multiplier": 1
             },
             "weight": 1
           },

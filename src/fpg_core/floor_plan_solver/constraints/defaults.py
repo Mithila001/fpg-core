@@ -15,6 +15,7 @@ from .room_specific.h_garage_placement import GaragePlacementConstraint
 from .room_specific.h_front_facing import VerandaFrontConstraint, LivingRoomFrontConstraint
 from .room_specific.h_hallway_connectivity import HallwayConnectivityConstraint
 from .room_specific.h_hallway_dimensions import HallwayDimensionsConstraint
+from .room_specific.h_hallway_parallel_overlap import HallwayParallelOverlapConstraint
 from .room_specific.h_hallway_shared_wall import HallwaySharedWallConstraint
 from .room_specific.s_bathroom_depth import BathroomDepthConstraint
 from .room_specific.s_hallway_efficiency import HallwayEfficiencyConstraint
@@ -38,6 +39,7 @@ def build_default_registry() -> ConstraintRegistry:
     registry.register_hard(MinimumCoverageConstraint())
     registry.register_hard(HallwayConnectivityConstraint())
     registry.register_hard(HallwayDimensionsConstraint())
+    registry.register_hard(HallwayParallelOverlapConstraint())
     registry.register_hard(HallwaySharedWallConstraint())
     registry.register_hard(VerandaFrontConstraint())
     registry.register_hard(LivingRoomFrontConstraint())
