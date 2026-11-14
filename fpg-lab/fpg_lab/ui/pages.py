@@ -10,7 +10,15 @@ from fpg_lab.core.settings import ROOT
 from fpg_lab.inputs import FloorPlanTemplateCreate, SystemConfigurationCreate
 from fpg_lab.runtime import LabRuntime, row_document
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
-from fpg_lab.ui.components import db_call, editor_value, notify_error, set_editor, shell
+from fpg_lab.ui.components import (
+    action_button,
+    db_call,
+    editor_value,
+    format_experiment_code,
+    notify_error,
+    set_editor,
+    shell,
+)
 from fpg_lab.ui.experiments import register_experiments
 
 EXPERIMENTS = {
@@ -31,20 +39,34 @@ def register_pages(runtime: LabRuntime) -> None:
             "Experiment workspace",
             "Run and inspect floor-plan prototypes and experiments directly in Python.",
         )
-        with ui.element("div").classes(
-            "w-full grid gap-3 items-stretch"
-        ).style("grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))"):
-            for flow, (title, description) in EXPERIMENTS.items():
-                with ui.card().classes("w-full h-full p-4 gap-2"):
-                    ui.label(flow.upper()).classes("text-xs font-bold lab-accent")
-                    ui.label(title).classes("text-lg font-semibold")
-                    ui.label(description).classes("lab-muted text-sm flex-1")
-                    ui.button(
-                        "Open setup",
-                        on_click=lambda f=flow: ui.navigate.to(f"/experiments/{f}"),
-                    ).props("dense outline")
+        # Family grouping is display-only; experiment keys and route paths stay unchanged.
+        categories = {flow[0].lower() for flow in EXPERIMENTS}
+        order = [code for code in ("e", "p") if code in categories]
+        order.extend(sorted(categories - {"e", "p"}))
+        for index, prefix in enumerate(order):
+            group = [
+                (flow, entry) for flow, entry in EXPERIMENTS.items() if flow.startswith(prefix)
+            ]
+            if index:
+                ui.separator().classes("w-full my-4")
+            with (
+                ui.element("div")
+                .classes("w-full grid gap-3 items-stretch")
+                .style("grid-template-columns: repeat(auto-fill, minmax(285px, 1fr))")
+            ):
+                for flow, (title, description) in group:
+                    with ui.card().classes("w-full h-full p-4 gap-2"):
+                        ui.label(format_experiment_code(flow)).classes(
+                            "text-base font-bold font-mono tracking-wide lab-accent"
+                        )
+                        ui.label(title).classes("text-lg font-semibold")
+                        ui.label(description).classes("lab-muted text-sm flex-1")
+                        action_button(
+                            "Open setup",
+                            on_click=lambda f=flow: ui.navigate.to(f"/experiments/{f}"),
+                        ).props("dense outline")
         ui.label(
-            f"FPG Core {runtime.codec.fpg_core_version} · P01 runs are saved; E01A runs are temporary"
+            f"FPG Core {runtime.codec.fpg_core_version} · P-01 runs are saved; E-01-A runs are temporary"
         ).classes("text-xs lab-muted mt-3")
 
     @ui.page("/configurations")
@@ -199,8 +221,8 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
         with ui.dialog() as dialog, ui.card():
             ui.label("Delete this saved record?")
             with ui.row():
-                ui.button("Cancel", on_click=lambda: dialog.submit(False))
-                ui.button("Delete", on_click=lambda: dialog.submit(True), color="negative")
+                action_button("Cancel", role="subtle", on_click=lambda: dialog.submit(False))
+                action_button("Delete", role="danger", on_click=lambda: dialog.submit(True))
         if not await dialog:
             return
         try:
@@ -217,9 +239,9 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
                 label="Saved profiles" if is_config else "Saved templates",
                 on_change=load_record,
             ).classes("min-w-80")
-            ui.button("New from default", on_click=new_record)
-            ui.button("Duplicate draft", on_click=duplicate).props("outline")
-            ui.button("Refresh list", on_click=refresh).props("flat")
+            action_button("New from default", on_click=new_record)
+            action_button("Duplicate draft", role="subtle", on_click=duplicate)
+            action_button("Refresh list", role="subtle", on_click=refresh).props("flat")
         with ui.row().classes("w-full"):
             name = ui.input("Name").classes("flex-1")
             description = ui.input("Description").classes("flex-[2]")
@@ -230,14 +252,16 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
         )
         feedback = ui.label().classes("text-sm lab-text whitespace-pre-wrap")
         with ui.row():
-            ui.button("Validate", on_click=validate).props("outline")
-            ui.button("Save", on_click=save)
-            ui.button("Reset draft", on_click=lambda: set_editor(editor, state["baseline"])).props(
-                "flat"
-            )
+            action_button("Validate", on_click=validate).props("outline")
+            action_button("Save", role="main", on_click=save)
+            action_button(
+                "Reset draft", role="danger", on_click=lambda: set_editor(editor, state["baseline"])
+            ).props("flat")
             if is_config:
-                ui.button("Activate saved profile", on_click=activate).props("outline")
-            ui.button("Delete saved record", on_click=delete, color="negative").props("flat")
+                action_button("Activate saved profile", role="main", on_click=activate).props(
+                    "outline"
+                )
+            action_button("Delete saved record", role="danger", on_click=delete).props("flat")
     await refresh()
     if state["records"]:
         picker.value = next(iter(state["records"]))

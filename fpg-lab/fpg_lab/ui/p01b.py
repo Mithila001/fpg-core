@@ -14,14 +14,16 @@ from fpg_lab.runtime import row_document
 from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01b import P01BService, next_preset_name, save_preset
 from fpg_lab.services.p01c import P01CService
-from fpg_lab.ui.components import db_call, json_panel, notify_error, shell
+from fpg_lab.ui.components import (
+    action_button, db_call, format_experiment_code, json_panel, notify_error, shell,
+)
 from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
 
 
 async def main_page(runtime, flow="p01b"):
     service_type = P01CService if flow == "p01c" else P01BService
-    shell(f"{flow.upper()} · Setup", "Configure repeated floor-plan generation and refinement.")
+    shell(f"{format_experiment_code(flow)} · Setup", "Configure repeated floor-plan generation and refinement.")
     state: dict[str, Any] = {"data": None}
     with ui.element("div").classes("w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"):
         with ui.column().classes("w-full gap-4") as controls:
@@ -43,7 +45,7 @@ async def main_page(runtime, flow="p01b"):
     history_page = ui.number("History page", min=1, value=1, precision=0).classes("w-36")
     with ui.dialog() as dialog, ui.card().classes("w-[50rem] max-w-full"):
         name = ui.input("Preset name").classes("w-full")
-        pasted = ui.textarea("Paste P01A cleaned hint map JSON").classes("w-full")
+        pasted = ui.textarea("Paste P-01-A cleaned hint map JSON").classes("w-full")
         validation = ui.label()
         import_preview = ui.column().classes("w-full")
 
@@ -82,7 +84,7 @@ async def main_page(runtime, flow="p01b"):
             except Exception as exc:
                 notify_error(exc)
 
-        ui.button("Save preset", on_click=save)
+        action_button("Save preset", role="main", on_click=save)
 
     quick = {"job": None, "cancel": None, "suggested": None, "timer": None}
     with (
@@ -219,12 +221,10 @@ async def main_page(runtime, flow="p01b"):
                 notify_error(exc)
 
         with ui.row():
-            start_button = ui.button("Start", on_click=start_quick)
-            ui.button("Cancel", on_click=lambda: (cancel_quick(), quick_dialog.close())).props(
-                "outline"
-            )
-            apply_button = ui.button("Quick Apply", on_click=apply_quick)
-            save_button = ui.button("Save and Apply", on_click=save_quick)
+            start_button = action_button("Start", role="main", on_click=start_quick)
+            action_button("Cancel", role="subtle", on_click=lambda: (cancel_quick(), quick_dialog.close()))
+            apply_button = action_button("Quick Apply", on_click=apply_quick)
+            save_button = action_button("Save and Apply", role="main", on_click=save_quick)
         quick["timer"] = ui.timer(0.5, poll_quick, active=False)
         quick_dialog.on("hide", cancel_quick)
 
@@ -349,11 +349,11 @@ async def main_page(runtime, flow="p01b"):
     configs.on_value_change(update_time)
     history_page.on_value_change(refresh)
     with controls, ui.row():
-        ui.button("Quick Hint Map", on_click=open_quick)
-        ui.button("Import preset", on_click=dialog.open)
-        ui.button("Delete preset", on_click=delete).props("outline")
-        ui.button("Start experiment", on_click=start)
-        ui.button("Refresh history", on_click=refresh).props("flat")
+        action_button("Quick Hint Map", on_click=open_quick)
+        action_button("Import preset", on_click=dialog.open)
+        action_button("Delete preset", role="danger", on_click=delete).props("outline")
+        action_button("Start experiment", role="main", on_click=start)
+        action_button("Refresh history", role="subtle", on_click=refresh).props("flat")
     await refresh()
 
 
@@ -365,7 +365,7 @@ async def run_page(runtime, experiment_id, flow="p01b"):
         "selected_stage": "Initial",
     }
     workspace = ResultWorkspace(
-        f"{flow.upper()} run #{experiment_id}",
+        f"{format_experiment_code(flow)} run #{experiment_id}",
         back_link=f"/experiments/{flow}",
         views=("Canvas", "Scores", "Diagnostics"),
     )
@@ -378,13 +378,13 @@ async def run_page(runtime, experiment_id, flow="p01b"):
     with workspace.controls:
         status = ui.label("Loading run…").classes("text-sm lab-muted")
         with ui.row().classes("items-center gap-2 w-full"):
-            previous = ui.button("Previous").props("dense outline")
+            previous = action_button("Previous").props("dense outline")
             position = ui.label().classes("text-sm font-medium")
-            following = ui.button("Next").props("dense outline")
+            following = action_button("Next").props("dense outline")
         stages_area = ui.column().classes("w-full gap-1")
         overlay = ui.checkbox("Show original hint points", value=False).props("dense")
-        ui.button("Refresh", on_click=lambda: timer.activate()).props("dense flat")
-        terminate_button = ui.button("Terminate run").props("dense outline")
+        action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props("dense flat")
+        terminate_button = action_button("Terminate run", role="danger").props("dense outline")
     with workspace.context("Canvas"):
         details_area = ui.column().classes("w-full gap-2")
         room_area = ui.column().classes("w-full gap-1")
@@ -444,7 +444,7 @@ async def run_page(runtime, experiment_id, flow="p01b"):
             ui.label("Pipeline stage").classes("font-semibold text-sm")
             with ui.row().classes("w-full gap-1"):
                 for index, stage in enumerate(stages):
-                    ui.button(
+                    action_button(
                         stage["name"], on_click=lambda index=index: select_stage(index)
                     ).props("dense " + ("" if index == state["stage"] else "outline"))
         stage = stages[state["stage"]] if stages else None
@@ -503,8 +503,8 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                         )
                         ui.notify("Floor plan and openings copied")
 
-                    ui.button("Copy final floor plan", icon="content_copy", on_click=copy_plan).props(
-                        "dense outline"
+                    action_button("Copy final floor plan", role="subtle", icon="content_copy", on_click=copy_plan).props(
+                        "dense flat"
                     )
         with room_area:
             if plan:

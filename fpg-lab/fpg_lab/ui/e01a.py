@@ -11,9 +11,11 @@ from nicegui import app, run, ui
 from fpg_lab.flows.e01a import simulate
 from fpg_lab.flows.e01a_plans import plans
 from fpg_lab.integrations.fpg_core.traffic_plan import import_traffic_plan
-from fpg_lab.ui.components import notify_error, shell
+from fpg_lab.ui.components import action_button, format_experiment_code, notify_error, shell
 from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
+
+DISPLAY_CODE = format_experiment_code("e01a")
 
 
 def traffic_figure(plan: dict, result: dict | None, mode: str, selected: set[int] | None = None) -> go.Figure:
@@ -65,7 +67,7 @@ def traffic_figure(plan: dict, result: dict | None, mode: str, selected: set[int
 
 async def main_page() -> None:
     """Choose a plan and start one tab-local traffic run."""
-    shell("E01A · Floor Traffic", "Choose a plan to simulate its preset walking trips.", back_link="/")
+    shell(f"{DISPLAY_CODE} · Floor Traffic", "Choose a plan to simulate its preset walking trips.", back_link="/")
     fixtures = plans()
     with ui.element("div").classes(
         "w-full grid grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)] gap-4 items-start"
@@ -77,8 +79,8 @@ async def main_page() -> None:
             ).classes("w-full")
             with ui.expansion("Paste a floor plan").classes("w-full"):
                 pasted = ui.textarea("Copied floor-plan JSON").classes("w-full")
-                ui.button("Load pasted plan", on_click=lambda: load_pasted()).props("outline")
-            button = ui.button("Simulate traffic").classes("w-full")
+                action_button("Load pasted plan", on_click=lambda: load_pasted()).props("outline")
+            button = action_button("Simulate traffic", role="main").classes("w-full")
             status = ui.label("Results will be available in this browser tab only.").classes(
                 "text-sm lab-muted"
             )
@@ -134,7 +136,7 @@ async def result_page(run_id: str) -> None:
     # exactly as the earlier single-page simulation did.
     saved = app.storage.tab.pop("e01a_result", None)
     if not saved or saved.get("run_id") != run_id:
-        shell("E01A · Result unavailable", back_link="/experiments/e01a")
+        shell(f"{DISPLAY_CODE} · Result unavailable", back_link="/experiments/e01a")
         ui.label("This temporary result is no longer available in this browser tab.")
         ui.link("Start another simulation", "/experiments/e01a")
         return
@@ -144,7 +146,7 @@ async def result_page(run_id: str) -> None:
     selected: set[int] = set(range(len(result["routes"])))
     labels = {room["id"]: room["name"] for room in plan["rooms"]}
     workspace = ResultWorkspace(
-        "E01A · Floor traffic result", back_link="/experiments/e01a",
+        f"{DISPLAY_CODE} · Floor traffic result", back_link="/experiments/e01a",
         views=("Canvas", "Room statistics"),
     )
     with workspace.main("Canvas"):
@@ -173,10 +175,10 @@ async def result_page(run_id: str) -> None:
             "dense no-caps"
         ).classes("w-full")
         with ui.row().classes("w-full gap-1"):
-            ui.button("Select all paths", on_click=lambda: select_paths(True)).props(
+            action_button("Select all paths", on_click=lambda: select_paths(True)).props(
                 "dense outline"
             )
-            ui.button("Clear paths", on_click=lambda: select_paths(False)).props("dense flat")
+            action_button("Clear paths", role="subtle", on_click=lambda: select_paths(False)).props("dense flat")
         ui.label("10 project units / metre · 8-unit walking width").classes("lab-muted text-xs")
         ui.link("New simulation", "/experiments/e01a").classes("text-sm")
     with workspace.context("Canvas"):

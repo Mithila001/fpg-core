@@ -14,7 +14,10 @@ from fpg_lab.flows.p01 import ACTIVE_STATUSES
 from fpg_lab.inputs import FloorPlanRequest
 from fpg_lab.runtime import FLOW_SERVICES, LabRuntime, row_document
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
-from fpg_lab.ui.components import db_call, editor_value, json_panel, notify_error, set_editor, shell
+from fpg_lab.ui.components import (
+    action_button, db_call, editor_value, format_experiment_code,
+    json_panel, notify_error, set_editor, shell,
+)
 from fpg_lab.ui.replay import candidate_replay
 from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
@@ -83,7 +86,7 @@ def register_experiments(runtime: LabRuntime) -> None:
             shell("Unknown experiment")
             return
         shell(
-            f"{flow.upper()} · Setup",
+            f"{format_experiment_code(flow)} · Setup",
             "Choose a configuration and request, then start a run.",
         )
         try:
@@ -243,8 +246,8 @@ def register_experiments(runtime: LabRuntime) -> None:
                                 hallway_rows.refresh()
 
                         with ui.row():
-                            ui.button("Add hallway", on_click=add_hallway).props("outline")
-                            ui.button("Remove last hallway", on_click=remove_hallway).props("flat")
+                            action_button("Add hallway", on_click=add_hallway).props("outline")
+                            action_button("Remove last hallway", role="subtle", on_click=remove_hallway).props("flat")
 
                         async def inspect_hints() -> None:
                             try:
@@ -263,7 +266,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                             except Exception as exc:
                                 notify_error(exc)
 
-                        ui.button("Validate and inspect hints", on_click=inspect_hints).props(
+                        action_button("Validate and inspect hints", on_click=inspect_hints).props(
                             "outline"
                         )
                 except Exception as exc:
@@ -284,7 +287,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                     if flow == "p01b":
                         prepared = state["preview"]
                         if not prepared or request != state["request"]:
-                            raise ValueError("Preview the current request before starting P01B")
+                            raise ValueError("Preview the current request before starting P-01-B")
                         current = await db_call(
                             runtime,
                             lambda session: (
@@ -309,8 +312,8 @@ def register_experiments(runtime: LabRuntime) -> None:
 
             with ui.row():
                 if flow == "p01b":
-                    ui.button("Preview request and edit hints", on_click=preview).props("outline")
-                start_button = ui.button(f"Start {flow.upper()}", on_click=start)
+                    action_button("Preview request and edit hints", on_click=preview).props("outline")
+                start_button = action_button(f"Start {format_experiment_code(flow)}", role="main", on_click=start)
 
         area = ui.column().classes("w-full")
         page = ui.number("History page", value=1, min=1, precision=0).classes("w-36")
@@ -344,7 +347,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 notify_error(exc)
 
         page.on_value_change(refresh_history)
-        ui.button("Refresh history", on_click=lambda: timer.activate())
+        action_button("Refresh history", role="subtle", on_click=lambda: timer.activate())
         timer = ui.timer(1.0, refresh_history, immediate=False)
         await refresh_history()
 
@@ -365,7 +368,7 @@ def register_experiments(runtime: LabRuntime) -> None:
             shell("Unknown experiment")
             return
         workspace = ResultWorkspace(
-            f"{flow.upper()} run #{experiment_id}",
+            f"{format_experiment_code(flow)} run #{experiment_id}",
             back_link=f"/experiments/{flow}",
             views=("Canvas", "Charts", "Trials", "Diagnostics"),
         )
@@ -385,8 +388,8 @@ def register_experiments(runtime: LabRuntime) -> None:
             counters = ui.label().classes("text-sm")
             progress = ui.linear_progress(value=0).classes("w-full")
             with ui.row().classes("w-full gap-2 items-center"):
-                ui.button("Refresh", on_click=lambda: timer.activate()).props("dense outline")
-                terminate_button = ui.button("Terminate").props("dense outline")
+                action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props("dense flat")
+                terminate_button = action_button("Terminate", role="danger").props("dense outline")
             trial_page = ui.number(
                 "Trial history page", value=1, min=1, precision=0
             ).classes("w-full").props("dense")
@@ -589,12 +592,12 @@ def register_experiments(runtime: LabRuntime) -> None:
                     "text-sm"
                 )
                 if exported is not None:
-                    ui.button(
-                        "Copy cleaned hint map", icon="content_copy",
+                    action_button(
+                        "Copy cleaned hint map", role="subtle", icon="content_copy",
                         on_click=lambda: ui.run_javascript(
                             f"navigator.clipboard.writeText({json.dumps(json.dumps(exported))})"
                         ),
-                    ).props("dense outline")
+                    ).props("dense flat")
                 if linked:
                     ui.link(
                         "Open floor-plan branch",
@@ -634,7 +637,7 @@ def register_experiments(runtime: LabRuntime) -> None:
             selector = ui.select(
                 STAGES, value="final_floor_plan", label="Pipeline stage"
             ).classes("w-full").props("dense")
-            ui.button("Refresh", on_click=lambda: timer.activate()).props("dense outline")
+            action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props("dense flat")
         with workspace.context("Canvas"):
             details = ui.column().classes("w-full gap-2")
         with workspace.context("Scores"):

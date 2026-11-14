@@ -32,6 +32,25 @@ This is a **workflow contract**, not a requirement to share identical forms, plo
 
 Use meaningful existing names such as *Experiment*, *Setup*, *Run*, *Results*, and experiment identifiers (e.g., E01A, P01A). Shorthand such as **EE**, **EM**, and **ER** is only conversational convenience; **do not** introduce it into product text, public API names, directory names, documentation headings, or component names.
 
+## Action-button semantics (required)
+
+Buttons express **intent**, not just visual priority; choose a role based on what the action does. The label and disabled/feedback states must still explain the action without relying on color alone.
+
+| Role | Appearance | Use |
+| --- | --- | --- |
+| `main` | **Green filled** | The principal workflow trigger: start/run/simulate, save, apply, or activate. |
+| `danger` | **Red** (filled or outlined/flat when secondary) | Destructive or interruptive operations: delete, discard/reset edits, terminate a running experiment. |
+| `general` | **Blue** (filled or outline) | Regular non-dangerous actions: open, validate, preview, import, navigate, playback. |
+| `subtle` | **Neutral transparent / ghost** | Low-priority or repetitive actions: refresh, cancel/close, clear selection, copy, and auxiliary shortcuts. |
+
+Implementation: use `fpg_lab.ui.components.action_button(label, role=..., ...)` for Lab action buttons, retaining ordinary NiceGUI `.props('dense')` / `.props('outline')` where needed. **Do not duplicate per-page hex colors or use the green role for every button merely because it appears first.** Keep one unmistakable main action per decision area when practical. Red means deletion, disruption, or loss of work, not a generic "negative" response. Icon-only buttons need an accessible description. Do not apply these semantics to tabs, view selectors, checkboxes, statuses, graph colors, or navigation links as if they were action buttons.
+
+## Experiment listing groups and identifier display
+
+- Group experiment cards by their **leading category letter** and separate groups with a horizontal divider; do not render category heading labels. Add new categories as required without changing existing family codes.
+- Show the experiment identifier prominently in a legible **monospace, semibold/bold** style: `P01A` appears as **`P-01-A`** and `E01A` as **`E-01-A`**. Use the same display formatting in experiment page headings when appropriate.
+- This is **presentation-only formatting**. Python flow names (`p01a`), persisted identifiers, route paths (`/experiments/p01a`), export schemas and family documentation names remain unchanged. Do not rename internal identifiers to include hyphens.
+
 ## Run result page: non-prescriptive reference layout
 
 ```text
@@ -71,7 +90,7 @@ Use meaningful existing names such as *Experiment*, *Setup*, *Run*, *Results*, a
 
 ## Other page practices
 
-**Experiment listing:** full-width, compact, consistent experiment cards with clear identifiers, purpose and navigation. Group peers in a fluid grid and avoid unnecessarily narrow center wrappers or tall, empty cards.
+**Experiment listing:** full-width, compact, consistent experiment cards grouped by category prefix, with visible dividers and clearly formatted identifiers. Group peers in a fluid grid and avoid unnecessarily narrow center wrappers or tall, empty cards.
 
 **Setup pages:** prioritize configuration and validation workflow, keep run-start action identifiable, and keep history accessible where the experiment retains it. Preview space may be substantial and may use a different layout than the result reference. Do not force result-page sidebar conventions onto setup forms.
 
@@ -110,7 +129,7 @@ This is the canonical file. Keep it linked from `fpg-lab/docs/README.md`, `fpg-l
 ## Current implementation (NiceGUI)
 
 - `fpg_lab/ui/result_layout.py::ResultWorkspace` provides the compact title/view row, full-height main region, scrollable sidebar, per-view main containers and per-view context containers. It is a layout primitive, not a fixed experiment schema.
-- `fpg_lab/ui/components.py::shell` owns the shared theme/header and workspace CSS. Ordinary setup and editor pages retain normal document flow; only result pages add the `lab-result-root` class.
+- `fpg_lab/ui/components.py::shell` owns the shared theme/header and workspace CSS, while `action_button` defines semantic action colors and `format_experiment_code` formats user-visible identifiers. Ordinary setup and editor pages retain normal document flow; only result pages add the `lab-result-root` class.
 - Create a `ResultWorkspace` with an explicit parent setup link and meaningful view labels, then populate `workspace.main('...')`, `workspace.controls` and `workspace.context('...')`. Keep view-specific state and callbacks inside the owning experiment page.
 - The result workspace has a sidebar sized at approximately 26.5vw (bounded to 290–390px) and a fluid, larger main region. Both have independent vertical overflow. Narrow browser windows may use horizontal overflow: mobile adaptation is deliberately out of scope.
 - Canvas views must actually **fill the available main-pane height**, not merely set `min-height`. When embedding Plotly inside additional containers (as P01A replay does), give each intermediary flex/container a definite height; otherwise the plot can stop at its minimum size and leave unused vertical space.

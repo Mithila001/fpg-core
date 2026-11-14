@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+import re
 from copy import deepcopy
-from typing import Any
+from typing import Any, Literal
 
 from nicegui import run, ui
 from sqlalchemy.orm import Session
@@ -18,10 +19,10 @@ def shell(
         primary="#75beff",
         secondary="#b0b0b0",
         accent="#75beff",
-        positive="#276749",
-        negative="#b32632",
+        positive="#287a49",
+        negative="#b6363d",
         warning="#cca700",
-        info="#005fb8",
+        info="#266fa9",
         dark="#252526",
         dark_page="#1e1e1e",
     )
@@ -34,10 +35,16 @@ def shell(
         .lab-text { color: #d4d4d4; }
         .lab-muted, .q-field--dark .q-field__label { color: #b0b0b0; }
         .lab-accent { color: #75beff; }
+        /* Semantic actions: filled main / general / danger, neutral ghost for low-priority controls. */
         .bg-primary { --q-primary: #005fb8; }
-        .q-btn.text-negative { --q-negative: #f48771; }
-        .q-btn.text-positive { --q-positive: #89d185; }
-        .q-btn.bg-primary, .q-btn.bg-negative, .q-btn.bg-positive { color: #ffffff !important; }
+        .lab-action-button.q-btn--outline.lab-action-general,
+        .lab-action-button.q-btn--flat.lab-action-general { color: #80bfff !important; }
+        .lab-action-button.q-btn--outline.lab-action-main,
+        .lab-action-button.q-btn--flat.lab-action-main { color: #83d6a4 !important; }
+        .lab-action-button.q-btn--outline.lab-action-danger,
+        .lab-action-button.q-btn--flat.lab-action-danger { color: #ff9397 !important; }
+        .lab-action-button.lab-action-subtle { color: #c7c7c7 !important; }
+        .lab-action-button.q-btn--standard .q-btn__content { color: #ffffff; }
         .q-field--outlined .q-field__control:before { border-color: #6b6b6b; }
         a:focus-visible, .q-btn:focus-visible { outline: 2px solid #75beff; outline-offset: 3px; }
 
@@ -144,6 +151,29 @@ def shell(
                 ui.link("Back to experiments", back_link).classes("text-sm")
     if subtitle:
         ui.label(subtitle).classes("lab-muted mb-4")
+
+
+ActionRole = Literal["main", "general", "subtle", "danger"]
+
+
+def action_button(
+    label: str | None = None, *, role: ActionRole = "general", **kwargs: Any
+) -> Any:
+    """FPG-Lab action semantics; use role, not one-off color choices."""
+    colors = {"main": "positive", "general": "info", "subtle": "secondary", "danger": "negative"}
+    options = {"color": colors[role], **kwargs}
+    button = (ui.button(**options) if label is None else ui.button(label, **options)).classes(
+        f"lab-action-button lab-action-{role}"
+    )
+    if role == "subtle":
+        button.props("flat")
+    return button
+
+
+def format_experiment_code(code: str) -> str:
+    """Render IDs legibly without changing persisted IDs or URL paths."""
+    match = re.fullmatch(r"([a-zA-Z])(\d+)([a-zA-Z])", code)
+    return "-".join(part.upper() for part in match.groups()) if match else code.upper()
 
 
 async def db_call(runtime: LabRuntime, operation: Callable[[Session], Any]) -> Any:

@@ -11,7 +11,7 @@ from nicegui import events, ui
 from fpg_lab.integrations.fpg_core.p01b_input import export_trial
 from fpg_lab.runtime import LabRuntime, row_document
 from fpg_lab.services.p01a import P01AService
-from fpg_lab.ui.components import db_call, json_panel
+from fpg_lab.ui.components import action_button, db_call, json_panel
 from fpg_lab.visualization import circulation, figures, replay
 
 
@@ -42,7 +42,7 @@ async def candidate_replay(
             break
     if not any(t.get("candidate_search_data") for t in trials):
         with canvas_area:
-            ui.label("No saved candidate geometry. Rerun P01A with Store debug data enabled.").classes(
+            ui.label("No saved candidate geometry. Rerun P-01-A with Store debug data enabled.").classes(
                 "text-amber-300"
             )
         return None
@@ -74,12 +74,14 @@ async def candidate_replay(
     with controls_area:
         ui.label("Replay").classes("font-semibold text-sm")
         with ui.row().classes("w-full items-center gap-1"):
-            play = ui.button("Play").props("dense")
-            previous = ui.button("Previous").props("dense outline")
-            following = ui.button("Next").props("dense outline")
-            restart = ui.button("Restart").props("dense flat")
-            jump = ui.button("Jump to best").props("dense flat")
-            copy_hint = ui.button(icon="content_copy").props("dense flat")
+            play = action_button("Play").props("dense")
+            previous = action_button("Previous").props("dense outline")
+            following = action_button("Next").props("dense outline")
+            restart = action_button("Restart", role="subtle").props("dense flat")
+            jump = action_button("Jump to best", role="subtle").props("dense flat")
+            copy_hint = action_button(icon="content_copy", role="subtle").props(
+                'dense flat aria-label="Copy cleaned hint map"'
+            )
             copy_hint.tooltip("Copy selected trial's cleaned hint map")
         with ui.element("div").classes("w-full grid grid-cols-2 gap-2"):
             speed = ui.select([1, 2, 5, 10], value=2, label="Frames / second").props(
@@ -102,7 +104,7 @@ async def candidate_replay(
         with ui.expansion(f"Rooms · {len(room_ids)} selected").classes("w-full") as rooms_panel:
             with ui.row().classes("w-full items-center gap-2"):
                 single = ui.switch("Select one", value=False).props("dense")
-                all_rooms = ui.button("Deselect all").props("dense flat")
+                all_rooms = action_button("Deselect all", role="subtle").props("dense flat")
             checks = {}
             with ui.element("div").classes("w-full grid grid-cols-2 gap-x-2 gap-y-1"):
                 for key, style in styles.items():
@@ -110,7 +112,7 @@ async def candidate_replay(
                         f"{style['label']} · {style['name']}", value=True
                     ).props("dense").classes("min-w-0")
                     checks[key].tooltip(key)
-        heatmap = ui.button("Show placement heatmap").props("dense outline")
+        heatmap = action_button("Show placement heatmap", role="subtle").props("dense flat")
         before_cleanup = ui.switch("Before cleanup", value=False).props("dense")
         route_panel = ui.column().classes("w-full gap-1")
         diagnostics = ui.column().classes("w-full min-w-0")
@@ -236,10 +238,10 @@ async def candidate_replay(
                             "text-xs lab-muted"
                         )
                     with ui.row():
-                        ui.button("Select all", on_click=lambda: select_paths(True)).props(
+                        action_button("Select all", role="subtle", on_click=lambda: select_paths(True)).props(
                             "dense flat"
                         )
-                        ui.button("Deselect all", on_click=lambda: select_paths(False)).props(
+                        action_button("Deselect all", role="subtle", on_click=lambda: select_paths(False)).props(
                             "dense flat"
                         )
                     if not available:
