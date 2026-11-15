@@ -216,6 +216,7 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
             for constraint in stage.get("hard_constraints", []):
                 if constraint["key"] == "hallway_dimensions":
                     constraint["settings"]["minimum_width"] = 8
+    old["experiments"]["p01b_refinement"] = deepcopy(old["floor_plan_solver"]["refinement_a"])
     with runtime.database.session_factory() as session:
         config = SystemConfiguration(name="old", configuration_data=deepcopy(old),
                                      schema_version="6", config_hash="old", fpg_core_version="old", is_active=True)
@@ -235,6 +236,14 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
         assert "p01c" not in migrated.configuration_data["experiments"]
         assert migrated.config_hash != "old"
         assert session.get(P01Experiment, experiment_id).system_configuration_snapshot == old
+        migrated_data = deepcopy(migrated.configuration_data)
+        migrated_hash = migrated.config_hash
+    from fpg_lab.integrations.fpg_core.profile_migration import migrate_profiles
+    with runtime.database.session_factory() as session:
+        migrate_profiles(session, runtime.codec)
+        migrated = session.get(SystemConfiguration, config_id)
+        assert migrated.configuration_data == migrated_data
+        assert migrated.config_hash == migrated_hash
     runtime.close()
 
 

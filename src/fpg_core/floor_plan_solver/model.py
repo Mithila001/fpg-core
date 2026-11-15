@@ -32,6 +32,10 @@ class ModelContext:
     config: FloorPlanSolverConfig
     room_variables: dict[str, RoomVariables]
     adjacency_cache: dict[tuple[str, str, int], Any] = field(default_factory=dict)
+    exposure_cache: dict[tuple[str, str, int | None], Any] = field(default_factory=dict)
+    exposure_blocker_cache: dict[tuple[str, str, str], Any] = field(
+        default_factory=dict
+    )
     _name_counter: int = 0
 
     def variables_for(self, room_id_key: str) -> RoomVariables:

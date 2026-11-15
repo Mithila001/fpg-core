@@ -412,6 +412,7 @@ class CoreConfigCodec:
         if source is None:
             return None
         from fpg_core.floor_plan_solver import (
+            FloorPlanSolver,
             FloorPlanSolverConfig,
             HardConstraintUse,
             PreparationConfig,
@@ -441,8 +442,10 @@ class CoreConfigCodec:
                 return tuple(settings(item) for item in value)
             return value
 
+        registry = FloorPlanSolver().registry
+
         def stage(item: Any) -> Any:
-            return FloorPlanSolverConfig(
+            config = FloorPlanSolverConfig(
                 name=item.name,
                 hard_constraints=tuple(
                     HardConstraintUse(x.key, settings(x.settings)) for x in item.hard_constraints
@@ -461,6 +464,8 @@ class CoreConfigCodec:
                     size_tolerance=item.seed.size_tolerance,
                 ),
             )
+            registry.validate_config(config)
+            return config
 
         return ProfileCatalog(
             initial=stage(source.initial),

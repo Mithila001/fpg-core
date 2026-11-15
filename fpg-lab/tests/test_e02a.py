@@ -86,3 +86,28 @@ def test_invalid_config_and_independent_failures(tmp_path, monkeypatch):
         assert row.status == "completed", row.error
         assert [case["status"] for case in row.cases] == ["failed", "completed", "completed", "completed"]
         assert row.cases[0]["error"]["stage"] == "refinement_1"
+
+
+def test_exposure_rules_map_for_all_e02a_profiles():
+    from fpg_core.domain import RoomType
+
+    from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec, CoreConfigurationError
+
+    payload = json.loads(e02a.CONFIG_PATH.read_text(encoding="utf-8"))["configuration"]
+    config = CoreConfigCodec().validate_for_flow(payload, "p01b").config.floor_plan_solver
+    for stage in (config.initial, config.refinement_a, config.refinement_b):
+        back = next(item for item in stage.hard_constraints if item.key == "exterior_wall_exposure")
+        rule = back.settings["rules"][0]
+        assert rule["room_types"] == (RoomType.HALLWAY, RoomType.KITCHEN)
+        assert rule["requirement"]["minimum_length"] == 10
+        assert next(item for item in stage.soft_constraints if item.key == "exterior_wall_exposure").weight == 10
+    old_payload = json.loads(json.dumps(payload))
+    old_payload["floor_plan_solver"]["initial"]["hard_constraints"][-1]["key"] = "back_exposure"
+    with pytest.raises(CoreConfigurationError, match="Unknown hard constraint 'back_exposure'"):
+        CoreConfigCodec().validate_payload(old_payload)
+    payload["floor_plan_solver"]["initial"]["hard_constraints"][-1]["key"] = "exterior_wall_exposure"
+    payload["floor_plan_solver"]["initial"]["hard_constraints"][-1]["settings"] = {
+        "rules": [{"id": "bad", "room_types": ["bedroom"], "match": {"policy": "all"},
+                   "requirement": {"side": "north", "coverage": "full_wall"}}]}
+    with pytest.raises(CoreConfigurationError, match="side"):
+        CoreConfigCodec().validate_payload(payload)

@@ -144,12 +144,52 @@ The shipped default profiles enable:
 | `hallway_dimensions` | corridor width is `10..10`; long dimension is capped at half the non-hallway room span, configurable by orientation |
 | `hallway_parallel_overlap` | projected overlap caps for same-orientation hallways: horizontal `40`, vertical `30` units, even when offset |
 | `hallway_shared_wall` | hallway pairs may touch/connect, but their collinear shared-wall overlap may not exceed `maximum_shared_wall=12.0` project units; corner-only contact has zero shared-wall length |
-| `veranda_front`, `living_room_front` | Clear front walls for verandas, or living rooms when no veranda is present |
-| `back_exposure` | hallway and kitchen; minimum exposure `10.0` |
-| `garage_placement` | Clear front and either side of each garage, including the adjacent front corner |
+| `exterior_wall_exposure` | Back exposure for at least one hallway or kitchen, full front and side exposure for garages, and full front exposure for verandas |
+| `living_room_front` | Full front exposure for living rooms when no veranda is supplied |
 
 
-The generic `boundary_placement` rule remains available for explicit boundary placement. `front_anchor` is no longer registered. Migrate saved configurations by replacing `front_anchor` and the veranda boundary rule with `veranda_front` and `living_room_front`; garage placement now uses room clearance. Set `floor_cluster_position.front_multiplier` to 0 to remove front-boundary bias.
+The generic `boundary_placement` rule remains available for explicit boundary placement. `front_anchor` is no longer registered. Exterior exposure means an unobstructed perpendicular path to the generation boundary; contact with that boundary is not required. Only rooms obstruct these paths. The hard back rule and soft kitchen rule require one continuous exposed segment of at least 10 project units in the default profiles. Veranda and living-room rules require the entire front wall; the living-room rule applies only when there is no veranda. Garage exposure is limited to the projections of its own walls, so the old adjacent-front-corner restriction no longer applies. Openings and post-processing use separate behavior and may not preserve these solver-stage exposure results.
+
+The generic `exterior_wall_exposure` hard and soft constraint accepts `settings.rules`: each rule has an `id`, `room_types`, a `match` mapping (`policy` is `all` or `at_least`, with a positive `count` for the latter), and a `requirement`. Requirements are nested `all`/`any` lists or leaves containing `side` (`front`, `back`, `left`, `right`), `coverage` (`full_wall` or `minimum_continuous_length`), and `minimum_length` for the latter. Soft rules add one weighted violation penalty per rule. Room types are `RoomType` members in Core and strings in Lab JSON. The conditional `living_room_front` constraint uses the same required rule format.
+
+Validation requires a nonempty rule list, unique nonblank IDs, nonempty room-type lists, and exactly the fields described above. Each `all` or `any` node has a nonempty list of child requirements; leaves cannot contain extra fields. Lengths must be finite positive numbers, and counts positive integers (booleans are rejected). An `all` match applies the requirement to every matching room; `at_least` counts rooms satisfying the complete requirement, not individual matching leaves. Each soft rule contributes one violation term, weighted by its constraint use, regardless of how many rooms fail. See the [design rationale](../features/solver.md#exterior-wall-exposure-design-rationale) for the geometry and scope.
+
+To add or change a rule, edit the relevant hard or soft constraint use in the profile, adding another uniquely identified rule to its `rules` list when needed. Use the generic key for ordinary policies; `living_room_front` retains its veranda condition. Core validates settings when constructing constraint uses and checks scaled minimum lengths against the floor span during model construction. Lab JSON maps room-type strings to Core enums and rejects unknown configuration fields.
+
+For example, to require two bedrooms to have at least 10 continuous project units
+of front or back exposure, add this use to a configuration's hard constraints:
+
+```python
+from fpg_core.domain import RoomType
+from fpg_core.floor_plan_solver import HardConstraintUse
+
+bedroom_exposure = HardConstraintUse("exterior_wall_exposure", {
+    "rules": [{
+        "id": "two_bedrooms",
+        "room_types": [RoomType.BEDROOM],
+        "match": {"policy": "at_least", "count": 2},
+        "requirement": {"any": [
+            {"side": "front", "coverage": "minimum_continuous_length", "minimum_length": 10},
+            {"side": "back", "coverage": "minimum_continuous_length", "minimum_length": 10},
+        ]},
+    }],
+})
+```
+
+Use `SoftConstraintUse` with the same settings and a positive weight for a
+preference. `all` applies to each matching room and is satisfied when none
+match. A hard `at_least` rule is infeasible when too few rooms qualify; a soft
+rule has no penalty if there are no matching rooms. The existing hard back rule
+is infeasible with no eligible rooms; the soft kitchen preference is skipped
+when no kitchen matches. Supplied rooms are required by the solver. Invalid
+rule structure and lengths raise `InvalidProfileError`; minimum lengths larger
+than the corresponding floor span are rejected during model construction.
+Lengths are project units and are rounded upward using the configured integer
+coordinate scale. A given constraint key occurs once per hard or soft list;
+put multiple identified rules in its `rules` list. Defaults use 10 units per
+metre in examples, but applications own unit conversion.
+
+Exposure settings must use `rules`; legacy settings and retired constraint keys are not supported. Replace saved profiles or development database configurations with the current seed configuration before running them. Historical snapshots are not migrated and may not be executable with current Core. Unknown constraint keys are rejected when the solver validates its registry.
 
 `room_size_hierarchy` is registered for custom configurations but is not enabled by
 the built-in profiles.
@@ -175,7 +215,7 @@ The default registry provides:
 - `dead_space`
 - `hallway_efficiency`
 - `bathroom_depth`
-- `kitchen_back_exposure`
+- `exterior_wall_exposure`
 - `seed_stability`
 
 The solver minimizes the weighted sum of enabled soft-constraint penalties. Hard
@@ -275,9 +315,9 @@ Exact built-in soft uses:
 
 | Profile | Exact soft uses (`key: weight`; important settings) | Runtime / seed |
 |---|---|---|
-| `initial_generation` | `room_relations:40` (overlap 10), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:3`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:2`, `kitchen_back_exposure:10` (exposure 10) | 5 s; candidate hints optional; coordinate scale 1 |
-| `refinement_a` | `room_relations:50`, `seed_stability:20` (position 2/size 1), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:4`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:3`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 10; coordinate scale 1 |
-| `refinement_b` | `room_relations:60`, `seed_stability:35` (position 2/size 2), `dead_space:6`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:4`, `kitchen_back_exposure:10` | 2 s; existing plan required; position/size tolerance 5; coordinate scale 1 |
+| `initial_generation` | `room_relations:40` (overlap 10), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:3`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:2`, `exterior_wall_exposure:10` (kitchen rule) (exposure 10) | 5 s; candidate hints optional; coordinate scale 1 |
+| `refinement_a` | `room_relations:50`, `seed_stability:20` (position 2/size 1), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:4`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:3`, `exterior_wall_exposure:10` (kitchen rule) | 2 s; existing plan required; position/size tolerance 10; coordinate scale 1 |
+| `refinement_b` | `room_relations:60`, `seed_stability:35` (position 2/size 2), `dead_space:6`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:4`, `exterior_wall_exposure:10` (kitchen rule) | 2 s; existing plan required; position/size tolerance 5; coordinate scale 1 |
 
 ## Recommended values
 

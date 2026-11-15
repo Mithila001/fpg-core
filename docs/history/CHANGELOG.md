@@ -1,8 +1,13 @@
 # Changelog
 
-- Breaking: solver defaults use room-facing clearance; migrate saved profiles from `front_anchor` and veranda boundary placement to `veranda_front` and `living_room_front`. Garage placement now uses room clearance.
+- Breaking: exposure constraints require explicit `rules`. Replace old named exposure keys with `exterior_wall_exposure` and replace saved Lab profiles with current configuration; `living_room_front` remains conditional and requires explicit rules. Old snapshots are not migrated.
+
+- Breaking: solver defaults use room-facing clearance; replace saved profiles using `front_anchor` and veranda boundary placement with the current exposure rules. Garage placement now uses room clearance.
 
 ## Unreleased
+
+- Breaking: back exposure no longer requires boundary contact, and garage side exposure no longer restricts space beyond its own wall projection. Review saved solver profiles that relied on the previous geometry.
+
 
 - Hallways now require at least 10 project units; default door width is 10.
   Custom profiles below the hallway minimum must be updated.

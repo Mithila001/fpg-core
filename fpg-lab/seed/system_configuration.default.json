@@ -816,30 +816,89 @@
             }
           },
           {
-            "key": "back_exposure",
+            "key": "exterior_wall_exposure",
             "settings": {
-              "room_types": [
-                "hallway",
-                "kitchen"
-              ],
-              "minimum_exposure": 10.0
-            }
-          },
-          {
-            "key": "garage_placement",
-            "settings": {
-              "garage_room_types": [
-                "garage"
+              "rules": [
+                {
+                  "id": "back_exposure",
+                  "room_types": [
+                    "hallway",
+                    "kitchen"
+                  ],
+                  "match": {
+                    "policy": "at_least",
+                    "count": 1
+                  },
+                  "requirement": {
+                    "side": "back",
+                    "coverage": "minimum_continuous_length",
+                    "minimum_length": 10.0
+                  }
+                },
+                {
+                  "id": "garage_placement",
+                  "room_types": [
+                    "garage"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "all": [
+                      {
+                        "side": "front",
+                        "coverage": "full_wall"
+                      },
+                      {
+                        "any": [
+                          {
+                            "side": "left",
+                            "coverage": "full_wall"
+                          },
+                          {
+                            "side": "right",
+                            "coverage": "full_wall"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "veranda_front",
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "side": "front",
+                    "coverage": "full_wall"
+                  }
+                }
               ]
             }
           },
           {
-            "key": "veranda_front",
-            "settings": {}
-          },
-          {
             "key": "living_room_front",
-            "settings": {}
+            "settings": {
+              "rules": [
+                {
+                  "id": "living_room_front",
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "side": "front",
+                    "coverage": "full_wall"
+                  }
+                }
+              ]
+            }
           },
           {
             "key": "hallway_parallel_overlap",
@@ -891,9 +950,25 @@
             "weight": 2
           },
           {
-            "key": "kitchen_back_exposure",
+            "key": "exterior_wall_exposure",
             "settings": {
-              "minimum_exposure": 10.0
+              "rules": [
+                {
+                  "id": "kitchen_back_exposure",
+                  "room_types": [
+                    "kitchen"
+                  ],
+                  "match": {
+                    "policy": "at_least",
+                    "count": 1
+                  },
+                  "requirement": {
+                    "side": "back",
+                    "coverage": "minimum_continuous_length",
+                    "minimum_length": 10.0
+                  }
+                }
+              ]
             },
             "weight": 10
           }
@@ -1005,30 +1080,89 @@
             }
           },
           {
-            "key": "back_exposure",
+            "key": "exterior_wall_exposure",
             "settings": {
-              "room_types": [
-                "hallway",
-                "kitchen"
-              ],
-              "minimum_exposure": 10.0
-            }
-          },
-          {
-            "key": "garage_placement",
-            "settings": {
-              "garage_room_types": [
-                "garage"
+              "rules": [
+                {
+                  "id": "back_exposure",
+                  "room_types": [
+                    "hallway",
+                    "kitchen"
+                  ],
+                  "match": {
+                    "policy": "at_least",
+                    "count": 1
+                  },
+                  "requirement": {
+                    "side": "back",
+                    "coverage": "minimum_continuous_length",
+                    "minimum_length": 10.0
+                  }
+                },
+                {
+                  "id": "garage_placement",
+                  "room_types": [
+                    "garage"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "all": [
+                      {
+                        "side": "front",
+                        "coverage": "full_wall"
+                      },
+                      {
+                        "any": [
+                          {
+                            "side": "left",
+                            "coverage": "full_wall"
+                          },
+                          {
+                            "side": "right",
+                            "coverage": "full_wall"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "veranda_front",
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "side": "front",
+                    "coverage": "full_wall"
+                  }
+                }
               ]
             }
           },
           {
-            "key": "veranda_front",
-            "settings": {}
-          },
-          {
             "key": "living_room_front",
-            "settings": {}
+            "settings": {
+              "rules": [
+                {
+                  "id": "living_room_front",
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "side": "front",
+                    "coverage": "full_wall"
+                  }
+                }
+              ]
+            }
           },
           {
             "key": "hallway_parallel_overlap",
@@ -1088,9 +1222,25 @@
             "weight": 3
           },
           {
-            "key": "kitchen_back_exposure",
+            "key": "exterior_wall_exposure",
             "settings": {
-              "minimum_exposure": 10.0
+              "rules": [
+                {
+                  "id": "kitchen_back_exposure",
+                  "room_types": [
+                    "kitchen"
+                  ],
+                  "match": {
+                    "policy": "at_least",
+                    "count": 1
+                  },
+                  "requirement": {
+                    "side": "back",
+                    "coverage": "minimum_continuous_length",
+                    "minimum_length": 10.0
+                  }
+                }
+              ]
             },
             "weight": 10
           }
@@ -1202,30 +1352,89 @@
             }
           },
           {
-            "key": "back_exposure",
+            "key": "exterior_wall_exposure",
             "settings": {
-              "room_types": [
-                "hallway",
-                "kitchen"
-              ],
-              "minimum_exposure": 10.0
-            }
-          },
-          {
-            "key": "garage_placement",
-            "settings": {
-              "garage_room_types": [
-                "garage"
+              "rules": [
+                {
+                  "id": "back_exposure",
+                  "room_types": [
+                    "hallway",
+                    "kitchen"
+                  ],
+                  "match": {
+                    "policy": "at_least",
+                    "count": 1
+                  },
+                  "requirement": {
+                    "side": "back",
+                    "coverage": "minimum_continuous_length",
+                    "minimum_length": 10.0
+                  }
+                },
+                {
+                  "id": "garage_placement",
+                  "room_types": [
+                    "garage"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "all": [
+                      {
+                        "side": "front",
+                        "coverage": "full_wall"
+                      },
+                      {
+                        "any": [
+                          {
+                            "side": "left",
+                            "coverage": "full_wall"
+                          },
+                          {
+                            "side": "right",
+                            "coverage": "full_wall"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "veranda_front",
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "side": "front",
+                    "coverage": "full_wall"
+                  }
+                }
               ]
             }
           },
           {
-            "key": "veranda_front",
-            "settings": {}
-          },
-          {
             "key": "living_room_front",
-            "settings": {}
+            "settings": {
+              "rules": [
+                {
+                  "id": "living_room_front",
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "match": {
+                    "policy": "all"
+                  },
+                  "requirement": {
+                    "side": "front",
+                    "coverage": "full_wall"
+                  }
+                }
+              ]
+            }
           },
           {
             "key": "hallway_parallel_overlap",
@@ -1277,9 +1486,25 @@
             "weight": 4
           },
           {
-            "key": "kitchen_back_exposure",
+            "key": "exterior_wall_exposure",
             "settings": {
-              "minimum_exposure": 10.0
+              "rules": [
+                {
+                  "id": "kitchen_back_exposure",
+                  "room_types": [
+                    "kitchen"
+                  ],
+                  "match": {
+                    "policy": "at_least",
+                    "count": 1
+                  },
+                  "requirement": {
+                    "side": "back",
+                    "coverage": "minimum_continuous_length",
+                    "minimum_length": 10.0
+                  }
+                }
+              ]
             },
             "weight": 10
           }

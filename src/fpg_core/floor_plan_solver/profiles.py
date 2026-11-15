@@ -67,7 +67,10 @@ def _default_hard_constraints(
     settings: DefaultProfileSettings,
 ) -> tuple[HardConstraintUse, ...]:
     return (
-        HardConstraintUse("bathroom_hallway_shared_wall", {"maximum_shared_sides": 1, "additional_shared_length": 10.0}),
+        HardConstraintUse(
+            "bathroom_hallway_shared_wall",
+            {"maximum_shared_sides": 1, "additional_shared_length": 10.0},
+        ),
         HardConstraintUse(
             "aspect_ratio",
             {
@@ -132,23 +135,57 @@ def _default_hard_constraints(
             },
         ),
         HardConstraintUse(
-            "back_exposure",
+            "exterior_wall_exposure",
             {
-                "room_types": (
-                    RoomType.HALLWAY,
-                    RoomType.KITCHEN,
-                ),
-                "minimum_exposure": 10.0,
+                "rules": [
+                    {
+                        "id": "back_exposure",
+                        "room_types": [RoomType.HALLWAY, RoomType.KITCHEN],
+                        "match": {"policy": "at_least", "count": 1},
+                        "requirement": {
+                            "side": "back",
+                            "coverage": "minimum_continuous_length",
+                            "minimum_length": 10.0,
+                        },
+                    },
+                    {
+                        "id": "garage_placement",
+                        "room_types": [RoomType.GARAGE],
+                        "match": {"policy": "all"},
+                        "requirement": {
+                            "all": [
+                                {"side": "front", "coverage": "full_wall"},
+                                {
+                                    "any": [
+                                        {"side": "left", "coverage": "full_wall"},
+                                        {"side": "right", "coverage": "full_wall"},
+                                    ]
+                                },
+                            ]
+                        },
+                    },
+                    {
+                        "id": "veranda_front",
+                        "room_types": [RoomType.VERANDA],
+                        "match": {"policy": "all"},
+                        "requirement": {"side": "front", "coverage": "full_wall"},
+                    },
+                ]
             },
         ),
         HardConstraintUse(
-            "garage_placement",
+            "living_room_front",
             {
-                "garage_room_types": (RoomType.GARAGE,),
+                "rules": [
+                    {
+                        "id": "living_room_front",
+                        "room_types": [RoomType.LIVING_ROOM],
+                        "match": {"policy": "all"},
+                        "requirement": {"side": "front", "coverage": "full_wall"},
+                    }
+                ]
             },
         ),
-        HardConstraintUse("veranda_front"),
-        HardConstraintUse("living_room_front"),
     )
 
 
@@ -169,6 +206,24 @@ def build_default_profiles(
     cfg = settings or DefaultProfileSettings()
     preparation = PreparationConfig(coordinate_scale=cfg.coordinate_scale)
     hard = _default_hard_constraints(cfg)
+    kitchen_exposure = SoftConstraintUse(
+        "exterior_wall_exposure",
+        weight=10,
+        settings={
+            "rules": [
+                {
+                    "id": "kitchen_back_exposure",
+                    "room_types": [RoomType.KITCHEN],
+                    "match": {"policy": "at_least", "count": 1},
+                    "requirement": {
+                        "side": "back",
+                        "coverage": "minimum_continuous_length",
+                        "minimum_length": 10.0,
+                    },
+                }
+            ]
+        },
+    )
 
     initial = GenerationProfile(
         name="initial_generation",
@@ -191,11 +246,7 @@ def build_default_profiles(
             SoftConstraintUse("dead_space", weight=3),
             _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=2),
-            SoftConstraintUse(
-                "kitchen_back_exposure",
-                weight=10,
-                settings={"minimum_exposure": 10.0},
-            ),
+            kitchen_exposure,
         ),
         solver=SolverConfig(max_time_seconds=cfg.initial_max_time_seconds),
         preparation=preparation,
@@ -232,11 +283,7 @@ def build_default_profiles(
             SoftConstraintUse("dead_space", weight=4),
             _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=3),
-            SoftConstraintUse(
-                "kitchen_back_exposure",
-                weight=10,
-                settings={"minimum_exposure": 10.0},
-            ),
+            kitchen_exposure,
         ),
         solver=SolverConfig(max_time_seconds=cfg.refinement_max_time_seconds),
         preparation=preparation,
@@ -267,11 +314,7 @@ def build_default_profiles(
             SoftConstraintUse("dead_space", weight=6),
             _hallway_efficiency_use(cfg),
             SoftConstraintUse("bathroom_depth", weight=4),
-            SoftConstraintUse(
-                "kitchen_back_exposure",
-                weight=10,
-                settings={"minimum_exposure": 10.0},
-            ),
+            kitchen_exposure,
         ),
         solver=SolverConfig(max_time_seconds=cfg.refinement_max_time_seconds),
         preparation=preparation,
