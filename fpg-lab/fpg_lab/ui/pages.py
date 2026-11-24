@@ -22,7 +22,10 @@ from fpg_lab.ui.components import (
 from fpg_lab.ui.experiments import register_experiments
 
 EXPERIMENTS = {
-    "e02a": ("Quick Solver Results Test", "File-backed hint maps → solve → refine → post-process → score"),
+    "e02a": (
+        "Quick Solver Results Test",
+        "File-backed hint maps → solve → refine → post-process → score",
+    ),
     "e01a": ("Floor Traffic", "Preset floor plans → walking paths → traffic heatmap"),
     "p01a": ("Candidate search", "Preprocess → search → circulation → candidate score"),
     "p01b": (
@@ -37,7 +40,7 @@ def register_pages(runtime: LabRuntime) -> None:
     @ui.page("/")
     async def home() -> None:
         shell(
-            "Experiment workspace",
+            None,
             "Run and inspect floor-plan prototypes and experiments directly in Python.",
         )
         # Family grouping is display-only; experiment keys and route paths stay unchanged.

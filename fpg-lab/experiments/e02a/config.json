@@ -1190,8 +1190,8 @@
           {
             "key": "seed_stability",
             "settings": {
-              "position_multiplier": 1,
-              "size_multiplier": 1
+              "position_multiplier": 0.1,
+              "size_multiplier": 0.1
             },
             "weight": 50
           },
@@ -1253,7 +1253,7 @@
           }
         ],
         "solver": {
-          "max_time_seconds": 3,
+          "max_time_seconds": 2,
           "num_search_workers": 0,
           "random_seed": null,
           "log_search_progress": false,
@@ -1267,7 +1267,7 @@
           "source": "existing_floor_plan",
           "require_source": true,
           "apply_hints": true,
-          "position_tolerance": 10.0,
+          "position_tolerance": 20.0,
           "size_tolerance": 10.0
         }
       },
