@@ -266,3 +266,11 @@ def import_e02a(draft: dict, path: Path = E02A_PATH) -> Configuration:
 
 class CountModel(Document):
     value: Count
+
+
+def maximum_counts(rooms: dict, limit_attached_bathrooms: bool) -> dict:
+    selected = {kind: {**room, "count": room["maximum_count"]} for kind, room in rooms.items()}
+    if limit_attached_bathrooms:
+        attached = selected[RoomType.ATTACHED_BATHROOM]
+        attached["count"] = min(attached["count"], selected[RoomType.BEDROOM]["count"])
+    return selected

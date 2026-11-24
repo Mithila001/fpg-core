@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from fractions import Fraction
@@ -20,6 +20,27 @@ RuleKey = tuple[RoomType, RoomType]
 
 class AnalysisLimit(Exception):
     pass
+
+
+@dataclass(frozen=True)
+class AreaRange:
+    minimum: int
+    maximum: int
+
+    def __post_init__(self) -> None:
+        if (
+            type(self.minimum) is not int
+            or type(self.maximum) is not int
+            or not 0 < self.minimum <= self.maximum
+        ):
+            raise ValueError("Enter positive whole areas with minimum at most maximum.")
+
+
+@dataclass(frozen=True)
+class Variation:
+    difference: int
+    spread: Fraction
+    restricted_by_other_rules: bool
 
 
 @dataclass(frozen=True)
@@ -50,6 +71,7 @@ class Analysis:
     dimensions: dict[str, Dimensions] = field(default_factory=dict)
     supported: dict[str, tuple[int, ...]] = field(default_factory=dict)
     area_ranges: dict[str, tuple[tuple[int, int], ...]] = field(default_factory=dict)
+    variation: dict[RoomType, Variation] = field(default_factory=dict)
     witness: dict[str, tuple[int, int, int]] = field(default_factory=dict)
     inactive: tuple[RuleKey, ...] = ()
     diagnostics: list[str] = field(default_factory=list)
@@ -207,23 +229,20 @@ def _diagnose(
     result: Analysis,
     domains: tuple[tuple[int, ...], ...],
     edges: tuple[Edge, ...],
-    locks: dict[str, int],
-    baseline: Analysis | None,
+    lock_induced: bool,
     deadline: float,
 ) -> None:
     count = len(domains)
     _, failure = propagate(domains, _outgoing(count, edges), deadline, trace=True)
     keys = tuple(dict.fromkeys(edge.rule for edge in edges))
-    result.category = (
-        "Locked-area" if locks and baseline and baseline.status == "compatible" else "Combined"
-    )
+    result.category = "Area-range lock" if lock_induced else "Combined"
     for key in keys:
         value, _ = propagate(
             domains, _outgoing(count, tuple(e for e in edges if e.rule == key)), deadline
         )
         if value is None:
             kind = "Same-type" if key[0] == key[1] else "Cross-type"
-            if result.category != "Locked-area" and result.category == "Combined":
+            if result.category == "Combined":
                 result.category = kind
             result.diagnostics.append(f"{kind} rule fails on its own — {_describe(key)}")
     chain = []
@@ -238,7 +257,7 @@ def _diagnose(
         )
         failure = failure.cause
     result.diagnostics.extend(reversed(tuple(dict.fromkeys(reversed(chain)))))
-    if locks and baseline and baseline.status == "compatible":
+    if lock_induced:
         result.diagnostics.append("Clearing the current locks restores a compatible configuration.")
     for removed in keys:
         witness, _ = propagate(
@@ -263,7 +282,7 @@ def _diagnose(
 
 def analyze(
     config: Configuration,
-    locks: dict[str, int] | None = None,
+    locks: dict[RoomType, AreaRange] | None = None,
     baseline: Analysis | None = None,
     *,
     seconds: float = 5,
@@ -295,12 +314,25 @@ def analyze(
         result.room_ids = tuple(ids)
         edges, result.inactive = _relationships(config, indexes)
         empty = [room for room in ids if not result.dimensions[room]]
-        unavailable = [
-            room for room, area in locks.items() if area not in result.dimensions.get(room, {})
-        ]
+        restricted: list[tuple[int, ...]] = [()] * len(ids)
+        unavailable = []
+        for kind, group in indexes.items():
+            if not group:
+                continue
+            original = tuple(result.dimensions[ids[group[0]]])
+            lock = locks.get(kind)
+            allowed = original
+            if lock is not None:
+                allowed = original[
+                    bisect_left(original, lock.minimum) : bisect_right(original, lock.maximum)
+                ]
+                if original and not allowed:
+                    unavailable.append((kind, lock))
+            for i in group:
+                restricted[i] = allowed
         if empty or unavailable:
             result.status = "incompatible"
-            result.category = "Dimension" if empty else "Locked-area"
+            result.category = "Dimension" if empty else "Area-range lock"
             for room in empty:
                 kind = RoomType(room.rsplit("_", 1)[0])
                 settings = config.rooms[kind]
@@ -316,21 +348,28 @@ def analyze(
                     f"{settings.min_area}–{settings.max_area}, and X/Y ratio {aspect_range}. "
                     "Try widening one of those bounds."
                 )
-            for room in unavailable:
+            for kind, lock in unavailable:
                 result.diagnostics.append(
-                    f"{room_label(room)} cannot achieve its locked area of {locks[room]} units²."
+                    f"{room_label(kind.value)} has no achievable area within the requested "
+                    f"{lock.minimum}–{lock.maximum} units² range."
                 )
             result.supported = dict.fromkeys(ids, ())
             return result
-        domains = tuple(
-            (locks[room],) if room in locks else tuple(result.dimensions[room]) for room in ids
-        )
+        domains = tuple(restricted)
         outgoing = _outgoing(len(ids), edges)
         least, _ = propagate(domains, outgoing, deadline)
         if least is None:
             result.status = "incompatible"
             result.supported = dict.fromkeys(ids, ())
-            _diagnose(result, domains, edges, locks, baseline, deadline)
+            lock_induced = bool(locks) and (
+                baseline.status == "compatible"
+                if baseline is not None
+                else propagate(
+                    tuple(tuple(result.dimensions[room]) for room in ids), outgoing, deadline
+                )[0]
+                is not None
+            )
+            _diagnose(result, domains, edges, lock_induced, deadline)
             return result
         result.witness = {
             room: (*result.dimensions[room][area][0], area)
@@ -338,28 +377,25 @@ def analyze(
         }
         connected = {edge.source for edge in edges} | {edge.target for edge in edges}
         for group in indexes.values():
-            equivalent = None
-            for i in group:
-                room = ids[i]
-                if room in locks or i not in connected:
-                    result.supported[room] = domains[i]
-                    continue
-                if equivalent is None:
-                    candidates = (
-                        baseline.supported.get(room, domains[i])
-                        if locks and baseline and baseline.status == "compatible"
-                        else domains[i]
+            if not group:
+                continue
+            i = group[0]
+            supported = domains[i]
+            if i in connected:
+                if locks and baseline and baseline.status == "compatible":
+                    prior = set(baseline.supported[ids[i]])
+                    supported = tuple(area for area in supported if area in prior)
+                supported = tuple(
+                    area
+                    for area in supported
+                    if area >= least[i]
+                    and (
+                        area == least[i]
+                        or propagate(domains, outgoing, deadline, (i, area))[0] is not None
                     )
-                    equivalent = tuple(
-                        area
-                        for area in candidates
-                        if area >= least[i]
-                        and (
-                            area == least[i]
-                            or propagate(domains, outgoing, deadline, (i, area))[0] is not None
-                        )
-                    )
-                result.supported[room] = equivalent
+                )
+            for member in group:
+                result.supported[ids[member]] = supported
         cached_ranges = {}
         for room, areas in result.supported.items():
             dimensions = result.dimensions[room]
@@ -374,7 +410,60 @@ def analyze(
                     (min(length), max(length)),
                 )
             result.area_ranges[room] = cached_ranges[key_ids]
+        result.variation = _variation(config, indexes, edges, domains, result, deadline)
         result.status = "compatible"
     except (AnalysisLimit, OverflowError) as exc:
         result.diagnostics.append(str(exc))
     return result
+
+
+def _variation(
+    config: Configuration,
+    indexes: dict[RoomType, list[int]],
+    edges: tuple[Edge, ...],
+    domains: tuple[tuple[int, ...], ...],
+    result: Analysis,
+    deadline: float,
+) -> dict[RoomType, Variation]:
+    # Negate areas and reverse each bound to reuse propagation for greatest assignments.
+    negative_by_domain = {
+        id(domains[group[0]]): tuple(-area for area in reversed(domains[group[0]]))
+        for group in indexes.values()
+        if group
+    }
+    negative = tuple(negative_by_domain[id(domain)] for domain in domains)
+    reversed_edges = tuple(
+        Edge(edge.target, edge.source, 1 / edge.multiplier, edge.rule) for edge in edges
+    )
+    outgoing = _outgoing(len(domains), reversed_edges)
+    tolerance = {
+        rule.room_type: Fraction(rule.maximum_spread_ratio) for rule in config.same_type_rules
+    }
+    variations = {}
+    for kind, group in indexes.items():
+        if len(group) < 2:
+            continue
+        first, second = group[:2]
+        domain = domains[first]
+        limit = tolerance.get(kind)
+        difference = own_difference = 0
+        spread = own_spread = Fraction(0)
+        for smaller in domain:
+            if monotonic() >= deadline:
+                raise AnalysisLimit("Same-type variation reached the analysis time limit")
+            if limit is None:
+                same_only = domain[-1]
+            else:
+                same_only = domain[bisect_right(domain, floor(smaller * (1 + limit))) - 1]
+            own_difference = max(own_difference, same_only - smaller)
+            own_spread = max(own_spread, Fraction(same_only - smaller, smaller))
+        for smaller in result.supported[result.room_ids[first]]:
+            greatest, _ = propagate(negative, outgoing, deadline, (first, -smaller))
+            assert greatest is not None  # The fixed area already has global support.
+            delta = -greatest[second] - smaller
+            difference = max(difference, delta)
+            spread = max(spread, Fraction(delta, smaller))
+        variations[kind] = Variation(
+            difference, spread, difference < own_difference or spread < own_spread
+        )
+    return variations

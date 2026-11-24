@@ -176,6 +176,6 @@ profiles. Add cleaned hint maps and configure the stages as described in the
 ## E03A room size configuration analyzer
 
 Open E-03-A in the experiment list to edit room sizing rules, inspect compatible
-sizes, and lock areas to explore their effects. See the
+sizes, and apply room-type area-range locks to explore their effects. See the
 [E03 guide](docs/experiments/e03.md) for import, saving, and analysis behavior.
 

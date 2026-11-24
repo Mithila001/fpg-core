@@ -3,15 +3,16 @@ from itertools import product
 from time import monotonic
 
 import pytest
-from fpg_core.domain import RoomSizeSpec, RoomWidthAxis
+from fpg_core.domain import RoomSizeSpec, RoomType, RoomWidthAxis
 
-from fpg_lab.flows.e03a import analyze, enumerate_dimensions
+from fpg_lab.flows.e03a import AreaRange, analyze, enumerate_dimensions
 from fpg_lab.flows.e03a_config import (
     CONFIG_PATH,
     E02A_PATH,
     Configuration,
     export,
     import_e02a,
+    maximum_counts,
     parse,
     save,
 )
@@ -31,6 +32,9 @@ def test_import_and_explicit_save(tmp_path, monkeypatch):
     assert str(imported.aspect_for("garage").max_ratio) == "0.7"
     assert draft["rooms"]["bedroom"]["count"] == 8
     assert E02A_PATH.read_bytes() == original
+    draft["rooms"]["bedroom"]["maximum_count"] = 2
+    counts = maximum_counts(draft["rooms"], True)
+    assert counts["bedroom"]["count"] == counts["attached_bathroom"]["count"] == 2
 
     saved = tmp_path / "config.json"
     initial = save(starter, None, saved)
@@ -93,13 +97,26 @@ def test_exact_support_against_brute_force():
     config = Configuration.model_validate(draft)
     baseline = analyze(config)
     assert len(baseline.inactive) == 1
-    for locks in ({}, {"living_room_1": 4}, {"bedroom_1": 3, "bedroom_2": 2}, {"living_room_1": 2}):
+    bedroom, living_room = RoomType.BEDROOM, RoomType.LIVING_ROOM
+    for locks in (
+        {},
+        {living_room: AreaRange(4, 5)},
+        {bedroom: AreaRange(2, 4), living_room: AreaRange(3, 5)},
+        {living_room: AreaRange(2, 3)},
+        {living_room: AreaRange(6, 7)},
+        {},
+    ):
         result = analyze(config, locks, baseline)
         rooms = result.room_ids
         exhaustive = []
         for sizes in product((2, 3, 4, 5), repeat=len(rooms)):
             a, b, bath, living = sizes
-            if any(sizes[rooms.index(room)] != value for room, value in locks.items()):
+            kinds = (bedroom, bedroom, RoomType.BATHROOM, living_room)
+            if any(
+                not locks[kind].minimum <= area <= locks[kind].maximum
+                for kind, area in zip(kinds, sizes, strict=True)
+                if kind in locks
+            ):
                 continue
             if (
                 4 * bath <= 3 * min(a, b)
@@ -114,8 +131,30 @@ def test_exact_support_against_brute_force():
         assert bool(result.witness) == bool(exhaustive)
         if exhaustive:
             assert tuple(result.witness[room][2] for room in rooms) in exhaustive
+            maximum_difference = max(abs(a - b) for a, b, _, _ in exhaustive)
+            maximum_spread = max(Fraction(abs(a - b), min(a, b)) for a, b, _, _ in exhaustive)
+            variation = result.variation[bedroom]
+            assert (variation.difference, variation.spread) == (maximum_difference, maximum_spread)
+            assert variation.restricted_by_other_rules
         else:
-            assert result.category == "Locked-area"
+            assert result.category == "Area-range lock"
+
+    equal_draft = {
+        **draft,
+        "cross_type_rules": (),
+        "same_type_rules": [
+            {"room_type": "bedroom", "maximum_spread_ratio": "0"},
+        ],
+    }
+    equal = analyze(Configuration.model_validate(equal_draft))
+    assert equal.flexibility("bedroom_1") == 100
+    assert equal.variation[bedroom].spread == 0
+    assert not equal.variation[bedroom].restricted_by_other_rules
+    equal_draft["same_type_rules"][0]["maximum_spread_ratio"] = "0.5"
+    varied = analyze(Configuration.model_validate(equal_draft), {bedroom: AreaRange(2, 4)})
+    assert varied.variation[bedroom].spread == Fraction(1, 2)
+    with pytest.raises(ValueError, match="positive whole areas"):
+        AreaRange(5, 4)
 
     draft["cross_type_rules"].append(
         {"compared_type": "living_room", "reference_type": "bathroom", "max_ratio": "0.75"}
