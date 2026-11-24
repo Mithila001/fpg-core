@@ -43,7 +43,8 @@ through polling; avoid rebuilding plots when snapshots have not changed.
 E01A is intentionally ephemeral: a one-time per-tab NiceGUI memory handoff
 transfers the result from setup to its dedicated result page. The result page
 consumes that handoff, so leaving/reloading loses it. There is no database run
-or history; other P01 experiments keep saved-run behavior.
+or history. E03A uses the same tab-local handoff for its interactive analysis
+and saves its configuration only on explicit request. P01 runs retain history.
 
 ## Extend an experiment
 
@@ -74,6 +75,8 @@ keyword arguments and validate Pydantic models explicitly at their boundaries.
 E02A owns its version-controlled configuration and hint maps under
 `experiments/e02a/`; they are independent of stored profiles and P01B presets.
 See the [E02 guide](experiments/e02.md) for its snapshot and mapping rules.
+E03A has its own settings under `experiments/e03a/` and reads E02A settings only
+for explicit imports. See the [E03 guide](experiments/e03.md).
 
 The editable repository is the supported Lab installation. `seed/` contains the
 single current starter profile. New drafts, setup and headless defaults use it.

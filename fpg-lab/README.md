@@ -173,3 +173,9 @@ E02A runs the floor-plan solver pipeline using files rather than saved system
 profiles. Add cleaned hint maps and configure the stages as described in the
 [E02 guide](docs/experiments/e02.md), then open E-02-A in the experiment list.
 
+## E03A room size configuration analyzer
+
+Open E-03-A in the experiment list to edit room sizing rules, inspect compatible
+sizes, and lock areas to explore their effects. See the
+[E03 guide](docs/experiments/e03.md) for import, saving, and analysis behavior.
+

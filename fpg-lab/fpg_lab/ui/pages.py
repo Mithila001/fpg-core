@@ -22,6 +22,7 @@ from fpg_lab.ui.components import (
 from fpg_lab.ui.experiments import register_experiments
 
 EXPERIMENTS = {
+    "e03a": ("Room Size Configuration Analyzer", "Compare room sizes, ratio rules and sizing flexibility"),
     "e02a": (
         "Quick Solver Results Test",
         "File-backed hint maps → solve → refine → post-process → score",
@@ -70,7 +71,7 @@ def register_pages(runtime: LabRuntime) -> None:
                             on_click=lambda f=flow: ui.navigate.to(f"/experiments/{f}"),
                         ).props("dense outline")
         ui.label(
-            f"FPG Core {runtime.codec.fpg_core_version} · P-01 and E-02-A runs are saved; E-01-A runs are temporary"
+            f"FPG Core {runtime.codec.fpg_core_version} · E-01-A and E-03-A runs are temporary"
         ).classes("text-xs lab-muted mt-3")
 
     @ui.page("/configurations")
