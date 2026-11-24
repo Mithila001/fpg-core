@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
 
 from ...domain import RoomType
@@ -28,21 +27,44 @@ def require_room_types(values: Iterable[object], label: str) -> tuple[RoomType, 
     return tuple(room_types)
 
 
+def nonnegative_multiplier(settings: ConstraintSettings, name: str, label: str) -> int:
+    value = settings.get(name, 1)
+    if type(value) is not int or value < 0:
+        raise InvalidProfileError(f"{label}.{name} must be a non-negative integer")
+    return value
+
+
 def require_room_type_keys(values: Mapping[object, Any], label: str) -> None:
     for value in values:
         if not isinstance(value, RoomType):
             raise InvalidProfileError(f"{label} keys must be RoomType enum members")
 
 
-@dataclass(frozen=True, slots=True)
-class PenaltyTerm:
-    name: str
-    expression: Any
-    multiplier: int = 1
+PENALTY_MAX = 10_000
+OBJECTIVE_SCALE = 1_000
 
-    def __post_init__(self) -> None:
-        if self.multiplier <= 0:
-            raise ValueError("Penalty multiplier must be positive")
+
+def ceil_ratio(
+    context: ModelContext, numerator: Any, denominator: Any, maximum: int,
+    *, denominator_max: int | None = None,
+) -> Any:
+    result = context.model.NewIntVar(0, maximum, context.new_name("penalty"))
+    upper = denominator if denominator_max is None else denominator_max
+    dividend = context.model.NewIntVar(
+        0, (maximum + 1) * upper - 1, context.new_name("penalty_dividend")
+    )
+    context.model.Add(dividend == numerator + denominator - 1)
+    context.model.AddDivisionEquality(result, dividend, denominator)
+    return result
+
+
+def average_penalties(context: ModelContext, terms: list[tuple[Any, int]]) -> Any:
+    if not terms:
+        return 0
+    if len(terms) == 1:
+        return terms[0][0]
+    return ceil_ratio(context, sum(value * weight for value, weight in terms),
+                      sum(weight for _, weight in terms), PENALTY_MAX)
 
 
 class HardConstraint(Protocol):
@@ -59,9 +81,9 @@ class HardConstraint(Protocol):
 class SoftConstraint(Protocol):
     key: str
 
-    def build_penalties(
+    def build_penalty(
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
+    ) -> Any:
         ...

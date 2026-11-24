@@ -8,7 +8,7 @@ from ...domain import RoomType
 from ...domain.room_size_preferences import DEFAULT_ROOM_SIZE_MAX_RATIO, DEFAULT_ROOM_SIZE_PAIRS
 from ..exceptions import InvalidProfileError
 from ..model import ModelContext
-from .base import ConstraintSettings, PenaltyTerm
+from .base import ConstraintSettings, PENALTY_MAX, average_penalties, ceil_ratio
 
 DEFAULT_RULES = tuple(
     {"compared_type": compared, "reference_type": reference,
@@ -22,9 +22,9 @@ class RoomSizeRelationsConstraint:
 
     key = "room_size_relations"
 
-    def build_penalties(
+    def build_penalty(
         self, context: ModelContext, settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
+    ):
         precision = settings.get("precision", 1000)
         if type(precision) is not int or not 1 <= precision <= 1_000_000:
             raise InvalidProfileError("room_size_relations.precision must be an integer in 1..1000000")
@@ -85,16 +85,15 @@ class RoomSizeRelationsConstraint:
                 r_area, r_capacity = r
                 denominator = precision * r_capacity
                 limit = max(precision * c_capacity, ratio * r_capacity)
-                numerator_limit = limit * precision + denominator - 1
+                numerator_limit = limit * PENALTY_MAX + denominator - 1
                 # Leave ample int64 headroom for CP-SAT's expression validation.
                 if numerator_limit * multiplier > 2**50:
                     raise InvalidProfileError("room_size_relations area/ratio/precision product is too large")
                 excess = context.model.NewIntVar(0, limit, context.new_name("size_excess"))
                 delta = precision * c_area - ratio * r_area
                 context.model.AddMaxEquality(excess, [0, delta if upper else -delta])
-                numerator = context.model.NewIntVar(0, numerator_limit, context.new_name("size_numerator"))
-                context.model.Add(numerator == excess * precision + denominator - 1)
-                penalty = context.model.NewIntVar(0, numerator_limit // denominator, context.new_name("size_penalty"))
-                context.model.AddDivisionEquality(penalty, numerator, denominator)
-                penalties.append(PenaltyTerm(f"room_size_relations:{index}:{key}", penalty, multiplier))
-        return tuple(penalties)
+                capped = context.model.NewIntVar(0, denominator, context.new_name("size_capped"))
+                context.model.AddMinEquality(capped, [excess, denominator])
+                penalty = ceil_ratio(context, capped * PENALTY_MAX, denominator, PENALTY_MAX)
+                penalties.append((penalty, multiplier))
+        return average_penalties(context, penalties)

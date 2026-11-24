@@ -80,7 +80,7 @@ def _rule_context(boxes):
 
 def test_composition_counts_and_soft_penalty():
     from fpg_core.domain import RoomType
-    from fpg_core.floor_plan_solver.constraints.exposure_rules import apply_rules
+    from fpg_core.floor_plan_solver.constraints.exposure_rules import SoftExteriorWallExposure, apply_rules
 
     boxes = [
         ("a", "bedroom", (0, 10, 5, 5)),
@@ -112,11 +112,11 @@ def test_composition_counts_and_soft_penalty():
     apply_rules(context, {"rules": [rule]}, "exterior_wall_exposure")
     assert cp_model.CpSolver().Solve(context.model) == cp_model.INFEASIBLE
     context = _rule_context(boxes)
-    terms = apply_rules(context, {"rules": [rule]}, "exterior_wall_exposure", soft=True)
-    context.model.Minimize(terms[0].expression * 7)
+    penalty = SoftExteriorWallExposure().build_penalty(context, {"rules": [rule]})
+    context.model.Minimize(penalty)
     solver = cp_model.CpSolver()
     assert solver.Solve(context.model) == cp_model.OPTIMAL
-    assert solver.ObjectiveValue() == 7
+    assert solver.ObjectiveValue() == 10_000
 
 
 @pytest.mark.parametrize(
@@ -236,7 +236,7 @@ def test_variable_positions_and_shared_wall_blocking():
 
 def test_absence_and_scaled_length():
     from fpg_core.domain import RoomType
-    from fpg_core.floor_plan_solver.constraints.exposure_rules import apply_rules
+    from fpg_core.floor_plan_solver.constraints.exposure_rules import SoftExteriorWallExposure, apply_rules
     from fpg_core.floor_plan_solver.preparation import CoordinateScale
 
     context = _rule_context([("living", "living_room", (0, 0, 10, 10))])
@@ -252,8 +252,8 @@ def test_absence_and_scaled_length():
         },
     }
     assert (
-        apply_rules(context, {"rules": [rule]}, "exterior_wall_exposure", soft=True)
-        == ()
+        SoftExteriorWallExposure().build_penalty(context, {"rules": [rule]})
+        == 0
     )
     apply_rules(context, {"rules": [rule]}, "exterior_wall_exposure")
     assert cp_model.CpSolver().Solve(context.model) == cp_model.INFEASIBLE
@@ -303,3 +303,31 @@ def test_legacy_exposure_settings_and_keys_are_rejected():
         HardConstraintUse("exterior_wall_exposure", {"minimum_exposure": 10})
     with pytest.raises(UnknownConstraintError, match="back_exposure"):
         build_default_registry().get_hard("back_exposure")
+
+
+def test_soft_neighbour_relationships_count_once():
+    from fpg_core.floor_plan_solver import SoftConstraintUse
+    from fpg_core.floor_plan_solver.constraints.s_room_relations import SoftRoomRelationsConstraint
+
+    context = _rule_context([
+        ("source", "living_room", (0, 0, 10, 10)),
+        ("touching", "bedroom", (10, 0, 10, 10)),
+        ("far_a", "bedroom", (30, 0, 10, 10)),
+        ("far_b", "bedroom", (30, 20, 10, 10)),
+    ])
+    context.adjacency_cache = {}
+    context.variables_for = context.room_variables.__getitem__
+    context.problem.relations = [
+        SimpleNamespace(strength="soft", source_id_key="source",
+                        target_id_keys=("far_a", "far_b"), match_policy="and"),
+        SimpleNamespace(strength="soft", source_id_key="source",
+                        target_id_keys=("far_a", "touching"), match_policy="or"),
+    ]
+    weight = SoftConstraintUse("room_relations", 2.42).weight
+    assert weight == 2.5
+    assert SoftConstraintUse("room_relations", 0).weight == 0
+    penalty = SoftRoomRelationsConstraint().build_penalty(context, {"minimum_overlap": 10})
+    context.model.Minimize(penalty)
+    solver = cp_model.CpSolver()
+    assert solver.Solve(context.model) == cp_model.OPTIMAL
+    assert solver.Value(penalty) == 5_000

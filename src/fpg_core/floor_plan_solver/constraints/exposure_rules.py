@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..exceptions import InvalidProfileError
-from .base import PenaltyTerm
+from .base import PENALTY_MAX, ceil_ratio
 from .exposure import _and, _or, exposure_literal
 
 
@@ -67,10 +67,10 @@ def apply_rules(context, settings, key, *, soft=False):
         if soft:
             present = _or(context, [room.present for room in rooms])
             violation = _and(context, [present, satisfied.Not()])
-            penalties.append(PenaltyTerm(name=f"{key}:{ident}", expression=violation))
+            penalties.append(violation)
         else:
             context.model.Add(satisfied == 1)
-    return tuple(penalties)
+    return penalties
 
 
 class HardExteriorWallExposure:
@@ -83,5 +83,6 @@ class HardExteriorWallExposure:
 class SoftExteriorWallExposure:
     key = "exterior_wall_exposure"
 
-    def build_penalties(self, context, settings):
-        return apply_rules(context, settings, self.key, soft=True)
+    def build_penalty(self, context, settings):
+        misses = apply_rules(context, settings, self.key, soft=True)
+        return ceil_ratio(context, PENALTY_MAX * sum(misses), len(misses), PENALTY_MAX) if misses else 0

@@ -6,6 +6,8 @@
 
 ## Unreleased
 
+- Breaking: each solver soft constraint returns one 0?100 penalty through `build_penalty`. Profiles supply weights from 0 to 10, with built-in defaults of 1. Replace saved solver profiles and retune custom weights. Debug objective values use weighted points.
+
 - Breaking: back exposure no longer requires boundary contact, and garage side exposure no longer restricts space beyond its own wall projection. Review saved solver profiles that relied on the previous geometry.
 
 

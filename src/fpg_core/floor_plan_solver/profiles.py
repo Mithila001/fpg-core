@@ -36,7 +36,7 @@ class DefaultProfileSettings:
     refinement_position_tolerance: float = 10
     refinement_size_tolerance: float = 10
     max_hallway_shared_wall: float = 12.0
-    hallway_efficiency_weight: int = 1
+    hallway_efficiency_weight: float = 1.0
     hallway_area_penalty_multiplier: int = 1
     hallway_preferred_max_length: float | None = 40.0
     hallway_excess_length_penalty_multiplier: int = 5
@@ -208,7 +208,7 @@ def build_default_profiles(
     hard = _default_hard_constraints(cfg)
     kitchen_exposure = SoftConstraintUse(
         "exterior_wall_exposure",
-        weight=10,
+        weight=1.0,
         settings={
             "rules": [
                 {
@@ -229,23 +229,23 @@ def build_default_profiles(
         name="initial_generation",
         hard_constraints=hard,
         soft_constraints=(
-            SoftConstraintUse("room_size_relations", weight=1),
+            SoftConstraintUse("room_size_relations", weight=1.0),
             SoftConstraintUse(
                 "room_relations",
-                weight=40,
+                weight=1.0,
                 settings={"minimum_overlap": cfg.minimum_adjacency_overlap},
             ),
             SoftConstraintUse(
                 "floor_cluster_position",
-                weight=1,
+                weight=1.0,
                 settings={
                     "horizontal_multiplier": 1,
                     "front_multiplier": 0,
                 },
             ),
-            SoftConstraintUse("dead_space", weight=3),
+            SoftConstraintUse("dead_space", weight=1.0),
             _hallway_efficiency_use(cfg),
-            SoftConstraintUse("bathroom_depth", weight=2),
+            SoftConstraintUse("bathroom_depth", weight=1.0),
             kitchen_exposure,
         ),
         solver=SolverConfig(max_time_seconds=cfg.initial_max_time_seconds),
@@ -261,28 +261,28 @@ def build_default_profiles(
         name="refinement_a",
         hard_constraints=hard,
         soft_constraints=(
-            SoftConstraintUse("room_size_relations", weight=1),
+            SoftConstraintUse("room_size_relations", weight=1.0),
             SoftConstraintUse(
                 "room_relations",
-                weight=50,
+                weight=1.0,
                 settings={"minimum_overlap": cfg.minimum_adjacency_overlap},
             ),
             SoftConstraintUse(
                 "seed_stability",
-                weight=20,
+                weight=1.0,
                 settings={"position_multiplier": 2, "size_multiplier": 1},
             ),
             SoftConstraintUse(
                 "floor_cluster_position",
-                weight=1,
+                weight=1.0,
                 settings={
                     "horizontal_multiplier": 1,
                     "front_multiplier": 0,
                 },
             ),
-            SoftConstraintUse("dead_space", weight=4),
+            SoftConstraintUse("dead_space", weight=1.0),
             _hallway_efficiency_use(cfg),
-            SoftConstraintUse("bathroom_depth", weight=3),
+            SoftConstraintUse("bathroom_depth", weight=1.0),
             kitchen_exposure,
         ),
         solver=SolverConfig(max_time_seconds=cfg.refinement_max_time_seconds),
@@ -300,20 +300,20 @@ def build_default_profiles(
         name="refinement_b",
         hard_constraints=hard,
         soft_constraints=(
-            SoftConstraintUse("room_size_relations", weight=1),
+            SoftConstraintUse("room_size_relations", weight=1.0),
             SoftConstraintUse(
                 "room_relations",
-                weight=60,
+                weight=1.0,
                 settings={"minimum_overlap": cfg.minimum_adjacency_overlap},
             ),
             SoftConstraintUse(
                 "seed_stability",
-                weight=35,
+                weight=1.0,
                 settings={"position_multiplier": 2, "size_multiplier": 2},
             ),
-            SoftConstraintUse("dead_space", weight=6),
+            SoftConstraintUse("dead_space", weight=1.0),
             _hallway_efficiency_use(cfg),
-            SoftConstraintUse("bathroom_depth", weight=4),
+            SoftConstraintUse("bathroom_depth", weight=1.0),
             kitchen_exposure,
         ),
         solver=SolverConfig(max_time_seconds=cfg.refinement_max_time_seconds),

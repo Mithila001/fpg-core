@@ -909,14 +909,14 @@
           {
             "key": "room_size_relations",
             "settings": {},
-            "weight": 1
+            "weight": 1.0
           },
           {
             "key": "room_relations",
             "settings": {
               "minimum_overlap": 10
             },
-            "weight": 40
+            "weight": 1.0
           },
           {
             "key": "floor_cluster_position",
@@ -924,17 +924,17 @@
               "horizontal_multiplier": 0,
               "front_multiplier": 0
             },
-            "weight": 1
+            "weight": 1.0
           },
           {
             "key": "room_center_line",
             "settings": {},
-            "weight": 40
+            "weight": 1.0
           },
           {
             "key": "dead_space",
             "settings": {},
-            "weight": 3
+            "weight": 1.0
           },
           {
             "key": "hallway_efficiency",
@@ -1178,14 +1178,14 @@
           {
             "key": "room_size_relations",
             "settings": {},
-            "weight": 1
+            "weight": 1.0
           },
           {
             "key": "room_relations",
             "settings": {
               "minimum_overlap": 10
             },
-            "weight": 50
+            "weight": 1.0
           },
           {
             "key": "seed_stability",
@@ -1193,7 +1193,7 @@
               "position_multiplier": 0.1,
               "size_multiplier": 0.1
             },
-            "weight": 50
+            "weight": 1.0
           },
           {
             "key": "floor_cluster_position",
@@ -1201,17 +1201,17 @@
               "horizontal_multiplier": 0,
               "front_multiplier": 0
             },
-            "weight": 1
+            "weight": 1.0
           },
           {
             "key": "room_center_line",
             "settings": {},
-            "weight": 50
+            "weight": 1.0
           },
           {
             "key": "dead_space",
             "settings": {},
-            "weight": 4
+            "weight": 1.0
           },
           {
             "key": "hallway_efficiency",
@@ -1455,14 +1455,14 @@
           {
             "key": "room_size_relations",
             "settings": {},
-            "weight": 1
+            "weight": 1.0
           },
           {
             "key": "room_relations",
             "settings": {
               "minimum_overlap": 10
             },
-            "weight": 60
+            "weight": 1.0
           },
           {
             "key": "seed_stability",
@@ -1470,12 +1470,12 @@
               "position_multiplier": 2,
               "size_multiplier": 2
             },
-            "weight": 35
+            "weight": 1.0
           },
           {
             "key": "dead_space",
             "settings": {},
-            "weight": 6
+            "weight": 1.0
           },
           {
             "key": "hallway_efficiency",

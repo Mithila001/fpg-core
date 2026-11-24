@@ -10,6 +10,7 @@ from .contracts import (
     SolverDiagnostics,
     SolverStatus,
 )
+from .constraints.base import OBJECTIVE_SCALE
 from .extractor import extract_floor_plan
 from .model import BuiltModel
 
@@ -76,12 +77,12 @@ def solve_built_model(
         raw_status=str(raw_status),
         wall_time_seconds=float(solver.WallTime()),
         objective_value=(
-            float(solver.ObjectiveValue())
+            float(solver.ObjectiveValue()) / OBJECTIVE_SCALE
             if has_solution and built.has_objective
             else None
         ),
         best_objective_bound=(
-            float(solver.BestObjectiveBound())
+            float(solver.BestObjectiveBound()) / OBJECTIVE_SCALE
             if has_solution and built.has_objective
             else None
         ),

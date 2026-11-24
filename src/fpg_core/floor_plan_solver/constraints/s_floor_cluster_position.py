@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from ..exceptions import InvalidProfileError
 from ..model import ModelContext, RoomVariables
-from .base import ConstraintSettings, PenaltyTerm, require_room_types
+from .base import ConstraintSettings, PENALTY_MAX, average_penalties, ceil_ratio, nonnegative_multiplier, require_room_types
 from .geometry import active_linear_penalty
 
 
@@ -29,23 +28,13 @@ class FloorClusterPositionConstraint:
 
     key = "floor_cluster_position"
 
-    def build_penalties(
+    def build_penalty(
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
-        horizontal_multiplier = int(settings.get("horizontal_multiplier", 1))
-        front_multiplier = int(settings.get("front_multiplier", 1))
-
-        if horizontal_multiplier < 0:
-            raise InvalidProfileError(
-                "floor_cluster_position.horizontal_multiplier cannot be negative"
-            )
-
-        if front_multiplier < 0:
-            raise InvalidProfileError(
-                "floor_cluster_position.front_multiplier cannot be negative"
-            )
+    ):
+        horizontal_multiplier = nonnegative_multiplier(settings, "horizontal_multiplier", self.key)
+        front_multiplier = nonnegative_multiplier(settings, "front_multiplier", self.key)
 
         excluded_room_types = require_room_types(
             settings.get("excluded_room_types", ()),
@@ -59,7 +48,7 @@ class FloorClusterPositionConstraint:
         )
 
         if not included_rooms:
-            return ()
+            return 0
 
         floor = context.problem.floor
         model = context.model
@@ -116,7 +105,7 @@ class FloorClusterPositionConstraint:
         model.AddMaxEquality(cluster_right, right_candidates)
         model.AddMinEquality(cluster_front, front_candidates)
 
-        penalties: list[PenaltyTerm] = []
+        penalties = []
 
         if horizontal_multiplier > 0:
             # Left margin:
@@ -155,11 +144,7 @@ class FloorClusterPositionConstraint:
             )
 
             penalties.append(
-                PenaltyTerm(
-                    name="floor_cluster_position:horizontal_center",
-                    expression=horizontal_penalty,
-                    multiplier=horizontal_multiplier,
-                )
+                (ceil_ratio(context, PENALTY_MAX * horizontal_penalty, floor.width, PENALTY_MAX), horizontal_multiplier)
             )
 
         if front_multiplier > 0:
@@ -174,14 +159,10 @@ class FloorClusterPositionConstraint:
             )
 
             penalties.append(
-                PenaltyTerm(
-                    name="floor_cluster_position:front",
-                    expression=front_penalty,
-                    multiplier=front_multiplier,
-                )
+                (ceil_ratio(context, PENALTY_MAX * front_penalty, floor.length, PENALTY_MAX), front_multiplier)
             )
 
-        return tuple(penalties)
+        return average_penalties(context, penalties)
 
     @staticmethod
     def _active_left_candidate(

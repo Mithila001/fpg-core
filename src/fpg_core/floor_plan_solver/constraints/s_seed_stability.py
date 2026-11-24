@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from fractions import Fraction
+from math import isfinite
+
 from ..exceptions import InvalidProfileError
 from ..model import ModelContext
-from .base import ConstraintSettings, PenaltyTerm
-from .geometry import active_linear_penalty
+from .base import ConstraintSettings, PENALTY_MAX, average_penalties, ceil_ratio
 
 
 class SeedStabilityConstraint:
@@ -11,26 +13,39 @@ class SeedStabilityConstraint:
 
     key = "seed_stability"
 
-    def build_penalties(
+    def build_penalty(
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
+    ):
         seed = context.problem.seed
         if seed is None:
-            return ()
+            return 0
 
-        position_multiplier = int(settings.get("position_multiplier", 1))
-        size_multiplier = int(settings.get("size_multiplier", 1))
-        if position_multiplier < 0 or size_multiplier < 0:
-            raise InvalidProfileError(
-                "seed_stability multipliers cannot be negative"
-            )
+        multipliers = []
+        for name in ("position_multiplier", "size_multiplier"):
+            value = settings.get(name, 1)
+            if type(value) not in (int, float) or value < 0 or (
+                isinstance(value, float) and not isfinite(value)
+            ):
+                raise InvalidProfileError(f"{self.key}.{name} must be finite and non-negative")
+            multipliers.append(Fraction(str(value)))
+
+        position_share, size_share = multipliers
+        if position_share and size_share:
+            # CP-SAT needs integer coefficients. Preserve the relative balance.
+            ratio = position_share / size_share
+            position_multiplier, size_multiplier = ratio.numerator, ratio.denominator
+            if position_multiplier + size_multiplier > 2**40:
+                raise InvalidProfileError(f"{self.key} multiplier ratio is too precise for the solver")
+        else:
+            position_multiplier, size_multiplier = int(bool(position_share)), int(bool(size_share))
+
         if position_multiplier == 0 and size_multiplier == 0:
-            return ()
+            return 0
 
         floor = context.problem.floor
-        penalties: list[PenaltyTerm] = []
+        penalties = []
         for room_id_key, room_seed in seed.rooms.items():
             variables = context.room_variables.get(room_id_key)
             if variables is None:
@@ -45,45 +60,23 @@ class SeedStabilityConstraint:
             context.model.AddAbsEquality(x_delta, variables.x - room_seed.x)
             context.model.AddAbsEquality(y_delta, variables.y - room_seed.y)
 
-            expression = position_multiplier * (x_delta + y_delta)
-            upper_bound = position_multiplier * (floor.width + floor.length)
-
-            if room_seed.width is not None:
-                width_delta = context.model.NewIntVar(
-                    0,
-                    floor.width,
-                    context.new_name("seed_width_delta", room_id_key),
-                )
-                context.model.AddAbsEquality(
-                    width_delta, variables.width - room_seed.width
-                )
-                expression += size_multiplier * width_delta
-                upper_bound += size_multiplier * floor.width
-
-            if room_seed.length is not None:
-                length_delta = context.model.NewIntVar(
-                    0,
-                    floor.length,
-                    context.new_name("seed_length_delta", room_id_key),
-                )
-                context.model.AddAbsEquality(
-                    length_delta, variables.length - room_seed.length
-                )
-                expression += size_multiplier * length_delta
-                upper_bound += size_multiplier * floor.length
-
-            penalty = active_linear_penalty(
-                context,
-                expression,
-                upper_bound,
-                variables.present,
-                f"seed_stability_penalty_{room_id_key}",
-            )
-            penalties.append(
-                PenaltyTerm(
-                    name=f"seed_stability:{room_id_key}",
-                    expression=penalty,
-                )
-            )
-
-        return tuple(penalties)
+            components = []
+            if position_multiplier:
+                position = ceil_ratio(context, PENALTY_MAX * (x_delta * floor.length + y_delta * floor.width),
+                                      2 * floor.width * floor.length, PENALTY_MAX)
+                components.append((position, position_multiplier))
+            if size_multiplier:
+                sizes = []
+                for value, seed_value, span in (
+                    (variables.width, room_seed.width, floor.width),
+                    (variables.length, room_seed.length, floor.length),
+                ):
+                    if seed_value is not None:
+                        delta = context.model.NewIntVar(0, span, context.new_name("seed_size_delta"))
+                        context.model.AddAbsEquality(delta, value - seed_value)
+                        sizes.append((ceil_ratio(context, PENALTY_MAX * delta, span, PENALTY_MAX), 1))
+                if sizes:
+                    components.append((average_penalties(context, sizes), size_multiplier))
+            if components:
+                penalties.append((average_penalties(context, components), 1))
+        return average_penalties(context, penalties)

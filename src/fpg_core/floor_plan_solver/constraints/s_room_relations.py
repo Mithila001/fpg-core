@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import math
+
+from ..exceptions import InvalidProfileError
 from ..model import ModelContext
-from .base import ConstraintSettings, PenaltyTerm
+from .base import ConstraintSettings, PENALTY_MAX, ceil_ratio
 from .geometry import (
     adjacency_literal,
     exact_or_literal,
@@ -12,18 +15,16 @@ from .geometry import (
 class SoftRoomRelationsConstraint:
     key = "room_relations"
 
-    def build_penalties(
+    def build_penalty(
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
-        minimum_overlap = max(
-            1,
-            context.problem.scale.minimum_length(
-                float(settings.get("minimum_overlap", 0.6))
-            ),
-        )
-        penalties: list[PenaltyTerm] = []
+    ):
+        overlap = settings.get("minimum_overlap", 0.6)
+        if type(overlap) not in (float, int) or overlap <= 0 or not math.isfinite(overlap):
+            raise InvalidProfileError("room_relations.minimum_overlap must be positive and finite")
+        minimum_overlap = max(1, context.problem.scale.minimum_length(overlap))
+        penalties = []
 
         for relation_index, relation in enumerate(context.problem.relations):
             if relation.strength != "soft":
@@ -40,43 +41,14 @@ class SoftRoomRelationsConstraint:
                 for target_id in relation.target_id_keys
             ]
 
+            name = f"soft_relation_{relation_index}"
             if relation.match_policy == "and":
-                for target_id, adjacent in zip(
-                    relation.target_id_keys,
-                    options,
-                    strict=False,
-                ):
-                    violation = violation_when_present(
-                        context,
-                        adjacent,
-                        source.present,
-                        f"soft_relation_violation_{relation_index}_{target_id}",
-                    )
-                    penalties.append(
-                        PenaltyTerm(
-                            name=(
-                                f"soft_relation:{relation.source_id_key}->{target_id}"
-                            ),
-                            expression=violation,
-                        )
-                    )
+                satisfied = exact_or_literal(context, [option.Not() for option in options], name).Not()
             else:
-                satisfied = exact_or_literal(
-                    context,
-                    options,
-                    f"soft_relation_satisfied_{relation_index}",
-                )
-                violation = violation_when_present(
-                    context,
-                    satisfied,
-                    source.present,
-                    f"soft_relation_violation_{relation_index}",
-                )
-                penalties.append(
-                    PenaltyTerm(
-                        name=f"soft_relation:{relation.source_id_key}->any",
-                        expression=violation,
-                    )
-                )
-
-        return tuple(penalties)
+                satisfied = exact_or_literal(context, options, name)
+            penalties.append(violation_when_present(
+                context, satisfied, source.present, f"soft_relation_miss_{relation_index}"
+            ))
+        if not penalties:
+            return 0
+        return ceil_ratio(context, PENALTY_MAX * sum(penalties), len(penalties), PENALTY_MAX)

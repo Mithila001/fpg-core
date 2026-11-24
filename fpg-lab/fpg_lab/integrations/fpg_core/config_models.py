@@ -294,7 +294,7 @@ class ConstraintUseDocument(StrictModel):
 
 
 class SoftConstraintUseDocument(ConstraintUseDocument):
-    weight: int = Field(gt=0)
+    weight: float = Field(ge=0, le=10, strict=True, allow_inf_nan=False)
 
 
 class SolverRuntimeDocument(StrictModel):

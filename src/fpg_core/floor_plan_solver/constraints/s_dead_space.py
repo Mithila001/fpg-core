@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..model import ModelContext
-from .base import ConstraintSettings, PenaltyTerm
+from .base import ConstraintSettings, PENALTY_MAX, ceil_ratio
 
 
 class DeadSpaceConstraint:
@@ -9,16 +9,16 @@ class DeadSpaceConstraint:
 
     key = "dead_space"
 
-    def build_penalties(
+    def build_penalty(
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
+    ):
         del settings
         floor = context.problem.floor
         rooms = tuple(context.room_variables.values())
         if not rooms:
-            return ()
+            return 0
 
         left_candidates = []
         right_candidates = []
@@ -103,4 +103,7 @@ class DeadSpaceConstraint:
             0, floor.area, context.new_name("dead_space")
         )
         context.model.Add(dead_space == bbox_area - room_area_sum)
-        return (PenaltyTerm(name="dead_space", expression=dead_space),)
+        denominator = context.model.NewIntVar(1, floor.area, context.new_name("gap_denominator"))
+        context.model.AddMaxEquality(denominator, [1, bbox_area])
+        return ceil_ratio(context, PENALTY_MAX * dead_space, denominator, PENALTY_MAX,
+                          denominator_max=floor.area)

@@ -4,7 +4,6 @@ from ortools.sat.python import cp_model
 
 from ..domain import RoomType
 from .config import FloorPlanSolverConfig
-from .constraints.base import PenaltyTerm
 from .constraints.registry import ConstraintRegistry
 from .model import BuiltModel, apply_seed_policy, create_model_context
 from .preparation import PreparedProblem
@@ -28,20 +27,19 @@ def build_model(
         registry.get_hard(hard_use.key).apply(context, hard_use.settings)
         applied_hard.append(hard_use.key)
 
-    all_penalties: list[PenaltyTerm] = []
     weighted_expressions = []
     applied_soft: list[str] = []
 
     for soft_use in config.soft_constraints:
-        terms = registry.get_soft(soft_use.key).build_penalties(
+        if soft_use.weight == 0:
+            continue
+        soft_constraint_penalty = registry.get_soft(soft_use.key).build_penalty(
             context, soft_use.settings
         )
+        if type(soft_constraint_penalty) is int and soft_constraint_penalty == 0:
+            continue
         applied_soft.append(soft_use.key)
-        all_penalties.extend(terms)
-        for term in terms:
-            weighted_expressions.append(
-                term.expression * (soft_use.weight * term.multiplier)
-            )
+        weighted_expressions.append(soft_constraint_penalty * round(soft_use.weight * 10))
 
     if weighted_expressions:
         context.model.Minimize(cp_model.LinearExpr.Sum(weighted_expressions))
@@ -51,5 +49,5 @@ def build_model(
         has_objective=bool(weighted_expressions),
         applied_hard_constraints=tuple(applied_hard),
         applied_soft_constraints=tuple(applied_soft),
-        penalty_terms=tuple(term.name for term in all_penalties),
+        penalty_terms=tuple(applied_soft),
     )

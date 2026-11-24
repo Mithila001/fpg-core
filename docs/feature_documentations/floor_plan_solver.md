@@ -77,7 +77,7 @@ HardConstraintUse(
 
 SoftConstraintUse(
     key: str,
-    weight: int,
+    weight: float,
     settings: Mapping[str, Any] = {},
 )
 
@@ -118,7 +118,9 @@ FloorPlanSolverConfig(
 value, and positive values bound movement or size.
 
 `FloorPlanSolverConfig` requires a non-empty name and unique hard/soft constraint keys.
-`SoftConstraintUse.weight` must be positive. `SolverConfig.max_time_seconds` must be
+Each profile supplies a finite numeric `SoftConstraintUse.weight` from 0 to 10.
+Extra digits round up to the next tenth (2.42 becomes 2.5). A zero weight skips
+the constraint. Built-in profiles start at 1.0. `SolverConfig.max_time_seconds` must be
 positive; workers, random seed, and relative gap cannot be negative.
 `PreparationConfig.coordinate_scale` must be at least `1`.
 
@@ -150,9 +152,9 @@ The shipped default profiles enable:
 
 The generic `boundary_placement` rule remains available for explicit boundary placement. `front_anchor` is no longer registered. Exterior exposure means an unobstructed perpendicular path to the generation boundary; contact with that boundary is not required. Only rooms obstruct these paths. The hard back rule and soft kitchen rule require one continuous exposed segment of at least 10 project units in the default profiles. Veranda and living-room rules require the entire front wall; the living-room rule applies only when there is no veranda. Garage exposure is limited to the projections of its own walls, so the old adjacent-front-corner restriction no longer applies. Openings and post-processing use separate behavior and may not preserve these solver-stage exposure results.
 
-The generic `exterior_wall_exposure` hard and soft constraint accepts `settings.rules`: each rule has an `id`, `room_types`, a `match` mapping (`policy` is `all` or `at_least`, with a positive `count` for the latter), and a `requirement`. Requirements are nested `all`/`any` lists or leaves containing `side` (`front`, `back`, `left`, `right`), `coverage` (`full_wall` or `minimum_continuous_length`), and `minimum_length` for the latter. Soft rules add one weighted violation penalty per rule. Room types are `RoomType` members in Core and strings in Lab JSON. The conditional `living_room_front` constraint uses the same required rule format.
+The generic `exterior_wall_exposure` hard and soft constraint accepts `settings.rules`: each rule has an `id`, `room_types`, a `match` mapping (`policy` is `all` or `at_least`, with a positive `count` for the latter), and a `requirement`. Requirements are nested `all`/`any` lists or leaves containing `side` (`front`, `back`, `left`, `right`), `coverage` (`full_wall` or `minimum_continuous_length`), and `minimum_length` for the latter. Soft rules contribute pass-or-fail checks to the combined exposure penalty. Room types are `RoomType` members in Core and strings in Lab JSON. The conditional `living_room_front` constraint uses the same required rule format.
 
-Validation requires a nonempty rule list, unique nonblank IDs, nonempty room-type lists, and exactly the fields described above. Each `all` or `any` node has a nonempty list of child requirements; leaves cannot contain extra fields. Lengths must be finite positive numbers, and counts positive integers (booleans are rejected). An `all` match applies the requirement to every matching room; `at_least` counts rooms satisfying the complete requirement, not individual matching leaves. Each soft rule contributes one violation term, weighted by its constraint use, regardless of how many rooms fail. See the [design rationale](../features/solver.md#exterior-wall-exposure-design-rationale) for the geometry and scope.
+Validation requires a nonempty rule list, unique nonblank IDs, nonempty room-type lists, and exactly the fields described above. Each `all` or `any` node has a nonempty list of child requirements; leaves cannot contain extra fields. Lengths must be finite positive numbers, and counts positive integers (booleans are rejected). An `all` match applies the requirement to every matching room; `at_least` counts rooms satisfying the complete requirement, not individual matching leaves. Each applicable soft rule counts once in the combined exposure penalty, regardless of how many rooms fail. See the [design rationale](../features/solver.md#exterior-wall-exposure-design-rationale) for the geometry and scope.
 
 To add or change a rule, edit the relevant hard or soft constraint use in the profile, adding another uniquely identified rule to its `rules` list when needed. Use the generic key for ordinary policies; `living_room_front` retains its veranda condition. Core validates settings when constructing constraint uses and checks scaled minimum lengths against the floor span during model construction. Lab JSON maps room-type strings to Core enums and rejects unknown configuration fields.
 
@@ -218,69 +220,47 @@ The default registry provides:
 - `exterior_wall_exposure`
 - `seed_stability`
 
-The solver minimizes the weighted sum of enabled soft-constraint penalties. Hard
-constraints always determine feasibility.
+The solver minimizes the sum of each combined penalty multiplied by its profile
+weight. Hard constraints determine feasibility.
 
-### Room-size relationships
+| Constraint | Combined penalty in points |
+|---|---|
+| `room_relations` | Percentage of missed soft relationships. Each AND group passes if all targets qualify, and each OR group passes if any target qualifies. |
+| `room_size_relations` | For each applicable ratio bound, divide positive excess or shortfall by the reference area's maximum capacity, convert to points and cap at 100. Average the bounds using their optional relative rule multipliers. Upper bounds compare the largest compared room with the smallest reference room. Lower bounds reverse the extrema. |
+| `floor_cluster_position` | Divide the absolute side-margin difference by floor width and front setback by floor length. Average the resulting percentages using the enabled component multipliers. |
+| `dead_space` | Empty area inside the rooms' bounding rectangle as a percentage of that rectangle. |
+| `hallway_efficiency` | Average hallway area as a percentage of floor area and unshared hallway wall as a percentage of total hallway perimeter. Use `area_penalty_multiplier` (default 1) for area and 1 for wall. A zero area multiplier disables the area component. |
+| `bathroom_depth` | Average the selected room centres' distance from the back as a percentage of floor length. |
+| `exterior_wall_exposure` | Percentage of applicable rules missed. Each rule passes or fails as a whole. |
+| `room_center_line` | Average the room centres' distance from the floor centre line as a percentage of half the floor width. |
+| `seed_stability` | Divide absolute changes by the matching floor span. Average the available axes in each component, combine position and size with their respective multipliers, then average across matched rooms. |
 
-The built-in profiles enable `room_size_relations` with weight 1. Its 12 default
-soft rules prefer bathrooms and attached bathrooms no larger than bedrooms,
-living rooms, dining rooms, kitchens, or garages, and bedrooms and kitchens no
-larger than living rooms. A rule is skipped when either room type is absent.
-These preferences cannot guarantee a size ordering; hard constraints and other
-objective terms can outweigh them. Refinement seed tolerances also restrict movement.
+Room-size rules accept `compared_type`, `reference_type`, `min_ratio` and/or
+`max_ratio`, and an optional positive integer `penalty_multiplier`. Ratios
+mean compared area divided by reference area. `precision` defaults to 1000.
+Rules with absent room types are skipped. Final scoring has separate settings.
 
-Custom settings use `rules`, a sequence of mappings containing `compared_type`,
-`reference_type` (both `RoomType` members), optional `min_ratio` and `max_ratio`,
-and optional positive integer `penalty_multiplier`. Ratios mean compared area /
-reference area. `precision` defaults to 1000. Upper bounds compare the largest
-compared room to the smallest reference room; lower bounds compare the smallest
-compared room to the largest reference room. The penalty measures the worst
-violation normalized by reference area capacity and is multiplied by the rule
-multiplier and the `SoftConstraintUse` weight. Final scoring uses the same default pairs and upper-bound aggregation, but has
-independent settings and adjusts infeasible thresholds; custom rules do not
-automatically synchronize between the features.
+Seed stability's `position_multiplier` and `size_multiplier` accept finite,
+non-negative numbers, including decimals. They set the relative balance
+between position and size. For example, 0.1 and 0.1 give the same balance as
+1 and 1. Use the profile's soft constraint weight to control its overall
+contribution. Zero disables a component. The solver rejects ratios too
+precise to represent with safe integer coefficients.
 
-### Hallway efficiency
+### Authoring a soft constraint
 
-`hallway_efficiency` minimizes total hallway area and exposed hallway wall. It does not decide whether an individual hallway is semantically necessary.
+Implement `build_penalty(context, settings)` to return one bounded CP-SAT
+integer expression in hundredths of a point (0 to 10,000). Validate the settings
+in the constraint, define what it measures and explain the endpoints and
+aggregation. Return zero when the preference is met or nothing applies. Round
+positive fractions upward to keep small misses visible. The profile supplies the
+weight. The solver applies it once and reports the objective and its bound in
+weighted points. Debug penalty term names are the constraint keys.
 
-The objective components are:
-
-```text
-hallway efficiency cost =
-    total hallway area * area_penalty_multiplier
-  + total exposed hallway wall length
-```
-
-The complete penalty is then multiplied by the ordinary `SoftConstraintUse.weight`.
-
-For each hallway:
-
-```text
-longest_side = max(width, length)
-excess_length = max(0, longest_side - preferred_max_length)
-```
-
-Hard hallway length caps are enforced by `hallway_dimensions`; efficiency no longer adds a length penalty. The soft shared-wall term favors enclosing hallways with other rooms. It never removes a hallway room.
-
-Supported settings:
-
-| Setting | Type | Default | Validation / meaning |
-|---|---|---:|---|
-| `hallway_room_types` | iterable of `RoomType` | `(RoomType.HALLWAY,)` | room types included in the hallway-efficiency objective |
-| `area_penalty_multiplier` | `int` | `1` | must be `>= 0`; `0` disables the area component |
-| `hallway_room_types` | iterable | hallway | room types whose exposed wall and area are scored |
-| `SoftConstraintUse.weight` | `int` | profile-defined | must be `> 0`; weights the whole hallway-efficiency penalty |
-
-With the project convention `10` units = `1 m`, the built-in
-`preferred_max_length=40.0` corresponds to `4 m`.
-
-To disable hallway efficiency completely:
-
-```python
-config = INITIAL_GENERATION_PROFILE.without_constraints("hallway_efficiency")
-```
+Custom constraints using `build_penalties` must migrate to the new method.
+Replace saved profiles with the current defaults and retune custom weights on
+the new scale. Legacy objective values and new weighted points use different
+scales.
 
 ## Built-in profile construction
 
@@ -295,7 +275,7 @@ DefaultProfileSettings(
     refinement_position_tolerance: float = 10,
     refinement_size_tolerance: float = 10,
     max_hallway_shared_wall: float = 12.0,
-    hallway_efficiency_weight: int = 1,
+    hallway_efficiency_weight: float = 1.0,
     hallway_area_penalty_multiplier: int = 1,
     hallway_preferred_max_length: float | None = 40.0,
     hallway_excess_length_penalty_multiplier: int = 5,
@@ -311,13 +291,10 @@ The public constants `DEFAULT_PROFILES`, `INITIAL_GENERATION_PROFILE`,
 `REFINEMENT_A_PROFILE`, and `REFINEMENT_B_PROFILE` are created from the default
 settings above.
 
-Exact built-in soft uses:
-
-| Profile | Exact soft uses (`key: weight`; important settings) | Runtime / seed |
-|---|---|---|
-| `initial_generation` | `room_relations:40` (overlap 10), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:3`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:2`, `exterior_wall_exposure:10` (kitchen rule) (exposure 10) | 5 s; candidate hints optional; coordinate scale 1 |
-| `refinement_a` | `room_relations:50`, `seed_stability:20` (position 2/size 1), `floor_cluster_position:1` (horizontal 1/front 0), `dead_space:4`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:3`, `exterior_wall_exposure:10` (kitchen rule) | 2 s; existing plan required; position/size tolerance 10; coordinate scale 1 |
-| `refinement_b` | `room_relations:60`, `seed_stability:35` (position 2/size 2), `dead_space:6`, `hallway_efficiency:1` (area 1, preferred max length 40, excess multiplier 5), `bathroom_depth:4`, `exterior_wall_exposure:10` (kitchen rule) | 2 s; existing plan required; position/size tolerance 5; coordinate scale 1 |
+The shipped weights are all 1.0. Initial generation enables the seven core
+preferences from `room_relations` through `exterior_wall_exposure` in the table
+above. Refinement A adds `seed_stability`, and Refinement B also drops
+`floor_cluster_position`. The optional `room_center_line` is off in all three.
 
 ## Recommended values
 
@@ -361,8 +338,8 @@ SolverDiagnostics(
 )
 ```
 
-With hallway efficiency enabled, `penalty_terms` can contain
-`'hallway_efficiency:total_area'` and `'hallway_efficiency:excess_length'`.
+With hallway efficiency enabled and applicable, `penalty_terms` can contain
+`'hallway_efficiency'`.
 `FloorPlanSolveResult.profile_name` is retained for serialized/public compatibility
 even though the request field is named `config`.
 
@@ -418,7 +395,7 @@ The solver does not expose a separate warning collection. Expected solver outcom
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
 | `DEFAULT_PROFILES` | dataclass/contract | `constructor has no separately inspectable signature` | ProfileCatalog(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') |
-| `DefaultProfileSettings` | dataclass/contract | `(coordinate_scale: 'int' = 1, minimum_coverage_ratio: 'float' = 0.6, minimum_adjacency_overlap: 'float' = 10, attached_bathroom_minimum_shared_wall: 'float' = 10.0, initial_max_time_seconds: 'float' = 5.0, refinement_max_time_seconds: 'float' = 2.0, refinement_position_tolerance: 'float' = 10, refinement_size_tolerance: 'float' = 10, max_hallway_shared_wall: 'float' = 12.0, hallway_efficiency_weight: 'int' = 1, hallway_area_penalty_multiplier: 'int' = 1, hallway_preferred_max_length: 'float | None' = 40.0, hallway_excess_length_penalty_multiplier: 'int' = 5) -> None` | Central tuning values used to construct the built-in profiles, including hallway compactness weights. |
+| `DefaultProfileSettings` | dataclass/contract | `(coordinate_scale: 'int' = 1, minimum_coverage_ratio: 'float' = 0.6, minimum_adjacency_overlap: 'float' = 10, attached_bathroom_minimum_shared_wall: 'float' = 10.0, initial_max_time_seconds: 'float' = 5.0, refinement_max_time_seconds: 'float' = 2.0, refinement_position_tolerance: 'float' = 10, refinement_size_tolerance: 'float' = 10, max_hallway_shared_wall: 'float' = 12.0, hallway_efficiency_weight: 'float' = 1.0, hallway_area_penalty_multiplier: 'int' = 1, hallway_preferred_max_length: 'float | None' = 40.0, hallway_excess_length_penalty_multiplier: 'int' = 5) -> None` | Central tuning values used to construct the built-in profiles, including hallway compactness weights. |
 | `ConstraintRegistry` | dataclass/contract | `(hard: 'dict[str, HardConstraint]' = <factory>, soft: 'dict[str, SoftConstraint]' = <factory>) -> None` | Runtime collection of available hard and soft constraints. |
 | `FloorPlanSolveExecution` | constant/type alias | `_GenericAlias instance` | Documented in the corresponding feature/shared section. |
 | `FloorPlanSolveRequest` | dataclass/contract | `(specification: 'FloorPlanGenerationSpec', config: 'FloorPlanSolverConfig', candidate_hints: 'tuple[RoomPlacementHint, ...]' = (), existing_floor_plan: 'FloorPlan \| None' = None) -> None` | Processing input for one floor-plan solve. |
@@ -436,7 +413,7 @@ The solver does not expose a separate warning collection. Expected solver outcom
 | `RoomPlacementHint` | dataclass/contract | `(room_id: 'RoomId', x: 'float', y: 'float', width: 'float \| None' = None, length: 'float \| None' = None) -> None` | Candidate-search hint for a room's lower-left position and optional size. |
 | `SeedPolicy` | dataclass/contract | `(source: 'SeedSource' = <SeedSource.NONE: 'none'>, require_source: 'bool' = False, apply_hints: 'bool' = True, position_tolerance: 'float \| None' = None, size_tolerance: 'float \| None' = None) -> None` | Controls how candidate or existing-layout geometry is used as a seed. |
 | `SeedSource` | enum | `NONE='none'; CANDIDATE_HINTS='candidate_hints'; EXISTING_FLOOR_PLAN='existing_floor_plan'` | Documented in the corresponding feature/shared section. |
-| `SoftConstraintUse` | dataclass/contract | `(key: 'str', weight: 'int', settings: 'Mapping[str, Any]' = <factory>) -> None` | Configuration for one enabled soft constraint and its objective weight. |
+| `SoftConstraintUse` | dataclass/contract | `(key: 'str', weight: 'float', settings: 'Mapping[str, Any]' = <factory>) -> None` | Configuration for one enabled soft constraint and its objective weight. |
 | `SolverConfig` | dataclass/contract | `(max_time_seconds: 'float' = 30.0, num_search_workers: 'int' = 0, random_seed: 'int \| None' = None, log_search_progress: 'bool' = False, relative_gap_limit: 'float \| None' = None, cp_model_presolve: 'bool' = True) -> None` | OR-Tools runtime settings for one solve. |
 | `SolverDiagnostics` | dataclass/contract | `(raw_status: 'str', wall_time_seconds: 'float', objective_value: 'float \| None', best_objective_bound: 'float \| None', conflicts: 'int', branches: 'int', applied_hard_constraints: 'tuple[str, ...]', applied_soft_constraints: 'tuple[str, ...]', penalty_terms: 'tuple[str, ...]') -> None` | SolverDiagnostics(raw_status: 'str', wall_time_seconds: 'float', objective_value: 'float \| None', best_objective_bound: 'float \| None', conflicts: 'int', branches: 'int', applied_hard_constraints: 'tuple[str, ...]', applied_soft_constraints: 'tuple[str, ...]', penalty_terms: 'tuple[str, ...]') |
 | `SolverStatus` | enum | `OPTIMAL='optimal'; FEASIBLE='feasible'; INFEASIBLE='infeasible'; MODEL_INVALID='model_invalid'; UNKNOWN='unknown'` | Documented in the corresponding feature/shared section. |

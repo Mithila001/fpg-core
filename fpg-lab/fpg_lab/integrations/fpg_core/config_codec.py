@@ -428,6 +428,8 @@ class CoreConfigCodec:
 
             if key is not None and (key == "room_types" or key.endswith("_room_types")):
                 return tuple(RoomType(item) for item in value)
+            if key in {"compared_type", "reference_type"}:
+                return RoomType(value)
             if key in {"overrides", "ratios_by_room_type"}:
                 return {
                     RoomType(item_key): settings(item_value)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import Enum
+from decimal import Decimal, ROUND_CEILING
 from types import MappingProxyType
 from typing import Any
 
@@ -40,16 +41,18 @@ class SoftConstraintUse:
     """Configuration for one enabled soft constraint and its objective weight."""
 
     key: str
-    weight: int
+    weight: float
     settings: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.key.strip():
             raise InvalidProfileError("Soft constraint key cannot be empty")
-        if self.weight <= 0:
+        if type(self.weight) not in (int, float) or not 0 <= self.weight <= 10:
             raise InvalidProfileError(
-                f"Soft constraint '{self.key}' must have a positive weight"
+                f"Soft constraint '{self.key}' must have a finite weight in 0..10"
             )
+        weight = Decimal(str(self.weight)).quantize(Decimal("0.1"), rounding=ROUND_CEILING)
+        object.__setattr__(self, "weight", float(weight))
         object.__setattr__(
             self,
             "settings",

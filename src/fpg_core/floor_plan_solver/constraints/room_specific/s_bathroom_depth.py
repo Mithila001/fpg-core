@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ....domain import RoomType
 from ...model import ModelContext
-from ..base import ConstraintSettings, PenaltyTerm, require_room_types
+from ..base import ConstraintSettings, PENALTY_MAX, ceil_ratio, require_room_types
 from ..geometry import active_linear_penalty
 
 
@@ -11,11 +11,11 @@ class BathroomDepthConstraint:
 
     key = "bathroom_depth"
 
-    def build_penalties(
+    def build_penalty(
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
+    ):
         target_types = require_room_types(
             settings.get(
                 "room_types",
@@ -24,7 +24,7 @@ class BathroomDepthConstraint:
             "bathroom_depth.room_types",
         )
         floor = context.problem.floor
-        penalties: list[PenaltyTerm] = []
+        penalties = []
 
         for variables in context.room_variables.values():
             if variables.room.room_type not in target_types:
@@ -37,11 +37,8 @@ class BathroomDepthConstraint:
                 variables.present,
                 f"bathroom_depth_penalty_{variables.room.id_key}",
             )
-            penalties.append(
-                PenaltyTerm(
-                    name=f"bathroom_depth:{variables.room.id_key}",
-                    expression=penalty,
-                )
-            )
-
-        return tuple(penalties)
+            penalties.append(penalty)
+        if not penalties:
+            return 0
+        return ceil_ratio(context, PENALTY_MAX * sum(penalties),
+                          2 * floor.length * len(penalties), PENALTY_MAX)

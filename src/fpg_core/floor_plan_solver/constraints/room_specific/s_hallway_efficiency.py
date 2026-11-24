@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ....domain import RoomType
 from ...model import ModelContext
-from ..base import ConstraintSettings, PenaltyTerm, require_room_types
+from ..base import ConstraintSettings, PENALTY_MAX, average_penalties, ceil_ratio, require_room_types
 from .h_hallway_shared_wall import _interval_overlap
 
 
@@ -22,11 +22,11 @@ class HallwayEfficiencyConstraint:
 
     key = "hallway_efficiency"
 
-    def build_penalties(
+    def build_penalty(
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> tuple[PenaltyTerm, ...]:
+    ):
         hallway_types = require_room_types(
             settings.get("hallway_room_types", (RoomType.HALLWAY,)),
             "hallway_efficiency.hallway_room_types",
@@ -41,21 +41,20 @@ class HallwayEfficiencyConstraint:
             if variables.room.room_type in hallway_types
         )
         if not hallways:
-            return ()
+            return 0
 
-        penalties: list[PenaltyTerm] = []
+        penalties = []
 
         if area_penalty_multiplier > 0:
-            penalties.append(
-                PenaltyTerm(
-                    name="hallway_efficiency:total_area",
-                    expression=sum(hallway.area for hallway in hallways),
-                    multiplier=area_penalty_multiplier,
-                )
-            )
+            area = sum(hallway.area for hallway in hallways)
+            area_penalty = ceil_ratio(context, PENALTY_MAX * area, context.problem.floor.area, PENALTY_MAX)
+            penalties.append((area_penalty, area_penalty_multiplier))
 
+        exposed_lengths = []
+        perimeters = []
         for hallway in hallways:
             perimeter = 2 * (hallway.width + hallway.length)
+            perimeters.append(perimeter)
             shared = []
             for other in context.room_variables.values():
                 if other is hallway:
@@ -72,9 +71,16 @@ class HallwayEfficiencyConstraint:
                     shared.append(amount)
             exposed = context.model.NewIntVar(0, 2 * (context.problem.floor.width + context.problem.floor.length), context.new_name("hallway_exposed_wall"))
             context.model.Add(exposed == perimeter - sum(shared))
-            penalties.append(PenaltyTerm(name=f"hallway_efficiency:exposed_wall:{hallway.room.id_key}", expression=exposed))
+            exposed_lengths.append(exposed)
 
-        return tuple(penalties)
+        floor = context.problem.floor
+        perimeter_limit = len(hallways) * 2 * (floor.width + floor.length)
+        perimeter_total = context.model.NewIntVar(1, perimeter_limit,
+                                                  context.new_name("hallway_perimeter_total"))
+        context.model.Add(perimeter_total == sum(perimeters))
+        wall_penalty = ceil_ratio(context, PENALTY_MAX * sum(exposed_lengths), perimeter_total, PENALTY_MAX,
+                                  denominator_max=perimeter_limit)
+        return average_penalties(context, [*penalties, (wall_penalty, 1)])
 
     @staticmethod
     def _non_negative_int(value: object, label: str) -> int:
