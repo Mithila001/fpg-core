@@ -43,7 +43,7 @@ through polling; avoid rebuilding plots when snapshots have not changed.
 E01A is intentionally ephemeral: a one-time per-tab NiceGUI memory handoff
 transfers the result from setup to its dedicated result page. The result page
 consumes that handoff, so leaving/reloading loses it. There is no database run
-or history. E03A uses the same tab-local handoff for its interactive analysis
+or history. E03A opens its interactive analysis directly without a setup handoff
 and saves its configuration only on explicit request. P01 runs retain history.
 
 ## Extend an experiment

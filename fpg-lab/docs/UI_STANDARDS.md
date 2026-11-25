@@ -20,7 +20,9 @@ Preserve the existing FPG-Lab dark-theme identity unless an actual usability pro
 
 ## Shared page structure (required)
 
-Each existing and future experiment has:
+Experiments normally have these pages. E03A is an exception: its live sizing workspace combines setup and results because edits and feedback are used together.
+
+Each other experiment has:
 
 - **Experiment listing:** the FPG-Lab main page lists experiments as cards.
 - **Experiment setup page:** choose inputs, configure the run, inspect or validate setup, start it, and discover prior runs when applicable.

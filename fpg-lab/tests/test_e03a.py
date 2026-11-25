@@ -24,6 +24,7 @@ def test_import_and_explicit_save(tmp_path, monkeypatch):
     draft = starter.model_dump(mode="json")
     draft["rooms"]["bedroom"]["count"] = 8
     draft["rooms"]["attached_bathroom"]["count"] = 5
+    draft["rooms"]["bathroom"]["count"] = 2
     imported = import_e02a(draft)
     assert imported.rooms["bedroom"].count == imported.rooms["attached_bathroom"].count == 5
     assert imported.rooms["bathroom"].count == 2

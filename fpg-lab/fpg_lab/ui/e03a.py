@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from collections.abc import Callable
 from copy import deepcopy
+from decimal import Decimal
 from typing import Any
-from uuid import uuid4
 
 from fpg_core.domain import RoomType
-from nicegui import app, run, ui
+from nicegui import run, ui
 from pydantic import ValidationError
 
 from fpg_lab.flows.e03a import Analysis, AreaRange, analyze
@@ -20,7 +21,6 @@ from fpg_lab.flows.e03a_config import (
     Configuration,
     export,
     import_e02a,
-    maximum_counts,
     parse,
     room_label,
     save,
@@ -28,16 +28,10 @@ from fpg_lab.flows.e03a_config import (
 )
 from fpg_lab.ui.components import action_button, notify_error, shell
 from fpg_lab.ui.result_layout import ResultWorkspace
-from fpg_lab.visualization.figures import figure
 
 TITLE = "E-03-A · Room Size Configuration Analyzer"
 SETUP = "/experiments/e03a"
-VIEWS = (
-    "Overview",
-    "Room configurations",
-    "Relationship matrix",
-    "Diagnostics",
-)
+VIEWS = ("Rooms", "Relationships")
 ROOM_FIELDS = {
     "min_width": "Min width (units)",
     "max_width": "Max width (units)",
@@ -45,6 +39,16 @@ ROOM_FIELDS = {
     "max_area": "Max area (units²)",
     "count": "Count",
 }
+
+
+def _hint(message: str) -> None:
+    with (
+        ui.element("span")
+        .classes("inline-flex items-center lab-muted cursor-help text-base")
+        .props(f'role="img" aria-label="{message}"')
+    ):
+        ui.icon("help_outline")
+        ui.tooltip(message).props('delay="300" max-width="320px"').classes("text-sm")
 
 
 def _table(headers: tuple[str, ...], values: list[tuple[Any, ...]]) -> ui.table:
@@ -118,7 +122,12 @@ async def _preview_import(
                     )
                 )
     with ui.dialog() as dialog, ui.card().classes("w-[760px] max-w-full"):
-        ui.label("Import from E02A").classes("text-lg font-semibold")
+        with ui.row().classes("items-center gap-1"):
+            ui.label("Import from E02A").classes("text-lg font-semibold")
+            _hint(
+                "Current draft shows what you have now. Proposed shows what applying the import "
+                "would change. Your relationship rules stay in the draft, and saving is separate."
+            )
         if rows:
             _table(("Setting", "Current draft", "Proposed"), rows).classes(
                 "max-h-[55vh] overflow-auto"
@@ -144,117 +153,28 @@ def _whole_number(value: str) -> int | str:
 
 
 async def setup_page() -> None:
-    shell(TITLE, back_link="/")
     expected, draft, message = _load()
-    revision = 0
-    status = ui.label(message).classes("lab-muted")
-    summary = ui.element("div").classes("grid grid-cols-[auto_8rem_6rem] gap-x-5 items-center")
-    with ui.row():
-        action_button("Reload saved", on_click=lambda: reload())
-        action_button("Validate fields", on_click=lambda: validate())
-        maximum = action_button("Use maximum counts", on_click=lambda: maximize())
-        action_button("Import from E02A", on_click=lambda: preview())
-        start = action_button("Start analysis", role="main", on_click=lambda: launch())
+    if not draft:
+        with ui.column() as recovery:
+            ui.label(TITLE).classes("text-lg font-semibold")
+            ui.label(message)
 
-    def render() -> None:
-        summary.clear()
-        maximum.set_enabled(bool(draft))
-        with summary:
-            if draft:
-                for heading in ("Room type", "Selected", "Allowed"):
-                    ui.label(heading).classes("font-semibold")
-                for room, spec in draft["rooms"].items():
-                    label = room_label(room)
-                    ui.label(label)
-                    count = ui.input(
-                        f"{label} count",
-                        value=str(spec["count"]),
-                        on_change=lambda e, target=spec: set_count(target, e.value),
-                    )
-                    count.props("dense inputmode=numeric")
-                    count.set_enabled(spec["minimum_count"] != spec["maximum_count"])
-                    ui.label(f"{spec['minimum_count']}–{spec['maximum_count']}")
-        start.set_enabled(validate(show_valid=False) is not None if draft else False)
+        async def recover() -> None:
+            def apply(updated: dict[str, Any]) -> None:
+                recovery.delete()
+                Workspace(updated, expected).file_status.set_text("Unsaved configuration edits")
 
-    def set_count(spec: dict[str, Any], value: str) -> None:
-        nonlocal revision
-        revision += 1
-        spec["count"] = _whole_number(value)
-        start.set_enabled(validate() is not None)
+            await _preview_import(draft, apply)
 
-    def maximize() -> None:
-        nonlocal draft, revision
-        draft = {
-            **draft,
-            "rooms": maximum_counts(draft["rooms"], draft["limit_attached_bathrooms"]),
-        }
-        revision += 1
-        validate()
-        render()
-
-    def reload() -> None:
-        nonlocal expected, draft, revision
-        revision += 1
-        expected, draft, message = _load()
-        status.set_text(message)
-        render()
-
-    def validate(*, show_valid: bool = True) -> Configuration | None:
-        try:
-            config = Configuration.model_validate(draft)
-        except ValidationError as exc:
-            status.set_text(_validation_message(exc))
-            return None
-        if show_valid:
-            status.set_text("Configuration fields are valid. Start analysis to check feasibility.")
-        return config
-
-    async def preview() -> None:
-        original_revision = revision
-
-        def apply(updated: dict[str, Any]) -> None:
-            nonlocal draft, revision
-            if revision != original_revision:
-                ui.notify("The draft changed. Preview the import again.", type="warning")
-                return
-            draft = updated
-            revision += 1
-            status.set_text("Import applied to the unsaved draft")
-            render()
-
-        await _preview_import(draft, apply)
-
-    async def launch() -> None:
-        if (config := validate()) is None:
-            return
-        await ui.context.client.connected()
-        run_id = uuid4().hex
-        app.storage.tab["e03a_run"] = {
-            "id": run_id,
-            "draft": config.model_dump(mode="json"),
-            "expected": expected.hex() if expected is not None else None,
-        }
-        ui.navigate.to(f"{SETUP}/runs/{run_id}")
-
-    render()
+        with recovery:
+            action_button("Import from E02A", on_click=recover)
+        return
+    Workspace(draft, expected)
 
 
 async def result_page(run_id: str) -> None:
-    client = ui.context.client
-    await client.connected()
-    handoff = app.storage.tab.get("e03a_run")
-    if not handoff or handoff["id"] != run_id:
-        shell("E-03-A · Run unavailable", back_link=SETUP)
-        ui.link("Start another analysis", SETUP)
-        return
-    app.storage.tab.pop("e03a_run")
-    expected = handoff["expected"]
-    workspace = Workspace(
-        handoff["draft"],
-        bytes.fromhex(expected) if expected is not None else None,
-        run_id,
-    )
-    client.on_delete(workspace.close)
+    shell("E-03-A · Session ended", back_link=SETUP)
+    ui.link("Open room sizing workspace", SETUP)
 
 
 def _compute(
@@ -265,7 +185,7 @@ def _compute(
 
 
 class Workspace:
-    def __init__(self, draft: dict[str, Any], expected: bytes | None, run_id: str) -> None:
+    def __init__(self, draft: dict[str, Any], expected: bytes | None) -> None:
         self.draft = draft
         self.expected = expected
         self.locks: dict[RoomType, AreaRange] = {}
@@ -276,28 +196,54 @@ class Workspace:
         self.baseline_config: Configuration | None = None
         self.baseline: Analysis | None = None
         self.result: Analysis | None = None
-        self.selected: RoomType | None = None
-        self.workspace = ResultWorkspace(TITLE, back_link=SETUP, views=VIEWS)
+        self.before_rule: Analysis | None = None
+        ui.context.client.on_delete(self.close)
+        self.workspace = ResultWorkspace(
+            TITLE, back_link="/", back_label="Experiments", views=VIEWS
+        )
         with self.workspace.controls:
-            self.status = ui.label().classes("font-semibold")
-            self.file_status = ui.label(f"Run {run_id[:8]}").classes("lab-muted text-sm")
-            self.save_button = action_button(
-                "Save configuration", role="main", on_click=self.save_draft
-            )
-            self.export_button = action_button("Export JSON", on_click=self.export_draft)
-            action_button("Import from E02A", on_click=self.preview)
-            self.reset_button = action_button(
-                "Reset unsaved edits", role="danger", on_click=self.reset
-            )
-            self.lock_panel = ui.column().classes("w-full")
-        self.draw_editor()
+            with ui.column().classes("w-full rounded border border-white/10 bg-white/5 p-3 gap-2"):
+                with ui.row().classes("items-center gap-1"):
+                    ui.label("Analysis").classes("font-semibold")
+                    _hint(
+                        "Results update after every edit. A compatible result means the room sizes "
+                        "can coexist under these rules. The analysis checks sizes only."
+                    )
+                self.status = ui.label().classes("text-sm").props('role="status"')
+                self.analysis_panel = ui.column().classes("w-full gap-1")
+            self.lock_panel = ui.column().classes("w-full rounded border border-white/10 p-3 gap-2")
+            with ui.column().classes("w-full border-t border-white/10 pt-3 gap-2"):
+                ui.label("Configuration").classes("font-semibold")
+                self.file_status = ui.label("Loaded saved configuration").classes(
+                    "lab-muted text-sm"
+                )
+                self.save_button = (
+                    action_button("Save configuration", role="main", on_click=self.save_draft)
+                    .props("dense no-caps")
+                    .classes("w-full")
+                )
+                with ui.row().classes("w-full gap-1"):
+                    action_button("Import from E02A", role="subtle", on_click=self.preview).props(
+                        "dense no-caps"
+                    )
+                    self.export_button = action_button(
+                        "Export JSON", role="subtle", on_click=self.export_draft
+                    ).props("dense no-caps")
+                    self.reset_button = action_button(
+                        "Reset unsaved edits", role="danger", on_click=self.reset
+                    ).props("flat dense no-caps")
         self.draw_matrix()
         self.changed()
 
     def close(self) -> None:
         self.closed = True
 
-    def changed(self) -> None:
+    def changed(self, *, rule_edit: bool = False) -> None:
+        self.before_rule = (
+            self.result
+            if rule_edit and self.result and self.result.status != "incomplete"
+            else None
+        )
         self.revision += 1
         self.result = None
         config = self.validate()
@@ -351,12 +297,12 @@ class Workspace:
                 return
             self.baseline_config = config
             self.baseline, self.result = output
-            suffix = (
-                f" · unlocked {self.baseline.status}"
-                if any(config.rooms[room].count for room in self.locks)
-                else ""
-            )
-            self.status.set_text(f"{self.result.status.capitalize()}{suffix}")
+            messages = {
+                "compatible": "Room sizes can work together",
+                "incompatible": "The current sizes cannot work together",
+                "incomplete": "Analysis could not finish",
+            }
+            self.status.set_text(messages[self.result.status])
             self.save_button.set_enabled(not self.saving)
             self.draw_results()
             return
@@ -413,93 +359,135 @@ class Workspace:
         await _preview_import(self.draft, apply)
 
     def redraw_configuration(self) -> None:
-        self.draw_editor()
         self.draw_matrix()
         self.changed()
 
-    def draw_editor(self) -> None:
-        pane = self.workspace.main("Room configurations")
+    def draw_rooms(self) -> None:
+        pane = self.workspace.main("Rooms")
         pane.clear()
-
-        def edit_ratio(target: dict[str, Any], key: str, label: str) -> None:
-            ui.input(
-                label,
-                value=str(target.get(key, "")),
-                on_change=lambda e: update(target, key, e.value),
-            ).props("dense").classes("w-24")
-
-        def update(target: dict[str, Any], field: str, value: Any) -> None:
-            target[field] = _whole_number(value) if field == "count" else value
-            self.file_status.set_text("Unsaved configuration edits")
-            self.changed()
-
         with pane:
-            ui.label("Default room aspect ratio · X ÷ Y").classes("font-semibold")
-            with ui.row().classes("items-center"):
-                default = self.draft.get("default_aspect")
+            action_button("Default room shape", role="subtle", on_click=lambda: self.edit_room())
+            with (
+                ui.element("div").classes("w-full overflow-x-auto"),
+                ui.element("table").classes("w-full text-sm"),
+            ):
+                with ui.element("thead"), ui.element("tr"):
+                    for heading in (
+                        "Room type",
+                        "Count",
+                        "Allowed (m²)",
+                        "Possible (m²)",
+                        "Actions",
+                    ):
+                        with ui.element("th").classes("p-2 text-left"):
+                            with ui.row().classes("items-center gap-1 flex-nowrap"):
+                                ui.label(heading)
+                                if heading == "Possible (m²)":
+                                    _hint(
+                                        "Smallest and largest areas that fit the current rules and "
+                                        "area tests. Open Details to see how many distinct areas fit."
+                                    )
+                with ui.element("tbody"):
+                    for kind in ROOM_TYPES:
+                        name = room_label(kind.value)
+                        spec = self.draft["rooms"][kind.value]
+                        room = f"{kind.value}_1"
+                        possible = _possible(self.result, room) if spec["count"] else "Inactive"
+                        with ui.element("tr").classes("border-t border-white/10"):
+                            for value in (
+                                name,
+                                str(spec["count"]),
+                                f"{Decimal(spec['min_area']) / 100:g}–{Decimal(spec['max_area']) / 100:g}",
+                                possible,
+                            ):
+                                with ui.element("td").classes("p-2"):
+                                    ui.label(value)
+                            with ui.element("td").classes("p-2"), ui.row().classes("gap-1"):
+                                action_button(
+                                    "Edit",
+                                    role="general",
+                                    on_click=lambda k=kind: self.edit_room(k),
+                                ).props(f'dense outline no-caps aria-label="Edit {name}"')
+                                if spec["count"]:
+                                    action_button(
+                                        "Details",
+                                        role="subtle",
+                                        on_click=lambda k=kind: self.room_details(k),
+                                    ).props(
+                                        f'dense no-caps aria-label="{name} details"'
+                                    ).set_enabled(self.result is not None)
+                                    action_button(
+                                        "Test area",
+                                        role="subtle",
+                                        on_click=lambda k=kind: self.test_area(k),
+                                    ).props(f'dense no-caps aria-label="Test {name} area"')
 
-                def set_default(event: Any) -> None:
-                    update(
-                        self.draft,
-                        "default_aspect",
-                        {"min_ratio": "0.60", "max_ratio": "1.80"} if event.value else None,
-                    )
-                    self.draw_editor()
-
-                ui.switch("Enabled", value=default is not None, on_change=set_default)
-                if default is not None:
-                    edit_ratio(default, "min_ratio", "Minimum")
-                    edit_ratio(default, "max_ratio", "Maximum")
-            ui.label("10 units = 1 m · 100 units² = 1 m²").classes("text-sm lab-muted")
-            for room_type in ROOM_TYPES:
-                spec = self.draft["rooms"][room_type.value]
-                override = spec["aspect"]
-                with ui.expansion(room_label(room_type.value), value=True).classes("w-full"):
-                    axis = "X span" if width_axis(room_type).value == "x" else "shorter span"
-                    ui.label(
-                        f"Maximum width applies to the {axis} · Count {spec['minimum_count']}–{spec['maximum_count']}"
-                    ).classes("text-sm lab-muted")
-                    with ui.row().classes("items-center gap-2"):
-                        for field, label in ROOM_FIELDS.items():
-                            ui.input(
-                                label,
-                                value=str(spec[field]),
-                                on_change=lambda e, s=spec, k=field: update(s, k, e.value),
-                            ).props("dense").classes("w-24")
-                        modes = {
-                            "inherit": "Use default",
-                            "custom": "Override",
-                            "none": "Unrestricted",
-                        }
-                        mode = (
-                            "inherit"
-                            if override == "inherit"
-                            else ("none" if override is None else "custom")
+    def edit_room(self, kind: RoomType | None = None) -> None:
+        candidate = deepcopy(self.draft)
+        spec = candidate["rooms"][kind.value] if kind is not None else None
+        with ui.dialog() as dialog, ui.card().classes("w-[34rem] max-w-full"):
+            ui.label(f"Edit {room_label(kind.value)}" if kind else "Default room shape").classes(
+                "text-lg font-semibold"
+            )
+            fields = {}
+            if kind and spec is not None:
+                ui.label(
+                    f"Count {spec['minimum_count']}–{spec['maximum_count']} · "
+                    f"Maximum width applies to the {('X span' if width_axis(kind).value == 'x' else 'shorter span')}."
+                ).classes("lab-muted text-sm")
+                with ui.row().classes("gap-2"):
+                    for field, label in ROOM_FIELDS.items():
+                        fields[field] = (
+                            ui.input(label, value=str(spec[field])).props("dense").classes("w-28")
                         )
+            with ui.row().classes("items-center gap-1"):
+                ui.label("Room shape · X ÷ Y").classes("font-semibold")
+                _hint(
+                    "A ratio of 1 is square. A ratio of 1.5 means X is 50% longer than Y. "
+                    "Use default inherits the shared room shape. Set bounds overrides it for this room type."
+                )
+            shape = spec["aspect"] if spec is not None else candidate["default_aspect"]
+            options = {"none": "Unrestricted", "custom": "Set bounds"}
+            if spec is not None:
+                options = {"inherit": "Use default", **options}
+            mode = ui.radio(
+                options, value="custom" if isinstance(shape, dict) else shape or "none"
+            ).props("inline")
+            bounds = shape if isinstance(shape, dict) else candidate["default_aspect"]
+            bounds = bounds or {"min_ratio": "0.60", "max_ratio": "1.80"}
+            with ui.row().bind_visibility_from(mode, "value", lambda value: value == "custom"):
+                minimum = ui.input("Minimum X ÷ Y", value=str(bounds["min_ratio"]))
+                maximum = ui.input("Maximum X ÷ Y", value=str(bounds["max_ratio"]))
+            issue = ui.label().classes("text-negative")
 
-                        def set_mode(event: Any, settings: dict = spec) -> None:
-                            default_bounds = self.draft.get("default_aspect") or {
-                                "min_ratio": "0.60",
-                                "max_ratio": "1.80",
-                            }
-                            update(
-                                settings,
-                                "aspect",
-                                dict(default_bounds)
-                                if event.value == "custom"
-                                else (None if event.value == "none" else "inherit"),
-                            )
-                            self.draw_editor()
+            def apply() -> None:
+                aspect = None
+                if mode.value == "inherit":
+                    aspect = "inherit"
+                elif mode.value == "custom":
+                    aspect = {"min_ratio": minimum.value, "max_ratio": maximum.value}
+                if spec is not None:
+                    spec.update({key: value.value for key, value in fields.items()}, aspect=aspect)
+                    spec["count"] = _whole_number(spec["count"].strip())
+                else:
+                    candidate["default_aspect"] = aspect
+                try:
+                    config = Configuration.model_validate(candidate)
+                except ValidationError as exc:
+                    issue.set_text(_validation_message(exc))
+                    return
+                self.draft = config.model_dump(mode="json")
+                self.file_status.set_text("Unsaved configuration edits")
+                dialog.close()
+                self.changed()
 
-                        ui.select(modes, value=mode, label="Room aspect", on_change=set_mode).props(
-                            "dense"
-                        ).classes("w-28")
-                        if isinstance(override, dict):
-                            edit_ratio(override, "min_ratio", "Min aspect")
-                            edit_ratio(override, "max_ratio", "Max aspect")
+            with ui.row():
+                action_button("Apply room settings", role="main", on_click=apply)
+                action_button("Cancel", role="subtle", on_click=dialog.close)
+        dialog.open()
 
     def draw_matrix(self) -> None:
-        pane = self.workspace.main("Relationship matrix")
+        pane = self.workspace.main("Relationships")
         pane.clear()
         cross = {
             (rule["compared_type"], rule["reference_type"]): rule
@@ -508,7 +496,14 @@ class Workspace:
         same = {rule["room_type"]: rule for rule in self.draft["same_type_rules"]}
         rooms = [room.value for room in ROOM_TYPES]
         with pane:
-            ui.label("Compared rooms ↓  ·  Reference rooms →").classes("lab-muted")
+            with ui.row().classes("items-center gap-2"):
+                ui.label(
+                    "Pick the room to size on the left, then the room to compare it with across the top."
+                ).classes("lab-muted")
+                _hint(
+                    "Select + to add a rule or a value to edit it. A diagonal cell limits how "
+                    "much two rooms of the same type can differ in area."
+                )
             with (
                 ui.element("div").classes("w-full overflow-x-auto"),
                 ui.element("table").classes("w-full text-sm"),
@@ -555,9 +550,21 @@ class Workspace:
             }
         )
         with ui.dialog() as dialog, ui.card():
-            ui.label(
-                f"{room_label(a)} spread" if diagonal else f"{room_label(a)} to {room_label(b)}"
-            ).classes("font-semibold")
+            with ui.row().classes("items-center gap-1"):
+                ui.label(
+                    f"{room_label(a)} spread" if diagonal else f"{room_label(a)} to {room_label(b)}"
+                ).classes("font-semibold")
+                _hint(
+                    "Enter 0 to require equal areas. Enter 0.2 to allow the larger room "
+                    "to be up to 20% bigger than the smaller room."
+                    if diagonal
+                    else "Divide the first room’s area by the second room’s area. Fill either bound "
+                    "or both. The rule applies to every pair of those room types."
+                )
+            if not diagonal:
+                ui.label(
+                    f"A minimum of 0.5 means each {room_label(a)} must be at least half the area of each {room_label(b)}."
+                ).classes("lab-muted")
             inputs = {
                 key: ui.input(label, value=str((old or {}).get(key) or ""))
                 for key, label in fields.items()
@@ -586,7 +593,7 @@ class Workspace:
                 self.file_status.set_text("Unsaved configuration edits")
                 dialog.close()
                 self.draw_matrix()
-                self.changed()
+                self.changed(rule_edit=True)
 
             with ui.row():
                 action_button("Apply rule", role="main", on_click=lambda: apply())
@@ -596,216 +603,224 @@ class Workspace:
         dialog.open()
 
     def draw_results(self) -> None:
-        overview = self.workspace.main("Overview")
-        diagnostics = self.workspace.main("Diagnostics")
-        overview.clear()
-        diagnostics.clear()
-        self.draw_locks()
+        self.draw_rooms()
+        self.analysis_panel.clear()
+        self.lock_panel.clear()
+        self.lock_panel.set_visibility(bool(self.locks))
+        context = self.workspace.context("Relationships")
+        context.clear()
         result, baseline, config = self.result, self.baseline, self.baseline_config
+        with self.lock_panel:
+            if self.locks:
+                with ui.row().classes("items-center gap-1"):
+                    ui.label("Temporary area tests").classes("font-semibold")
+                    _hint(
+                        "A test restricts every room of that type. Remove it to see which areas "
+                        "fit without the test. Saving keeps only your configuration."
+                    )
+                for kind, area in self.locks.items():
+                    name = room_label(kind.value)
+                    inactive = " · inactive" if not self.draft["rooms"][kind.value]["count"] else ""
+                    with ui.row().classes("items-center"):
+                        ui.label(
+                            f"{name} · {area.minimum / 100:g}–{area.maximum / 100:g} m²{inactive}"
+                        )
+                        action_button(
+                            "Remove", role="subtle", on_click=lambda k=kind: self.set_lock(k, None)
+                        ).props(f'dense no-caps aria-label="Remove {name} test"')
+            if (
+                self.locks
+                and result
+                and baseline
+                and "incomplete" not in (result.status, baseline.status)
+            ):
+                self.show_effect("Effect of temporary tests", baseline, result)
         if result is None or baseline is None or config is None:
             return
-        active = [kind for kind in ROOM_TYPES if config.rooms[kind].count]
-        compare = any(kind in self.locks for kind in active)
-
-        with overview:
-            rows = []
-            for kind in ROOM_TYPES:
-                room = f"{kind.value}_1"
-                spec = config.rooms[kind]
-                supported = result.supported.get(room)
-                flex = result.flexibility(room)
-                span = result.ranges(room)
-                original = baseline.ranges(room)
-                current: tuple[Any, ...] = (
-                    room_label(kind.value),
-                    spec.count,
-                    f"{spec.min_area / 100:g}–{spec.max_area / 100:g}",
-                    _span(span, 0, 100) if spec.count else "Inactive",
-                    f"{len(supported)} / {len(result.dimensions[room])}"
-                    if supported is not None
-                    else "—",
-                    f"{flex:.1f}%" if flex is not None else "—",
-                )
-                if compare:
-                    affected = result.supported.get(room) != baseline.supported.get(room)
-                    current += (_span(original, 0, 100), "Changed" if affected else "—")
-                rows.append(current)
-
-            headers: tuple[str, ...] = (
-                "Room type",
-                "Count",
-                "Configured (m²)",
-                "Feasible (m²)",
-                "Area options",
-                "Flexibility",
-            )
-            if compare:
-                headers += ("Unlocked (m²)", "Lock effect")
-            _table(headers, rows)
-            if any(result.flexibility(f"{kind.value}_1") is not None for kind in active):
-                chart = figure("Retained area options by room type")
-                labels = [room_label(kind.value) for kind in active]
-                if compare:
-                    chart.add_bar(
-                        name="Unlocked",
-                        x=labels,
-                        y=[baseline.flexibility(f"{kind.value}_1") for kind in active],
+        with self.analysis_panel:
+            if result.status == "incompatible":
+                if result.category == "Area-range lock":
+                    ui.label("Widen or remove a temporary area test.")
+                elif result.category == "Dimension":
+                    ui.label("Review the size and shape limits of the affected rooms.")
+                    action_button(
+                        "Review rooms",
+                        role="subtle",
+                        on_click=lambda: self.workspace.select_view("Rooms"),
                     )
-                chart.add_bar(
-                    name="Current",
-                    x=labels,
-                    y=[result.flexibility(f"{kind.value}_1") for kind in active],
-                )
-                chart.update_yaxes(range=[0, 100], ticksuffix="%")
-                ui.plotly(chart).classes("w-full h-[270px]")
+                else:
+                    ui.label("Review the relationships between the affected rooms.")
+                    action_button(
+                        "Review relationships",
+                        role="subtle",
+                        on_click=lambda: self.workspace.select_view("Relationships"),
+                    )
+            with ui.row().classes("gap-1"):
+                if result.diagnostics or result.inactive:
+                    action_button(
+                        "Analysis details", role="subtle", on_click=self.analysis_details
+                    ).props("dense no-caps")
+                if result.status == "compatible" and result.witness:
+                    action_button(
+                        "Example sizes", role="subtle", on_click=self.example_sizes
+                    ).props("dense no-caps")
+        with context:
+            ui.label("Possible room areas (m²)").classes("font-semibold")
+            _table(
+                ("Room", "Possible"),
+                [
+                    (room_label(kind.value), _possible(result, f"{kind.value}_1"))
+                    for kind in ROOM_TYPES
+                    if config.rooms[kind].count
+                ],
+            )
+            if self.before_rule is not None and result.status != "incomplete":
+                self.show_effect("Effect of last rule edit", self.before_rule, result)
 
-        with diagnostics:
-            if result.category:
-                ui.label(f"{result.category} conflict").classes("font-semibold")
+    def show_effect(self, title: str, before: Analysis, after: Analysis) -> None:
+        with ui.row().classes("items-center gap-1"):
+            ui.label(title).classes("font-semibold text-sm")
+            _hint(
+                "Read each arrow from before to after. Options counts distinct areas that fit. "
+                "That set can change even when its smallest and largest values stay the same."
+            )
+        rows = []
+        for kind in ROOM_TYPES:
+            room = f"{kind.value}_1"
+            previous, current = before.supported.get(room), after.supported.get(room)
+            if previous != current:
+                old_area, new_area = _possible(before, room), _possible(after, room)
+                change = (
+                    f"{old_area} → {new_area} m²"
+                    if old_area != new_area and previous and current
+                    else (
+                        f"{old_area} → {new_area}"
+                        if old_area != new_area
+                        else "Area options changed"
+                    )
+                )
+                counts = f"{len(previous or ())} → {len(current or ())}"
+                rows.append((room_label(kind.value), change, counts))
+        if rows:
+            _table(("Room", "Range", "Options"), rows)
+        else:
+            ui.label("Possible areas stayed the same.").classes("lab-muted text-sm")
+
+    def analysis_details(self) -> None:
+        result = self.result
+        if result is None:
+            return
+        with ui.dialog() as dialog, ui.card().classes("w-[42rem] max-w-full"):
+            ui.label("Analysis details").classes("text-lg font-semibold")
             for line in result.diagnostics:
                 ui.label(line)
             if result.inactive:
-                ui.label("Inapplicable rules").classes("font-semibold")
+                ui.label("Inactive rules").classes("font-semibold")
                 for a, b in result.inactive:
                     ui.label(
-                        f"{room_label(a.value)} spread"
-                        if a == b
-                        else f"{room_label(a.value)} to {room_label(b.value)}"
+                        room_label(a.value) + (" spread" if a == b else f" / {room_label(b.value)}")
                     )
-            if result.status == "compatible":
-                ui.label(
-                    "Compatible sizes can come from different arrangements. Check the combination you intend to use."
-                ).classes("lab-muted")
-            if result.witness:
-                with ui.expansion("Compatible sizing example").classes("w-full"):
-                    _table(
-                        ("Room", "Width (m)", "Length (m)", "Area (m²)", "Area (units²)"),
-                        [
-                            (room_label(room), width / 10, length / 10, area / 100, area)
-                            for room, (width, length, area) in result.witness.items()
-                        ],
-                    )
+            action_button("Close", role="subtle", on_click=dialog.close)
+        dialog.open()
 
-    def draw_locks(self) -> None:
-        self.lock_panel.clear()
-        result, config = self.result, self.baseline_config
-        with self.lock_panel:
-            ui.label("Area-range locks").classes("font-semibold")
-            for kind, area in self.locks.items():
-                inactive = (
-                    " · inactive" if config is not None and not config.rooms[kind].count else ""
+    def example_sizes(self) -> None:
+        if self.result is None:
+            return
+        with ui.dialog() as dialog, ui.card().classes("w-[42rem] max-w-full"):
+            ui.label("One compatible set of room sizes").classes("text-lg font-semibold")
+            _table(
+                ("Room", "Width (m)", "Length (m)", "Area (m²)"),
+                [
+                    (room_label(room), x / 10, y / 10, area / 100)
+                    for room, (x, y, area) in self.result.witness.items()
+                ],
+            )
+            action_button("Close", role="subtle", on_click=dialog.close)
+        dialog.open()
+
+    def room_details(self, kind: RoomType) -> None:
+        result = self.result
+        if result is None:
+            return
+        room = f"{kind.value}_1"
+        ranges = result.ranges(room)
+        supported = result.supported.get(room)
+        total = len(result.dimensions.get(room, {}))
+        with ui.dialog() as dialog, ui.card().classes("w-[32rem] max-w-full"):
+            with ui.row().classes("items-center gap-1"):
+                ui.label(f"{room_label(kind.value)} details").classes("text-lg font-semibold")
+                _hint(
+                    "Area options count each distinct area once, even if several widths and "
+                    "lengths produce it. Width, length, and area ranges show separate extremes. "
+                    "Use Example sizes for a set of dimensions that works together."
                 )
-                with ui.row().classes("items-center justify-between w-full"):
-                    ui.label(
-                        f"{room_label(kind.value)} · {area.minimum}–{area.maximum} units²{inactive}"
-                    )
-                    action_button(
-                        f"Remove {room_label(kind.value)} lock",
-                        role="subtle",
-                        on_click=lambda target=kind: self.set_lock(target, None),
-                    ).props("dense")
-            if self.locks:
-                action_button("Clear all locks", role="subtle", on_click=self.clear_locks)
-            if result is None or config is None:
-                return
-            choices = {
-                kind.value: room_label(kind.value)
-                for kind in ROOM_TYPES
-                if config.rooms[kind].count or kind in self.locks
-            }
-            if not choices:
-                return
-            if self.selected is None or self.selected.value not in choices:
-                self.selected = RoomType(next(iter(choices)))
+            if supported is not None and total and result.status != "incomplete":
+                ui.label(
+                    f"{len(supported)} of {total} possible areas fit the current rules ({100 * len(supported) / total:.1f}%)."
+                )
+                ui.label(
+                    "The total counts distinct areas that fit this room²s own size and shape limits."
+                ).classes("lab-muted text-sm")
+            if ranges and result.status == "compatible":
+                ui.label(f"Possible width · {_span(ranges, 1, 10)} m")
+                ui.label(f"Possible length · {_span(ranges, 2, 10)} m")
+                ui.label("Each range shows its smallest and largest possible value.").classes(
+                    "lab-muted text-sm"
+                )
+            elif result.status == "incomplete":
+                ui.label("Analysis could not finish.")
+            else:
+                ui.label("No compatible dimensions.")
+            variation = result.variation.get(kind)
+            if result.status == "compatible" and variation is not None:
+                ui.label(
+                    f"Two rooms can differ by up to {variation.difference / 100:g} m² in one compatible arrangement."
+                )
+                ui.label(
+                    f"Largest relative difference · {float(variation.spread):.2%} of the smaller room"
+                )
+            action_button("Close", role="subtle", on_click=dialog.close)
+        dialog.open()
 
-            def select(event: Any) -> None:
-                self.selected = RoomType(event.value)
-                self.draw_locks()
-
-            ui.select(
-                choices, value=self.selected.value, label="Room type", on_change=select
-            ).classes("w-full")
-            kind = self.selected
-            room = f"{kind.value}_1"
-            lock = self.locks.get(kind)
-            if not config.rooms[kind].count:
-                return
-            minimum = (
-                ui.input("Minimum area (units²)", value=str(lock.minimum) if lock else "")
-                .props("dense inputmode=numeric")
-                .classes("w-full")
+    def test_area(self, kind: RoomType) -> None:
+        lock = self.locks.get(kind)
+        with ui.dialog() as dialog, ui.card():
+            with ui.row().classes("items-center gap-1"):
+                ui.label(f"Test {room_label(kind.value)} area").classes("font-semibold")
+                _hint(
+                    "Enter both bounds in square metres, with up to two decimal places. "
+                    "You can enter the same number twice to test one exact area. After applying, "
+                    "check the sidebar for changes to this room and others."
+                )
+            ui.label("This temporary range applies to every room of this type.")
+            minimum = ui.input(
+                "Minimum area (m²)", value=str(Decimal(lock.minimum) / 100) if lock else ""
             )
-            maximum = (
-                ui.input("Maximum area (units²)", value=str(lock.maximum) if lock else "")
-                .props("dense inputmode=numeric")
-                .classes("w-full")
+            maximum = ui.input(
+                "Maximum area (m²)", value=str(Decimal(lock.maximum) / 100) if lock else ""
             )
-            issue = ui.label().classes("text-negative text-sm")
+            issue = ui.label().classes("text-negative")
 
             def apply() -> None:
-                lo, hi = _whole_number(minimum.value.strip()), _whole_number(maximum.value.strip())
-                if not isinstance(lo, int) or not isinstance(hi, int):
-                    issue.set_text("Enter whole areas in project units².")
-                    return
                 try:
-                    area = AreaRange(lo, hi)
-                except ValueError as exc:
-                    issue.set_text(str(exc))
+                    values = [field.value.strip() for field in (minimum, maximum)]
+                    if any(
+                        not re.fullmatch(r"(?:[0-9]{1,12}(?:\.[0-9]{1,2})?|\.[0-9]{1,2})", value)
+                        for value in values
+                    ):
+                        raise ValueError
+                    area = AreaRange(*(int(Decimal(value) * 100) for value in values))
+                except ValueError:
+                    issue.set_text(
+                        "Enter positive areas with up to two decimal places, with minimum at most maximum."
+                    )
                     return
+                dialog.close()
                 self.set_lock(kind, area)
 
-            action_button("Apply range lock", on_click=apply)
-
-            current = result.ranges(room)
-            original = self.baseline.ranges(room) if self.baseline else ()
-            with ui.expansion("Feasible dimensions", value=lock is not None).classes("w-full"):
-                _table(
-                    ("Range", "Unlocked", "Current"),
-                    [
-                        (label, _span(original, i, scale), _span(current, i, scale))
-                        for i, (label, scale) in enumerate(
-                            (("Area (m²)", 100), ("Width (m)", 10), ("Length (m)", 10))
-                        )
-                    ],
-                )
-            supported = result.supported.get(room)
-            if lock is not None and supported is not None:
-                requested = lock.maximum - lock.minimum + 1
-                if not supported:
-                    ui.label("No area in the requested range has global support.").classes(
-                        "lab-muted text-sm"
-                    )
-                elif len(supported) < requested:
-                    ui.label(
-                        f"Partial range support · {len(supported)} of {requested} whole areas"
-                    ).classes("lab-muted text-sm")
-                    ui.label(f"Feasible area · {supported[0]}–{supported[-1]} units²").classes(
-                        "lab-muted text-sm"
-                    )
-
-            with ui.expansion("Same-type variation", value=True).classes("w-full"):
-                if config.rooms[kind].count < 2:
-                    ui.label("Not applicable · fewer than two rooms").classes("lab-muted text-sm")
-                    return
-                rule = next(
-                    (rule for rule in config.same_type_rules if rule.room_type == kind), None
-                )
-                ui.label(
-                    f"Configured tolerance · {rule.maximum_spread_ratio * 100:g}%"
-                    if rule
-                    else "Configured tolerance · none"
-                )
-                variation = result.variation.get(kind)
-                if variation is None:
-                    ui.label("Variation unavailable for this result").classes("lab-muted text-sm")
-                    return
-                ui.label(f"Maximum area difference · {variation.difference / 100:g} m²")
-                ui.label(f"Maximum relative spread · {float(variation.spread) * 100:.2f}%")
-                ui.label(
-                    "Other relationships narrow the achievable variation."
-                    if variation.restricted_by_other_rules
-                    else "The same variation is achievable with all relationships applied."
-                ).classes("lab-muted text-sm")
+            action_button("Apply test", role="main", on_click=apply)
+            action_button("Cancel", role="subtle", on_click=dialog.close)
+        dialog.open()
 
     def set_lock(self, room: RoomType, area: AreaRange | None) -> None:
         if area is None:
@@ -814,9 +829,13 @@ class Workspace:
             self.locks[room] = area
         self.changed()
 
-    def clear_locks(self) -> None:
-        self.locks.clear()
-        self.changed()
+
+def _possible(result: Analysis | None, room: str) -> str:
+    if result is None:
+        return "Checking…"
+    if result.status == "incomplete":
+        return "Unavailable"
+    return _span(result.ranges(room), 0, 100) if result.status == "compatible" else "None"
 
 
 def _span(ranges: tuple[tuple[int, int], ...], index: int, scale: int) -> str:
