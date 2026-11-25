@@ -3,6 +3,7 @@ from __future__ import annotations
 from .exposure_rules import HardExteriorWallExposure, SoftExteriorWallExposure
 from .h_aspect_ratio import AspectRatioConstraint
 from .h_boundary_placement import BoundaryPlacementConstraint
+from .h_fully_shared_wall import FullySharedWallConstraint
 from .h_minimum_coverage import MinimumCoverageConstraint
 from .h_room_relations import HardRoomRelationsConstraint
 from .h_room_size_hierarchy import RoomSizeHierarchyConstraint
@@ -44,6 +45,7 @@ def build_default_registry() -> ConstraintRegistry:
     registry.register_hard(HallwaySharedWallConstraint())
     registry.register_hard(LivingRoomFrontConstraint())
     registry.register_hard(BoundaryPlacementConstraint())
+    registry.register_hard(FullySharedWallConstraint())
     registry.register_hard(RoomSizeHierarchyConstraint())
 
     registry.register_soft(SoftRoomRelationsConstraint())

@@ -49,6 +49,30 @@ room-facing tests, the Lab E02A tests, and the Lab Core verifier after changes.
 
 Built-in profiles: `INITIAL_GENERATION_PROFILE` (candidate hints), `REFINEMENT_A_PROFILE` and `REFINEMENT_B_PROFILE` (existing floor-plan seed, with tighter stabilization). Construct tuned versions using `build_default_profiles(DefaultProfileSettings(...))`; default time limits are 5 seconds initial, 2 seconds per refinement. Maintain bounded solves and configurable seeds.
 
+## Fully shared wall design rationale
+
+`fully_shared_wall` encourages compact layouts by requiring one group of walls
+on each targeted room to be covered by its neighbors. The solver projects each
+room pair onto the two wall axes. Only a projection with touching opposing
+faces contributes to shared length. Structural non-overlap ensures two neighbors
+cannot cover the same positive-length segment on a wall. The solver sums the
+segments and uses conditional constraints to choose a qualifying group. Pairwise
+projection work grows quadratically when most rooms are targeted and is
+independent of the number of coordinate grid cells.
+
+Requiring more sides reduces placement and dimensional flexibility and can
+reduce opportunities for windows, daylight and ventilation. A room can become
+excessively enclosed, since sides outside the required group have no guaranteed
+exterior exposure. Small plans or rooms with few neighbors are especially
+constrained. Other placement or geometric requirements can compound these
+restrictions, making search harder or the plan infeasible.
+
+Zero tolerance requires exact coverage. A high tolerance can allow enough gaps
+to weaken the compactness benefit even though each selected wall still needs
+positive contact. Post-processing can move or reshape rooms and change
+coverage. See the [solver contract](../feature_documentations/floor_plan_solver.md#fully-shared-walls)
+for configuration and examples.
+
 ## Hallway rules that are easy to misunderstand
 
 - A hallway corridor width is constrained to `8..10` project units by default; its *length* is not hard-capped.

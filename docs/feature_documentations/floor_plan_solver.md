@@ -206,6 +206,57 @@ extra length. Only regular bathrooms are affected. Existing saved Lab profiles
 must add this hard-constraint entry to enable it. Existing experiment snapshots
 are preserved.
 
+### Fully shared walls
+
+Add `HardConstraintUse("fully_shared_wall", settings)` to any initial or
+refinement configuration's `hard_constraints`. The built-in profiles leave
+this opt-in constraint disabled. `settings` contains a nonempty `rules` list,
+with these fields per rule.
+
+| Field | Accepted values |
+| --- | --- |
+| `room_types` | Nonempty list or tuple of `RoomType` members in Core, or their string values in Lab JSON. |
+| `minimum_shared_sides` | Integer from 0 to 4. Zero adds no geometric requirement. Additional shared sides are allowed. |
+| `arrangement` | `adjacent` selects consecutive sides around the perimeter. `any` allows any group of the specified size. For rectangular rooms, only the two-side case differs between the arrangements. |
+| `uncovered_length_tolerance` | Optional finite non-negative number in project units, default 0. The solver scales it down to the greatest allowed integer length on its coordinate grid. |
+| `when` | Optional mapping with exactly `room_type` and Boolean `exists`. The rule applies when the specification contains that type for `true`, or omits it for `false`. Omitting `when` makes the rule unconditional. |
+
+Every applicable rule must hold independently for each matching room. A
+condition checks the supplied room list regardless of where those rooms are
+placed. Core raises `InvalidProfileError` for invalid rules or unknown fields.
+Boolean values are invalid as counts or lengths.
+
+The solver counts actual overlapping segments where opposing room boundaries
+touch. All other rooms, including hallways, can contribute. Corner contact and
+rooms across a gap contribute zero. Two neighbors covering 15 and 25 units of a
+40-unit wall can satisfy strict coverage together.
+
+Every selected wall must have positive contact. The tolerance is one budget
+for the sum of all uncovered segments on the selected walls. With a budget of
+10, uncovered lengths of 4 and 6 pass, while 6 and 6 fail. The 10 project units
+equal 1 metre at the example scale of 10 project units per metre. Adjacent
+sides can qualify even if their shared segments leave a gap at the common corner.
+
+```python
+from fpg_core.domain import RoomType
+from fpg_core.floor_plan_solver import HardConstraintUse
+
+garage_wall_sharing = HardConstraintUse("fully_shared_wall", {
+    "rules": [{
+        "room_types": [RoomType.GARAGE],
+        "minimum_shared_sides": 2,
+        "arrangement": "adjacent",
+        "uncovered_length_tolerance": 10,
+    }],
+})
+```
+
+This policy encourages compactness and limits room placement, dimensions and
+potential exterior-facing walls. The remaining walls have no guaranteed exterior
+exposure. The guarantee applies to solver-stage geometry, which post-processing
+can change. See the [design rationale](../features/solver.md#fully-shared-wall-design-rationale)
+for the feasibility and design trade-offs.
+
 ## Built-in soft constraints
 
 The default registry provides:

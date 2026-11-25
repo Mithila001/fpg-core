@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from decimal import ROUND_CEILING, Decimal
 from enum import Enum
-from decimal import Decimal, ROUND_CEILING
 from types import MappingProxyType
 from typing import Any
 
 from .exceptions import InvalidProfileError
 from .exposure_config import validate_exposure_settings
+from .shared_wall_config import (
+    FULLY_SHARED_WALL_KEY,
+    validate_fully_shared_wall_settings,
+)
 
 
 def _freeze(value: Any) -> Any:
@@ -29,6 +33,8 @@ class HardConstraintUse:
     def __post_init__(self) -> None:
         if not self.key.strip():
             raise InvalidProfileError("Hard constraint key cannot be empty")
+        if self.key == FULLY_SHARED_WALL_KEY:
+            validate_fully_shared_wall_settings(self.settings)
         object.__setattr__(
             self,
             "settings",

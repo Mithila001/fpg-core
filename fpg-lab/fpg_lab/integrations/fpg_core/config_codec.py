@@ -411,6 +411,7 @@ class CoreConfigCodec:
     def _build_solver(source: Any | None) -> Any | None:
         if source is None:
             return None
+        from fpg_core.domain import RoomType
         from fpg_core.floor_plan_solver import (
             FloorPlanSolver,
             FloorPlanSolverConfig,
@@ -423,25 +424,31 @@ class CoreConfigCodec:
             SolverConfig,
         )
 
-        def settings(value: Any, key: str | None = None) -> Any:
-            from fpg_core.domain import RoomType
-
-            if key is not None and (key == "room_types" or key.endswith("_room_types")):
-                return tuple(RoomType(item) for item in value)
-            if key in {"compared_type", "reference_type"}:
+        def room_type(value: Any, path: str) -> RoomType:
+            try:
                 return RoomType(value)
+            except ValueError as exc:
+                raise CoreConfigurationError(f"{path} has an invalid room type: {value!r}") from exc
+
+        def settings(value: Any, path: str, key: str | None = None) -> Any:
+            if key is not None and (key == "room_types" or key.endswith("_room_types")):
+                if not isinstance(value, (list, tuple)):
+                    raise CoreConfigurationError(f"{path} must be a room-type list")
+                return tuple(room_type(item, f"{path}[{index}]") for index, item in enumerate(value))
+            if key in {"room_type", "compared_type", "reference_type"}:
+                return room_type(value, path)
             if key in {"overrides", "ratios_by_room_type"}:
                 return {
-                    RoomType(item_key): settings(item_value)
+                    room_type(item_key, path): settings(item_value, f"{path}.{item_key}")
                     for item_key, item_value in value.items()
                 }
             if isinstance(value, dict):
                 return {
-                    item_key: settings(item_value, item_key)
+                    item_key: settings(item_value, f"{path}.{item_key}", item_key)
                     for item_key, item_value in value.items()
                 }
             if isinstance(value, list):
-                return tuple(settings(item) for item in value)
+                return tuple(settings(item, f"{path}[{index}]") for index, item in enumerate(value))
             return value
 
         registry = FloorPlanSolver().registry
@@ -450,10 +457,10 @@ class CoreConfigCodec:
             config = FloorPlanSolverConfig(
                 name=item.name,
                 hard_constraints=tuple(
-                    HardConstraintUse(x.key, settings(x.settings)) for x in item.hard_constraints
+                    HardConstraintUse(x.key, settings(x.settings, x.key)) for x in item.hard_constraints
                 ),
                 soft_constraints=tuple(
-                    SoftConstraintUse(x.key, x.weight, settings(x.settings))
+                    SoftConstraintUse(x.key, x.weight, settings(x.settings, x.key))
                     for x in item.soft_constraints
                 ),
                 solver=SolverConfig(**item.solver.model_dump()),

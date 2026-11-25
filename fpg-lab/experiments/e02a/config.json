@@ -729,6 +729,66 @@
         "name": "initial_generation",
         "hard_constraints": [
           {
+            "key": "fully_shared_wall",
+            "settings": {
+              "rules": [
+                {
+                  "room_types": [
+                    "bedroom",
+                    "bathroom",
+                    "attached_bathroom",
+                    "dining_room",
+                    "kitchen",
+                    "hallway"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "minimum_shared_sides": 3,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": true
+                  }
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": false
+                  }
+                },
+                {
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "minimum_shared_sides": 1,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0
+                },
+                {
+                  "room_types": [
+                    "garage"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 10
+                }
+              ]
+            }
+          },
+          {
             "key": "bathroom_hallway_shared_wall",
             "settings": {
               "maximum_shared_sides": 1,
@@ -997,6 +1057,66 @@
       "refinement_a": {
         "name": "refinement_a",
         "hard_constraints": [
+          {
+            "key": "fully_shared_wall",
+            "settings": {
+              "rules": [
+                {
+                  "room_types": [
+                    "bedroom",
+                    "bathroom",
+                    "attached_bathroom",
+                    "dining_room",
+                    "kitchen",
+                    "hallway"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "minimum_shared_sides": 3,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": true
+                  }
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": false
+                  }
+                },
+                {
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "minimum_shared_sides": 1,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0
+                },
+                {
+                  "room_types": [
+                    "garage"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 10
+                }
+              ]
+            }
+          },
           {
             "key": "bathroom_hallway_shared_wall",
             "settings": {
@@ -1274,6 +1394,66 @@
       "refinement_b": {
         "name": "refinement_b",
         "hard_constraints": [
+          {
+            "key": "fully_shared_wall",
+            "settings": {
+              "rules": [
+                {
+                  "room_types": [
+                    "bedroom",
+                    "bathroom",
+                    "attached_bathroom",
+                    "dining_room",
+                    "kitchen",
+                    "hallway"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "minimum_shared_sides": 3,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": true
+                  }
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": false
+                  }
+                },
+                {
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "minimum_shared_sides": 1,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 0
+                },
+                {
+                  "room_types": [
+                    "garage"
+                  ],
+                  "minimum_shared_sides": 2,
+                  "arrangement": "adjacent",
+                  "uncovered_length_tolerance": 10
+                }
+              ]
+            }
+          },
           {
             "key": "bathroom_hallway_shared_wall",
             "settings": {

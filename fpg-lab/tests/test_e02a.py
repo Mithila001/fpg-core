@@ -111,3 +111,46 @@ def test_exposure_rules_map_for_all_e02a_profiles():
                    "requirement": {"side": "north", "coverage": "full_wall"}}]}
     with pytest.raises(CoreConfigurationError, match="side"):
         CoreConfigCodec().validate_payload(payload)
+
+
+def test_fully_shared_wall_rules_map_for_all_e02a_profiles():
+    from fpg_core.domain import RoomType
+    from fpg_core.floor_plan_solver import DEFAULT_PROFILES
+
+    from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec, CoreConfigurationError
+
+    key = "fully_shared_wall"
+    payload = json.loads(e02a.CONFIG_PATH.read_text(encoding="utf-8"))["configuration"]
+    codec = CoreConfigCodec()
+    config = codec.validate_for_flow(payload, "p01b").config.floor_plan_solver
+    expected = [
+        ((RoomType.BEDROOM, RoomType.BATHROOM, RoomType.ATTACHED_BATHROOM,
+          RoomType.DINING_ROOM, RoomType.KITCHEN, RoomType.HALLWAY), 2, 0, None),
+        ((RoomType.LIVING_ROOM,), 3, 0, {"room_type": RoomType.VERANDA, "exists": True}),
+        ((RoomType.LIVING_ROOM,), 2, 0, {"room_type": RoomType.VERANDA, "exists": False}),
+        ((RoomType.VERANDA,), 1, 0, None),
+        ((RoomType.GARAGE,), 2, 10, None),
+    ]
+    for stage_name in ("initial", "refinement_a", "refinement_b"):
+        stage = getattr(config, stage_name)
+        assert all(item.key != key for item in getattr(DEFAULT_PROFILES, stage_name).hard_constraints)
+        rules = next(item.settings["rules"] for item in stage.hard_constraints if item.key == key)
+        assert all(rule["arrangement"] == "adjacent" for rule in rules)
+        assert all(isinstance(value, RoomType) for rule in rules for value in rule["room_types"])
+        assert rules[1]["when"]["room_type"] is RoomType.VERANDA
+        assert rules[2]["when"]["room_type"] is RoomType.VERANDA
+        assert [
+            (rule["room_types"], rule["minimum_shared_sides"],
+             rule["uncovered_length_tolerance"], rule.get("when"))
+            for rule in rules
+        ] == expected
+
+    hard_constraints = payload["floor_plan_solver"]["initial"]["hard_constraints"]
+    rules = next(item["settings"]["rules"] for item in hard_constraints if item["key"] == key)
+    rules[1]["when"]["room_type"] = "invalid"
+    with pytest.raises(CoreConfigurationError, match=r"fully_shared_wall\.rules\[1\]\.when\.room_type"):
+        codec.validate_payload(payload)
+    rules[1]["when"]["room_type"] = "veranda"
+    rules[1]["when"]["exists"] = 1
+    with pytest.raises(CoreConfigurationError, match=r"fully_shared_wall\.rules\[1\]\.when\.exists"):
+        codec.validate_payload(payload)
