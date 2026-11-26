@@ -316,7 +316,7 @@
     },
     "fpg_core.floor_plan_scoring": {
       "source": "src/fpg_core/floor_plan_scoring/__init__.py",
-      "export_count": 64,
+      "export_count": 68,
       "exports": [
         "AESTHETIC_GROUP",
         "BEDROOM_QUALITY_KEY",
@@ -359,6 +359,10 @@
         "GroupStatus",
         "InwardRecessEvaluator",
         "InwardRecessSettings",
+        "InwardRecessVisualizationData",
+        "RecessRoomBoundary",
+        "RecessSectionVisualization",
+        "RecessVisualization",
         "KitchenDiningEvaluator",
         "KitchenDiningSettings",
         "LivingRoomBalanceEvaluator",

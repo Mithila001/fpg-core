@@ -2096,7 +2096,8 @@
           "minimum_score": 100.0,
           "key": "inward_recess",
           "settings": {
-            "maximum_length": 20.0,
+            "max_depth_to_width_ratio": 1.0,
+            "max_recess_levels": 1,
             "tolerance": 1e-06
           }
         },

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
-from shapely.geometry import LineString, MultiPolygon, Polygon
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import linemerge
 
 from ...domain import ExecutionMode
 from ..context import ScoringContext
+from ..exceptions import ScoringConfigurationError
 from ..types import (
     EvaluationStatus,
     EvaluatorKey,
@@ -15,34 +18,64 @@ from ..types import (
     ScoreMetric,
 )
 from .base import FloorPlanEvaluator
-from .common import require_non_negative, typed_settings
+from .common import require_non_negative, require_positive, typed_settings
+from .recess_geometry import detect_recesses, lines, polygons
 
 INWARD_RECESS_KEY = EvaluatorKey("inward_recess")
+_Rings = tuple[tuple[tuple[float, float], ...], ...]
 
 
 @dataclass(frozen=True, slots=True)
-class InwardPocketVisualization:
-    pocket_index: int
-    points: tuple[tuple[float, float], ...]
-    measured_length: float
-    violates_maximum: bool
+class RecessRoomBoundary:
+    room_id: str
+    segments: tuple[tuple[tuple[float, float], ...], ...]
+    shared_length: float
 
 
 @dataclass(frozen=True, slots=True)
-class InwardRecessVisualizationData:
-    maximum_length: float
-    tolerance: float
-    pockets: tuple[InwardPocketVisualization, ...]
+class RecessSectionVisualization:
+    polygons: tuple[_Rings, ...]
+    width: float
+    depth: float
+    area: float
+    depth_to_width_ratio: float
+    level: int
+    parent_indices: tuple[int, ...]
+    direction: tuple[int, int]
+    room_boundaries: tuple[RecessRoomBoundary, ...]
+    violation_codes: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RecessVisualization:
+    region: RecessSectionVisualization
+    entrance: tuple[tuple[float, float], ...]
+    direction: tuple[int, int]
+    branch_count: int
+    sections: tuple[RecessSectionVisualization, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class InwardRecessSettings:
-    maximum_length: float
-    tolerance: float
+    max_depth_to_width_ratio: float = 1.0
+    max_recess_levels: int = 1
+    tolerance: float = 1e-6
 
     def __post_init__(self) -> None:
-        require_non_negative(self.maximum_length, "Maximum inward-recess length")
+        require_positive(
+            self.max_depth_to_width_ratio, "Maximum inward-recess depth-to-width ratio"
+        )
+        if type(self.max_recess_levels) is not int or self.max_recess_levels < 1:
+            raise ScoringConfigurationError(
+                "Maximum inward-recess levels must be a positive integer."
+            )
         require_non_negative(self.tolerance, "Inward-recess tolerance")
+
+
+@dataclass(frozen=True, slots=True)
+class InwardRecessVisualizationData:
+    settings: InwardRecessSettings
+    recesses: tuple[RecessVisualization, ...]
 
 
 class InwardRecessEvaluator(FloorPlanEvaluator):
@@ -56,8 +89,9 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
 
     def evaluate(self, context: ScoringContext, settings: object) -> EvaluatorResult:
         config = typed_settings(settings, InwardRecessSettings, str(self.key))
+        debug = context.mode is ExecutionMode.DEBUG
         union = context.room_union
-        if union is None or union.is_empty:
+        if union is None or union.is_empty or not union.is_valid:
             return EvaluatorResult(
                 self.key,
                 EvaluationStatus.COMPLETED,
@@ -69,144 +103,232 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
                         severity=FindingSeverity.ERROR,
                     ),
                 ),
-                visualization_payload=(
-                    InwardRecessVisualizationData(
-                        maximum_length=config.maximum_length,
-                        tolerance=config.tolerance,
-                        pockets=(),
-                    )
-                    if context.mode is ExecutionMode.DEBUG
-                    else None
-                ),
+                visualization_payload=InwardRecessVisualizationData(config, ())
+                if debug
+                else None,
             )
 
-        hull = union.convex_hull
-        pockets = _pocket_polygons(hull.difference(union))
-        violating: list[tuple[int, float]] = []
-        maximum_observed = 0.0
-        visualized_pockets: list[InwardPocketVisualization] = []
-        plan_boundary = union.boundary
-        hull_boundary = hull.boundary
-
-        for pocket_index, pocket in enumerate(pockets):
-            segments = _segments(pocket, config.tolerance)
-            outer = [
-                segment
-                for segment in segments
-                if segment[2].intersection(plan_boundary).length > config.tolerance
-            ]
-            convex = [
-                segment
-                for segment in segments
-                if segment[2].intersection(hull_boundary).length > config.tolerance
-            ]
-            if not convex or len(outer) == 2:
-                continue
-
-            horizontal_hull = sum(
-                segment.length
-                for first, second, segment in convex
-                if _orientation(first, second, config.tolerance) == "horizontal"
-            )
-            vertical_hull = sum(
-                segment.length
-                for first, second, segment in convex
-                if _orientation(first, second, config.tolerance) == "vertical"
-            )
-            opposing = "vertical" if horizontal_hull >= vertical_hull else "horizontal"
-            lengths = [
-                float(segment.length)
-                for first, second, segment in outer
-                if _orientation(first, second, config.tolerance) == opposing
-            ]
-            pocket_maximum = max(lengths, default=0.0)
-            maximum_observed = max(maximum_observed, pocket_maximum)
-            violates = pocket_maximum > config.maximum_length + config.tolerance
-            if context.mode is ExecutionMode.DEBUG:
-                visualized_pockets.append(
-                    InwardPocketVisualization(
-                        pocket_index=pocket_index,
-                        points=tuple(
-                            (float(x), float(y)) for x, y in pocket.exterior.coords
-                        ),
-                        measured_length=pocket_maximum,
-                        violates_maximum=violates,
+        recesses = detect_recesses(union, config.tolerance)
+        findings: list[ScoreFinding] = []
+        visuals: list[RecessVisualization] = []
+        violating_count = 0
+        max_ratio = 0.0
+        for index, recess in enumerate(recesses):
+            width = recess.entrance.length
+            level = max(section.level for section in recess.sections)
+            overall_codes = _violations(recess.depth, width, level, config)
+            if recess.branch_count > config.max_recess_levels:
+                overall_codes += ("INWARD_RECESS_TOO_MANY_BRANCHES",)
+            max_ratio = max(max_ratio, recess.depth / width)
+            section_visuals = []
+            before = len(findings)
+            if overall_codes:
+                findings.extend(
+                    _findings(
+                        context,
+                        recess.polygon,
+                        recess.depth,
+                        width,
+                        level,
+                        recess.branch_count,
+                        index,
+                        None,
+                        overall_codes,
+                        config,
                     )
                 )
-            if violates:
-                violating.append((pocket_index, pocket_maximum))
+            for section_index, section in enumerate(recess.sections):
+                max_ratio = max(max_ratio, section.depth / section.width)
+                codes = _violations(section.depth, section.width, section.level, config)
+                if (
+                    len(recess.sections) == 1
+                    and abs(section.width - width) <= config.tolerance
+                ):
+                    codes = tuple(code for code in codes if code not in overall_codes)
+                if codes:
+                    findings.extend(
+                        _findings(
+                            context,
+                            section.polygon,
+                            section.depth,
+                            section.width,
+                            section.level,
+                            recess.branch_count,
+                            index,
+                            section_index,
+                            codes,
+                            config,
+                        )
+                    )
+                if debug:
+                    section_visuals.append(
+                        _visual(
+                            context,
+                            section.polygon,
+                            section.depth,
+                            section.width,
+                            section.level,
+                            section.parents,
+                            section.direction,
+                            codes,
+                        )
+                    )
+            if debug:
+                visuals.append(
+                    RecessVisualization(
+                        _visual(
+                            context,
+                            recess.polygon,
+                            recess.depth,
+                            width,
+                            level,
+                            (),
+                            recess.direction,
+                            overall_codes,
+                        ),
+                        _coordinates(recess.entrance.coords),
+                        recess.direction,
+                        recess.branch_count,
+                        tuple(section_visuals),
+                    )
+                )
+            violating_count += int(len(findings) > before)
 
-        findings = tuple(
-            ScoreFinding(
-                code="INWARD_RECESS_TOO_LONG",
-                message=(
-                    f"Inward recess {index} has length {length:.4f}, exceeding "
-                    f"the configured maximum {config.maximum_length:.4f}."
-                ),
-                severity=FindingSeverity.ERROR,
-                metrics=(ScoreMetric("recess_length", length, "units"),),
-            )
-            for index, length in violating
-        )
         return EvaluatorResult(
             self.key,
             EvaluationStatus.COMPLETED,
-            0.0 if violating else 100.0,
-            findings,
+            0.0 if findings else 100.0,
+            tuple(findings),
             (
-                ScoreMetric("pocket_count", len(pockets)),
-                ScoreMetric("violating_recess_count", len(violating)),
-                ScoreMetric("maximum_recess_length", maximum_observed, "units"),
+                ScoreMetric("recess_count", len(recesses)),
+                ScoreMetric("violating_recess_count", violating_count),
+                ScoreMetric("maximum_depth_to_width_ratio", max_ratio),
             ),
-            visualization_payload=(
-                InwardRecessVisualizationData(
-                    maximum_length=config.maximum_length,
-                    tolerance=config.tolerance,
-                    pockets=tuple(visualized_pockets),
-                )
-                if context.mode is ExecutionMode.DEBUG
-                else None
-            ),
+            InwardRecessVisualizationData(config, tuple(visuals)) if debug else None,
         )
 
 
-def _pocket_polygons(geometry: object) -> tuple[Polygon, ...]:
-    if getattr(geometry, "is_empty", True):
-        return ()
-    if isinstance(geometry, Polygon):
-        return (geometry,)
-    if isinstance(geometry, MultiPolygon):
-        return tuple(geometry.geoms)
-    return tuple(
-        item for item in getattr(geometry, "geoms", ()) if isinstance(item, Polygon)
+def _violations(
+    depth: float,
+    width: float,
+    level: int,
+    config: InwardRecessSettings,
+) -> tuple[str, ...]:
+    codes = []
+    if depth - config.max_depth_to_width_ratio * width > config.tolerance:
+        codes.append("INWARD_RECESS_DEPTH_TO_WIDTH_EXCEEDED")
+    if level > config.max_recess_levels:
+        codes.append("INWARD_RECESS_TOO_MANY_LEVELS")
+    return tuple(codes)
+
+
+def _boundaries(
+    context: ScoringContext,
+    shape: BaseGeometry,
+) -> tuple[RecessRoomBoundary, ...]:
+    result = []
+    boundary = shape.boundary
+    for room in sorted(context.rooms, key=lambda room: room.room_id):
+        shared = boundary.intersection(room.polygon.boundary)
+        parts = lines(shared)
+        if not parts:
+            continue
+        if len(parts) > 1:
+            parts = lines(linemerge(parts))
+        result.append(
+            RecessRoomBoundary(
+                room.room_id,
+                tuple(sorted(_coordinates(part.normalize().coords) for part in parts)),
+                shared.length,
+            )
+        )
+    return tuple(result)
+
+
+def _coordinates(
+    coords: Iterable[tuple[float, float]],
+) -> tuple[tuple[float, float], ...]:
+    return tuple((float(x), float(y)) for x, y in coords)
+
+
+def _visual(
+    context: ScoringContext,
+    shape: BaseGeometry,
+    depth: float,
+    width: float,
+    level: int,
+    parents: tuple[int, ...],
+    direction: tuple[int, int],
+    codes: tuple[str, ...],
+) -> RecessSectionVisualization:
+    rings = tuple(
+        tuple(_coordinates(ring.coords) for ring in (poly.exterior, *poly.interiors))
+        for poly in polygons(shape.normalize())
+    )
+    return RecessSectionVisualization(
+        rings,
+        width,
+        depth,
+        shape.area,
+        depth / width,
+        level,
+        parents,
+        direction,
+        _boundaries(context, shape),
+        codes,
     )
 
 
-def _segments(
-    polygon: Polygon,
-    tolerance: float,
-) -> list[tuple[tuple[float, float], tuple[float, float], LineString]]:
-    coordinates = [(float(x), float(y)) for x, y in polygon.exterior.coords]
-    if coordinates and coordinates[0] == coordinates[-1]:
-        coordinates.pop()
-    result: list[tuple[tuple[float, float], tuple[float, float], LineString]] = []
-    for index, first in enumerate(coordinates):
-        second = coordinates[(index + 1) % len(coordinates)]
-        segment = LineString((first, second))
-        if segment.length > tolerance:
-            result.append((first, second, segment))
-    return result
-
-
-def _orientation(
-    first: tuple[float, float],
-    second: tuple[float, float],
-    tolerance: float,
-) -> str:
-    dx = abs(second[0] - first[0])
-    dy = abs(second[1] - first[1])
-    if dx <= tolerance < dy:
-        return "vertical"
-    if dy <= tolerance < dx:
-        return "horizontal"
-    return "other"
+def _findings(
+    context: ScoringContext,
+    shape: BaseGeometry,
+    depth: float,
+    width: float,
+    level: int,
+    branch_count: int,
+    recess_index: int,
+    section_index: int | None,
+    codes: tuple[str, ...],
+    config: InwardRecessSettings,
+) -> tuple[ScoreFinding, ...]:
+    boundaries = _boundaries(context, shape)
+    ratio = depth / width
+    messages = {
+        "INWARD_RECESS_DEPTH_TO_WIDTH_EXCEEDED": (
+            f"depth-to-width ratio {ratio:.6g} exceeds {config.max_depth_to_width_ratio:.6g}"
+        ),
+        "INWARD_RECESS_TOO_MANY_LEVELS": (
+            f"nesting level {level} exceeds {config.max_recess_levels}"
+        ),
+        "INWARD_RECESS_TOO_MANY_BRANCHES": (
+            f"branch count {branch_count} exceeds {config.max_recess_levels}"
+        ),
+    }
+    subject = f"Inward recess {recess_index}"
+    metrics: tuple[ScoreMetric, ...] = (
+        ScoreMetric("recess_index", recess_index),
+        ScoreMetric("width", width, "units"),
+        ScoreMetric("depth", depth, "units"),
+        ScoreMetric("area", shape.area, "square_units"),
+        ScoreMetric("depth_to_width_ratio", ratio),
+        ScoreMetric("level", level),
+        ScoreMetric("branch_count", branch_count),
+        ScoreMetric(
+            "shared_boundary_length",
+            sum(item.shared_length for item in boundaries),
+            "units",
+        ),
+    )
+    if section_index is not None:
+        subject += f", section {section_index}"
+        metrics += (ScoreMetric("section_index", section_index),)
+    return tuple(
+        ScoreFinding(
+            code,
+            f"{subject}: {messages[code]}.",
+            FindingSeverity.ERROR,
+            tuple(item.room_id for item in boundaries),
+            metrics,
+        )
+        for code in codes
+    )

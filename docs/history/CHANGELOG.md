@@ -6,6 +6,12 @@
 
 ## Unreleased
 
+- Breaking: `inward_recess` replaces `maximum_length` with
+  `max_depth_to_width_ratio` (default 1.0) and `max_recess_levels` (default 1).
+  Update Python settings and saved Lab profiles or use the current seed.
+  DEBUG payloads and finding codes now describe sweep regions and sections.
+  Review custom tools that consume the older metrics or payload.
+
 - Breaking: each solver soft constraint returns one 0?100 penalty through `build_penalty`. Profiles supply weights from 0 to 10, with built-in defaults of 1. Replace saved solver profiles and retune custom weights. Debug objective values use weighted points.
 
 - Breaking: back exposure no longer requires boundary contact, and garage side exposure no longer restricts space beyond its own wall projection. Review saved solver profiles that relied on the previous geometry.

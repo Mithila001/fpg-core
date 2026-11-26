@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from ..domain import RoomType
-from ..domain.room_size_preferences import DEFAULT_ROOM_SIZE_MAX_RATIO, DEFAULT_ROOM_SIZE_PAIRS
+from ..domain.room_size_preferences import (
+    DEFAULT_ROOM_SIZE_MAX_RATIO,
+    DEFAULT_ROOM_SIZE_PAIRS,
+)
 from .config import (
     EvaluatorRule,
     FloorPlanScoringConfig,
@@ -38,7 +41,6 @@ from .types import CRITICAL_GROUP, FUNCTIONAL_GROUP
 
 DEFAULT_GEOMETRY_TOLERANCE = 1e-6
 DEFAULT_MINIMUM_SHARED_BOUNDARY = 10.0
-DEFAULT_MAXIMUM_INWARD_RECESS = 20.0
 DEFAULT_KITCHEN_DINING_MAXIMUM_DISTANCE = 2000.0
 
 
@@ -90,10 +92,7 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
         EvaluatorRule(
             INWARD_RECESS_KEY,
             CRITICAL_GROUP,
-            InwardRecessSettings(
-                DEFAULT_MAXIMUM_INWARD_RECESS,
-                DEFAULT_GEOMETRY_TOLERANCE,
-            ),
+            InwardRecessSettings(),
             order=40,
             minimum_score=100.0,
         ),

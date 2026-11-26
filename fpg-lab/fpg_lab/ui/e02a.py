@@ -6,9 +6,9 @@ from fpg_lab.database.models.e02 import E02Run
 from fpg_lab.flows.e02a import CONFIG_PATH, prepare, retry, start
 from fpg_lab.integrations.fpg_core.e02a_input import load_hint_maps
 from fpg_lab.runtime import row_document
-from fpg_lab.visualization import figures
 from fpg_lab.ui.components import action_button, db_call, json_panel, notify_error, shell
 from fpg_lab.ui.result_layout import ResultWorkspace
+from fpg_lab.visualization import figures
 
 
 async def main_page(runtime):
@@ -105,7 +105,12 @@ async def run_page(runtime, experiment_id):
         stage_picker.update()
         stage = next((entry for entry in stages if entry["name"] == stage_picker.value), None)
         data = stage["data"] if stage else {}
-        chart.figure = figures.floor_plan((data.get("result") or {}).get("floor_plan"))
+        scoring = (case.get("scoring") or {}) if case else {}
+        scoring_details = scoring.get("details") or {}
+        plan_figure = figures.floor_plan((data.get("result") or {}).get("floor_plan"))
+        if stage_picker.value == "Post-process":
+            figures.add_inward_recesses(plan_figure, scoring_details)
+        chart.figure = plan_figure
         chart.update()
         details.clear()
         with details:
@@ -121,8 +126,7 @@ async def run_page(runtime, experiment_id):
         scores.clear()
         with scores:
             if case and case.get("scoring"):
-                scoring = case["scoring"].get("result") or case["scoring"]
-                ui.plotly(figures.score_breakdown(scoring)).classes("w-full h-[32rem]")
+                ui.plotly(figures.score_breakdown(scoring_details)).classes("w-full h-[32rem]")
                 json_panel("Scoring details", case["scoring"])
             else:
                 ui.label("No score recorded.")

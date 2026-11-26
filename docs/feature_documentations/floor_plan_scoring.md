@@ -216,7 +216,7 @@ Critical evaluators, all requiring score `100`:
 | `geometry_integrity` | 10 | tolerance `1e-6` |
 | `required_adjacency` | 20 | minimum shared boundary `10.0`, tolerance `1e-6` |
 | `enclosed_voids` | 30 | area tolerance `1e-6` |
-| `inward_recess` | 40 | maximum length `20.0`, tolerance `1e-6` |
+| `inward_recess` | 40 | maximum depth-to-width ratio `1.0`, maximum levels and branches `1`, tolerance `1e-6` |
 
 Functional evaluators:
 
@@ -228,6 +228,55 @@ Functional evaluators:
 `LivingRoomBalanceEvaluator` and `BedroomQualityEvaluator` remain exported and are
 still registered by `create_default_registry()` for compatibility with custom
 configs. They are **not enabled by the default scoring config**.
+
+## Inward recesses
+
+`InwardRecessSettings(max_depth_to_width_ratio=1.0, max_recess_levels=1,
+tolerance=1e-6)` applies to the rectilinear union of the rooms. The ratio must be
+finite and positive, the level limit a positive integer, and the numerical
+tolerance finite and nonnegative. Replace `maximum_length` in code and saved
+profiles with the new settings. There is no absolute depth cap.
+
+Horizontal and vertical sweeps measure connected empty space bounded on both
+transverse sides and fed by a single exterior entrance. An ordinary L corner
+has no such space, a through gap has more than one opening, and interior rings
+are handled by `enclosed_voids`. A perpendicular sweep can measure a contained
+blind arm as an additional section of the larger recess. The arm keeps its own
+direction, width and depth.
+
+Overall depth is the farthest inward distance from the entrance along the
+sweep axis, and overall width is the entrance length. A section spans successive
+slices of the same width along one path. Its depth is its span along that axis,
+and its width is the transverse passage width. Both the overall region and its
+sections fail proportionality when `depth - max_depth_to_width_ratio * width >
+tolerance`, in project units. A 10-unit opening with 10 units of depth passes
+the default rule, while a depth of 20 fails.
+
+The entrance section is level 1. A strict inward contraction or a split
+increments the level along the connected path. A widening can start another
+section at the same level. At a merge the section inherits the highest incoming
+level, including any contraction on that connection. A section may also start
+where a blind arm turns back. Geometry subdivisions alone do not increment
+levels. Branch count starts at 1 and adds one for every outgoing arm beyond
+the first at each split within a sweep. A contained perpendicular view inherits
+the level at its entrance and can add deeper sections. Its branch count is
+compared with the primary sweep count, and the larger count is used so that
+one fork cannot be counted twice. The same configuration limit applies
+independently to maximum nesting level and branch count within each recess.
+
+A violation scores 0, and a passing result scores 100. Findings report
+`INWARD_RECESS_DEPTH_TO_WIDTH_EXCEEDED`, `INWARD_RECESS_TOO_MANY_LEVELS`, or
+`INWARD_RECESS_TOO_MANY_BRANCHES`. They include contributing physical room IDs
+and measurements, indexed to the recess and, where applicable, its section.
+
+The DEBUG `InwardRecessVisualizationData` includes the applied settings and each
+recess's entrance line, inward axis vector, branch count, region, and sections.
+Width, depth, area, ratio, level, direction, parent section indices, and violation codes are
+available on the region and sections. Indices start at zero. Each polygon is
+represented by closed rings in plan coordinates, exterior first and any holes
+afterward. Room contacts give line coordinates and shared lengths for each
+physical room touching the boundary. Geometry is in project units and area is in
+square project units.
 
 ## Recommended values
 
@@ -349,7 +398,11 @@ Floor-plan scoring uses structured `ScoreFinding` values instead of free-form wa
 | `GroupKey` | constant/type alias | `NewType instance` | NewType creates simple unique types with almost zero runtime overhead. |
 | `GroupStatus` | enum | `COMPLETED='completed'; FAILED='failed'; NOT_APPLICABLE='not_applicable'; SKIPPED='skipped'` | Documented in the corresponding feature/shared section. |
 | `InwardRecessEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
-| `InwardRecessSettings` | dataclass/contract | `(maximum_length: 'float', tolerance: 'float') -> None` | InwardRecessSettings(maximum_length: 'float', tolerance: 'float') |
+| `InwardRecessSettings` | dataclass/contract | `(max_depth_to_width_ratio=1.0, max_recess_levels=1, tolerance=1e-6)` | Proportion, nesting and branch limits, and numerical tolerance. |
+| `InwardRecessVisualizationData` | dataclass/contract | `(settings, recesses)` | DEBUG payload for the inward-recess evaluator. |
+| `RecessRoomBoundary` | dataclass/contract | `(room_id, segments, shared_length)` | Physical room boundary shared with a recess region or section. |
+| `RecessSectionVisualization` | dataclass/contract | `(polygons, width, depth, area, depth_to_width_ratio, level, parent_indices, direction, room_boundaries, violation_codes)` | Geometry and evaluation measurements for one region or section. |
+| `RecessVisualization` | dataclass/contract | `(region, entrance, direction, branch_count, sections)` | A recess and its connected sections. |
 | `KitchenDiningEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
 | `KitchenDiningSettings` | dataclass/contract | `(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') -> None` | KitchenDiningSettings(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') |
 | `LivingRoomBalanceEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |

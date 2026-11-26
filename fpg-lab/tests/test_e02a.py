@@ -113,6 +113,49 @@ def test_exposure_rules_map_for_all_e02a_profiles():
         CoreConfigCodec().validate_payload(payload)
 
 
+def test_inward_recess_config_and_debug_overlay():
+    from fpg_core.floor_plan_scoring import (
+        INWARD_RECESS_KEY,
+        InwardRecessSettings,
+        InwardRecessVisualizationData,
+        RecessSectionVisualization,
+        RecessVisualization,
+    )
+
+    from fpg_lab.core.serialization import to_jsonable
+    from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec, CoreConfigurationError
+    from fpg_lab.visualization.figures import add_inward_recesses, floor_plan
+
+    payload = json.loads(e02a.CONFIG_PATH.read_text(encoding="utf-8"))["configuration"]
+    codec = CoreConfigCodec()
+    config = codec.validate_for_flow(payload, "p01b").config.floor_plan_scoring
+    settings = next(rule.settings for rule in config.evaluators if rule.key == INWARD_RECESS_KEY)
+    assert settings == InwardRecessSettings()
+    profile = next(rule for rule in payload["floor_plan_scoring"]["evaluators"]
+                   if rule["key"] == INWARD_RECESS_KEY)
+    profile["settings"]["maximum_length"] = 20
+    with pytest.raises(CoreConfigurationError, match="maximum_length"):
+        codec.validate_payload(payload)
+
+    ring = ((0, 0), (10, 0), (10, 20), (0, 20), (0, 0))
+    region = RecessSectionVisualization(((ring,),), 10, 20, 200, 2, 1, (), (0, -1), (), ())
+    section = RecessSectionVisualization(
+        ((ring,),), 10, 20, 200, 2, 1, (0,), (0, -1), (),
+        ("INWARD_RECESS_DEPTH_TO_WIDTH_EXCEEDED",),
+    )
+    debug = InwardRecessVisualizationData(
+        settings, (RecessVisualization(region, ((0, 20), (10, 20)), (0, -1), 1, (section,)),),
+    )
+    plot = floor_plan(None)
+    add_inward_recesses(plot, {"evaluator_results": [
+        {"evaluator_key": INWARD_RECESS_KEY, "visualization_payload": to_jsonable(debug)}
+    ]})
+    assert [trace.name for trace in plot.data] == [
+        "Recess 0 entrance", "Recess 0", "Recess 0, section 0",
+    ]
+    assert tuple(zip(plot.data[-1].x, plot.data[-1].y, strict=True)) == ring
+
+
 def test_fully_shared_wall_rules_map_for_all_e02a_profiles():
     from fpg_core.domain import RoomType
     from fpg_core.floor_plan_solver import DEFAULT_PROFILES

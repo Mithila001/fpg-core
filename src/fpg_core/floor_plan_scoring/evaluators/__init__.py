@@ -18,6 +18,10 @@ from .inward_recess import (
     INWARD_RECESS_KEY,
     InwardRecessEvaluator,
     InwardRecessSettings,
+    InwardRecessVisualizationData,
+    RecessRoomBoundary,
+    RecessSectionVisualization,
+    RecessVisualization,
 )
 from .kitchen_dining import (
     KITCHEN_DINING_KEY,
@@ -61,6 +65,10 @@ __all__ = [
     "GeometryIntegritySettings",
     "InwardRecessEvaluator",
     "InwardRecessSettings",
+    "InwardRecessVisualizationData",
+    "RecessRoomBoundary",
+    "RecessSectionVisualization",
+    "RecessVisualization",
     "KitchenDiningEvaluator",
     "KitchenDiningSettings",
     "LivingRoomBalanceEvaluator",

@@ -14,4 +14,10 @@ Default room-size preferences use the same 12 upper-bound relationships as the s
 
 `LivingRoomBalanceEvaluator` and `BedroomQualityEvaluator` remain registered/exported for compatibility, but are **not enabled** in the default configuration. `FloorPlanScoringConfig` defines groups/evaluators and `EvaluatorRegistry` provides custom evaluators. Keep stable evaluator keys and structured finding codes when evolving the feature.
 
+The [inward recess contract](../feature_documentations/floor_plan_scoring.md#inward-recesses)
+defines the opening, proportion, and topology rules. The sweep cuts the room
+union at boundary coordinates and links empty slices over shared segments.
+Using the room union removes internal room seams. The geometry pass returns
+the regions and section graph independently of the score limits.
+
 Sources: `floor_plan_scoring/defaults.py`, `manager.py`, `evaluators/room_size_consistency.py`, `types.py`.

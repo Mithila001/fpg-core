@@ -137,6 +137,53 @@ def floor_plan(plan: Mapping[str, Any] | None, *, title: str = "Floor plan") -> 
     return result
 
 
+def add_inward_recesses(result: go.Figure, details: Mapping[str, Any]) -> None:
+    payload = next(
+        (item.get("visualization_payload") for item in details.get("evaluator_results", [])
+         if item["evaluator_key"] == "inward_recess"),
+        None,
+    )
+    for index, recess in enumerate((payload or {}).get("recesses", [])):
+        region = recess["region"]
+        entrance = recess["entrance"]
+        inward = recess["direction"]
+        label = f"Recess {index}"
+        result.add_scatter(
+            x=[point[0] for point in entrance],
+            y=[point[1] for point in entrance],
+            mode="lines",
+            line=dict(color="#dcdcaa", dash="dash", width=3),
+            name=f"{label} entrance",
+            legendgroup=label,
+            hovertext=f"Inward ({inward[0]}, {inward[1]}) · width {region['width']:.3g}",
+            hoverinfo="text+name",
+        )
+        for section_index, section in enumerate((region, *recess["sections"]), start=-1):
+            codes = section["violation_codes"]
+            if section_index >= 0 and not codes:
+                continue
+            name = f"{label}, section {section_index}" if section_index >= 0 else label
+            hover = (
+                f"Depth {section['depth']:.3g} · width {section['width']:.3g}"
+                f"<br>Ratio {section['depth_to_width_ratio']:.3g} · level {section['level']}"
+            )
+            if section_index < 0:
+                hover += f"<br>Branches {recess['branch_count']}"
+            if codes:
+                hover += "<br>" + "<br>".join(
+                    code.removeprefix("INWARD_RECESS_").replace("_", " ").capitalize()
+                    for code in codes
+                )
+            for polygon in section["polygons"]:
+                for ring in polygon:
+                    result.add_scatter(
+                        x=[point[0] for point in ring], y=[point[1] for point in ring],
+                        mode="lines", line=dict(color="#f38ba8" if codes else "#dcdcaa", width=3),
+                        name=name, legendgroup=label, showlegend=False,
+                        hovertext=hover, hoverinfo="text+name",
+                    )
+
+
 def score_history(trials: Sequence[Mapping[str, Any]], *, trial_no: int | None = None) -> go.Figure:
     result = figure("Candidate score progression")
     scored = [trial for trial in trials if trial.get("final_score") is not None]

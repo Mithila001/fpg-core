@@ -508,8 +508,9 @@ class EnclosedVoidsSettingsDocument(StrictModel):
 
 
 class InwardRecessSettingsDocument(StrictModel):
-    maximum_length: float = Field(gt=0, allow_inf_nan=False)
-    tolerance: float = Field(gt=0, allow_inf_nan=False)
+    max_depth_to_width_ratio: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+    max_recess_levels: int = Field(default=1, ge=1, strict=True)
+    tolerance: float = Field(default=1e-6, ge=0, allow_inf_nan=False)
 
 
 class LivingRoomBalanceSettingsDocument(StrictModel):
