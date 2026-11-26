@@ -3,7 +3,7 @@ from fpg_lab.database.models.common import (
     NamespaceRegistry,
     SystemConfiguration,
 )
-from fpg_lab.database.models.e02 import E02Run
+from fpg_lab.database.models.e02 import E02BRun, E02BSavedPlan, E02Run
 from fpg_lab.database.models.p01 import (
     P01BIteration,
     P01BPreset,
@@ -13,6 +13,9 @@ from fpg_lab.database.models.p01 import (
 )
 
 __all__ = [
+    "E02BRun",
+    "E02BSavedPlan",
+    "E02Run",
     "FloorPlanTemplate",
     "NamespaceRegistry",
     "P01BIteration",

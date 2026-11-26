@@ -75,6 +75,9 @@ keyword arguments and validate Pydantic models explicitly at their boundaries.
 E02A owns its version-controlled configuration and hint maps under
 `experiments/e02a/`; they are independent of stored profiles and P01B presets.
 See the [E02 guide](experiments/e02.md) for its snapshot and mapping rules.
+E02B owns a standalone scoring file under `experiments/e02b/` and persists
+scoring runs separately from the reusable floor plans. See the same guide for
+the portable handoff and diagnostic execution contract.
 E03A has its own settings under `experiments/e03a/` and reads E02A settings only
 for explicit imports. See the [E03 guide](experiments/e03.md).
 

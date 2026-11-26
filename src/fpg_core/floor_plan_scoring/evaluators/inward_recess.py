@@ -44,6 +44,7 @@ class RecessSectionVisualization:
     direction: tuple[int, int]
     room_boundaries: tuple[RecessRoomBoundary, ...]
     violation_codes: tuple[str, ...]
+    entrances: tuple[tuple[tuple[float, float], ...], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,7 +109,7 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
                 else None,
             )
 
-        recesses = detect_recesses(union, config.tolerance)
+        recesses = detect_recesses(union, config.tolerance, debug=debug)
         findings: list[ScoreFinding] = []
         visuals: list[RecessVisualization] = []
         violating_count = 0
@@ -140,6 +141,7 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
             for section_index, section in enumerate(recess.sections):
                 max_ratio = max(max_ratio, section.depth / section.width)
                 codes = _violations(section.depth, section.width, section.level, config)
+                visual_codes = codes
                 if (
                     len(recess.sections) == 1
                     and abs(section.width - width) <= config.tolerance
@@ -170,7 +172,8 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
                             section.level,
                             section.parents,
                             section.direction,
-                            codes,
+                            visual_codes,
+                            section.entrance,
                         )
                     )
             if debug:
@@ -260,6 +263,7 @@ def _visual(
     parents: tuple[int, ...],
     direction: tuple[int, int],
     codes: tuple[str, ...],
+    entrance: BaseGeometry | None = None,
 ) -> RecessSectionVisualization:
     rings = tuple(
         tuple(_coordinates(ring.coords) for ring in (poly.exterior, *poly.interiors))
@@ -276,6 +280,7 @@ def _visual(
         direction,
         _boundaries(context, shape),
         codes,
+        tuple(_coordinates(part.coords) for part in lines(entrance)) if entrance is not None else (),
     )
 
 

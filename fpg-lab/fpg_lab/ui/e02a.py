@@ -1,10 +1,13 @@
 """Setup and inspection for file-backed solver runs."""
+import json
+
 from nicegui import app, run, ui
 from sqlalchemy import select
 
 from fpg_lab.database.models.e02 import E02Run
 from fpg_lab.flows.e02a import CONFIG_PATH, prepare, retry, start
 from fpg_lab.integrations.fpg_core.e02a_input import load_hint_maps
+from fpg_lab.integrations.fpg_core.e02b_input import export_stage
 from fpg_lab.runtime import row_document
 from fpg_lab.ui.components import action_button, db_call, json_panel, notify_error, shell
 from fpg_lab.ui.result_layout import ResultWorkspace
@@ -78,6 +81,8 @@ async def run_page(runtime, experiment_id):
         case_picker = ui.select({}, label="Case").classes("w-full")
         stage_picker = ui.radio({}, value=None).props("inline")
         stage_label = ui.label("Stage").classes("font-semibold text-sm")
+        copy_button = action_button("Copy floor plan", role="subtle").props("flat dense")
+        copy_button.disable()
         terminate = action_button("Terminate run", role="danger").props("outline dense")
         retry_button = action_button("Retry run", role="main").props("dense")
     with workspace.context("Canvas"):
@@ -104,10 +109,13 @@ async def run_page(runtime, experiment_id):
         stage_picker.set_visibility(bool(stages))
         stage_picker.update()
         stage = next((entry for entry in stages if entry["name"] == stage_picker.value), None)
+        state["case"], state["stage"] = case, stage
         data = stage["data"] if stage else {}
+        plan = (data.get("result") or {}).get("floor_plan")
+        copy_button.set_enabled(bool(plan))
         scoring = (case.get("scoring") or {}) if case else {}
         scoring_details = scoring.get("details") or {}
-        plan_figure = figures.floor_plan((data.get("result") or {}).get("floor_plan"))
+        plan_figure = figures.floor_plan(plan)
         if stage_picker.value == "Post-process":
             figures.add_inward_recesses(plan_figure, scoring_details)
         chart.figure = plan_figure
@@ -169,9 +177,18 @@ async def run_page(runtime, experiment_id):
         except Exception as exc:
             notify_error(exc)
 
+    async def copy_floor_plan():
+        try:
+            document = export_stage(state["record"], state["case"], state["stage"])
+            await ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})")
+            ui.notify("Floor plan copied")
+        except Exception as exc:
+            notify_error(exc)
+
     case_picker.on_value_change(lambda _: render())
     stage_picker.on_value_change(lambda _: render())
     terminate.on_click(stop)
     retry_button.on_click(rerun)
+    copy_button.on_click(copy_floor_plan)
     timer = ui.timer(1, refresh, immediate=False)
     await refresh()

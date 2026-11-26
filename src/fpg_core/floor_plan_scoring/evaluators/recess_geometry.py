@@ -18,6 +18,7 @@ class Section:
     level: int
     parents: tuple[int, ...]
     direction: tuple[int, int]
+    entrance: BaseGeometry | None
 
 
 @dataclass(slots=True)
@@ -50,7 +51,7 @@ def lines(geometry: BaseGeometry) -> tuple[LineString, ...]:
     )
 
 
-def detect_recesses(footprint: BaseGeometry, tolerance: float) -> tuple[Recess, ...]:
+def detect_recesses(footprint: BaseGeometry, tolerance: float, *, debug: bool = False) -> tuple[Recess, ...]:
     # Interior rings belong to the enclosed-void evaluator.
     solid = unary_union(
         [Polygon(poly.exterior) for poly in polygons(footprint)]
@@ -58,8 +59,8 @@ def detect_recesses(footprint: BaseGeometry, tolerance: float) -> tuple[Recess, 
     if solid.is_empty:
         return ()
     candidates = [
-        *_sweep(solid, False, tolerance),
-        *_sweep(_swap_axes(solid), True, tolerance),
+        *_sweep(solid, False, tolerance, debug),
+        *_sweep(_swap_axes(solid), True, tolerance, debug),
     ]
     regions: list[Recess] = []
     for recess in sorted(candidates, key=lambda item: -item.polygon.area):
@@ -89,7 +90,7 @@ def _add_cross_sections(region: Recess, arm: Recess, tolerance: float) -> None:
         if section.polygon.intersection(arm.entrance).length > tolerance
     )
     level = max((region.sections[index].level for index in parents), default=1)
-    overall = Section(arm.polygon, arm.entrance.length, arm.depth, 1, (), arm.direction)
+    overall = Section(arm.polygon, arm.entrance.length, arm.depth, 1, (), arm.direction, arm.entrance)
     indices: dict[int, int] = {}
     for index, section in enumerate((overall, *arm.sections), start=-1):
         inherited = (
@@ -123,6 +124,7 @@ def _add_cross_sections(region: Recess, arm: Recess, tolerance: float) -> None:
                 section_level,
                 inherited,
                 section.direction,
+                section.entrance,
             ),
         )
     region.branch_count = max(region.branch_count, arm.branch_count)
@@ -132,7 +134,7 @@ def _swap_axes(geometry: BaseGeometry) -> BaseGeometry:
     return affine_transform(geometry, (0, 1, 1, 0, 0, 0))
 
 
-def _sweep(solid: BaseGeometry, swap: bool, tolerance: float) -> list[Recess]:
+def _sweep(solid: BaseGeometry, swap: bool, tolerance: float, debug: bool) -> list[Recess]:
     left, bottom, right, top = solid.bounds
     empty = box(left, bottom, right, top).difference(solid)
     coordinates = sorted(
@@ -230,6 +232,7 @@ def _sweep(solid: BaseGeometry, swap: bool, tolerance: float) -> list[Recess]:
         directions: list[int] = []
         levels: list[int] = []
         parents: list[tuple[int, ...]] = []
+        section_entrances: list[BaseGeometry | None] = []
         branch_count = 1 + sum(
             max(0, len(outgoing) - 1) for outgoing in children.values()
         )
@@ -271,6 +274,11 @@ def _sweep(solid: BaseGeometry, swap: bool, tolerance: float) -> list[Recess]:
                 widths.append(width)
                 directions.append(direction)
                 parents.append(prior)
+                section_entrance = None
+                if debug:
+                    section_entrance = (unary_union([cell.intersection(cells[i]) for i in previous])
+                                        if previous else entrance)
+                section_entrances.append(section_entrance)
                 levels.append(
                     max(
                         (
@@ -287,12 +295,13 @@ def _sweep(solid: BaseGeometry, swap: bool, tolerance: float) -> list[Recess]:
         geometry = unary_union([cells[i] for i in component])
         depth = sign * (geometry.bounds[3 if sign == 1 else 1] - entrance.bounds[1])
         sections = []
-        for parts, width, level, parent, direction in zip(
+        for parts, width, level, parent, direction, section_entrance in zip(
             pieces,
             widths,
             levels,
             parents,
             directions,
+            section_entrances,
             strict=True,
         ):
             shape = unary_union(parts)
@@ -304,6 +313,7 @@ def _sweep(solid: BaseGeometry, swap: bool, tolerance: float) -> list[Recess]:
                     level,
                     parent,
                     (direction, 0) if swap else (0, direction),
+                    _swap_axes(section_entrance) if swap and section_entrance is not None else section_entrance,
                 )
             )
         if swap:

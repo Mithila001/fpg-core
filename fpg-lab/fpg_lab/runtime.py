@@ -7,12 +7,12 @@ from copy import deepcopy
 from threading import Event, Lock
 from typing import Any
 
-from sqlalchemy import inspect, select
+from sqlalchemy import inspect, select, update
 
 from fpg_lab.core.exceptions import AppError, InvalidInputError
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import get_settings
-from fpg_lab.database.models import P01Experiment
+from fpg_lab.database.models import E02BRun, E02Run, P01Experiment
 from fpg_lab.database.session import Database
 from fpg_lab.flows.p01 import (
     ACTIVE_STATUSES,
@@ -124,9 +124,10 @@ class LabRuntime:
             migrate_profiles(session, self.codec)
             seed_namespace_registry(session)
             recover_interrupted_experiments(session)
-            from sqlalchemy import update
-            from fpg_lab.database.models.e02 import E02Run
             session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="interrupted"))
+            session.execute(update(E02BRun).where(E02BRun.status.in_(ACTIVE_STATUSES)).values(
+                status="interrupted", error={"stage": "startup", "message": "Previous Lab process stopped before completion."},
+            ))
             session.commit()
         self._started = True
 
@@ -209,8 +210,6 @@ class LabRuntime:
         try:
             if self._started:
                 with self.database.session_factory() as session:
-                    from sqlalchemy import update
-                    from fpg_lab.database.models.e02 import E02Run
                     session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="termination_requested"))
                     session.commit()
                     for experiment in session.scalars(

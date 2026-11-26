@@ -1,0 +1,219 @@
+{
+  "groups": [
+    {
+      "key": "critical",
+      "enabled": true,
+      "order": 10,
+      "weight": 1.0
+    },
+    {
+      "key": "functional",
+      "enabled": true,
+      "order": 20,
+      "weight": 1.0
+    }
+  ],
+  "evaluators": [
+    {
+      "key": "geometry_integrity",
+      "group_key": "critical",
+      "settings": {
+        "tolerance": 1e-06
+      },
+      "enabled": true,
+      "order": 10,
+      "weight": 1.0,
+      "minimum_score": 100.0
+    },
+    {
+      "key": "required_adjacency",
+      "group_key": "critical",
+      "settings": {
+        "minimum_shared_boundary": 10.0,
+        "tolerance": 1e-06
+      },
+      "enabled": true,
+      "order": 20,
+      "weight": 1.0,
+      "minimum_score": 100.0
+    },
+    {
+      "key": "enclosed_voids",
+      "group_key": "critical",
+      "settings": {
+        "area_tolerance": 1e-06
+      },
+      "enabled": true,
+      "order": 30,
+      "weight": 1.0,
+      "minimum_score": 100.0
+    },
+    {
+      "key": "inward_recess",
+      "group_key": "critical",
+      "settings": {
+        "max_depth_to_width_ratio": 1.0,
+        "max_recess_levels": 1,
+        "tolerance": 1e-06
+      },
+      "enabled": true,
+      "order": 40,
+      "weight": 1.0,
+      "minimum_score": 100.0
+    },
+    {
+      "key": "room_size_consistency",
+      "group_key": "functional",
+      "settings": {
+        "relation_rules": [
+          {
+            "reference_type": "bedroom",
+            "compared_type": "bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "living_room",
+            "compared_type": "bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "dining_room",
+            "compared_type": "bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "kitchen",
+            "compared_type": "bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "garage",
+            "compared_type": "bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "bedroom",
+            "compared_type": "attached_bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "living_room",
+            "compared_type": "attached_bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "dining_room",
+            "compared_type": "attached_bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "kitchen",
+            "compared_type": "attached_bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "garage",
+            "compared_type": "attached_bathroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "living_room",
+            "compared_type": "bedroom",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          },
+          {
+            "reference_type": "living_room",
+            "compared_type": "kitchen",
+            "min_ratio": null,
+            "max_ratio": 1.0,
+            "reference_aggregation": "min",
+            "compared_aggregation": "max",
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          }
+        ],
+        "consistency_rules": [
+          {
+            "room_type": "bedroom",
+            "maximum_spread_ratio": 0.25,
+            "weight": 1.0,
+            "full_penalty_ratio_delta": null
+          }
+        ],
+        "default_full_penalty_ratio_delta": 0.5
+      },
+      "enabled": true,
+      "order": 10,
+      "weight": 2.0,
+      "minimum_score": null
+    },
+    {
+      "key": "kitchen_dining_proximity",
+      "group_key": "functional",
+      "settings": {
+        "minimum_shared_boundary": 10.0,
+        "maximum_distance": 2000.0,
+        "tolerance": 1e-06
+      },
+      "enabled": true,
+      "order": 20,
+      "weight": 1.0,
+      "minimum_score": null
+    }
+  ]
+}

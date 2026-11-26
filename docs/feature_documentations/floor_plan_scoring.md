@@ -22,6 +22,14 @@ score_floor_plan(
 
 create_default_config() -> FloorPlanScoringConfig
 create_default_registry() -> EvaluatorRegistry
+validate_scoring_input(floor_plan: FloorPlan, specification: FloorPlanGenerationSpec) -> None
+validate_scoring_config(config: FloorPlanScoringConfig) -> None
+diagnose_skipped_evaluators(
+    scoring_input: FloorPlanScoringInput,
+    official: FloorPlanScoringExecution,
+    *,
+    registry: EvaluatorRegistry | None = None,
+) -> tuple[EvaluatorDiagnostic, ...]
 
 # Compatibility names:
 create_default_profile() -> ScoringProfile
@@ -45,6 +53,12 @@ The specification is required because evaluators use room IDs, relations, and ro
 size ranges. The room-size-consistency feasibility adjustment reads `RoomSizeSpec.min_area`
 and `max_area` directly from this specification; consumers do not supply a second copy
 of those ranges.
+
+`validate_scoring_input` uses the scoring input contract to check coordinates,
+specification ranges, room identities, relationships and redirects. Overlap,
+invalid topology and boundary violations can pass this structural check and be
+reported by evaluators. `validate_scoring_config` checks groups, thresholds,
+weights and rules against the built-in registry without scoring a plan.
 
 ## Configuration
 
@@ -223,7 +237,7 @@ Functional evaluators:
 | Evaluator | Order | Weight | Exact settings |
 |---|---:|---:|---|
 | `room_size_consistency` | 10 | `2.0` | exact rules listed above |
-| `kitchen_dining` | 20 | `1.0` | minimum shared boundary `10.0`, maximum distance `2000.0`, tolerance `1e-6` |
+| `kitchen_dining_proximity` | 20 | `1.0` | minimum shared boundary `10.0`, maximum distance `2000.0`, tolerance `1e-6` |
 
 `LivingRoomBalanceEvaluator` and `BedroomQualityEvaluator` remain exported and are
 still registered by `create_default_registry()` for compatibility with custom
@@ -276,13 +290,16 @@ available on the region and sections. Indices start at zero. Each polygon is
 represented by closed rings in plan coordinates, exterior first and any holes
 afterward. Room contacts give line coordinates and shared lengths for each
 physical room touching the boundary. Geometry is in project units and area is in
-square project units.
+square project units. Section `entrances` expose the opening or connections to
+predecessor cells as line coordinate sequences. Section `violation_codes` include
+all measured violations, including ones reported once at the recess level in
+official findings.
 
 ## Recommended values
 
 Use `create_default_config()` as the canonical baseline. The four critical checks are
 strict 100-point gates. The default functional allocation gives
-`room_size_consistency` twice the configured weight of `kitchen_dining` before
+`room_size_consistency` twice the configured weight of `kitchen_dining_proximity` before
 normalization. Treat the built-in room-size ratios as package preferences that can be
 replaced by project-specific values.
 
@@ -310,6 +327,39 @@ payloads.
 
 For `room_size_consistency`, DEBUG metrics/findings expose configured, feasible,
 effective, actual, and violation ratios/spreads where applicable.
+
+### DEBUG visualization payloads
+
+Each evaluator owns its payload. Payloads may be absent for skipped or inapplicable
+evaluations. Built-in payloads include successful measurements where available.
+Coordinates and lengths use project units. Areas use square project units.
+Geometry objects use GeoJSON geometry structure with project coordinates.
+Adjacency and kitchen–dining pairs include `measurement_available`, which
+distinguishes a measured zero shared length from a zero scoring fallback.
+
+| Evaluator | Payload |
+| --- | --- |
+| `geometry_integrity` | Tolerance and `findings`, an array of geometry lists aligned with the evaluator findings. Entries contain affected polygons, diagonal segments, overlap intersections or regions outside the boundary. An entry can be empty when its geometry operation failed. |
+| `required_adjacency` | Settings and `relations` with specification and physical room IDs, source centroid, AND/OR result, and each target's centroid, shared length, shared geometry and pass flag. |
+| `enclosed_voids` | Area tolerance and each void's ring, area and `affects_score` flag. The `enclosed_void_area` metric sums voids exceeding tolerance. |
+| `inward_recess` | Settings, recess regions, sections, entrances and room contacts as described above. |
+| `room_size_consistency` | Measured room areas and centroids, plus applied rule configuration, actual, feasible and effective ratios or spreads, contributing rooms, measured areas, scores, penalties and violation deltas. |
+| `kitchen_dining_proximity` | Settings, each pair's centroids, distance, shared length, shared wall and pass flag, both measured extrema and the `applied_rule` (`shared_boundary` or `centroid_distance`). The two extrema can come from different pairs. |
+
+### Independent diagnostics
+
+After official DEBUG scoring, call `diagnose_skipped_evaluators` with the same
+input and execution. If official scoring used a custom registry, pass it again.
+When the gate fails, diagnostics attempt the enabled evaluators recorded as
+skipped by that gate. Each `EvaluatorDiagnostic` records the evaluator key,
+status (`completed`, `not_applicable`, `unavailable`, or `failed`), optional
+evaluator execution and optional error. Independent executions have no official
+allocation or contribution. The call preserves the original total and findings.
+It can recover a valid pair's shared-wall measurement when unrelated geometry
+interrupted the official measurement pass. Invalid or missing prerequisites
+yield `unavailable`. Evaluator exceptions yield `failed` and later attempts
+continue. A passed gate returns an empty tuple. A missing DEBUG breakdown raises
+`ValueError`.
 
 ## Errors / failure conditions
 
@@ -354,7 +404,7 @@ Floor-plan scoring uses structured `ScoreFinding` values instead of free-form wa
 
 ## Public Export Inventory
 
-### `fpg_core.floor_plan_scoring` exports (64)
+### `fpg_core.floor_plan_scoring` exports (68)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
@@ -401,7 +451,7 @@ Floor-plan scoring uses structured `ScoreFinding` values instead of free-form wa
 | `InwardRecessSettings` | dataclass/contract | `(max_depth_to_width_ratio=1.0, max_recess_levels=1, tolerance=1e-6)` | Proportion, nesting and branch limits, and numerical tolerance. |
 | `InwardRecessVisualizationData` | dataclass/contract | `(settings, recesses)` | DEBUG payload for the inward-recess evaluator. |
 | `RecessRoomBoundary` | dataclass/contract | `(room_id, segments, shared_length)` | Physical room boundary shared with a recess region or section. |
-| `RecessSectionVisualization` | dataclass/contract | `(polygons, width, depth, area, depth_to_width_ratio, level, parent_indices, direction, room_boundaries, violation_codes)` | Geometry and evaluation measurements for one region or section. |
+| `RecessSectionVisualization` | dataclass/contract | `(polygons, width, depth, area, depth_to_width_ratio, level, parent_indices, direction, room_boundaries, violation_codes, entrances=())` | Geometry and evaluation measurements for one region or section. |
 | `RecessVisualization` | dataclass/contract | `(region, entrance, direction, branch_count, sections)` | A recess and its connected sections. |
 | `KitchenDiningEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
 | `KitchenDiningSettings` | dataclass/contract | `(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') -> None` | KitchenDiningSettings(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') |
@@ -426,6 +476,10 @@ Floor-plan scoring uses structured `ScoreFinding` values instead of free-form wa
 | `create_default_profile` | function | `create_default_profile() -> 'ScoringProfile'` | Compatibility alias for create_default_config(). |
 | `create_default_registry` | function | `create_default_registry() -> 'EvaluatorRegistry'` | Documented in the corresponding feature/shared section. |
 | `score_floor_plan` | function | `score_floor_plan(scoring_input: 'FloorPlanScoringInput', *, registry: 'EvaluatorRegistry \| None' = None, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'FloorPlanScoringExecution'` | Score one completed floor plan without application-layer orchestration. |
+| `EvaluatorDiagnostic` | dataclass/contract | `(evaluator_key, status, evaluation=None, error=None)` | Independent attempt with no official allocation. |
+| `diagnose_skipped_evaluators` | function | `(scoring_input, official, *, registry=None)` | Evaluate enabled evaluators skipped by the matching official DEBUG run. |
+| `validate_scoring_config` | function | `(config) -> None` | Validate configuration against the built-in registry. |
+| `validate_scoring_input` | function | `(floor_plan, specification) -> None` | Validate structural compatibility for scoring. |
 
 ## API Compatibility
 

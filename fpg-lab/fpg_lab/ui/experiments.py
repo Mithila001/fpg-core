@@ -15,8 +15,14 @@ from fpg_lab.inputs import FloorPlanRequest
 from fpg_lab.runtime import FLOW_SERVICES, LabRuntime, row_document
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
 from fpg_lab.ui.components import (
-    action_button, db_call, editor_value, format_experiment_code,
-    json_panel, notify_error, set_editor, shell,
+    action_button,
+    db_call,
+    editor_value,
+    format_experiment_code,
+    json_panel,
+    notify_error,
+    set_editor,
+    shell,
 )
 from fpg_lab.ui.replay import candidate_replay
 from fpg_lab.ui.result_layout import ResultWorkspace
@@ -79,6 +85,11 @@ def register_experiments(runtime: LabRuntime) -> None:
             return
         if flow == "e02a":
             from fpg_lab.ui.e02a import main_page
+            await main_page(runtime)
+            return
+        if flow == "e02b":
+            from fpg_lab.ui.e02b import main_page
+
             await main_page(runtime)
             return
         if flow == "e01a":
@@ -374,6 +385,11 @@ def register_experiments(runtime: LabRuntime) -> None:
 
     @ui.page("/experiments/{flow}/runs/{experiment_id}")
     async def run_page(flow: str, experiment_id: int) -> None:
+        if flow == "e02b":
+            from fpg_lab.ui.e02b import run_page as e02b_run_page
+
+            await e02b_run_page(runtime, experiment_id)
+            return
         if flow == "e02a":
             from fpg_lab.ui.e02a import run_page as e02a_run_page
             await e02a_run_page(runtime, experiment_id)

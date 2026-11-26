@@ -209,7 +209,7 @@ class CoreConfigCodec:
             floor_plan_solver=self._build_solver(document.floor_plan_solver),
             post_processing=self._build_post_processing(document.post_processing),
             openings=self._build_openings(document.openings),
-            floor_plan_scoring=self._build_floor_scoring(document.floor_plan_scoring),
+            floor_plan_scoring=self.build_floor_scoring(document.floor_plan_scoring),
         )
 
     @staticmethod
@@ -582,7 +582,7 @@ class CoreConfigCodec:
         )
 
     @staticmethod
-    def _build_floor_scoring(source: Any | None) -> Any | None:
+    def build_floor_scoring(source: Any | None) -> Any | None:
         if source is None:
             return None
         from fpg_core.floor_plan_scoring import (

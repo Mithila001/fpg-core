@@ -316,7 +316,7 @@
     },
     "fpg_core.floor_plan_scoring": {
       "source": "src/fpg_core/floor_plan_scoring/__init__.py",
-      "export_count": 68,
+      "export_count": 72,
       "exports": [
         "AESTHETIC_GROUP",
         "BEDROOM_QUALITY_KEY",
@@ -337,6 +337,7 @@
         "EnclosedVoidsEvaluator",
         "EnclosedVoidsSettings",
         "EvaluationStatus",
+        "EvaluatorDiagnostic",
         "EvaluatorContractError",
         "EvaluatorExecutionError",
         "EvaluatorExecutionResult",
@@ -385,7 +386,10 @@
         "create_default_config",
         "create_default_profile",
         "create_default_registry",
-        "score_floor_plan"
+        "diagnose_skipped_evaluators",
+        "score_floor_plan",
+        "validate_scoring_config",
+        "validate_scoring_input"
       ]
     },
     "fpg_core.floor_plan_solver": {

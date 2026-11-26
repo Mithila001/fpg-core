@@ -495,16 +495,16 @@ class ScoringGroupDocument(StrictModel):
 
 
 class GeometryIntegritySettingsDocument(StrictModel):
-    tolerance: float = Field(gt=0, allow_inf_nan=False)
+    tolerance: float = Field(ge=0, allow_inf_nan=False)
 
 
 class RequiredAdjacencySettingsDocument(StrictModel):
-    minimum_shared_boundary: float = Field(gt=0, allow_inf_nan=False)
-    tolerance: float = Field(gt=0, allow_inf_nan=False)
+    minimum_shared_boundary: float = Field(ge=0, allow_inf_nan=False)
+    tolerance: float = Field(ge=0, allow_inf_nan=False)
 
 
 class EnclosedVoidsSettingsDocument(StrictModel):
-    area_tolerance: float = Field(gt=0, allow_inf_nan=False)
+    area_tolerance: float = Field(ge=0, allow_inf_nan=False)
 
 
 class InwardRecessSettingsDocument(StrictModel):
@@ -525,9 +525,9 @@ class BedroomQualitySettingsDocument(StrictModel):
 
 
 class KitchenDiningSettingsDocument(StrictModel):
-    minimum_shared_boundary: float = Field(gt=0, allow_inf_nan=False)
+    minimum_shared_boundary: float = Field(ge=0, allow_inf_nan=False)
     maximum_distance: float = Field(gt=0, allow_inf_nan=False)
-    tolerance: float = Field(gt=0, allow_inf_nan=False)
+    tolerance: float = Field(ge=0, allow_inf_nan=False)
 
 
 class FloorEvaluatorBaseDocument(StrictModel):

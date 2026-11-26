@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 from ..domain import FeatureExecution, FloorPlan, FloorPlanGenerationSpec
 from .config import FloorPlanScoringConfig
 from .types import (
     EvaluatorExecutionResult,
+    EvaluatorKey,
     FloorPlanScoringResult,
     ScoreFinding,
     ScoringGroupResult,
@@ -41,6 +42,16 @@ class FloorPlanScoringDetails:
     findings: tuple[ScoreFinding, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class EvaluatorDiagnostic:
+    """Independent DEBUG attempt with no allocation in the official score."""
+
+    evaluator_key: EvaluatorKey
+    status: Literal["completed", "not_applicable", "unavailable", "failed"]
+    evaluation: EvaluatorExecutionResult | None = None
+    error: str | None = None
+
+
 FloorPlanScoringExecution: TypeAlias = FeatureExecution[
     FloorPlanScoringResult,
     FloorPlanScoringDetails,
@@ -48,6 +59,7 @@ FloorPlanScoringExecution: TypeAlias = FeatureExecution[
 
 
 __all__ = [
+    "EvaluatorDiagnostic",
     "FloorPlanScoringDetails",
     "FloorPlanScoringExecution",
     "FloorPlanScoringInput",

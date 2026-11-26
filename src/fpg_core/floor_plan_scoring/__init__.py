@@ -18,6 +18,7 @@ from .api import (
     EnclosedVoidsEvaluator,
     EnclosedVoidsSettings,
     EvaluationStatus,
+    EvaluatorDiagnostic,
     EvaluatorExecutionResult,
     EvaluatorKey,
     EvaluatorRegistry,
@@ -60,7 +61,10 @@ from .api import (
     create_default_config,
     create_default_profile,
     create_default_registry,
+    diagnose_skipped_evaluators,
     score_floor_plan,
+    validate_scoring_config,
+    validate_scoring_input,
 )
 from .exceptions import (
     EvaluatorContractError,
@@ -91,6 +95,7 @@ __all__ = [
     "EnclosedVoidsEvaluator",
     "EnclosedVoidsSettings",
     "EvaluationStatus",
+    "EvaluatorDiagnostic",
     "EvaluatorContractError",
     "EvaluatorExecutionError",
     "EvaluatorExecutionResult",
@@ -139,5 +144,8 @@ __all__ = [
     "create_default_config",
     "create_default_profile",
     "create_default_registry",
+    "diagnose_skipped_evaluators",
     "score_floor_plan",
+    "validate_scoring_config",
+    "validate_scoring_input",
 ]

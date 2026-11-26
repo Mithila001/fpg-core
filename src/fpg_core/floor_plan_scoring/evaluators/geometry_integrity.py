@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from shapely.errors import ShapelyError
+from shapely.geometry import LineString, box
+from shapely.geometry.base import BaseGeometry
 
+from ...domain import ExecutionMode
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,
@@ -43,6 +46,8 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
         diagonal_polygon_count = 0
         containment_failure_count = 0
         overlap_count = 0
+        debug = context.mode is ExecutionMode.DEBUG
+        overlaps: dict[tuple[str, ...], BaseGeometry] = {}
 
         if (
             not context.floor_polygon.is_valid
@@ -129,13 +134,14 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
         for index, room_a in enumerate(context.rooms):
             for room_b in context.rooms[index + 1 :]:
                 try:
-                    overlap_area = float(
-                        room_a.polygon.intersection(room_b.polygon).area
-                    )
+                    intersection = room_a.polygon.intersection(room_b.polygon)
+                    overlap_area = float(intersection.area)
                 except ShapelyError:
                     overlap_area = None
                 if overlap_area is None or overlap_area > config.tolerance:
                     overlap_count += 1
+                    if debug and overlap_area is not None:
+                        overlaps[room_a.room_id, room_b.room_id] = intersection
                     overlap_metrics = (
                         (ScoreMetric("overlap_area", overlap_area, "square_units"),)
                         if overlap_area is not None
@@ -163,4 +169,32 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
             score=0.0 if findings else 100.0,
             findings=tuple(findings),
             metrics=summary_metrics,
+            visualization_payload={
+                "tolerance": config.tolerance,
+                "findings": [
+                    _finding_geometry(context, finding, config.tolerance, overlaps)
+                    for finding in findings
+                ],
+            } if debug else None,
         )
+
+
+def _finding_geometry(context, finding, tolerance, overlaps) -> list[dict]:
+    rooms = [context.rooms_by_id[room_id] for room_id in finding.subject_ids]
+    shape = rooms[0].polygon if rooms else context.floor_polygon
+    try:
+        if finding.code.startswith("NON_RECTILINEAR"):
+            points = rooms[0].points if rooms else context.floor_points
+            return [LineString((a, b)).__geo_interface__
+                    for a, b in zip(points, (*points[1:], points[0]), strict=True)
+                    if not is_rectilinear((a, b), tolerance)]
+        if finding.code == "ROOM_OVERLAP":
+            overlap = overlaps.get(finding.subject_ids)
+            return [overlap.__geo_interface__] if overlap is not None else []
+        if finding.code == "ROOM_OUTSIDE_FLOOR_BOUNDARY":
+            shape = shape.difference(context.floor_polygon)
+        if finding.code == "FLOOR_BOUNDARY_OUTSIDE_SPECIFICATION":
+            shape = shape.difference(box(0, 0, context.floor_width, context.floor_length))
+        return [shape.__geo_interface__] if not shape.is_empty else []
+    except ShapelyError:
+        return []

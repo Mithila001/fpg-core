@@ -2,10 +2,24 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from ..domain import ExecutionMode, FloorPlan, FloorPlanGenerationSpec
+from ..domain import ExecutionMode, FloorPlan, FloorPlanGenerationSpec, RoomType
 from .config import EvaluatorRule, FloorPlanScoringConfig, ScoringGroupRule
-from .context import ScoringContext, ScoringContextFactory
-from .contracts import FloorPlanScoringDetails
+from .context import (
+    ScoringContext,
+    ScoringContextFactory,
+    has_shared_boundary_measurement,
+    recover_diagnostic_shared_boundaries,
+)
+from .contracts import EvaluatorDiagnostic, FloorPlanScoringDetails
+from .evaluators import (
+    BEDROOM_QUALITY_KEY,
+    ENCLOSED_VOIDS_KEY,
+    INWARD_RECESS_KEY,
+    KITCHEN_DINING_KEY,
+    LIVING_ROOM_BALANCE_KEY,
+    REQUIRED_ADJACENCY_KEY,
+    RoomSizeConsistencySettings,
+)
 from .exceptions import (
     EvaluatorContractError,
     EvaluatorExecutionError,
@@ -16,6 +30,7 @@ from .types import (
     CRITICAL_GROUP,
     EvaluationStatus,
     EvaluatorExecutionResult,
+    EvaluatorKey,
     FindingSeverity,
     FloorPlanScoringResult,
     GroupStatus,
@@ -176,6 +191,36 @@ class FloorPlanScoreManager:
         )
         return result, details
 
+    def diagnose(
+        self, floor_plan: FloorPlan, specification: FloorPlanGenerationSpec,
+        skipped: set[EvaluatorKey],
+    ) -> tuple[EvaluatorDiagnostic, ...]:
+        if not skipped:
+            return ()
+        context = self._context_factory.build(floor_plan, specification, mode=ExecutionMode.DEBUG)
+        context = recover_diagnostic_shared_boundaries(context)
+        results = []
+        for group in self._ordered_groups():
+            for rule in self._ordered_rules(group):
+                if rule.key not in skipped:
+                    continue
+                reason = _unavailable_inputs(rule, context)
+                if reason:
+                    results.append(EvaluatorDiagnostic(rule.key, "unavailable", error=reason))
+                    continue
+                try:
+                    evaluation = self._execute(rule, context)
+                except FloorPlanScoringError as exc:
+                    results.append(EvaluatorDiagnostic(rule.key, "failed", error=str(exc)))
+                    continue
+                if evaluation.status is EvaluationStatus.COMPLETED:
+                    results.append(EvaluatorDiagnostic(rule.key, "completed", evaluation))
+                elif evaluation.status is EvaluationStatus.NOT_APPLICABLE:
+                    results.append(EvaluatorDiagnostic(rule.key, "not_applicable", evaluation))
+                else:
+                    results.append(EvaluatorDiagnostic(rule.key, "unavailable", evaluation))
+        return tuple(results)
+
     def _execute(
         self,
         rule: EvaluatorRule,
@@ -314,6 +359,48 @@ class FloorPlanScoreManager:
         if total_weight <= 0:
             return {}
         return {str(group.key): 100.0 * group.weight / total_weight for group in groups}
+
+
+def _unavailable_inputs(rule: EvaluatorRule, context: ScoringContext) -> str | None:
+    if rule.key in (ENCLOSED_VOIDS_KEY, INWARD_RECESS_KEY):
+        if context.room_union is None or not context.room_union.is_valid:
+            return "A valid room union is required."
+
+    room_types = {room.room_type for room in context.rooms}
+    relevant_types: set[RoomType] = set()
+    if rule.key == KITCHEN_DINING_KEY:
+        pair = {RoomType.KITCHEN, RoomType.DINING_ROOM}
+        if pair <= room_types:
+            relevant_types = pair
+            for kitchen in (r for r in context.rooms if r.room_type is RoomType.KITCHEN):
+                for dining in (r for r in context.rooms if r.room_type is RoomType.DINING_ROOM):
+                    if not has_shared_boundary_measurement(context, kitchen.room_id, dining.room_id):
+                        return "A kitchen–dining shared-wall measurement is unavailable."
+    elif rule.key == REQUIRED_ADJACENCY_KEY:
+        for relation in context.relations:
+            if relation.strength != "hard":
+                continue
+            for target_id in relation.target_room_ids:
+                if not has_shared_boundary_measurement(context, relation.source_room_id, target_id):
+                    return "A required shared-wall measurement is unavailable."
+    elif isinstance(rule.settings, RoomSizeConsistencySettings):
+        for relation_rule in rule.settings.relation_rules:
+            pair = {relation_rule.reference_type, relation_rule.compared_type}
+            if pair <= room_types:
+                relevant_types.update(pair)
+        for consistency in rule.settings.consistency_rules:
+            if sum(room.room_type == consistency.room_type for room in context.rooms) >= 2:
+                relevant_types.add(consistency.room_type)
+    elif rule.key == BEDROOM_QUALITY_KEY:
+        relevant_types = {RoomType.BEDROOM}
+    elif rule.key == LIVING_ROOM_BALANCE_KEY and RoomType.LIVING_ROOM in room_types:
+        relevant_types = room_types
+
+    invalid_ids = [room.room_id for room in context.rooms if room.room_type in relevant_types
+                   and (not room.polygon.is_valid or room.area <= 0)]
+    if invalid_ids:
+        return "Valid room geometry is required for " + ", ".join(invalid_ids) + "."
+    return None
 
 
 def _clamp_total(value: float) -> float:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from types import MappingProxyType
 from typing import Any
@@ -180,6 +180,39 @@ def shared_boundary_length(
     return context.shared_boundary_lengths.get(
         _pair_key(resolved_first, resolved_second), 0.0
     )
+
+
+def shared_boundary_geometry(context: ScoringContext, first_id: str, second_id: str) -> dict | None:
+    first, second = context.rooms_by_id.get(first_id), context.rooms_by_id.get(second_id)
+    if first is None or second is None or not shared_boundary_length(context, first_id, second_id):
+        return None
+    return dict(first.polygon.boundary.intersection(second.polygon.boundary).__geo_interface__)
+
+
+def has_shared_boundary_measurement(context: ScoringContext, first_id: str, second_id: str) -> bool:
+    first, second = context.rooms_by_id.get(first_id), context.rooms_by_id.get(second_id)
+    return first is not None and second is not None and (
+        first.room_id == second.room_id
+        or _pair_key(first.room_id, second.room_id) in context.shared_boundary_lengths
+    )
+
+
+def recover_diagnostic_shared_boundaries(context: ScoringContext) -> ScoringContext:
+    """Recover valid pair measurements when a different geometry operation failed."""
+    if context.geometry_build_error is None:
+        return context
+    lengths = dict(context.shared_boundary_lengths)
+    valid_rooms = [room for room in context.rooms if room.polygon.is_valid and room.area > 0]
+    for index, first in enumerate(valid_rooms):
+        for second in valid_rooms[index + 1:]:
+            key = _pair_key(first.room_id, second.room_id)
+            if key in lengths:
+                continue
+            try:
+                lengths[key] = first.polygon.boundary.intersection(second.polygon.boundary).length
+            except ShapelyError:
+                continue
+    return replace(context, shared_boundary_lengths=MappingProxyType(lengths))
 
 
 def _normalize_identity_redirects(

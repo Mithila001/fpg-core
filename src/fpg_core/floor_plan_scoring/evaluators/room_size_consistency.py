@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from ...domain import RoomType
+from ...domain import ExecutionMode, RoomType
 from ..context import NormalizedRoom, NormalizedRoomSpec, ScoringContext
 from ..exceptions import ScoringConfigurationError
 from ..types import (
@@ -178,6 +178,7 @@ class _RuleScore:
     weight: float
     findings: tuple[ScoreFinding, ...]
     metrics: tuple[ScoreMetric, ...]
+    visual: dict | None = None
 
 
 class RoomSizeConsistencyEvaluator(FloorPlanEvaluator):
@@ -235,6 +236,11 @@ class RoomSizeConsistencyEvaluator(FloorPlanEvaluator):
             score=clamp_score(score),
             findings=findings,
             metrics=tuple(metrics),
+            visualization_payload={
+                "rooms": [{"room_id": room.room_id, "area": room.area, "centroid": room.centroid}
+                          for room in context.rooms],
+                "rules": [item.visual for item in scored_rules],
+            } if context.mode is ExecutionMode.DEBUG else None,
         )
 
 
@@ -366,6 +372,15 @@ def _score_relation(
         weight=rule.weight,
         findings=tuple(findings),
         metrics=tuple(metrics),
+        visual={
+            "kind": "relation", "rule": rule, "actual": actual_ratio,
+            "effective_min": effective_min, "effective_max": effective_max,
+            "feasible_min": feasible_min_ratio, "feasible_max": feasible_max_ratio,
+            "reference_area": reference_area, "compared_area": compared_area,
+            "room_ids": tuple(room.room_id for room in (*reference_rooms, *compared_rooms)),
+            "violation_delta": violation_delta, "full_penalty_delta": full_penalty_delta,
+            "score": score, "penalty": 100.0 - score,
+        } if context.mode is ExecutionMode.DEBUG else None,
     )
 
 
@@ -477,6 +492,13 @@ def _score_same_type(
         weight=rule.weight,
         findings=tuple(findings),
         metrics=metrics,
+        visual={
+            "kind": "consistency", "rule": rule, "actual": actual_spread,
+            "effective_max": effective_maximum_spread, "feasible_min": feasible_minimum_spread,
+            "smallest_area": smallest_area, "largest_area": largest_area,
+            "room_ids": tuple(room.room_id for room in rooms), "violation_delta": violation_delta,
+            "full_penalty_delta": full_penalty_delta, "score": score, "penalty": 100.0 - score,
+        } if context.mode is ExecutionMode.DEBUG else None,
     )
 
 
