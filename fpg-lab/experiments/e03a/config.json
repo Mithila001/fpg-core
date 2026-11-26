@@ -97,12 +97,6 @@
   },
   "cross_type_rules": [
     {
-      "compared_type": "bedroom",
-      "reference_type": "living_room",
-      "min_ratio": "0.40",
-      "max_ratio": "0.60"
-    },
-    {
       "compared_type": "bathroom",
       "reference_type": "bedroom",
       "min_ratio": "0.25",
@@ -119,6 +113,54 @@
       "reference_type": "kitchen",
       "min_ratio": "0.5",
       "max_ratio": "1.5"
+    },
+    {
+      "compared_type": "bedroom",
+      "reference_type": "living_room",
+      "min_ratio": "0.40",
+      "max_ratio": "0.80"
+    },
+    {
+      "compared_type": "bedroom",
+      "reference_type": "dining_room",
+      "min_ratio": "1",
+      "max_ratio": null
+    },
+    {
+      "compared_type": "veranda",
+      "reference_type": "living_room",
+      "min_ratio": null,
+      "max_ratio": "1"
+    },
+    {
+      "compared_type": "attached_bathroom",
+      "reference_type": "bathroom",
+      "min_ratio": "0.8",
+      "max_ratio": "1.5"
+    },
+    {
+      "compared_type": "living_room",
+      "reference_type": "bedroom",
+      "min_ratio": "1",
+      "max_ratio": null
+    },
+    {
+      "compared_type": "living_room",
+      "reference_type": "kitchen",
+      "min_ratio": "1",
+      "max_ratio": null
+    },
+    {
+      "compared_type": "living_room",
+      "reference_type": "dining_room",
+      "min_ratio": "1",
+      "max_ratio": null
+    },
+    {
+      "compared_type": "living_room",
+      "reference_type": "veranda",
+      "min_ratio": "1",
+      "max_ratio": null
     }
   ],
   "same_type_rules": [
@@ -128,6 +170,10 @@
     },
     {
       "room_type": "attached_bathroom",
+      "maximum_spread_ratio": "0.2"
+    },
+    {
+      "room_type": "bathroom",
       "maximum_spread_ratio": "0.2"
     }
   ]
