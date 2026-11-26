@@ -5,6 +5,8 @@ from typing import Annotated, Any, Literal
 from fpg_core.floor_plan_scoring import RoomSizeConsistencySettings
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from fpg_lab.e03a_config import Configuration as E03AConfiguration
+
 RoomTypeValue = Literal[
     "bedroom",
     "bathroom",
@@ -23,6 +25,7 @@ MatchPolicyValue = Literal["and", "or"]
 ConstraintStrengthValue = Literal["hard", "soft"]
 DestinationSelectionValue = Literal["all_matching", "lowest_cost_match"]
 TrafficClassValue = Literal["public", "private"]
+
 
 
 class StrictModel(BaseModel):
@@ -598,12 +601,13 @@ class FloorPlanScoringDocument(StrictModel):
 
 class ExperimentsDocument(StrictModel):
     p01b_refinement: SolverStageDocument | None = None
+    e03a: E03AConfiguration | None = None
 
 
 class SystemConfigurationDocument(StrictModel):
     schema_version: Literal[6] = 6
     project_units_per_meter: int = Field(gt=0)
-    buildable_space: BuildableSpaceDocument
+    buildable_space: BuildableSpaceDocument | None = None
     preprocessing: PreprocessingDocument | None = None
     candidate_search: CandidateSearchDocument | None = None
     candidate_circulation: CandidateCirculationDocument | None = None

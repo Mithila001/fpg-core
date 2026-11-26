@@ -1,9 +1,36 @@
+import pytest
 from sqlalchemy import select
-from test_lab import PLAN, Execution, RecordingAdapter, Solve, create_profile, payload, wait
+from test_lab import (
+    PLAN,
+    Execution,
+    RecordingAdapter,
+    Solve,
+    create_profile,
+    initialized_runtime,
+    payload,
+    wait,
+)
 
 from fpg_lab.database.models import P01BIteration, P01BPreset
+from fpg_lab.inputs import SystemConfigurationCreate
 from fpg_lab.integrations.fpg_core.p01b_input import export_trial, validate_export
-from fpg_lab.runtime import LabRuntime
+from fpg_lab.services.common import SystemConfigurationService
+
+
+def selected_profile(session, *, override=False):
+    service = SystemConfigurationService(session)
+    source = service.get_active().configuration_data
+    stage = source["floor_plan_solver"]["refinement_a"]
+    stage["solver"]["max_time_seconds"] = 17
+    if override:
+        from copy import deepcopy
+
+        source["experiments"]["p01b_refinement"] = deepcopy(stage)
+        source["experiments"]["p01b_refinement"]["solver"]["max_time_seconds"] = 18
+    return service.create(SystemConfigurationCreate(
+        name="selected P01 solver", configuration_data=source
+    ))
+
 
 
 def test_export_and_independent_iterations(tmp_path, monkeypatch):
@@ -14,7 +41,7 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
         return Execution(Solve(PLAN))
 
     monkeypatch.setattr("fpg_lab.flows.p01b.generate_floor_plan", solve)
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=RecordingAdapter
     ) as runtime:
         create_profile(runtime)
@@ -23,13 +50,13 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
         older_trial = dict(source["trials"][0])
         older_trial["circulation_data"] = dict(older_trial["circulation_data"])
         older_trial["circulation_data"].pop("lab_generation_specification")
-        assert (
-            export_trial(source["experiment"], older_trial)["specification"]
-            == document["specification"]
-        )
+        with pytest.raises(ValueError, match="specification was not saved"):
+            export_trial(source["experiment"], older_trial)
         spec = validate_export(document)
         assert {p["room_id"] for p in document["candidate"]["points"]} == {r.id for r in spec.rooms}
         with runtime.database.session_factory() as session:
+            profile = selected_profile(session)
+            profile_id, profile_hash = profile.id, profile.config_hash
             preset = P01BPreset(name="test", data=document)
             session.add(preset)
             session.commit()
@@ -38,6 +65,7 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
             "p01b",
             {
                 "preset_id": preset_id,
+                "system_configuration_id": profile_id,
                 "initial_time_limit": 1,
                 "iterations": 2,
                 "refinement_rounds": 2,
@@ -45,7 +73,11 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
             },
         )
         result = wait(runtime, "p01b", experiment_id)
-        assert result["experiment"]["status"] == "completed"
+        experiment = result["experiment"]
+        assert experiment["status"] == "completed"
+        assert experiment["system_configuration_id"] == profile_id
+        assert experiment["system_configuration_hash"] == profile_hash
+        assert experiment["hint_points"]["effective_solver"]["refinement"]["solver"]["max_time_seconds"] == 17
         with runtime.database.session_factory() as session:
             session.delete(session.get(P01BPreset, preset_id))
             session.commit()
@@ -76,7 +108,7 @@ def test_failed_refinement_keeps_initial_and_continues(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN))
     )
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=FailingAdapter
     ) as runtime:
         create_profile(runtime)
@@ -112,7 +144,7 @@ def test_failed_refinement_keeps_initial_and_continues(tmp_path, monkeypatch):
 
 
 def test_real_initial_solver_with_and_without_hints(tmp_path):
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'real.db'}", adapter_factory=RecordingAdapter
     ) as runtime:
         create_profile(runtime)
@@ -146,7 +178,7 @@ def test_scoring_failure_retains_post_processed_plan(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN))
     )
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'score.db'}", adapter_factory=FailingScore
     ) as runtime:
         create_profile(runtime)
@@ -180,18 +212,26 @@ def test_p01c_scores_the_opening_plan_and_keeps_it_on_score_failure(tmp_path, mo
             raise RuntimeError("scoring unavailable")
 
     monkeypatch.setattr("fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN)))
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'p01c.db'}", adapter_factory=OpeningsAdapter) as runtime:
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'p01c.db'}", adapter_factory=OpeningsAdapter) as runtime:
         create_profile(runtime)
         source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
         document = export_trial(source["experiment"], source["trials"][0])
         with runtime.database.session_factory() as session:
+            profile = selected_profile(session, override=True)
+            profile_id = profile.id
             preset = P01BPreset(name="for-p01c", data=document)
             session.add(preset)
             session.commit()
             preset_id = preset.id
-        experiment_id = runtime.start_experiment("p01c", {"preset_id": preset_id, "initial_time_limit": 1})
+        experiment_id = runtime.start_experiment("p01c", {
+            "preset_id": preset_id, "initial_time_limit": 1,
+            "system_configuration_id": profile_id,
+        })
         result = wait(runtime, "p01c", experiment_id)
-        assert result["experiment"]["failed_trial_count"] == 1
+        experiment = result["experiment"]
+        assert experiment["failed_trial_count"] == 1
+        assert experiment["system_configuration_id"] == profile_id
+        assert experiment["hint_points"]["effective_solver"]["refinement"]["solver"]["max_time_seconds"] == 18
         with runtime.database.session_factory() as session:
             row = session.scalar(select(P01BIteration).where(P01BIteration.experiment_id == experiment_id))
             assert [stage["name"] for stage in row.stages] == ["Initial", "Post-process", "Openings"]
@@ -205,8 +245,12 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
     from fpg_lab.database.models import P01Experiment, SystemConfiguration
 
     database_url = f"sqlite:///{tmp_path / 'migration.db'}"
+    from fpg_lab.database.base import Base
+    from fpg_lab.database.maintenance import migrate
+    from fpg_lab.runtime import LabRuntime
+
     runtime = LabRuntime(database_url=database_url)
-    runtime.database.create_schema()
+    Base.metadata.create_all(runtime.database.engine)
     old = deepcopy(runtime.codec.default_configuration().payload)
     old["preprocessing"]["hallway_min_width"] = 8
     old["openings"]["dimensions"]["door_width"] = 8
@@ -228,6 +272,9 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
         session.add(experiment)
         session.commit()
         config_id, experiment_id = config.id, experiment.id
+    with pytest.raises(ValueError, match="lab_db.* migrate"):
+        runtime.start()
+    assert migrate(runtime.database)["applied"]
     runtime.start()
     with runtime.database.session_factory() as session:
         migrated = session.get(SystemConfiguration, config_id)
@@ -238,9 +285,9 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
         assert session.get(P01Experiment, experiment_id).system_configuration_snapshot == old
         migrated_data = deepcopy(migrated.configuration_data)
         migrated_hash = migrated.config_hash
-    from fpg_lab.integrations.fpg_core.profile_migration import migrate_profiles
+    runtime.close()
+    assert not migrate(runtime.database)["applied"]
     with runtime.database.session_factory() as session:
-        migrate_profiles(session, runtime.codec)
         migrated = session.get(SystemConfiguration, config_id)
         assert migrated.configuration_data == migrated_data
         assert migrated.config_hash == migrated_hash
@@ -256,7 +303,7 @@ def test_p01c_opening_failure_stops_iteration(tmp_path, monkeypatch):
             raise AssertionError("scoring must not run after opening failure")
 
     monkeypatch.setattr("fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN)))
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'openings.db'}", adapter_factory=FailedOpenings) as runtime:
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'openings.db'}", adapter_factory=FailedOpenings) as runtime:
         create_profile(runtime)
         source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
         document = export_trial(source["experiment"], source["trials"][0])

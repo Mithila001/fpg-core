@@ -5,11 +5,18 @@ from nicegui import app, run, ui
 from sqlalchemy import select
 
 from fpg_lab.database.models.e02 import E02Run
-from fpg_lab.flows.e02a import CONFIG_PATH, prepare, retry, start
+from fpg_lab.flows.e02a import prepare, retry, start
 from fpg_lab.integrations.fpg_core.e02a_input import load_hint_maps
 from fpg_lab.integrations.fpg_core.e02b_input import export_stage
 from fpg_lab.runtime import row_document
-from fpg_lab.ui.components import action_button, db_call, json_panel, notify_error, shell
+from fpg_lab.ui.components import (
+    action_button,
+    db_call,
+    json_panel,
+    notify_error,
+    profile_picker,
+    shell,
+)
 from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
 
@@ -17,7 +24,7 @@ from fpg_lab.visualization import figures
 async def main_page(runtime):
     await ui.context.client.connected()
     shell("E-02-A · Setup", "Run the solver pipeline with file-backed hint maps.")
-    ui.label(f"Configuration: {CONFIG_PATH}").classes("text-sm lab-muted")
+    profile = await profile_picker(runtime)
     try:
         maps = load_hint_maps()
     except Exception as exc:
@@ -46,14 +53,14 @@ async def main_page(runtime):
 
     async def validate():
         try:
-            await run.io_bound(prepare, runtime.codec, selection(), refinement_count.value)
+            await run.io_bound(prepare, runtime, selection(), refinement_count.value, profile.value)
             feedback.set_text("Configuration and selected maps are valid.")
         except Exception as exc:
             feedback.set_text(str(exc))
 
     async def submit():
         try:
-            run_id = await run.io_bound(start, runtime, selection(), refinement_count.value)
+            run_id = await run.io_bound(start, runtime, selection(), refinement_count.value, profile.value)
             ui.navigate.to(f"/experiments/e02a/runs/{run_id}")
         except Exception as exc:
             feedback.set_text(str(exc))

@@ -6,15 +6,11 @@ import argparse
 import json
 import math
 import time
-from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 from fpg_lab.core.settings import ROOT
-from fpg_lab.inputs import SystemConfigurationCreate
-from fpg_lab.integrations.fpg_core.config_models import SystemConfigurationDocument
 from fpg_lab.runtime import FLOW_SERVICES, LabRuntime, row_document
-from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01_common import TERMINAL_STATUSES
 
 
@@ -108,21 +104,6 @@ def main() -> None:
     try:
         with LabRuntime(database_url=args.database_url) as runtime:
             configuration_id = args.configuration_id
-            if configuration_id is None:
-                with runtime.database.session_factory() as session:
-                    service = SystemConfigurationService(session, runtime.codec)
-                    configs, _ = service.list(limit=1, offset=0)
-                    if configs:
-                        configuration_id = configs[0].id
-                    else:
-                        data = deepcopy(runtime.codec.default_configuration().payload)
-                        record = service.create(
-                            SystemConfigurationCreate(
-                                name=f"scenario-{time.time_ns()}",
-                                configuration_data=SystemConfigurationDocument.model_validate(data),
-                            )
-                        )
-                        configuration_id = record.id
             request = (
                 json.loads(args.request.read_text(encoding="utf-8"))
                 if args.request

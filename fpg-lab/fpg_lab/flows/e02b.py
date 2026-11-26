@@ -12,12 +12,8 @@ from fpg_core.floor_plan_scoring import (
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import E02BRun, E02BSavedPlan
 from fpg_lab.flows.p01 import error_payload, result_document
-from fpg_lab.integrations.fpg_core.e02b_input import (
-    CONFIG_PATH,
-    decode_config,
-    decode_plan,
-    load_config,
-)
+from fpg_lab.integrations.fpg_core.e02b_input import decode_plan
+from fpg_lab.services.common import SystemConfigurationService
 
 
 def save_layout(session, name, document):
@@ -38,13 +34,13 @@ def delete_layout(session, layout_id):
         session.commit()
 
 
-def start(runtime, *, document=None, layout_id=None, config_path=CONFIG_PATH):
+def start(runtime, *, document=None, layout_id=None, configuration_id=None):
     if not runtime._started or runtime._closed:
         raise RuntimeError("Start the Lab runtime before submitting evaluations")
     if (document is None) == (layout_id is None):
         raise ValueError("Select one saved floor plan or import a temporary layout")
-    configuration = load_config(config_path)
     with runtime.database.session_factory() as session:
+        profile, validated = SystemConfigurationService(session, runtime.codec).for_flow(configuration_id, "e02b")
         layout_name = "Temporary import"
         if layout_id is not None:
             saved = session.get(E02BSavedPlan, layout_id)
@@ -55,8 +51,9 @@ def start(runtime, *, document=None, layout_id=None, config_path=CONFIG_PATH):
         snapshot = {
             "input": to_jsonable(document),
             "layout_name": layout_name,
-            "configuration": configuration,
-            "configuration_hash": runtime.codec.hash_payload(configuration),
+            "configuration": validated.payload["floor_plan_scoring"],
+            "configuration_id": profile.id,
+            "configuration_hash": profile.config_hash,
             "core_version": runtime.codec.fpg_core_version,
         }
         row = E02BRun(status="queued", snapshot=snapshot)
@@ -89,7 +86,7 @@ def execute(runtime, run_id):
     try:
         plan, specification = decode_plan(snapshot["input"])
         request = FloorPlanScoringInput(
-            plan, specification, decode_config(snapshot["configuration"])
+            plan, specification, runtime.codec.decode_floor_scoring(snapshot["configuration"])
         )
         execution = score_floor_plan(request, mode=ExecutionMode.DEBUG)
         official = result_document(execution)

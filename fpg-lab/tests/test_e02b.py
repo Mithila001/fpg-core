@@ -7,25 +7,23 @@ from fpg_core.floor_plan_scoring import (
     EvaluatorRegistry,
     FloorPlanScoringInput,
     RoomSizeConsistencyEvaluator,
-    ScoringConfigurationError,
     ScoringInputError,
     create_default_registry,
     diagnose_skipped_evaluators,
     score_floor_plan,
 )
 from sqlalchemy import inspect
+from test_lab import initialized_runtime
 
+from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import E02BRun, E02BSavedPlan, E02Run
 from fpg_lab.flows.e02b import delete_layout, save_layout, start
+from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
 from fpg_lab.integrations.fpg_core.e02b_input import (
-    decode_config,
     decode_plan,
-    default_config_document,
     export_stage,
-    load_config,
-    save_config,
 )
-from fpg_lab.runtime import LabRuntime
+from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.visualization import e02b as plots
 
 
@@ -131,32 +129,38 @@ def test_portable_stages_accept_architectural_defects():
         decode_plan(invalid)
 
 
-def test_storage_snapshot_recovery_and_measurements(tmp_path, monkeypatch):
-    monkeypatch.setenv("FPG_LAB_AUTO_CREATE_SCHEMA", "true")
-    database_url = f"sqlite:///{tmp_path / 'lab.db'}"
-    config_path = tmp_path / "config.json"
-    config = save_config(default_config_document(), config_path)
-    bad_config = deepcopy(config)
-    bad_config["groups"][0]["enabled"] = False
-    with pytest.raises(ScoringConfigurationError, match="enabled 'critical'"):
-        save_config(bad_config, config_path)
-    assert load_config(config_path) == config
-    document = portable_plan()
 
-    # Initialize an existing E02A database before the two new tables are registered.
-    runtime = LabRuntime(database_url=database_url)
-    E02Run.__table__.create(runtime.database.engine)
-    with runtime.database.session_factory() as session:
-        session.add(E02Run(status="completed", snapshot={"existing": True}, cases=[]))
-        session.commit()
+
+def decode_config(document):
+    return CoreConfigCodec().decode_floor_scoring(document)
+
+
+def default_config_document():
+    from fpg_core.floor_plan_scoring import create_default_config
+
+    return to_jsonable(create_default_config())
+
+
+def test_storage_snapshot_recovery_and_measurements(tmp_path):
+    database_url = f"sqlite:///{tmp_path / 'lab.db'}"
+    runtime = initialized_runtime(database_url=database_url)
+    document = portable_plan()
     with runtime:
         assert {"fpg_e02_run", "fpg_e02b_run", "fpg_e02b_saved_plan"} <= set(
             inspect(runtime.database.engine).get_table_names()
         )
         with runtime.database.session_factory() as session:
+            service = SystemConfigurationService(session, runtime.codec)
+            profile = service.duplicate(service.get_active().id, "scoring fixture")
+            saved = service.save_section(profile.id, "floor_plan_scoring", default_config_document(),
+                                         expected_hash=profile.config_hash)
+            profile_id, profile_hash = saved.id, saved.config_hash
+            config = saved.configuration_data["floor_plan_scoring"]
+            session.add(E02Run(status="completed", snapshot={"existing": True}, cases=[]))
+            session.commit()
             layout_id = save_layout(session, "Ring and notch", document)
-        saved_run = start(runtime, layout_id=layout_id, config_path=config_path)
-        temporary_run = start(runtime, document=document, config_path=config_path)
+        saved_run = start(runtime, layout_id=layout_id, configuration_id=profile_id)
+        temporary_run = start(runtime, document=document, configuration_id=profile_id)
         with runtime.database.session_factory() as session:
             delete_layout(session, layout_id)
             interrupted = E02BRun(status="running", snapshot={"existing": True})
@@ -165,10 +169,13 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path, monkeypatch):
             interrupted_id = interrupted.id
         changed = deepcopy(config)
         changed["groups"][1]["weight"] = 3
-        save_config(changed, config_path)
+        with runtime.database.session_factory() as session:
+            SystemConfigurationService(session).save_section(
+                profile_id, "floor_plan_scoring", changed, expected_hash=profile_hash
+            )
 
     with (
-        LabRuntime(database_url=database_url) as reopened,
+        initialized_runtime(database_url=database_url) as reopened,
         reopened.database.session_factory() as session,
     ):
         assert session.get(E02BSavedPlan, layout_id) is None
@@ -179,7 +186,8 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path, monkeypatch):
         assert historical.duration_seconds > 0
         assert historical.snapshot["input"] == json.loads(json.dumps(document))
         assert historical.snapshot["configuration"] == config
-        assert historical.snapshot["configuration_hash"] == reopened.codec.hash_payload(config)
+        assert historical.snapshot["configuration_hash"] == profile_hash
+        assert historical.snapshot["configuration_id"] == profile_id
         assert session.get(E02BRun, temporary_run).snapshot["layout_name"] == "Temporary import"
 
         plan, spec = decode_plan(document)

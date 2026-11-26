@@ -5,12 +5,15 @@ description: Create, extend, or reorganize FPG Lab experiments using the local C
 
 # Develop Lab experiments
 
-For experiment UI creation or updates, follow the canonical [UI standards](../../../fpg-lab/docs/UI_STANDARDS.md): experiment listing, setup and run-specific results, plus visualization-first desktop layout with documented exceptions. Use the shared semantic button roles and family-grouped, display-only experiment codes; keep internal route identifiers unchanged.
+For experiment UI creation or updates, follow the canonical [UI standards](../../../fpg-lab/docs/UI_STANDARDS.md): adaptable desktop layout. Use the shared semantic button roles and family-grouped, display-only experiment codes; keep internal route identifiers unchanged.
 
 Read [Lab instructions](../../../fpg-lab/AGENTS.md), its
 [development guide](../../../fpg-lab/docs/DEVELOPMENT.md), and the relevant family
-in the [Lab map](../../../fpg-lab/docs/README.md). Inspect the actual flow and its
+in the [Lab catalogue](../../../fpg-lab/docs/EXPERIMENTS.md). Inspect the actual flow and its
 callers; do not load unrelated Core implementation or every family document.
+
+Use the [glossary](../../../fpg-lab/GLOSSARY.md) for terminology and the
+[architecture](../../../fpg-lab/docs/ARCHITECTURE.md) for ownership and decision records.
 
 Identify the research question, inputs, stages and observations needed. Reuse an
 existing experiment for a profile variation. Extend its family when execution

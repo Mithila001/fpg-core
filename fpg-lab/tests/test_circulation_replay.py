@@ -23,12 +23,11 @@ from fpg_core.domain import (
     RoomId,
     RoomType,
 )
-from test_lab import RecordingAdapter, create_profile, payload, wait
+from test_lab import RecordingAdapter, create_profile, initialized_runtime, payload, wait
 
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter
 from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
-from fpg_lab.runtime import LabRuntime
 from fpg_lab.visualization import circulation
 
 
@@ -47,7 +46,7 @@ def test_diagnostic_retention_is_p01a_debug_only(tmp_path: Path, debug: bool, fl
         adapters.append(adapter)
         return adapter
 
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'diagnostics.db'}", adapter_factory=factory,
     ) as runtime:
         create_profile(runtime)

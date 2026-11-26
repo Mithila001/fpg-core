@@ -12,7 +12,7 @@ from time import monotonic
 
 from fpg_core.domain import RoomSizeSpec, RoomType, RoomWidthAxis
 
-from fpg_lab.flows.e03a_config import ROOM_TYPES, Aspect, Configuration, room_label
+from fpg_lab.e03a_config import ROOM_TYPES, Aspect, Configuration, room_label
 
 Dimensions = dict[int, tuple[tuple[int, int], ...]]
 RuleKey = tuple[RoomType, RoomType]

@@ -53,20 +53,13 @@ if [[ ! -f .env ]]; then
     cp .env.example .env
 fi
 
+.venv/bin/python -m scripts.verify_fpg_core
 if [[ "$fresh" == "Yes" ]]; then
-    .venv/bin/python -m scripts.reset_db --yes
+    .venv/bin/python -m scripts.lab_db reset --scope all --yes
+else
+    .venv/bin/python -m scripts.lab_db migrate --json
+    .venv/bin/python -m scripts.lab_db seed --json
 fi
-
-.venv/bin/python -m scripts.init_db
-.venv/bin/python -m scripts.verify_fpg_core --system-config seed/system_configuration.default.json
-.venv/bin/python -m scripts.seed_db \
-    --system-config seed/system_configuration.default.json \
-    --activate \
-    --floor-plan-template seed/floor_plan_template.example.json \
-    --floor-plan-template seed/floor_plan_template.minimal.json \
-    --floor-plan-template seed/floor_plan_template.super_minimal.json \
-    --floor-plan-template seed/floor_plan_template.average.json \
-    --floor-plan-template seed/floor_plan_template.big_plan.json
 
 echo
 echo "FPG Lab initialization completed."

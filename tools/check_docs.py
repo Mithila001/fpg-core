@@ -73,6 +73,7 @@ def check() -> list[str]:
         relative = path.relative_to(ROOT)
         allowed = (
             relative.parts[0] == "docs"
+            or relative == Path("fpg-lab/GLOSSARY.md")
             or relative.parts[:2] == ("fpg-lab", "docs")
             or relative.parts[:2] == (".agents", "skills")
         )

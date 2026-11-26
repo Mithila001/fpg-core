@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[2]
 @dataclass(frozen=True, slots=True)
 class Settings:
     database_url: str
-    auto_create_schema: bool
     max_background_workers: int
     host: str
     port: int
@@ -40,8 +39,6 @@ def get_settings() -> Settings:
         raise ValueError("FPG_LAB_PORT must be at most 65535")
     return Settings(
         database_url=url.render_as_string(hide_password=False),
-        auto_create_schema=os.getenv("FPG_LAB_AUTO_CREATE_SCHEMA", "true").lower()
-        in {"1", "true", "yes", "on"},
         max_background_workers=positive_int("FPG_LAB_MAX_BACKGROUND_WORKERS", 1),
         host=os.getenv("FPG_LAB_HOST", "127.0.0.1"),
         port=port,

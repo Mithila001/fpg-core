@@ -3,12 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from test_lab import create_profile, payload
+from test_lab import create_profile, initialized_runtime, payload
 
 from fpg_lab.core.exceptions import NotFoundError
 from fpg_lab.database.models import P01CandidateTrial
 from fpg_lab.inputs import P01AInput
-from fpg_lab.runtime import LabRuntime
 from fpg_lab.services.p01a import P01AService
 from fpg_lab.visualization import figures, replay
 
@@ -188,7 +187,7 @@ def test_dynamic_evaluator_progression() -> None:
 
 
 def test_replay_pages_and_ownership(tmp_path: Path) -> None:
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'replay.db'}") as runtime:
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'replay.db'}") as runtime:
         create_profile(runtime)
         with runtime.database.session_factory() as session:
             service = P01AService(session)

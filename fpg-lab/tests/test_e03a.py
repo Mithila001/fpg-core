@@ -4,55 +4,61 @@ from time import monotonic
 
 import pytest
 from fpg_core.domain import RoomSizeSpec, RoomType, RoomWidthAxis
+from test_lab import initialized_runtime
 
-from fpg_lab.flows.e03a import AreaRange, analyze, enumerate_dimensions
-from fpg_lab.flows.e03a_config import (
-    CONFIG_PATH,
-    E02A_PATH,
+from fpg_lab.core.exceptions import ConflictError
+from fpg_lab.e03a_config import (
     Configuration,
     export,
-    import_e02a,
     maximum_counts,
     parse,
-    save,
+    refresh_profile_inputs,
 )
+from fpg_lab.flows.e03a import AreaRange, analyze, enumerate_dimensions
+from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
+from fpg_lab.services.common import SystemConfigurationService
 
 
-def test_import_and_explicit_save(tmp_path, monkeypatch):
-    original = E02A_PATH.read_bytes()
-    starter = parse(CONFIG_PATH.read_bytes())
+def starter_configuration():
+    return CoreConfigCodec().default_configuration().config.document.experiments.e03a
+
+
+def test_refresh_and_explicit_save(tmp_path):
+    source = CoreConfigCodec().default_configuration().payload
+    starter = starter_configuration()
     draft = starter.model_dump(mode="json")
     draft["rooms"]["bedroom"]["count"] = 8
     draft["rooms"]["attached_bathroom"]["count"] = 5
     draft["rooms"]["bathroom"]["count"] = 2
-    imported = import_e02a(draft)
+    imported = refresh_profile_inputs(draft, source)
     assert imported.rooms["bedroom"].count == imported.rooms["attached_bathroom"].count == 5
     assert imported.rooms["bathroom"].count == 2
     assert imported.cross_type_rules == starter.cross_type_rules
     assert imported.same_type_rules == starter.same_type_rules
     assert str(imported.aspect_for("garage").max_ratio) == "0.7"
     assert draft["rooms"]["bedroom"]["count"] == 8
-    assert E02A_PATH.read_bytes() == original
     draft["rooms"]["bedroom"]["maximum_count"] = 2
     counts = maximum_counts(draft["rooms"], True)
     assert counts["bedroom"]["count"] == counts["attached_bathroom"]["count"] == 2
 
-    saved = tmp_path / "config.json"
-    initial = save(starter, None, saved)
     assert parse(export(imported)) == imported
-    assert save(imported, initial, saved) == export(imported)
-    with pytest.raises(ValueError, match="saved file changed"):
-        save(starter, initial, saved)
-    assert parse(saved.read_bytes()) == imported
-
-    def fail_replace(*_):
-        raise OSError("disk error")
-
-    monkeypatch.setattr(type(saved), "replace", fail_replace)
-    with pytest.raises(OSError, match="disk error"):
-        save(starter, export(imported), saved)
-    assert list(tmp_path.iterdir()) == [saved]
-    assert parse(saved.read_bytes()) == imported
+    runtime = initialized_runtime(database_url=f"sqlite:///{tmp_path / 'e03a.db'}")
+    with runtime, runtime.database.session_factory() as session:
+        service = SystemConfigurationService(session)
+        selected = service.duplicate(service.get_active().id, "e03a-draft")
+        profile, validated = service.for_flow(selected.id, "e03a")
+        assert validated.config.document.experiments.e03a == starter
+        expected = profile.config_hash
+        scoring = profile.configuration_data["floor_plan_scoring"]
+        scoring["groups"][1]["weight"] = 3
+        updated = service.save_section(profile.id, "floor_plan_scoring", scoring, expected_hash=expected)
+        with pytest.raises(ConflictError, match="saved profile changed"):
+            service.save_section(profile.id, "experiments.e03a", imported.model_dump(mode="json"),
+                                 expected_hash=expected)
+        saved = service.save_section(profile.id, "experiments.e03a", imported.model_dump(mode="json"),
+                                     expected_hash=updated.config_hash)
+        assert saved.configuration_data["floor_plan_scoring"]["groups"][1]["weight"] == 3
+        assert service.for_flow(saved.id, "e03a")[1].config.document.experiments.e03a == imported
 
 
 def test_dimension_gaps_and_axis():
@@ -63,7 +69,7 @@ def test_dimension_gaps_and_axis():
     y = enumerate_dimensions(RoomSizeSpec(2, 2, 4, 9, RoomWidthAxis.Y), None, 1000, deadline)
     assert x[8] == ((2, 4),)
     assert y[8] == ((4, 2),)
-    starter = parse(CONFIG_PATH.read_bytes())
+    starter = starter_configuration()
     result = analyze(starter)
     assert result.status == "compatible"
     assert 900 in result.supported["bedroom_1"]
@@ -76,7 +82,7 @@ def test_dimension_gaps_and_axis():
 
 
 def test_exact_support_against_brute_force():
-    draft = parse(CONFIG_PATH.read_bytes()).model_dump(mode="json")
+    draft = starter_configuration().model_dump(mode="json")
     draft["default_aspect"] = None
     for room, settings in draft["rooms"].items():
         count = {"bedroom": 2, "bathroom": 1, "living_room": 1}.get(room, 0)

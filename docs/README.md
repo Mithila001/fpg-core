@@ -29,6 +29,6 @@ consumer contracts.
 - [Feature development](development/FEATURE_GUIDE.md).
 - [Verification](development/verification.md): check selection and exact commands.
 - [Documentation maintenance](development/documentation-maintenance.md).
-- [Root agent instructions](../AGENTS.md) and [Lab documentation](../fpg-lab/docs/README.md).
+- [Root agent instructions](../AGENTS.md) and [Lab documentation](../fpg-lab/README.md).
 
 [Personal notes](personal/README.md) are informal, user-owned, and not authoritative.

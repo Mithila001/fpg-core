@@ -1,4 +1,4 @@
-"""Validation and reconstruction of portable cleaned candidate inputs."""
+"""Validation and export of portable cleaned candidate inputs."""
 
 from math import isfinite
 
@@ -66,16 +66,6 @@ def export_trial(experiment: dict, trial: dict) -> dict:
     circulation = trial.get("circulation_data") or {}
     candidate = (circulation.get("result") or {}).get("candidate")
     specification = circulation.get("lab_generation_specification")
-    if candidate and not specification:
-        from fpg_core.floor_plan_preprocessing import PreparedGenerationInput
-
-        from fpg_lab.core.serialization import to_jsonable
-
-        prepared_data = (experiment.get("preprocessing_result") or {}).get("result")
-        if prepared_data:
-            prepared = TypeAdapter(PreparedGenerationInput).validate_python(prepared_data)
-            cleaned = TypeAdapter(CandidateMap).validate_python(candidate)
-            specification = to_jsonable(prepared.generation_spec_for_candidate(cleaned))
     if not candidate or not specification:
         raise ValueError("Cleaned candidate or its specification was not saved for this trial")
     document = {

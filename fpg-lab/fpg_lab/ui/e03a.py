@@ -14,19 +14,17 @@ from fpg_core.domain import RoomType
 from nicegui import run, ui
 from pydantic import ValidationError
 
-from fpg_lab.flows.e03a import Analysis, AreaRange, analyze
-from fpg_lab.flows.e03a_config import (
-    CONFIG_PATH,
+from fpg_lab.e03a_config import (
     ROOM_TYPES,
     Configuration,
     export,
-    import_e02a,
-    parse,
+    refresh_profile_inputs,
     room_label,
-    save,
     width_axis,
 )
-from fpg_lab.ui.components import action_button, notify_error, shell
+from fpg_lab.flows.e03a import Analysis, AreaRange, analyze
+from fpg_lab.services.common import SystemConfigurationService
+from fpg_lab.ui.components import action_button, db_call, notify_error, profile_picker, shell
 from fpg_lab.ui.result_layout import ResultWorkspace
 
 TITLE = "E-03-A · Room Size Configuration Analyzer"
@@ -68,17 +66,14 @@ def _table(headers: tuple[str, ...], values: list[tuple[Any, ...]]) -> ui.table:
     )
 
 
-def _load() -> tuple[bytes | None, dict[str, Any], str]:
-    try:
-        contents = CONFIG_PATH.read_bytes()
-    except FileNotFoundError:
-        return None, {}, "Saved configuration is missing. Import from E02A to start."
-    except OSError as exc:
-        return None, {}, str(exc)
-    try:
-        return contents, parse(contents).model_dump(mode="json"), "Loaded saved configuration"
-    except (ValueError, ArithmeticError) as exc:
-        return contents, {}, f"Saved configuration is invalid. {exc}"
+async def _load(runtime, profile_id):
+    def read(session):
+        record, validated = SystemConfigurationService(session, runtime.codec).for_flow(
+            profile_id, "e03a"
+        )
+        return record.id, record.name, record.config_hash, validated.payload["experiments"]["e03a"]
+
+    return await db_call(runtime, read)
 
 
 def _validation_message(exc: ValidationError) -> str:
@@ -90,11 +85,12 @@ def _validation_message(exc: ValidationError) -> str:
 
 async def _preview_import(
     draft: dict[str, Any],
+    source: dict[str, Any],
     confirm: Callable[[dict[str, Any]], None],
 ) -> None:
     draft = deepcopy(draft)
     try:
-        proposal = await run.io_bound(import_e02a, draft)
+        proposal = await run.io_bound(refresh_profile_inputs, draft, source)
     except ValueError as exc:
         notify_error(exc)
         return
@@ -123,7 +119,7 @@ async def _preview_import(
                 )
     with ui.dialog() as dialog, ui.card().classes("w-[760px] max-w-full"):
         with ui.row().classes("items-center gap-1"):
-            ui.label("Import from E02A").classes("text-lg font-semibold")
+            ui.label("Refresh profile inputs").classes("text-lg font-semibold")
             _hint(
                 "Current draft shows what you have now. Proposed shows what applying the import "
                 "would change. Your relationship rules stay in the draft, and saving is separate."
@@ -133,7 +129,7 @@ async def _preview_import(
                 "max-h-[55vh] overflow-auto"
             )
         else:
-            ui.label("The relevant E02A settings already match this draft.")
+            ui.label("The profile inputs already match this draft.")
         with ui.row():
 
             def apply() -> None:
@@ -152,24 +148,30 @@ def _whole_number(value: str) -> int | str:
         return value
 
 
-async def setup_page() -> None:
-    expected, draft, message = _load()
-    if not draft:
-        with ui.column() as recovery:
-            ui.label(TITLE).classes("text-lg font-semibold")
-            ui.label(message)
+async def setup_page(runtime) -> None:
+    with ui.row().classes("items-center"):
+        profile = await profile_picker(runtime)
+        load_button = action_button("Load profile")
+    area = ui.column().classes("w-full")
+    workspace = None
 
-        async def recover() -> None:
-            def apply(updated: dict[str, Any]) -> None:
-                recovery.delete()
-                Workspace(updated, expected).file_status.set_text("Unsaved configuration edits")
+    async def load():
+        nonlocal workspace
+        load_button.disable()
+        try:
+            profile_id, name, expected, draft = await _load(runtime, profile.value)
+            if workspace is not None:
+                workspace.close()
+            area.clear()
+            with area:
+                workspace = Workspace(runtime, profile_id, name, draft, expected)
+        except Exception as exc:
+            notify_error(exc)
+        finally:
+            load_button.enable()
 
-            await _preview_import(draft, apply)
-
-        with recovery:
-            action_button("Import from E02A", on_click=recover)
-        return
-    Workspace(draft, expected)
+    load_button.on_click(load)
+    await load()
 
 
 async def result_page(run_id: str) -> None:
@@ -185,7 +187,9 @@ def _compute(
 
 
 class Workspace:
-    def __init__(self, draft: dict[str, Any], expected: bytes | None) -> None:
+    def __init__(self, runtime, profile_id, profile_name, draft, expected) -> None:
+        self.runtime = runtime
+        self.profile_id = profile_id
         self.draft = draft
         self.expected = expected
         self.locks: dict[RoomType, AreaRange] = {}
@@ -214,7 +218,7 @@ class Workspace:
             self.lock_panel = ui.column().classes("w-full rounded border border-white/10 p-3 gap-2")
             with ui.column().classes("w-full border-t border-white/10 pt-3 gap-2"):
                 ui.label("Configuration").classes("font-semibold")
-                self.file_status = ui.label("Loaded saved configuration").classes(
+                self.file_status = ui.label(f"Editing {profile_name}").classes(
                     "lab-muted text-sm"
                 )
                 self.save_button = (
@@ -223,7 +227,7 @@ class Workspace:
                     .classes("w-full")
                 )
                 with ui.row().classes("w-full gap-1"):
-                    action_button("Import from E02A", role="subtle", on_click=self.preview).props(
+                    action_button("Refresh profile inputs", role="subtle", on_click=self.preview).props(
                         "dense no-caps"
                     )
                     self.export_button = action_button(
@@ -315,7 +319,12 @@ class Workspace:
         self.save_button.disable()
         self.reset_button.disable()
         try:
-            contents = await run.io_bound(save, config, self.expected)
+            contents = await db_call(self.runtime, lambda session: (
+                SystemConfigurationService(session, self.runtime.codec).save_section(
+                    self.profile_id, "experiments.e03a", config.model_dump(mode="json"),
+                    expected_hash=self.expected,
+                ).config_hash
+            ))
             if contents is not None:
                 self.expected = contents
                 self.file_status.set_text(
@@ -323,7 +332,7 @@ class Workspace:
                     if config == self.validate(show_error=False)
                     else "Saved previous draft · newer edits are unsaved"
                 )
-        except (OSError, ValueError) as exc:
+        except Exception as exc:
             notify_error(exc)
         finally:
             self.saving = False
@@ -336,14 +345,16 @@ class Workspace:
                 export(config), filename="e03a-config.json", media_type="application/json"
             )
 
-    def reset(self) -> None:
+    async def reset(self) -> None:
         if self.saving:
             return
-        expected, draft, message = _load()
-        self.file_status.set_text(message)
-        if draft:
+        try:
+            _, name, expected, draft = await _load(self.runtime, self.profile_id)
             self.expected, self.draft = expected, draft
+            self.file_status.set_text(f"Editing {name}")
             self.redraw_configuration()
+        except Exception as exc:
+            notify_error(exc)
 
     async def preview(self) -> None:
         revision = self.revision
@@ -356,7 +367,14 @@ class Workspace:
             self.file_status.set_text("Import applied to the unsaved draft")
             self.redraw_configuration()
 
-        await _preview_import(self.draft, apply)
+        try:
+            source = await db_call(self.runtime, lambda session: (
+                SystemConfigurationService(session, self.runtime.codec)
+                .for_flow(self.profile_id, "e03a_refresh")[1].payload
+            ))
+            await _preview_import(self.draft, source, apply)
+        except Exception as exc:
+            notify_error(exc)
 
     def redraw_configuration(self) -> None:
         self.draw_matrix()
@@ -461,7 +479,7 @@ class Workspace:
             issue = ui.label().classes("text-negative")
 
             def apply() -> None:
-                aspect = None
+                aspect: str | dict[str, Any] | None = None
                 if mode.value == "inherit":
                     aspect = "inherit"
                 elif mode.value == "custom":
@@ -572,7 +590,7 @@ class Workspace:
             issue = ui.label().classes("text-negative")
 
             def apply(remove: bool = False) -> None:
-                from fpg_lab.flows.e03a_config import CrossRule, SameRule
+                from fpg_lab.e03a_config import CrossRule, SameRule
 
                 rules = [rule for rule in self.draft[group] if rule != old]
                 if not remove:

@@ -52,20 +52,13 @@ try {
         Copy-Item -LiteralPath ".env.example" -Destination ".env"
     }
 
+    Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.verify_fpg_core")
     if ($Fresh -eq "Yes") {
-        Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.reset_db", "--yes")
+        Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.lab_db", "reset", "--scope", "all", "--yes")
+    } else {
+        Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.lab_db", "migrate", "--json")
+        Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.lab_db", "seed", "--json")
     }
-
-    Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.init_db")
-    Invoke-Checked -Command $VirtualPython -Arguments @("-m", "scripts.verify_fpg_core", "--system-config", "seed/system_configuration.default.json")
-    Invoke-Checked -Command $VirtualPython -Arguments @(
-        "-m", "scripts.seed_db", "--system-config", "seed/system_configuration.default.json", "--activate",
-        "--floor-plan-template", "seed/floor_plan_template.example.json",
-        "--floor-plan-template", "seed/floor_plan_template.minimal.json",
-        "--floor-plan-template", "seed/floor_plan_template.super_minimal.json",
-        "--floor-plan-template", "seed/floor_plan_template.average.json",
-        "--floor-plan-template", "seed/floor_plan_template.big_plan.json"
-    )
 
     Write-Host ""
     Write-Host "FPG Lab initialization completed."

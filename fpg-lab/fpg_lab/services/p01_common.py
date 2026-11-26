@@ -6,13 +6,13 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from fpg_lab.core.exceptions import ConflictError, InvalidInputError, NotFoundError
+from fpg_lab.core.exceptions import NotFoundError
 from fpg_lab.database.models import (
     P01CandidateTrial,
     P01Experiment,
     P01FloorPlanRun,
-    SystemConfiguration,
 )
+from fpg_lab.services.common import SystemConfigurationService
 
 TERMINAL_STATUSES = {"completed", "terminated", "failed", "interrupted"}
 
@@ -36,7 +36,17 @@ class P01Service:
         trial_count: int | None = None,
         hint_points: dict[str, Any] | None = None,
     ) -> P01Experiment:
-        configuration = self._resolve_configuration(system_configuration_id)
+        configuration, validated = SystemConfigurationService(self.session, self.codec).for_flow(
+            system_configuration_id, self.flow_type
+        )
+        if hint_points is not None and self.flow_type in ("p01b", "p01c"):
+            from fpg_lab.core.serialization import to_jsonable
+            from fpg_lab.flows.p01b import effective_profiles
+
+            initial, refinement = effective_profiles(validated.config, hint_points)
+            hint_points = {**hint_points, "effective_solver": to_jsonable({
+                "initial": initial, "refinement": refinement,
+            })}
         experiment = P01Experiment(
             flow_type=self.flow_type,
             status="queued",
@@ -45,9 +55,9 @@ class P01Service:
             floor_plan_request=floor_plan_request,
             hint_points=hint_points,
             system_configuration_id=configuration.id,
-            system_configuration_snapshot=configuration.configuration_data,
+            system_configuration_snapshot=validated.payload,
             system_configuration_hash=configuration.config_hash,
-            fpg_core_version=configuration.fpg_core_version,
+            fpg_core_version=validated.fpg_core_version,
         )
         self.session.add(experiment)
         self.session.commit()
@@ -180,41 +190,3 @@ class P01Service:
                 f"{self.flow_type.upper()} floor-plan run {run_id} was not found.",
             )
         return run
-
-    def _resolve_configuration(self, configuration_id: int | None) -> SystemConfiguration:
-        if configuration_id is not None:
-            configuration = self.session.get(SystemConfiguration, configuration_id)
-            if configuration is None:
-                raise NotFoundError(
-                    "system_configuration_not_found",
-                    f"System configuration {configuration_id} was not found.",
-                )
-            return self._validate_configuration(configuration)
-        configuration = self.session.scalar(
-            select(SystemConfiguration).where(SystemConfiguration.is_active.is_(True))
-        )
-        if configuration is None:
-            raise ConflictError(
-                "active_system_configuration_required",
-                f"Activate a system configuration before starting a {self.flow_type.upper()} experiment.",
-            )
-        return self._validate_configuration(configuration)
-
-    def _validate_configuration(self, configuration: SystemConfiguration) -> SystemConfiguration:
-        if self.codec is None:
-            return configuration
-        from fpg_lab.integrations.fpg_core.config_codec import CoreConfigurationError
-
-        try:
-            validated = self.codec.validate_for_flow(
-                configuration.configuration_data,
-                self.flow_type,
-            )
-        except CoreConfigurationError as exc:
-            raise InvalidInputError("invalid_fpg_core_configuration", str(exc)) from exc
-        configuration.configuration_data = validated.payload
-        configuration.schema_version = str(validated.payload["schema_version"])
-        configuration.config_hash = validated.config_hash
-        configuration.fpg_core_version = validated.fpg_core_version
-        self.session.commit()
-        return configuration

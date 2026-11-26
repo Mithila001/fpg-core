@@ -81,16 +81,16 @@ def register_experiments(runtime: LabRuntime) -> None:
         if flow == "e03a":
             from fpg_lab.ui.e03a import setup_page
 
-            await setup_page()
+            await setup_page(runtime)
             return
         if flow == "e02a":
-            from fpg_lab.ui.e02a import main_page
-            await main_page(runtime)
+            from fpg_lab.ui.e02a import main_page as e02a_page
+            await e02a_page(runtime)
             return
         if flow == "e02b":
-            from fpg_lab.ui.e02b import main_page
+            from fpg_lab.ui.e02b import main_page as e02b_page
 
-            await main_page(runtime)
+            await e02b_page(runtime)
             return
         if flow == "e01a":
             from fpg_lab.ui.e01a import main_page as e01a_page
@@ -98,9 +98,9 @@ def register_experiments(runtime: LabRuntime) -> None:
             await e01a_page()
             return
         if flow in ("p01b", "p01c"):
-            from fpg_lab.ui.p01b import main_page
+            from fpg_lab.ui.p01b import main_page as p01b_page
 
-            await main_page(runtime, flow)
+            await p01b_page(runtime, flow)
             return
         if flow not in FLOW_SERVICES:
             shell("Unknown experiment")
@@ -312,7 +312,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                             runtime,
                             lambda session: (
                                 SystemConfigurationService(session, runtime.codec)
-                                .get(profile.value)
+                                .resolve(profile.value)
                                 .config_hash
                             ),
                         )
@@ -385,6 +385,7 @@ def register_experiments(runtime: LabRuntime) -> None:
 
     @ui.page("/experiments/{flow}/runs/{experiment_id}")
     async def run_page(flow: str, experiment_id: int) -> None:
+        timer: ui.timer
         if flow == "e02b":
             from fpg_lab.ui.e02b import run_page as e02b_run_page
 
@@ -652,6 +653,7 @@ def register_experiments(runtime: LabRuntime) -> None:
 
     @ui.page("/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/{run_id}")
     async def floor_page(flow: str, experiment_id: int, run_id: int) -> None:
+        timer: ui.timer
         if flow not in ("p01b", "p01c"):
             shell("This experiment has no floor-plan branches")
             return

@@ -108,6 +108,39 @@ def test_search_exhausted_returns_best(monkeypatch):
     assert state["stop_reason"] == "Candidate search exhausted"
 
 
+def test_runtime_quick_search_uses_selected_profile(tmp_path, monkeypatch):
+    from test_lab import initialized_runtime
+
+    from fpg_lab.database.models import FloorPlanTemplate
+    from fpg_lab.inputs import SystemConfigurationCreate
+    from fpg_lab.services.common import SystemConfigurationService
+
+    submitted = []
+    adapter_configs = []
+    with initialized_runtime(
+        database_url=f"sqlite:///{tmp_path / 'quick.db'}", adapter_factory=adapter_configs.append
+    ) as runtime:
+        with runtime.database.session_factory() as session:
+            service = SystemConfigurationService(session)
+            payload = {**service.get_active().configuration_data, "project_units_per_meter": 20}
+            profile = service.create(
+                SystemConfigurationCreate(name="selected quick profile", configuration_data=payload)
+            )
+            profile_id, profile_hash = profile.id, profile.config_hash
+            template_id = session.scalar(select(FloorPlanTemplate.id))
+
+        def capture(action, *args):
+            submitted.append(args)
+            return SimpleNamespace(add_done_callback=lambda callback: callback(None))
+
+        monkeypatch.setattr(runtime.jobs, "submit_task", capture)
+        state, _ = runtime.start_quick_hint(template_id, profile_id, 2, 70)
+        assert state["configuration_id"] == profile_id
+        assert state["configuration_hash"] == profile_hash
+        assert adapter_configs[0].document.project_units_per_meter == 20
+        assert submitted[0][2]["project_units_per_meter"] == 20
+
+
 def test_preset_input_requires_exactly_one():
     common = {"initial_time_limit": 5}
     assert P01BInput.model_validate({**common, "preset_id": 1}).preset_id == 1

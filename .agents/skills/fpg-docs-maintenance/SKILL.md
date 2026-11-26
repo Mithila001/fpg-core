@@ -11,8 +11,9 @@ exports and consumer behavior against canonical docs.
 
 Read the [maintenance policy](../../../docs/development/documentation-maintenance.md)
 and only the affected documents in the [Core map](../../../docs/README.md) or
-[Lab map](../../../fpg-lab/docs/README.md). Verify claims against current exports,
-inputs/configuration, validation, execution paths and relevant tests.
+[Lab catalogue](../../../fpg-lab/docs/EXPERIMENTS.md). Verify claims against current exports,
+inputs/configuration, validation, execution paths and relevant tests. For Lab decisions and terms, consult its
+[architecture](../../../fpg-lab/docs/ARCHITECTURE.md) and [glossary](../../../fpg-lab/GLOSSARY.md).
 
 Update the authoritative home of each changed fact: shared Core contracts in the
 API guide, feature contracts in consumer feature docs, rationale in internal notes,

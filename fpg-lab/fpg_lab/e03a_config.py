@@ -3,26 +3,16 @@
 from __future__ import annotations
 
 import json
-import os
 from decimal import Decimal
 from math import ceil, floor
-from pathlib import Path
-from tempfile import NamedTemporaryFile
-from threading import Lock
 from typing import Annotated, Literal
 
 from fpg_core.domain import RoomSizeSpec, RoomType, RoomWidthAxis
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from fpg_lab.core.settings import ROOT
-
-CONFIG_PATH = ROOT / "experiments" / "e03a" / "config.json"
-E02A_PATH = ROOT / "experiments" / "e02a" / "config.json"
 ROOM_TYPES = tuple(room for room in RoomType if room is not RoomType.HALLWAY)
 Positive = Annotated[Decimal, Field(gt=0, allow_inf_nan=False)]
 Count = Annotated[int, Field(strict=True, ge=0)]
-# ponytail: serializes saves within one Lab process; use a file lock for cross-process writers.
-_SAVE_LOCK = Lock()
 
 
 def room_label(room: str) -> str:
@@ -154,43 +144,16 @@ def export(config: Configuration) -> bytes:
     return (config.model_dump_json(indent=2) + "\n").encode("utf-8")
 
 
-def save(config: Configuration, expected: bytes | None, path: Path = CONFIG_PATH) -> bytes:
-    content = export(Configuration.model_validate(config.model_dump()))
-    with _SAVE_LOCK:
-        current = path.read_bytes() if path.exists() else None
-        if current != expected:
-            raise ValueError(
-                "The saved file changed. Export your draft or reset to load the latest file."
-            )
-        temporary = None
-        try:
-            with NamedTemporaryFile(dir=path.parent, delete=False) as stream:
-                temporary = Path(stream.name)
-                stream.write(content)
-                stream.flush()
-                os.fsync(stream.fileno())
-            temporary.replace(path)
-        finally:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
-    return content
-
-
-def import_e02a(draft: dict, path: Path = E02A_PATH) -> Configuration:
-    """Read only settings the experiment uses. Leave the source and draft untouched."""
+def refresh_profile_inputs(draft: dict, source: dict) -> Configuration:
+    """Refresh common inputs while retaining analytical relationship rules."""
     try:
-        source = json.loads(
-            path.read_text(encoding="utf-8-sig"),
-            parse_float=Decimal,
-            object_pairs_hook=_unique_fields,
-        )["configuration"]
         pre = source["preprocessing"]
         stage = source["floor_plan_solver"]["initial"]
         aspect_rules = [
             rule["settings"] for rule in stage["hard_constraints"] if rule["key"] == "aspect_ratio"
         ]
         if len(aspect_rules) > 1:
-            raise ValueError("E02A has duplicate initial room aspect rules")
+            raise ValueError("Profile has duplicate initial room aspect rules")
         aspect = aspect_rules[0] if aspect_rules else None
         defaults = (
             {"min_ratio": aspect.get("min_ratio", 0.35), "max_ratio": aspect.get("max_ratio", 2.85)}
@@ -261,7 +224,7 @@ def import_e02a(draft: dict, path: Path = E02A_PATH) -> Configuration:
             }
         )
     except (OSError, KeyError, ValueError, TypeError, AttributeError, ArithmeticError) as exc:
-        raise ValueError(f"Cannot import E02A: {exc}") from exc
+        raise ValueError(f"Cannot refresh profile inputs: {exc}") from exc
 
 
 class CountModel(Document):

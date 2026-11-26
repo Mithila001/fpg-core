@@ -3,32 +3,42 @@ import time
 
 import pytest
 from sqlalchemy import func, select
-from test_lab import PLAN, Execution, RecordingAdapter, Solve, create_profile, payload, wait
+from test_lab import (
+    PLAN,
+    Execution,
+    RecordingAdapter,
+    Solve,
+    create_profile,
+    initialized_runtime,
+    payload,
+    wait,
+)
 
 from fpg_lab.database.models import P01BPreset, SystemConfiguration
 from fpg_lab.database.models.e02 import E02Run
 from fpg_lab.flows import e02a
 from fpg_lab.integrations.fpg_core.p01b_input import export_trial
-from fpg_lab.runtime import LabRuntime
+from fpg_lab.services.common import SystemConfigurationService
 
 
-def test_file_backed_run_and_isolation(tmp_path, monkeypatch):
+def test_prepared_maps_and_selected_profile_snapshot(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(e02a, "generate_floor_plan", lambda request, *, mode: (calls.append(request) or Execution(Solve(PLAN))))
     maps_path = tmp_path / "maps.json"
     monkeypatch.setattr("fpg_lab.integrations.fpg_core.e02a_input.HINT_MAPS_PATH", maps_path)
     monkeypatch.setattr(e02a, "load_hint_maps", lambda: json.loads(maps_path.read_text()))
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=RecordingAdapter) as runtime:
-        create_profile(runtime)
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=RecordingAdapter) as runtime:
+        profile_id = create_profile(runtime)
         source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
         document = export_trial(source["experiment"], source["trials"][0])
         maps_path.write_text(json.dumps({"one": document, "two": document, "three": document, "four": document}))
         with runtime.database.session_factory() as session:
             profiles = session.scalar(select(func.count()).select_from(SystemConfiguration))
             presets = session.scalar(select(func.count()).select_from(P01BPreset))
-        snapshot = e02a.prepare(runtime.codec, "one")
+        snapshot = e02a.prepare(runtime, "one", configuration_id=profile_id)
+        assert snapshot["configuration_id"] == profile_id
         assert list(snapshot["maps"]) == ["one"]
-        assert len(e02a.prepare(runtime.codec, None)["maps"]) == 4
+        assert len(e02a.prepare(runtime, None)["maps"]) == 4
         run_id = e02a.start(runtime, "one")
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline:
@@ -47,26 +57,31 @@ def test_file_backed_run_and_isolation(tmp_path, monkeypatch):
             assert presets == session.scalar(select(func.count()).select_from(P01BPreset))
         maps_path.write_text('{}')
         with pytest.raises(ValueError, match="exactly four"):
-            e02a.prepare(runtime.codec, None)
+            e02a.prepare(runtime, None)
 
 
 def test_invalid_config_and_independent_failures(tmp_path, monkeypatch):
-    config_path = tmp_path / "config.json"
-    config = json.loads(e02a.CONFIG_PATH.read_text(encoding="utf-8"))
-    config_path.write_text(json.dumps(config))
-    monkeypatch.setattr(e02a, "CONFIG_PATH", config_path)
     monkeypatch.setattr(e02a, "generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN)))
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=RecordingAdapter) as runtime:
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=RecordingAdapter) as runtime:
         create_profile(runtime)
         source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
         document = export_trial(source["experiment"], source["trials"][0])
         monkeypatch.setattr(e02a, "load_hint_maps", lambda: {str(i): document for i in range(4)})
-        config["configuration"]["floor_plan_solver"]["initial"]["unexpected_field"] = True
-        config_path.write_text(json.dumps(config))
-        with pytest.raises(Exception, match="unexpected_field"):
-            e02a.prepare(runtime.codec, "0")
-        del config["configuration"]["floor_plan_solver"]["initial"]["unexpected_field"]
-        config_path.write_text(json.dumps(config))
+        with runtime.database.session_factory() as session:
+            profile = SystemConfigurationService(session, runtime.codec).get_active()
+            original = profile.configuration_data
+            from copy import deepcopy
+
+            invalid = deepcopy(original)
+            invalid["floor_plan_solver"]["initial"]["unexpected_field"] = True
+            profile.configuration_data = invalid
+            profile.config_hash = runtime.codec.hash_payload(invalid)
+            session.commit()
+            with pytest.raises(Exception, match="unexpected_field"):
+                e02a.prepare(runtime, "0")
+            profile.configuration_data = original
+            profile.config_hash = runtime.codec.hash_payload(original)
+            session.commit()
         class FailFirst(RecordingAdapter):
             count = 0
             def refine_floor_plan(self, *args, **kwargs):
@@ -93,8 +108,8 @@ def test_exposure_rules_map_for_all_e02a_profiles():
 
     from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec, CoreConfigurationError
 
-    payload = json.loads(e02a.CONFIG_PATH.read_text(encoding="utf-8"))["configuration"]
-    config = CoreConfigCodec().validate_for_flow(payload, "p01b").config.floor_plan_solver
+    payload = CoreConfigCodec().default_configuration().payload
+    config = CoreConfigCodec().validate_for_flow(payload, "e02a").config.floor_plan_solver
     for stage in (config.initial, config.refinement_a, config.refinement_b):
         back = next(item for item in stage.hard_constraints if item.key == "exterior_wall_exposure")
         rule = back.settings["rules"][0]
@@ -126,9 +141,9 @@ def test_inward_recess_config_and_debug_overlay():
     from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec, CoreConfigurationError
     from fpg_lab.visualization.figures import add_inward_recesses, floor_plan
 
-    payload = json.loads(e02a.CONFIG_PATH.read_text(encoding="utf-8"))["configuration"]
+    payload = CoreConfigCodec().default_configuration().payload
     codec = CoreConfigCodec()
-    config = codec.validate_for_flow(payload, "p01b").config.floor_plan_scoring
+    config = codec.validate_for_flow(payload, "e02a").config.floor_plan_scoring
     settings = next(rule.settings for rule in config.evaluators if rule.key == INWARD_RECESS_KEY)
     assert settings == InwardRecessSettings()
     profile = next(rule for rule in payload["floor_plan_scoring"]["evaluators"]
@@ -163,9 +178,9 @@ def test_fully_shared_wall_rules_map_for_all_e02a_profiles():
     from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec, CoreConfigurationError
 
     key = "fully_shared_wall"
-    payload = json.loads(e02a.CONFIG_PATH.read_text(encoding="utf-8"))["configuration"]
+    payload = CoreConfigCodec().default_configuration().payload
     codec = CoreConfigCodec()
-    config = codec.validate_for_flow(payload, "p01b").config.floor_plan_solver
+    config = codec.validate_for_flow(payload, "e02a").config.floor_plan_solver
     expected = [
         ((RoomType.BEDROOM, RoomType.BATHROOM, RoomType.ATTACHED_BATHROOM,
           RoomType.DINING_ROOM, RoomType.KITCHEN, RoomType.HALLWAY), 2, 0, None),

@@ -146,6 +146,16 @@ class RecordingAdapter(FpgCoreAdapter):
         return Execution(Score(90.0))
 
 
+def initialized_runtime(**kwargs) -> LabRuntime:
+    from fpg_lab.database.maintenance import migrate, seed, status
+
+    runtime = LabRuntime(**kwargs)
+    if status(runtime.database)["compatibility"] == "empty":
+        assert migrate(runtime.database)["applied"]
+        seed(runtime.database)
+    return runtime
+
+
 def create_profile(runtime: LabRuntime, *, threshold: float = 79) -> int:
     document = runtime.codec.default_configuration().payload
     with runtime.database.session_factory() as session:
@@ -207,7 +217,7 @@ def test_flows_and_persistence(tmp_path: Path, flow: str, debug: bool) -> None:
         adapters.append(adapter)
         return adapter
 
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=factory
     ) as runtime:
         profile_id = create_profile(runtime)
@@ -258,7 +268,7 @@ def test_rejected_candidate(tmp_path: Path) -> None:
     class Adapter(RecordingAdapter):
         reject = True
 
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=Adapter
     ) as runtime:
         create_profile(runtime)
@@ -268,7 +278,7 @@ def test_rejected_candidate(tmp_path: Path) -> None:
 
 
 def test_submission_failure_and_invalid_input(tmp_path: Path) -> None:
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'lab.db'}") as runtime:
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'lab.db'}") as runtime:
         create_profile(runtime)
         with pytest.raises(ValidationError):
             runtime.start_experiment("p01a", {**payload("p01a"), "trial_count": 0})
@@ -294,7 +304,7 @@ def test_termination_and_queued_job(tmp_path: Path) -> None:
         entered = Event()
         release = Event()
 
-    with LabRuntime(
+    with initialized_runtime(
         database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=Adapter
     ) as runtime:
         create_profile(runtime)
@@ -316,7 +326,7 @@ def test_shutdown_terminates_active_and_queued_jobs(tmp_path: Path) -> None:
         entered = Event()
         release = Event()
 
-    runtime = LabRuntime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=Adapter)
+    runtime = initialized_runtime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=Adapter)
     runtime.start()
     create_profile(runtime)
     first = runtime.start_experiment("p01a", payload("p01a"))
@@ -350,7 +360,7 @@ def test_shutdown_terminates_active_and_queued_jobs(tmp_path: Path) -> None:
 def test_restart_recovery(tmp_path: Path) -> None:
     from fpg_lab.services.p01a import P01AService
 
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'lab.db'}") as runtime:
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'lab.db'}") as runtime:
         create_profile(runtime)
         with runtime.database.session_factory() as session:
             item = P01AService(session, runtime.codec).create_experiment(

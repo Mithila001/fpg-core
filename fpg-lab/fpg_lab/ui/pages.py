@@ -47,7 +47,7 @@ def register_pages(runtime: LabRuntime) -> None:
         )
         # Family grouping is display-only; experiment keys and route paths stay unchanged.
         categories = {flow[0].lower() for flow in EXPERIMENTS}
-        order = [code for code in ("e", "p") if code in categories]
+        order: list[str] = [code for code in ("e", "p") if code in categories]
         order.extend(sorted(categories - {"e", "p"}))
         for index, prefix in enumerate(order):
             group = [
@@ -119,6 +119,7 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
         if record is None:
             return
         state["id"] = record["id"]
+        state["expected_hash"] = record.get("config_hash")
         name.value, description.value = record["name"], record.get("description") or ""
         state["baseline"] = deepcopy(record["configuration_data" if is_config else "template_data"])
         set_editor(editor, state["baseline"])
@@ -134,10 +135,9 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
     async def new_record() -> None:
         try:
             if is_config:
-                configuration = await run.io_bound(runtime.codec.default_configuration)
-                if configuration is None:
-                    raise ValueError("Default configuration could not be loaded")
-                value = configuration.payload
+                value = await db_call(
+                    runtime, lambda session: service(session).resolve().configuration_data
+                )
             else:
                 value = json.loads(
                     (ROOT / "seed/floor_plan_template.example.json").read_text(encoding="utf-8")
@@ -193,7 +193,8 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
                 lambda session: row_document(
                     service(session).create(draft)
                     if record_id is None
-                    else service(session).update(record_id, draft)
+                    else service(session).save(record_id, draft, expected_hash=state["expected_hash"])
+                    if is_config else service(session).update(record_id, draft)
                 ),
             )
             state["id"] = saved["id"]
@@ -245,7 +246,7 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
                 label="Saved profiles" if is_config else "Saved templates",
                 on_change=load_record,
             ).classes("min-w-80")
-            action_button("New from default", on_click=new_record)
+            action_button("New from active" if is_config else "New from default", on_click=new_record)
             action_button("Duplicate draft", role="subtle", on_click=duplicate)
             action_button("Refresh list", role="subtle", on_click=refresh).props("flat")
         with ui.row().classes("w-full"):
@@ -270,7 +271,8 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
             action_button("Delete saved record", role="danger", on_click=delete).props("flat")
     await refresh()
     if state["records"]:
-        picker.value = next(iter(state["records"]))
+        picker.value = next((row["id"] for row in state["records"].values()
+                             if row.get("is_active")), None) if is_config else next(iter(state["records"]))
         load_record()
     else:
         await new_record()

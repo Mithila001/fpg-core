@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from copy import deepcopy
 from typing import Any
 
 from sqlalchemy import func, select, update
@@ -20,9 +21,12 @@ from fpg_lab.inputs import (
     SystemConfigurationUpdate,
 )
 from fpg_lab.integrations.fpg_core.config_codec import (
+    CoreConfigCodec,
     CoreConfigurationError,
     ValidatedCoreConfiguration,
 )
+
+PRIMARY_PROFILE = "research-default"
 
 NAMESPACE_SEEDS = (
     {"tag": "E01A", "name": "floor-traffic-experiment",
@@ -57,18 +61,11 @@ NAMESPACE_SEEDS = (
 )
 
 
-def seed_namespace_registry(session: Session) -> None:
-    for item in NAMESPACE_SEEDS:
-        existing = session.scalar(
-            select(NamespaceRegistry).where(NamespaceRegistry.tag == item["tag"])
-        )
-        if existing is None:
-            session.add(NamespaceRegistry(**item))
-        else:
-            existing.name = item["name"]
-            existing.description = item["description"]
-            existing.kind = item["kind"]
-    session.commit()
+def seed_namespace_registry(session: Session) -> list[str]:
+    existing = set(session.scalars(select(NamespaceRegistry.tag)))
+    missing = [item for item in NAMESPACE_SEEDS if item["tag"] not in existing]
+    session.add_all(NamespaceRegistry(**item) for item in missing)
+    return [item["tag"] for item in missing]
 
 
 class NamespaceService:
@@ -147,22 +144,18 @@ class FloorPlanTemplateService:
 
 
 class SystemConfigurationService:
-    def __init__(self, session: Session, codec: Any) -> None:
+    def __init__(self, session: Session, codec: Any = None) -> None:
         self.session = session
-        self.codec = codec
+        self.codec = codec if codec is not None else CoreConfigCodec()
 
     def create(self, payload: SystemConfigurationCreate) -> SystemConfiguration:
         self._ensure_name_available(payload.name)
-        validated = self._validate(payload.configuration_data.model_dump(mode="json"))
-        self._validate_schema_version(payload.schema_version, validated)
+        validated = self._validate_edit(payload)
         record = SystemConfiguration(
             name=payload.name,
             description=payload.description,
-            configuration_data=validated.payload,
             is_active=False,
-            schema_version=str(validated.payload["schema_version"]),
-            fpg_core_version=validated.fpg_core_version,
-            config_hash=validated.config_hash,
+            **self.configuration_values(validated),
         )
         self.session.add(record)
         self._commit("system_configuration_conflict")
@@ -170,161 +163,156 @@ class SystemConfigurationService:
 
     def list(self, *, limit: int, offset: int) -> tuple[list[SystemConfiguration], int]:
         total = self.session.scalar(select(func.count()).select_from(SystemConfiguration)) or 0
-        items = list(
-            self.session.scalars(
-                select(SystemConfiguration)
-                .order_by(
-                    SystemConfiguration.is_active.desc(),
-                    SystemConfiguration.created_at.desc(),
-                    SystemConfiguration.id.desc(),
-                )
-                .limit(limit)
-                .offset(offset)
-            )
+        rows = self.session.scalars(
+            select(SystemConfiguration)
+            .order_by(SystemConfiguration.is_active.desc(), SystemConfiguration.id)
+            .limit(limit)
+            .offset(offset)
         )
-        for item in items:
-            self._refresh_stored_configuration(item)
-        return items, int(total)
+        return list(rows), total
 
     def get(self, configuration_id: int) -> SystemConfiguration:
-        record = self.session.get(SystemConfiguration, configuration_id)
+        record = self.session.get(SystemConfiguration, configuration_id, populate_existing=True)
         if record is None:
             raise NotFoundError(
                 "system_configuration_not_found",
                 f"System configuration {configuration_id} was not found.",
             )
-        return self._refresh_stored_configuration(record)
+        return record
 
     def get_active(self) -> SystemConfiguration:
         record = self.session.scalar(
             select(SystemConfiguration).where(SystemConfiguration.is_active.is_(True))
+            .execution_options(populate_existing=True)
         )
         if record is None:
             raise NotFoundError(
                 "active_system_configuration_not_found",
-                "No active FPG Core system configuration exists.",
+                "No active profile. Activate a saved profile using profiles activate <id>.",
             )
-        return self._refresh_stored_configuration(record)
-
-    def update(
-        self,
-        configuration_id: int,
-        payload: SystemConfigurationUpdate,
-    ) -> SystemConfiguration:
-        record = self.get(configuration_id)
-        self._ensure_name_available(payload.name, exclude_id=configuration_id)
-        validated = self._validate(payload.configuration_data.model_dump(mode="json"))
-        self._validate_schema_version(payload.schema_version, validated)
-        record.name = payload.name
-        record.description = payload.description
-        record.configuration_data = validated.payload
-        record.schema_version = str(validated.payload["schema_version"])
-        record.fpg_core_version = validated.fpg_core_version
-        record.config_hash = validated.config_hash
-        self._commit("system_configuration_conflict")
         return record
 
-    def activate(self, configuration_id: int) -> SystemConfiguration:
-        record = self.get(configuration_id)
-        # Revalidate at activation time against the installed FPG Core version.
-        validated = self._validate(record.configuration_data)
-        record.configuration_data = validated.payload
-        record.fpg_core_version = validated.fpg_core_version
-        record.config_hash = validated.config_hash
+    def resolve(self, configuration_id: int | None = None) -> SystemConfiguration:
+        record = self.get_active() if configuration_id is None else self.get(configuration_id)
+        if (record.schema_version != "6"
+            or not isinstance(record.configuration_data, dict)
+            or record.config_hash != self.codec.hash_payload(record.configuration_data)):
+            raise InvalidInputError(
+                "invalid_profile_metadata",
+                f"Profile {record.id} has incompatible schema or hash metadata. Inspect it with lab_db.",
+            )
+        return record
 
-        self.session.execute(
-            update(SystemConfiguration)
-            .where(SystemConfiguration.id != record.id)
-            .values(is_active=False)
-        )
-        record.is_active = True
-        self._commit("system_configuration_activation_conflict")
+    def for_flow(self, configuration_id: int | None, flow: str):
+        record = self.resolve(configuration_id)
+        try:
+            return record, self.codec.validate_for_flow(record.configuration_data, flow)
+        except CoreConfigurationError as exc:
+            raise InvalidInputError(
+                "invalid_fpg_core_configuration", f"Profile {record.id}: {exc}"
+            ) from exc
+
+    def validate(self, configuration_id: int) -> ValidatedCoreConfiguration:
+        record = self.resolve(configuration_id)
+        return self.validate_payload(record.configuration_data)
+
+    def duplicate(self, configuration_id: int, name: str) -> SystemConfiguration:
+        record = self.resolve(configuration_id)
+        return self.create(SystemConfigurationCreate(
+            name=name, description=record.description, configuration_data=record.configuration_data,
+        ))
+
+    def save(
+        self, configuration_id: int, payload: SystemConfigurationUpdate, *, expected_hash: str
+    ) -> SystemConfiguration:
+        record = self.get(configuration_id)
+        if record.name == PRIMARY_PROFILE and payload.name != record.name:
+            raise ConflictError("primary_profile_name", f"Keep the primary profile name {PRIMARY_PROFILE!r}.")
+        self._ensure_name_available(payload.name, exclude_id=configuration_id)
+        return self._save_values(record, expected_hash, self._validate_edit(payload),
+                                 name=payload.name, description=payload.description)
+
+    def save_section(self, configuration_id: int, section: str, value: dict, *, expected_hash: str):
+        record = self.resolve(configuration_id)
+        self._check_hash(record, expected_hash)
+        document = deepcopy(record.configuration_data)
+        if section == "experiments.e03a":
+            document["experiments"]["e03a"] = value
+        elif section == "floor_plan_scoring":
+            document[section] = value
+        else:
+            raise ValueError(f"Unknown editable section {section!r}")
+        return self._save_values(record, expected_hash, self.validate_payload(document))
+
+    def _save_values(self, record, expected_hash, validated, **metadata):
+        self._check_hash(record, expected_hash)
+        try:
+            result = self.session.execute(
+                update(SystemConfiguration)
+                .where(SystemConfiguration.id == record.id,
+                       SystemConfiguration.config_hash == expected_hash)
+                .values(**metadata, **self.configuration_values(validated))
+            )
+            if result.rowcount != 1:
+                self._stale()
+            self._commit("system_configuration_conflict")
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise ConflictError("system_configuration_conflict", "Profile save was rejected.") from exc
+        return self.get(record.id)
+
+    def _check_hash(self, record, expected_hash):
+        if record.config_hash != expected_hash:
+            self._stale()
+
+    def _stale(self):
+        self.session.rollback()
+        raise ConflictError("profile_changed", "The saved profile changed. Reload it before saving.")
+
+    def activate(self, configuration_id: int) -> SystemConfiguration:
+        self.validate(configuration_id)
+        record = self.get(configuration_id)
+        if not record.is_active:
+            self.session.execute(
+                update(SystemConfiguration).where(SystemConfiguration.is_active.is_(True))
+                .values(is_active=False)
+            )
+            record.is_active = True
+            self._commit("system_configuration_activation_conflict")
         return record
 
     def delete(self, configuration_id: int) -> None:
         record = self.get(configuration_id)
-        if record.is_active:
+        if record.is_active or record.name == PRIMARY_PROFILE:
             raise ConflictError(
-                "active_system_configuration_cannot_be_deleted",
-                "Deactivate it by activating another profile before deleting it.",
+                "protected_profile", "The active profile and primary profile cannot be deleted."
             )
         self.session.delete(record)
-        try:
-            self.session.commit()
-        except IntegrityError as exc:
-            self.session.rollback()
-            raise ConflictError(
-                "system_configuration_in_use",
-                "This configuration is referenced by one or more experiments.",
-            ) from exc
+        self._commit("system_configuration_in_use")
 
-    def default_configuration(self) -> ValidatedCoreConfiguration:
-        try:
-            return self.codec.default_configuration()
-        except CoreConfigurationError as exc:
-            raise InvalidInputError(
-                "fpg_core_default_configuration_unavailable",
-                str(exc),
-            ) from exc
+    @staticmethod
+    def configuration_values(validated: ValidatedCoreConfiguration) -> dict[str, Any]:
+        return {
+            "configuration_data": validated.payload,
+            "schema_version": str(validated.payload["schema_version"]),
+            "fpg_core_version": validated.fpg_core_version,
+            "config_hash": validated.config_hash,
+        }
 
-    def configuration_schema(self) -> dict[str, Any]:
-        try:
-            document = self.codec.configuration_schema()
-        except CoreConfigurationError as exc:
-            raise InvalidInputError(
-                "fpg_core_configuration_schema_unavailable",
-                str(exc),
-            ) from exc
-        if not isinstance(document, dict):
-            raise InvalidInputError(
-                "fpg_core_configuration_schema_unavailable",
-                "FPG Core returned an invalid configuration schema document.",
-            )
-        return document
-
-    def _validate(self, payload: Mapping[str, Any]) -> ValidatedCoreConfiguration:
+    def validate_payload(self, payload: Mapping[str, Any]) -> ValidatedCoreConfiguration:
         try:
             return self.codec.validate_payload(payload)
         except CoreConfigurationError as exc:
-            raise InvalidInputError(
-                "invalid_fpg_core_configuration",
-                str(exc),
-            ) from exc
+            raise InvalidInputError("invalid_fpg_core_configuration", str(exc)) from exc
 
-    def _refresh_stored_configuration(
-        self,
-        record: SystemConfiguration,
-    ) -> SystemConfiguration:
-        validated = self._validate(record.configuration_data)
-        configuration_version = str(validated.payload["schema_version"])
-        if (
-            record.configuration_data != validated.payload
-            or record.schema_version != configuration_version
-            or record.fpg_core_version != validated.fpg_core_version
-            or record.config_hash != validated.config_hash
-        ):
-            record.configuration_data = validated.payload
-            record.schema_version = configuration_version
-            record.fpg_core_version = validated.fpg_core_version
-            record.config_hash = validated.config_hash
-            self._commit("system_configuration_upgrade_conflict")
-        return record
-
-    @staticmethod
-    def _validate_schema_version(
-        envelope_version: str,
-        validated: ValidatedCoreConfiguration,
-    ) -> None:
-        configuration_version = str(validated.payload["schema_version"])
-        if envelope_version != configuration_version:
+    def _validate_edit(self, payload: SystemConfigurationCreate) -> ValidatedCoreConfiguration:
+        validated = self.validate_payload(payload.configuration_data.model_dump(mode="json"))
+        if payload.schema_version != str(validated.payload["schema_version"]):
             raise InvalidInputError(
                 "system_configuration_schema_version_mismatch",
                 "The record schema_version must match configuration_data.schema_version.",
-                details={
-                    "record_schema_version": envelope_version,
-                    "configuration_schema_version": configuration_version,
-                },
             )
+        return validated
 
     def _ensure_name_available(self, name: str, *, exclude_id: int | None = None) -> None:
         statement = select(SystemConfiguration.id).where(SystemConfiguration.name == name)

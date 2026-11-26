@@ -10,20 +10,16 @@ from sqlalchemy import select
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import E02BRun, E02BSavedPlan
 from fpg_lab.flows.e02b import delete_layout, save_layout, start
-from fpg_lab.integrations.fpg_core.e02b_input import (
-    decode_config,
-    decode_plan,
-    default_config_document,
-    load_config,
-    save_config,
-)
+from fpg_lab.integrations.fpg_core.e02b_input import decode_plan
 from fpg_lab.runtime import row_document
+from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.ui.components import (
     action_button,
     db_call,
     editor_value,
     json_panel,
     notify_error,
+    profile_picker,
     shell,
 )
 from fpg_lab.ui.result_layout import ResultWorkspace
@@ -79,7 +75,6 @@ async def main_page(runtime):
             with ui.row().classes("items-center"):
                 launch = action_button("Run evaluation", role="main")
                 launch.disable()
-                ui.label("Uses the saved scoring configuration").classes("text-sm lab-muted")
             ui.label("Run history").classes("text-lg font-semibold")
             history = await db_call(
                 runtime,
@@ -92,17 +87,17 @@ async def main_page(runtime):
             for run_id, status in history:
                 ui.link(f"Run #{run_id} · {plots.label(status)}", f"{PATH}/runs/{run_id}")
         with ui.column().classes("w-full min-w-0 gap-3"):
+            profile = await profile_picker(runtime)
             ui.label("Scoring configuration").classes("text-lg font-semibold")
             config_status = ui.label().classes("text-sm whitespace-pre-wrap")
             with ui.row().classes("gap-2"):
                 apply_config = action_button("Save configuration", role="main").props("dense")
                 check_config = action_button("Validate").props("dense outline")
                 discard_config = action_button("Discard changes", role="danger").props("dense flat")
-                defaults = action_button("Restore Core defaults", role="danger").props("dense flat")
             config_area = ui.column().classes("w-full gap-2")
 
     def show_document(document, layout_id, name_text):
-        plan_state.update(document=document, layout_id=layout_id)
+        plan_state.update(document=document, layout_id=layout_id, configuration_id=profile.value)
         plan = document["floor_plan"] if document else None
         units = document["project_units_per_meter"] if document else None
         preview.figure = figures.floor_plan(
@@ -201,7 +196,7 @@ async def main_page(runtime):
         try:
             layout_id = plan_state["layout_id"]
             document = plan_state["document"] if layout_id is None else None
-            run_id = await run.io_bound(start, runtime, document=document, layout_id=layout_id)
+            run_id = await run.io_bound(start, runtime, document=document, layout_id=layout_id, configuration_id=profile.value)
             ui.navigate.to(f"{PATH}/runs/{run_id}")
         except Exception as exc:
             launch.set_enabled(plan_state["document"] is not None)
@@ -214,11 +209,13 @@ async def main_page(runtime):
     launch.on_click(launch_run)
     await refresh_saved()
     await _config_editor(
-        config_area, config_status, apply_config, check_config, discard_config, defaults
+        runtime, profile, config_area, config_status, apply_config, check_config, discard_config
     )
 
 
-async def _config_editor(area, feedback, save, validate, discard, restore):
+async def _config_editor(runtime, profile, area, feedback, save, validate, discard):
+    loaded = None
+    load_number = 0
     groups: list[tuple[dict[str, Any], ui.checkbox, ui.number]] = []
     rules: list[
         tuple[dict[str, Any], ui.checkbox, ui.number, ui.number | None, ui.json_editor]
@@ -294,37 +291,65 @@ async def _config_editor(area, feedback, save, validate, discard, restore):
         }
 
     async def load_saved():
+        nonlocal loaded, load_number
+        load_number += 1
+        current = load_number
+        profile_id = profile.value
+        loaded = None
+        area.clear()
+        save.disable()
         try:
-            show(await run.io_bound(load_config))
-            feedback.set_text("Saved configuration loaded.")
+            def read(session):
+                record, validated = SystemConfigurationService(session, runtime.codec).for_flow(
+                    profile_id, "e02b"
+                )
+                return record.id, record.config_hash, validated.payload["floor_plan_scoring"]
+
+            profile_id, expected, document = await db_call(runtime, read)
+            if current == load_number:
+                loaded = profile_id, expected
+                show(document)
+                save.enable()
+                feedback.set_text("Saved scoring settings loaded.")
         except Exception as exc:
-            show(default_config_document())
-            feedback.set_text(
-                f"Saved configuration unavailable. Core defaults loaded as a draft. {exc}"
-            )
+            if current == load_number:
+                feedback.set_text(str(exc))
 
     async def check():
         try:
-            await run.io_bound(decode_config, await draft())
+            await run.io_bound(runtime.codec.decode_floor_scoring, await draft())
             feedback.set_text("Configuration is valid.")
         except Exception as exc:
             feedback.set_text(str(exc))
 
     async def persist():
+        nonlocal loaded
+        if loaded is None:
+            return
+        saved_profile = loaded
+        profile_id, expected = saved_profile
+        save.disable()
         try:
-            await run.io_bound(save_config, await draft())
-            feedback.set_text("Configuration saved.")
+            document = await draft()
+            new_hash = await db_call(runtime, lambda session: (
+                SystemConfigurationService(session, runtime.codec).save_section(
+                    profile_id, "floor_plan_scoring", document, expected_hash=expected
+                ).config_hash
+            ))
+            if loaded == saved_profile:
+                loaded = profile_id, new_hash
+                feedback.set_text("Scoring settings saved.")
         except Exception as exc:
-            feedback.set_text(str(exc))
-
-    def defaults():
-        show(default_config_document())
-        feedback.set_text("Core defaults loaded as a draft. Save configuration to apply them.")
+            if loaded == saved_profile:
+                feedback.set_text(str(exc))
+        finally:
+            if loaded and loaded[0] == profile_id:
+                save.enable()
 
     save.on_click(persist)
     validate.on_click(check)
-    restore.on_click(defaults)
     discard.on_click(load_saved)
+    profile.on_value_change(load_saved)
     await load_saved()
 
 

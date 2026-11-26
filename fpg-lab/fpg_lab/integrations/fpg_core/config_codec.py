@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
@@ -11,7 +11,10 @@ from typing import Any
 from pydantic import ValidationError
 
 from fpg_lab.core.settings import ROOT
-from fpg_lab.integrations.fpg_core.config_models import SystemConfigurationDocument
+from fpg_lab.integrations.fpg_core.config_models import (
+    FloorPlanScoringDocument,
+    SystemConfigurationDocument,
+)
 
 
 class CoreConfigurationError(RuntimeError):
@@ -40,15 +43,19 @@ class ValidatedCoreConfiguration:
     fpg_core_version: str
 
 
-FLOW_REQUIRED_SECTIONS: dict[str, tuple[str, ...]] = {
+FLOW_REQUIRED_SECTIONS = {
     "p01a": ("preprocessing", "candidate_search", "candidate_circulation", "candidate_scoring"),
-    "p01b": (
-        "floor_plan_solver",
-        "post_processing",
-        "floor_plan_scoring",
-    ),
+    "p01b": ("floor_plan_solver", "post_processing", "floor_plan_scoring"),
     "p01c": ("floor_plan_solver", "post_processing", "openings", "floor_plan_scoring"),
+    "p01_preview": ("preprocessing",),
+    "e02a": ("floor_plan_solver", "post_processing", "floor_plan_scoring"),
+    "e02b": ("floor_plan_scoring",),
+    "e03a": (),
+    "e03a_refresh": ("preprocessing", "floor_plan_solver"),
 }
+COMPLETE_SECTIONS = ("buildable_space", *dict.fromkeys(
+    section for sections in FLOW_REQUIRED_SECTIONS.values() for section in sections
+))
 
 
 class CoreConfigCodec:
@@ -70,12 +77,61 @@ class CoreConfigCodec:
             return "not-installed"
 
     def validate_payload(self, payload: Mapping[str, Any]) -> ValidatedCoreConfiguration:
+        return self._validate(payload, COMPLETE_SECTIONS, full=True)
+
+    def validate_for_flow(
+        self, payload: Mapping[str, Any], flow_type: str
+    ) -> ValidatedCoreConfiguration:
+        if flow_type not in FLOW_REQUIRED_SECTIONS:
+            raise CoreConfigurationError(f"Unknown experiment flow {flow_type!r}")
+        return self._validate(payload, FLOW_REQUIRED_SECTIONS[flow_type], flow=flow_type)
+
+    def _validate(self, payload, required, *, full=False, flow=None):
         if not isinstance(payload, Mapping):
             raise CoreConfigurationError("configuration_data must be a JSON object")
+        if type(payload.get("schema_version")) is not int or payload["schema_version"] != 6:
+            raise CoreConfigurationError("schema_version: expected Lab configuration version 6")
+        missing = [name for name in required if payload.get(name) is None]
+        if missing:
+            raise CoreConfigurationError(f"Missing configuration sections: {', '.join(missing)}")
         try:
-            document = SystemConfigurationDocument.model_validate(payload)
+            document_data = payload
+            if not full:
+                document_data = {key: payload[key] for key in (
+                    "schema_version", "project_units_per_meter", *required
+                )}
+                experiment_key = {
+                    "p01b": "p01b_refinement", "p01c": "p01b_refinement", "e03a": "e03a"
+                }.get(flow)
+                if experiment_key:
+                    settings = payload.get("experiments") or {}
+                    document_data["experiments"] = {experiment_key: settings.get(experiment_key)}
+            document = SystemConfigurationDocument.model_validate(document_data)
+            if (full or flow == "e03a") and document.experiments.e03a is None:
+                raise CoreConfigurationError("experiments.e03a: configuration is required")
             resolved = self._build_resolved_config(document)
-            self._validate_resolved_config(resolved)
+            if full:
+                self._validate_resolved_config(resolved)
+            override = document.experiments.p01b_refinement
+            if override is not None:
+                solver = document.floor_plan_solver
+                assert solver is not None
+                effective = self._build_solver(solver.model_copy(update={"refinement_a": override}))
+                if full:
+                    self._validate_resolved_config(replace(resolved, floor_plan_solver=effective))
+                elif flow in ("p01b", "p01c"):
+                    resolved = replace(resolved, floor_plan_solver=effective)
+            if not full and resolved.candidate_scoring is not None:
+                from fpg_core.candidate_scoring import (
+                    CandidateScoreManager,
+                    create_default_registry,
+                )
+
+                CandidateScoreManager(create_default_registry(), resolved.candidate_scoring)
+            if not full and resolved.floor_plan_scoring is not None:
+                from fpg_core.floor_plan_scoring import validate_scoring_config
+
+                validate_scoring_config(resolved.floor_plan_scoring)
         except ValidationError as exc:
             raise CoreConfigurationError(
                 "The system-configuration JSON is invalid: " + self._format_validation_error(exc)
@@ -83,10 +139,10 @@ class CoreConfigCodec:
         except CoreConfigurationError:
             raise
         except Exception as exc:
-            raise CoreConfigurationError(
-                f"fpg-core rejected the mapped configuration: {exc}"
-            ) from exc
+            raise CoreConfigurationError(f"fpg-core rejected the mapped configuration: {exc}") from exc
         normalized = document.model_dump(mode="json")
+        if not full:
+            normalized = {key: normalized[key] for key in document_data}
         return ValidatedCoreConfiguration(
             config=resolved,
             payload=normalized,
@@ -94,37 +150,13 @@ class CoreConfigCodec:
             fpg_core_version=self.fpg_core_version,
         )
 
-    def validate_for_flow(
-        self, payload: Mapping[str, Any], flow_type: str
-    ) -> ValidatedCoreConfiguration:
-        validated = self.validate_payload(payload)
-        required = FLOW_REQUIRED_SECTIONS.get(flow_type)
-        if required is None:
-            raise CoreConfigurationError(f"Unknown experiment flow {flow_type!r}")
-        missing = [name for name in required if getattr(validated.config, name) is None]
-        if missing:
-            raise CoreConfigurationError(
-                f"{flow_type.upper()} requires configuration section(s): {', '.join(missing)}"
-            )
-        if (
-            flow_type in ("p01b", "p01c")
-            and validated.config.document.experiments.p01b_refinement is not None
-        ):
-            solver = validated.config.document.floor_plan_solver
-            assert solver is not None
-            try:
-                self._build_solver(
-                    solver.model_copy(
-                        update={
-                            "refinement_a": validated.config.document.experiments.p01b_refinement
-                        }
-                    )
-                )
-            except Exception as exc:
-                raise CoreConfigurationError(
-                    f"Invalid P01B refinement configuration: {exc}"
-                ) from exc
-        return validated
+    def decode_floor_scoring(self, payload: Mapping[str, Any]) -> Any:
+        from fpg_core.floor_plan_scoring import validate_scoring_config
+
+        config = self.build_floor_scoring(FloorPlanScoringDocument.model_validate(payload))
+        assert config is not None
+        validate_scoring_config(config)
+        return config
 
     def decode(self, payload: Mapping[str, Any]) -> ResolvedSystemConfiguration:
         return self.validate_payload(payload).config
@@ -181,24 +213,26 @@ class CoreConfigCodec:
         )
 
         source = document.buildable_space
-        setback = source.active_profile
-        buildable = BuildableSpaceConfig(
-            active_profile=SetbackProfile(
-                name=setback.name,
-                status=setback.status,
-                description=setback.description,
-                calculation_mode=SetbackCalculationMode(setback.calculation_mode),
-                base_setbacks={LandSide(k): v for k, v in setback.base_setbacks.items()},
-                road_adjustments={
-                    RoadType(k): {LandSide(side): value for side, value in values.items()}
-                    for k, values in setback.road_adjustments.items()
-                },
-            ),
-            usable_land_constraints=UsableLandConstraints(
-                **source.usable_land_constraints.model_dump()
-            ),
-            validation_limits=ValidationLimits(**source.validation_limits.model_dump()),
-        )
+        buildable = None
+        if source is not None:
+            setback = source.active_profile
+            buildable = BuildableSpaceConfig(
+                active_profile=SetbackProfile(
+                    name=setback.name,
+                    status=setback.status,
+                    description=setback.description,
+                    calculation_mode=SetbackCalculationMode(setback.calculation_mode),
+                    base_setbacks={LandSide(k): v for k, v in setback.base_setbacks.items()},
+                    road_adjustments={
+                        RoadType(k): {LandSide(side): value for side, value in values.items()}
+                        for k, values in setback.road_adjustments.items()
+                    },
+                ),
+                usable_land_constraints=UsableLandConstraints(
+                    **source.usable_land_constraints.model_dump()
+                ),
+                validation_limits=ValidationLimits(**source.validation_limits.model_dump()),
+            )
         return ResolvedSystemConfiguration(
             document=document,
             buildable_space=buildable,
@@ -635,36 +669,27 @@ class CoreConfigCodec:
 
     @staticmethod
     def _validate_resolved_config(config: ResolvedSystemConfiguration) -> None:
-        from fpg_core import CandidateSearchConfig, FpgCoreConfig, validate_fpg_core_config
-        from fpg_core.candidate_scoring import create_default_config as candidate_default
-        from fpg_core.floor_plan_openings import DEFAULT_OPENING_CONFIG
-        from fpg_core.floor_plan_post_processing import INITIAL_GENERATION_PROFILE
-        from fpg_core.floor_plan_scoring import create_default_config as floor_scoring_default
-        from fpg_core.floor_plan_solver import build_default_profiles
+        from fpg_core import FpgCoreConfig, validate_fpg_core_config
 
-        from fpg_lab.integrations.fpg_core.config_models import PreprocessingDocument
-
-        preprocessing = config.preprocessing
-        if preprocessing is None:
-            source = json.loads(
-                (ROOT / "seed/system_configuration.default.json").read_text(encoding="utf-8")
-            )["configuration_data"]["preprocessing"]
-            preprocessing = CoreConfigCodec._build_preprocessing(
-                PreprocessingDocument.model_validate(source)
-            )
-        assert preprocessing is not None
+        assert config.preprocessing is not None
+        assert config.candidate_search is not None
+        assert config.candidate_scoring is not None
+        assert config.floor_plan_solver is not None
+        assert config.post_processing is not None
+        assert config.openings is not None
+        assert config.floor_plan_scoring is not None
         validate_fpg_core_config(
             FpgCoreConfig(
                 schema_version=2,
                 project_units_per_meter=config.document.project_units_per_meter,
                 buildable_space=config.buildable_space,
-                preprocessing=preprocessing,
-                candidate_search=config.candidate_search or CandidateSearchConfig(trial_count=1),
-                candidate_scoring=config.candidate_scoring or candidate_default(),
-                floor_plan_solver=config.floor_plan_solver or build_default_profiles(),
-                post_processing=config.post_processing or INITIAL_GENERATION_PROFILE,
-                openings=config.openings or DEFAULT_OPENING_CONFIG,
-                floor_plan_scoring=config.floor_plan_scoring or floor_scoring_default(),
+                preprocessing=config.preprocessing,
+                candidate_search=config.candidate_search,
+                candidate_scoring=config.candidate_scoring,
+                floor_plan_solver=config.floor_plan_solver,
+                post_processing=config.post_processing,
+                openings=config.openings,
+                floor_plan_scoring=config.floor_plan_scoring,
             )
         )
 

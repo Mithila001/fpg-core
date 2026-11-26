@@ -3,14 +3,15 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
+from test_lab import initialized_runtime
+
 from fpg_lab.core.settings import ROOT
+from fpg_lab.database.maintenance import seed
 from fpg_lab.inputs import FloorPlanTemplateCreate
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter
 from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
-from fpg_lab.runtime import LabRuntime
 from fpg_lab.services.common import FloorPlanTemplateService
 from scripts.run_experiment import sample_hints, sample_request
-from scripts.seed_db import seed_template
 
 
 def test_research_templates_preprocess_and_seed_idempotently(tmp_path: Path) -> None:
@@ -26,10 +27,10 @@ def test_research_templates_preprocess_and_seed_idempotently(tmp_path: Path) -> 
     adapter = FpgCoreAdapter(codec.decode_for_flow(codec.default_configuration().payload, "p01a"))
     paths = sorted((ROOT / "seed").glob("floor_plan_template.*.json"))
     assert len(paths) == len(expected)
-    with LabRuntime(database_url=f"sqlite:///{tmp_path / 'templates.db'}") as runtime:
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'templates.db'}") as runtime:
         with runtime.database.session_factory() as session:
             service = FloorPlanTemplateService(session)
-            ids = []
+            ids = {row.name: row.id for row in service.list(limit=10, offset=0)[0]}
             for path in paths:
                 template = FloorPlanTemplateCreate.model_validate_json(path.read_text(encoding="utf-8"))
                 name, limits, counts = expected[path.stem.split(".")[1]]
@@ -49,8 +50,8 @@ def test_research_templates_preprocess_and_seed_idempotently(tmp_path: Path) -> 
                 assert all(rule.source_room_type in room_types and rule.destination_room_type in room_types for rule in rules)
                 circulation = adapter.run_circulation(candidate, debug=True)
                 assert circulation.details.passes[-1].paths
-                ids.append(seed_template(service, session, path))
-            assert [seed_template(service, session, path) for path in paths] == ids
+            assert not seed(runtime.database)["templates"]
+            assert {row.name: row.id for row in service.list(limit=10, offset=0)[0]} == ids
             assert service.list(limit=10, offset=0)[1] == len(expected)
 
 

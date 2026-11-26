@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from contextlib import ExitStack
 from copy import deepcopy
 from threading import Event, Lock
 from typing import Any
@@ -12,6 +13,7 @@ from sqlalchemy import inspect, select, update
 from fpg_lab.core.exceptions import AppError, InvalidInputError
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import get_settings
+from fpg_lab.database.maintenance import execution_lock, require_current
 from fpg_lab.database.models import E02BRun, E02Run, P01Experiment
 from fpg_lab.database.session import Database
 from fpg_lab.flows.p01 import (
@@ -23,7 +25,7 @@ from fpg_lab.flows.p01 import (
 from fpg_lab.inputs import FloorPlanRequest, ManualHints, P01AInput, P01BInput, P01CInput
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter
 from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
-from fpg_lab.services.common import seed_namespace_registry
+from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01a import P01AService
 from fpg_lab.services.p01b import P01BService
 from fpg_lab.services.p01c import P01CService
@@ -58,6 +60,7 @@ class LabRuntime:
         self.jobs = P01JobManager(
             self.runner, max_workers=max_workers or settings.max_background_workers
         )
+        self._execution = ExitStack()
         self._started = False
         self._closed = False
         self._quick_cancels: set[Event] = set()
@@ -68,7 +71,7 @@ class LabRuntime:
     ):
         from math import isfinite
 
-        from fpg_lab.database.models import FloorPlanTemplate, SystemConfiguration
+        from fpg_lab.database.models import FloorPlanTemplate
         from fpg_lab.flows.quick_hint import search_hint_map
 
         if not self._started or self._closed:
@@ -79,16 +82,23 @@ class LabRuntime:
             raise ValueError("Required score must be between 0 and 100")
         with self.database.session_factory() as session:
             template = session.get(FloorPlanTemplate, template_id)
-            config = session.get(SystemConfiguration, configuration_id)
-            if template is None or config is None:
-                raise ValueError("Select an existing template and system configuration")
+            if template is None:
+                raise ValueError("Select an existing template")
+            config, validated = SystemConfigurationService(session, self.codec).for_flow(
+                configuration_id, "p01a"
+            )
             request = deepcopy(template.template_data)
-            configuration = deepcopy(config.configuration_data)
-        adapter = self.adapter_factory(self.codec.decode_for_flow(configuration, "p01a"))
+            configuration = validated.payload
+            profile_id, profile_hash = config.id, config.config_hash
+        adapter = self.adapter_factory(validated.config)
         state = {
             "status": "running",
             "completed": 0,
             "count": count,
+            "configuration_id": profile_id,
+            "configuration_hash": profile_hash,
+            "configuration": configuration,
+            "threshold": threshold,
             "best_score": None,
             "result": None,
         }
@@ -116,19 +126,17 @@ class LabRuntime:
             raise RuntimeError("The Lab runtime is closed")
         if self._started:
             return
-        if get_settings().auto_create_schema:
-            self.database.create_schema()
-        with self.database.session_factory() as session:
-            from fpg_lab.integrations.fpg_core.profile_migration import migrate_profiles
-
-            migrate_profiles(session, self.codec)
-            seed_namespace_registry(session)
-            recover_interrupted_experiments(session)
-            session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="interrupted"))
-            session.execute(update(E02BRun).where(E02BRun.status.in_(ACTIVE_STATUSES)).values(
-                status="interrupted", error={"stage": "startup", "message": "Previous Lab process stopped before completion."},
-            ))
-            session.commit()
+        with ExitStack() as execution:
+            execution.enter_context(execution_lock(self.database))
+            require_current(self.database)
+            with self.database.session_factory() as session:
+                recover_interrupted_experiments(session)
+                session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="interrupted"))
+                session.execute(update(E02BRun).where(E02BRun.status.in_(ACTIVE_STATUSES)).values(
+                    status="interrupted", error={"stage": "startup", "message": "Previous Lab process stopped before completion."},
+                ))
+                session.commit()
+            self._execution = execution.pop_all()
         self._started = True
 
     def start_experiment(self, flow_type: str, payload: Mapping[str, Any]) -> int:
@@ -167,10 +175,10 @@ class LabRuntime:
     ) -> dict[str, Any]:
         validated = FloorPlanRequest.model_validate(request)
         with self.database.session_factory() as session:
-            configuration = P01BService(session, self.codec)._resolve_configuration(
-                configuration_id
+            configuration, validated_config = SystemConfigurationService(session, self.codec).for_flow(
+                configuration_id, "p01_preview"
             )
-            result = self._manual_preview(validated, configuration.configuration_data, hints)
+            result = self._manual_preview(validated, validated_config.config, hints)
             return {
                 "configuration_id": configuration.id,
                 "configuration_hash": configuration.config_hash,
@@ -180,7 +188,7 @@ class LabRuntime:
     def _manual_preview(
         self,
         request: FloorPlanRequest,
-        configuration: Mapping[str, Any],
+        configuration: Any,
         hints: Mapping[str, Any] | None,
     ) -> dict[str, Any]:
         ids = [room.id for room in request.rooms if room.room_type.value != "hallway"]
@@ -188,7 +196,7 @@ class LabRuntime:
             raise InvalidInputError(
                 "explicit_room_ids_required", "P01B rooms require unique explicit IDs."
             )
-        adapter = self.adapter_factory(self.codec.decode_for_flow(deepcopy(configuration), "p01b"))
+        adapter = self.adapter_factory(configuration)
         execution = adapter.preprocess(request.model_dump(mode="json"), debug=True)
         validated_hints = (
             ManualHints.model_validate(hints).model_dump(mode="json") if hints is not None else None
@@ -227,6 +235,7 @@ class LabRuntime:
                 self.jobs.shutdown(wait=True)
             finally:
                 self.database.dispose()
+                self._execution.close()
 
     def __enter__(self) -> LabRuntime:
         try:

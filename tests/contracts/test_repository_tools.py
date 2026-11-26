@@ -16,6 +16,7 @@ def test_documentation_roots_skills_and_local_artifact_exclusion(
         "AGENTS.md",
         "fpg-lab/AGENTS.md",
         "fpg-lab/docs/guide.md",
+        "fpg-lab/GLOSSARY.md",
         ".agents/skills/example/SKILL.md",
     ):
         path = tmp_path / name
@@ -25,6 +26,9 @@ def test_documentation_roots_skills_and_local_artifact_exclusion(
     local.parent.mkdir(parents=True)
     local.write_text("[ignored](missing.md)", encoding="utf-8")
     assert check_docs.check() == []
+    (tmp_path / "GLOSSARY.md").write_text("# Misplaced\n", encoding="utf-8")
+    assert check_docs.check() == ["GLOSSARY.md: non-README Markdown belongs under docs/"]
+    (tmp_path / "GLOSSARY.md").unlink()
     (tmp_path / "fpg-lab/docs/guide.md").write_text(
         "[broken](missing.md)", encoding="utf-8"
     )

@@ -7,14 +7,32 @@ from fpg_core.floor_plan_solver import (
     FloorPlanSolveRequest,
     RoomPlacementHint,
     SeedSource,
-    build_default_profiles,
     generate_floor_plan,
 )
 
-from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import P01BIteration
 from fpg_lab.flows.p01 import PipelineTerminated, error_payload, result_document, utc_now
 from fpg_lab.integrations.fpg_core.p01b_input import validate_export
+
+
+def effective_profiles(config, settings):
+    initial = config.floor_plan_solver.initial
+    refinement = config.floor_plan_solver.refinement_a
+    enabled = not settings["disable_hints"]
+    initial = replace(
+        initial,
+        seed=replace(
+            initial.seed,
+            source=SeedSource.CANDIDATE_HINTS if enabled else SeedSource.NONE,
+            require_source=enabled,
+            apply_hints=enabled,
+        ),
+        solver=replace(initial.solver, max_time_seconds=settings["initial_time_limit"]),
+    )
+    refinement = replace(refinement, seed=replace(
+        refinement.seed, source=SeedSource.EXISTING_FLOOR_PLAN, require_source=True
+    ))
+    return initial, refinement
 
 
 def run_p01b(runner, session, experiment):
@@ -25,43 +43,13 @@ def run_p01b(runner, session, experiment):
         adapter = runner.adapter_factory(
             runner.config_codec.decode_for_flow(experiment.system_configuration_snapshot, experiment.flow_type)
         )
-        refinement_document = adapter.core_config.document.experiments.p01b_refinement
-        if refinement_document is None:
-            refinement_config = build_default_profiles().refinement_a
-        else:
-            solver_document = adapter.core_config.document.floor_plan_solver
-            refinement_config = runner.config_codec._build_solver(
-                solver_document.model_copy(update={"refinement_a": refinement_document})
-            ).refinement_a
-        refinement_config = replace(
-            refinement_config,
-            seed=replace(
-                refinement_config.seed, source=SeedSource.EXISTING_FLOOR_PLAN, require_source=True
-            ),
-        )
+        initial_config, refinement_config = effective_profiles(adapter.core_config, settings)
         adapter.core_config = replace(
             adapter.core_config,
             floor_plan_solver=replace(
                 adapter.core_config.floor_plan_solver, refinement_a=refinement_config
             ),
         )
-        initial_config = adapter.core_config.floor_plan_solver.initial
-        seed = replace(
-            initial_config.seed,
-            source=SeedSource.NONE if settings["disable_hints"] else SeedSource.CANDIDATE_HINTS,
-            require_source=not settings["disable_hints"],
-            apply_hints=not settings["disable_hints"],
-        )
-        initial_config = replace(
-            initial_config,
-            seed=seed,
-            solver=replace(initial_config.solver, max_time_seconds=settings["initial_time_limit"]),
-        )
-        settings["effective_solver"] = to_jsonable(
-            {"initial": initial_config, "refinement": refinement_config}
-        )
-        experiment.hint_points = settings
-        session.commit()
         hints = (
             ()
             if settings["disable_hints"]
