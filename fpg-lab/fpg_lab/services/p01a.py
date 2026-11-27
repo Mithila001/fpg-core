@@ -28,11 +28,10 @@ class P01AService(P01Service):
     def list_candidate_trials(
         self, *, experiment_id: int | None, limit: int, offset: int
     ) -> tuple[list[P01CandidateTrial], int]:
-        rows, total = super().list_trials(experiment_id=experiment_id, limit=limit, offset=offset)
-        return [row[0] for row in rows], total
+        return super().list_trials(experiment_id=experiment_id, limit=limit, offset=offset)
 
     def get_candidate_trial(self, trial_id: int) -> P01CandidateTrial:
-        return super().get_trial(trial_id)[0]
+        return super().get_trial(trial_id)
 
     def replay_trials(self, experiment_id: int, *, after: int = 0) -> list[P01CandidateTrial]:
         """Read one bounded chronological page, checking the experiment's flow first."""

@@ -1,11 +1,11 @@
 """Solver inspection using prepared hint maps and a saved profile."""
 from dataclasses import replace
+from math import isfinite
 from time import perf_counter
 from typing import Any
 
 from fpg_core.floor_plan_solver import (
     FloorPlanSolveRequest,
-    RoomPlacementHint,
     SeedSource,
     generate_floor_plan,
 )
@@ -14,24 +14,31 @@ from fpg_lab.core.results import error_payload, result_document
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models.e02 import E02Run
 from fpg_lab.integrations.fpg_core.e02a_input import load_hint_maps, select_hint_maps
-from fpg_lab.integrations.fpg_core.hint_map import validate_export
+from fpg_lab.integrations.fpg_core.hint_map import candidate_hints, validate_export
+from fpg_lab.integrations.fpg_core.solver import refinement_profile
 from fpg_lab.services.common import SystemConfigurationService
 
 
-def effective_profiles(config):
-    initial, refine = config.floor_plan_solver.initial, config.floor_plan_solver.refinement_a
+def effective_profiles(config, initial_time_limit=None, random_seed=None):
+    initial = config.floor_plan_solver.initial
     initial = replace(initial, seed=replace(
         initial.seed, source=SeedSource.CANDIDATE_HINTS, require_source=True, apply_hints=True
     ))
-    refine = replace(refine, seed=replace(
-        refine.seed, source=SeedSource.EXISTING_FLOOR_PLAN, require_source=True
+    initial = replace(initial, solver=replace(
+        initial.solver,
+        max_time_seconds=initial_time_limit if initial_time_limit is not None else initial.solver.max_time_seconds,
+        random_seed=random_seed if random_seed is not None else initial.solver.random_seed,
     ))
-    return initial, refine
+    return initial, refinement_profile(config)
 
 
-def prepare(runtime, selection, refinement_rounds=0, configuration_id=None):
+def prepare(runtime, selection, refinement_rounds=0, configuration_id=None, initial_time_limit=None, random_seed=None):
     if isinstance(refinement_rounds, bool) or not isinstance(refinement_rounds, int) or not 0 <= refinement_rounds <= 5:
         raise ValueError("Refinement stage count must be an integer from 0 to 5")
+    if initial_time_limit is not None and (isinstance(initial_time_limit, bool) or not isinstance(initial_time_limit, (int, float)) or not isfinite(initial_time_limit) or initial_time_limit <= 0):
+        raise ValueError("Initial time limit must be positive and finite")
+    if random_seed is not None and (type(random_seed) is not int or random_seed < 0):
+        raise ValueError("Random seed must be a nonnegative integer")
     with runtime.database.session_factory() as session:
         record, config = SystemConfigurationService(session, runtime.codec).for_flow(configuration_id, "e02a")
         profile_id, profile_hash = record.id, record.config_hash
@@ -41,15 +48,16 @@ def prepare(runtime, selection, refinement_rounds=0, configuration_id=None):
             raise ValueError(f"Hint map {name!r} uses different project units")
     return {"configuration_id": profile_id, "configuration": config.payload, "refinement_rounds": refinement_rounds,
             "configuration_hash": profile_hash, "core_version": config.fpg_core_version,
+            "initial_time_limit": initial_time_limit, "random_seed": random_seed,
             "effective_solver": to_jsonable(dict(zip(
-                ("initial", "refinement"), effective_profiles(config.config), strict=True
+                ("initial", "refinement"), effective_profiles(config.config, initial_time_limit, random_seed), strict=True
             ))), "maps": maps}
 
 
-def start(runtime, selection, refinement_rounds=0, configuration_id=None):
+def start(runtime, selection, refinement_rounds=0, configuration_id=None, initial_time_limit=None, random_seed=None):
     if not runtime._started or runtime._closed:
         raise RuntimeError("Start the Lab runtime before submitting experiments")
-    snapshot = prepare(runtime, selection, refinement_rounds, configuration_id)
+    snapshot = prepare(runtime, selection, refinement_rounds, configuration_id, initial_time_limit, random_seed)
     return _queue_snapshot(runtime, snapshot)
 
 
@@ -109,7 +117,7 @@ def execute(runtime, run_id):
             snapshot = session.get(E02Run, run_id).snapshot
         save(status="running")
         config = runtime.codec.decode_for_flow(snapshot["configuration"], "e02a")
-        initial, refine = effective_profiles(config)
+        initial, refine = effective_profiles(config, snapshot.get("initial_time_limit"), snapshot.get("random_seed"))
         config = replace(config, floor_plan_solver=replace(config.floor_plan_solver, initial=initial, refinement_a=refine))
         adapter = runtime.adapter_factory(config)
         for name, hint_map in snapshot["maps"].items():
@@ -120,7 +128,7 @@ def execute(runtime, run_id):
             stage = "initial"
             try:
                 spec = validate_export(hint_map)
-                hints = tuple(RoomPlacementHint(room_id=p["room_id"], x=p["x"], y=p["y"]) for p in hint_map["candidate"]["points"])
+                hints = candidate_hints(hint_map)
                 def record(label, action, *args, current_case=case, **kwargs):
                     save(cases)
                     begin = perf_counter()

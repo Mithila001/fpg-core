@@ -19,10 +19,8 @@ from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import E02BRun, E02BSavedPlan, E02Run
 from fpg_lab.flows.e02b import delete_layout, save_layout, start
 from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
-from fpg_lab.integrations.fpg_core.e02b_input import (
-    decode_plan,
-    export_stage,
-)
+from fpg_lab.integrations.fpg_core.e02a_export import export_stage
+from fpg_lab.integrations.fpg_core.floor_plan import decode_plan
 from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.visualization import e02b as plots
 

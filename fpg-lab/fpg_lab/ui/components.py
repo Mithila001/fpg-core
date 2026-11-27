@@ -60,11 +60,25 @@ def shell(
         .q-field--outlined .q-field__control:before { border-color: #6b6b6b; }
         a:focus-visible, .q-btn:focus-visible { outline: 2px solid #75beff; outline-offset: 3px; }
 
+        .lab-setup-grid {
+            display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+            gap: 12px; align-items: stretch; min-height: min(650px, calc(100dvh - 150px));
+        }
+        .lab-setup-main, .lab-setup-sidebar {
+            min-width: 0; padding: 12px; gap: 10px; background: #252526;
+            border: 1px solid #3c3c3c; border-radius: 5px;
+        }
+        .lab-setup-plot { width: 100%; height: clamp(420px, 65dvh, 850px); }
+        .lab-record-grid { display: grid; width: 100%; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+        .lab-record-list { max-height: 70dvh; overflow-y: auto; width: 100%; }
+        @media (max-width: 850px) { .lab-setup-grid, .lab-record-grid { grid-template-columns: 1fr; } }
+
         /* Shared desktop result workspace; avoid document-level scrolling. */
+        .q-page:has(.lab-result-root) { height: 0; }
         .lab-result-root {
             width: 100%; max-width: none !important;
             padding: 0 12px 12px !important;
-            height: calc(100dvh - 50px);
+            height: 100%;
             min-height: 0;
             overflow: hidden;
             display: flex;
@@ -103,7 +117,8 @@ def shell(
         .lab-replay-canvas > .lab-primary-plot { height: 100% !important; }
         .lab-result-pane .q-table__container { max-width: 100%; }
         @media (max-width: 900px) {
-            .lab-result-root { min-width: 850px; }
+            .q-page:has(.lab-result-root) { height: 0; }
+        .lab-result-root { min-width: 850px; }
         }
         .nicegui-json-editor {
             --jse-background-color: #1e1e1e;
@@ -152,7 +167,6 @@ def shell(
             ("Templates", "/templates"),
         ):
             ui.link(name, path).classes("lab-text no-underline hover:underline")
-        ui.label("Local research workspace").classes("ml-auto text-xs lab-muted")
     ui.query("body").classes("lab-workspace")
     if title is not None:
         with ui.row().classes("w-full items-center justify-between"):

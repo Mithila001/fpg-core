@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from fpg_lab.core.results import error_payload, result_document
 from fpg_lab.core.serialization import to_jsonable
-from fpg_lab.database.models import P01CandidateTrial, P01Experiment, P01FloorPlanRun
+from fpg_lab.database.models import P01CandidateTrial, P01Experiment
 from fpg_lab.database.models.common import utc_now
 from fpg_lab.database.session import Database
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter, FpgCoreCandidateRejected
@@ -66,24 +66,6 @@ def recover_interrupted_experiments(session: Session) -> int:
                 },
             )
         ),
-    )
-    session.execute(
-        update(P01FloorPlanRun)
-        .where(P01FloorPlanRun.status == "running")
-        .values(
-            status="interrupted",
-            finished_at=utc_now(),
-            error_data={
-                "stage": "runtime",
-                "source": "lab",
-                "type": "LabRestart",
-                "message": "The Lab stopped before this floor-plan run finished.",
-                "code": "lab_restart",
-                "details": None,
-                "cause_type": None,
-                "rejected": False,
-            },
-        )
     )
     session.commit()
     return int(result.rowcount or 0)

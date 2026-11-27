@@ -4,25 +4,22 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Lock
 from typing import Any
 
-from fpg_lab.flows.p01 import P01FlowRunner
-
 
 class BackgroundExecutor:
-    def __init__(self, runner: P01FlowRunner, *, max_workers: int = 1) -> None:
-        self.runner = runner
+    def __init__(self, *, max_workers: int = 1) -> None:
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="lab")
         self._futures: dict[int, Future[None]] = {}
         self._lock = Lock()
         self._closed = False
 
-    def submit(self, experiment_id: int, flow_type: str) -> None:
+    def submit(self, experiment_id: int, function, *args) -> None:
         with self._lock:
             if self._closed:
                 raise RuntimeError("The Lab background executor is closed")
             existing = self._futures.get(experiment_id)
             if existing is not None and not existing.done():
                 return
-            future = self._executor.submit(self.runner.run, experiment_id, flow_type)
+            future = self._executor.submit(function, *args)
             self._futures[experiment_id] = future
 
             def remove_completed(completed: Future[None], item_id: int = experiment_id) -> None:

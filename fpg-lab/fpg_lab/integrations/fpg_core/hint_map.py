@@ -3,6 +3,7 @@
 from math import isfinite
 
 from fpg_core.domain import CandidateMap, FloorPlanGenerationSpec
+from fpg_core.floor_plan_solver import RoomPlacementHint
 from pydantic import TypeAdapter
 
 
@@ -62,3 +63,10 @@ def validate_export(data: dict) -> FloorPlanGenerationSpec:
     return spec
 
 
+
+
+def candidate_hints(document):
+    return tuple(
+        RoomPlacementHint(room_id=point["room_id"], x=point["x"], y=point["y"])
+        for point in document["candidate"]["points"]
+    )

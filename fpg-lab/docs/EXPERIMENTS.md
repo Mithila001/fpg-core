@@ -16,3 +16,32 @@ Use E02A for prepared inputs and recorded stage results, E02B for a portable
 input and detailed measurements, E03A for tab-local analysis, or P01 for a
 queued integrated workflow. Each pattern serves its own research workflow.
 Use [architecture](ARCHITECTURE.md) for the shared configuration and snapshot policy.
+
+## Reference patterns
+
+- **Transient analysis - E01A.** `/experiments/e01a` selects a prepared plan
+  and runs `flows.e01a.simulate`; its result is tab-local. Use this pattern for
+  input-driven analyses that do not need profiles or recorded runs. Its routing,
+  traffic model and plan preparation are specific to E01A.
+- **Profile-based solver cases - E02A.** The setup loads portable hint maps,
+  resolves a selected or active profile and snapshots effective settings; the
+  background flow stores each case and stage in an E02 run. Use it for comparing
+  independent prepared inputs, retaining failed case details and successful
+  earlier geometry. Its case selection and refinement policy are local to E02A.
+- **Scoring inspection - E02B.** The setup accepts a portable plan or saved
+  layout and snapshots scoring settings. The worker stores official scoring and
+  skipped-evaluator diagnostics separately; the result page displays both. Use
+  this when investigating scoring, including structurally valid poor plans.
+- **Live analytical editing - E03A.** The editor loads typed profile settings
+  into a tab-local draft and runs `flows.e03a.analyze`; explicit save writes the
+  profile section. Use for direct analysis with draft and temporary lock state,
+  adapting its sizing rules and stale-result handling to the problem.
+- **Candidate flow - P01A.** A profile and request drive preprocessing, candidate
+  search, circulation and scoring in a worker; saved trials feed result and replay
+  views. Use for candidate investigation, adapting its search and rejection policy.
+- **Iterative generation - P01B/C.** A portable preset and profile snapshot
+  drive independent iterations through initial solve, optional refinement,
+  post-processing and scoring; P01C inserts openings before scoring. Their
+  iteration, cancellation, stage recording and failure policies remain local.
+
+These examples are starting points to adapt, not mandatory experiment lifecycles.

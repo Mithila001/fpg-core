@@ -11,7 +11,7 @@ from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import E02BRun, E02BSavedPlan
 from fpg_lab.database.serialization import row_document
 from fpg_lab.flows.e02b import delete_layout, save_layout, start
-from fpg_lab.integrations.fpg_core.e02b_input import decode_plan
+from fpg_lab.integrations.fpg_core.floor_plan import decode_plan
 from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.ui.components import (
     action_button,
@@ -39,62 +39,55 @@ VIEWS = {
 
 
 async def main_page(runtime):
-    shell("E-02-B · Final Floor Plan Evaluation Inspector", compact=True, back_link="/")
+    shell("E-02-B - Floor plan evaluation", compact=True, back_link="/")
     plan_state = {"document": None, "layout_id": None}
-    with (
-        ui.element("div")
-        .classes("w-full grid gap-4 items-start")
-        .style("grid-template-columns: minmax(420px, 1.35fr) minmax(380px, 1fr)")
-    ):
-        with ui.column().classes("w-full min-w-0 gap-3"):
-            ui.label("Floor plan").classes("text-lg font-semibold")
-            with ui.row().classes("w-full items-center"):
-                saved = (
-                    ui.select({}, label="Saved floor plans", clearable=True)
-                    .props("dense outlined")
-                    .classes("flex-1")
-                )
-                remove = action_button("Delete saved layout", role="danger").props("dense outline")
-                remove.disable()
-            paste = (
-                ui.textarea("Portable floor-plan JSON from E-02-A")
-                .props("outlined rows=4")
-                .classes("w-full")
-            )
-            with ui.row().classes("w-full items-center"):
-                import_button = action_button("Import and preview").props("dense outline")
-                name = (
-                    ui.input("Layout name").props("dense outlined maxlength=120").classes("flex-1")
-                )
-                save = action_button("Save layout", role="main").props("dense")
-                save.disable()
-            layout_status = ui.label("Select a saved plan or import a temporary layout.").classes(
-                "text-sm lab-muted"
-            )
-            preview = ui.plotly(figures.floor_plan(None)).classes("w-full h-[420px]")
-            with ui.row().classes("items-center"):
-                launch = action_button("Run evaluation", role="main")
-                launch.disable()
-            ui.label("Run history").classes("text-lg font-semibold")
-            history = await db_call(
-                runtime,
-                lambda session: session.execute(
-                    select(E02BRun.id, E02BRun.status).order_by(E02BRun.id.desc())
-                ).all(),
-            )
-            if not history:
-                ui.label("No saved runs yet.").classes("text-sm lab-muted")
-            for run_id, status in history:
-                ui.link(f"Run #{run_id} · {plots.label(status)}", f"{PATH}/runs/{run_id}")
-        with ui.column().classes("w-full min-w-0 gap-3"):
+    with ui.element("div").classes("lab-setup-grid"):
+        with ui.column().classes("lab-setup-main"):
+            layout_status = ui.label("Select or import a floor plan.").classes("text-sm lab-muted")
+            preview = ui.plotly(figures.floor_plan(None)).classes("lab-setup-plot")
+        with ui.column().classes("lab-setup-sidebar"):
             profile = await profile_picker(runtime)
-            ui.label("Scoring configuration").classes("text-lg font-semibold")
-            config_status = ui.label().classes("text-sm whitespace-pre-wrap")
-            with ui.row().classes("gap-2"):
-                apply_config = action_button("Save configuration", role="main").props("dense")
-                check_config = action_button("Validate").props("dense outline")
-                discard_config = action_button("Discard changes", role="danger").props("dense flat")
-            config_area = ui.column().classes("w-full gap-2")
+            profile.classes("w-full")
+            saved = ui.select({}, label="Saved floor plans", clearable=True).props("dense outlined").classes("w-full")
+            launch = action_button("Run", role="main").classes("w-full")
+            launch.disable()
+            action_button("Import", icon="upload", on_click=lambda: import_dialog.open()).props("dense outline")
+            remove = action_button("Delete", role="danger").props("dense flat")
+            remove.disable()
+            ui.separator()
+            action_button("Scoring settings", role="subtle", on_click=lambda: config_dialog.open()).props("dense")
+            action_button("History", role="subtle", on_click=lambda: history_dialog.open()).props("dense")
+
+    with ui.dialog() as import_dialog, ui.card().classes("w-[52rem] max-w-full gap-3"):
+        ui.label("Import floor plan").classes("text-lg font-semibold")
+        paste = ui.textarea("Portable floor-plan JSON").props("outlined rows=10").classes("w-full")
+        with ui.row().classes("w-full items-center"):
+            import_button = action_button("Preview").props("dense")
+            name = ui.input("Save as").props("dense outlined maxlength=120").classes("flex-1")
+            save = action_button("Save").props("dense outline")
+            save.disable()
+            action_button("Close", role="subtle", on_click=import_dialog.close).props("dense")
+
+    with ui.dialog() as config_dialog, ui.card().classes("w-[60rem] max-w-full max-h-[85vh] overflow-auto"):
+        ui.label("Scoring settings").classes("text-lg font-semibold")
+        config_status = ui.label().classes("text-sm whitespace-pre-wrap")
+        with ui.row().classes("gap-2"):
+            apply_config = action_button("Save", role="main").props("dense")
+            check_config = action_button("Validate").props("dense outline")
+            discard_config = action_button("Reload", role="subtle").props("dense")
+            action_button("Close", role="subtle", on_click=config_dialog.close).props("dense")
+        config_area = ui.column().classes("w-full gap-2")
+
+    with ui.dialog() as history_dialog, ui.card().classes("w-[32rem] max-w-full max-h-[80vh] overflow-auto"):
+        ui.label("Recent runs").classes("text-lg font-semibold")
+        history = await db_call(runtime, lambda session: session.execute(
+            select(E02BRun.id, E02BRun.status).order_by(E02BRun.id.desc()).limit(50)
+        ).all())
+        if not history:
+            ui.label("No saved runs yet.").classes("text-sm lab-muted")
+        for run_id, status in history:
+            ui.link(f"Run #{run_id} - {plots.label(status)}", f"{PATH}/runs/{run_id}")
+        action_button("Close", role="subtle", on_click=history_dialog.close).props("dense")
 
     def show_document(document, layout_id, name_text):
         plan_state.update(document=document, layout_id=layout_id, configuration_id=profile.value)
@@ -564,15 +557,11 @@ def _inspection(workspace, title, key, official, diagnostic, document):
         if key == "geometry_integrity" and payload:
             _measurements({"Geometry tolerance": plots.number(payload["tolerance"])})
         if items:
-            picker = (
-                ui.select(
-                    {index: item.label for index, item in enumerate(items)},
-                    label="Highlight finding or measurement",
-                    clearable=True,
-                )
-                .props("dense outlined")
-                .classes("w-full")
-            )
+            ui.label("Findings and measurements").classes("font-semibold text-sm")
+            picker = ui.radio(
+                {-1: "No highlight", **{index: item.label for index, item in enumerate(items)}},
+                value=-1,
+            ).props("dense").classes("w-full max-h-64 overflow-auto")
             if overlays:
                 with (
                     ui.expansion("Plot overlays", value=len(overlays) <= 3)
@@ -605,7 +594,7 @@ def _inspection(workspace, title, key, official, diagnostic, document):
                 )
 
     def draw():
-        selected = picker.value
+        selected = None if picker.value == -1 else picker.value
         chart.figure = plots.inspection_plot(
             plan, title, document["project_units_per_meter"], items, evaluation, selected, enabled
         )
@@ -624,9 +613,6 @@ def _inspection(workspace, title, key, official, diagnostic, document):
 
 async def run_page(runtime, run_id):
     workspace = ResultWorkspace(f"E-02-B run #{run_id}", back_link=PATH, views=tuple(VIEWS))
-    # Quasar's page minimum already accounts for the actual header height.
-    ui.query(".q-page").style("height: 0")
-    ui.query(".lab-result-root").style("height: 100%")
     with workspace.controls:
         status = ui.label("Loading run…").classes("font-semibold")
         provenance = ui.label().classes("text-sm lab-muted")

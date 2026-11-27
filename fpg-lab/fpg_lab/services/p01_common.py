@@ -9,7 +9,6 @@ from fpg_lab.core.exceptions import NotFoundError
 from fpg_lab.database.models import (
     P01CandidateTrial,
     P01Experiment,
-    P01FloorPlanRun,
 )
 from fpg_lab.database.models.common import utc_now
 from fpg_lab.services.common import SystemConfigurationService
@@ -103,7 +102,7 @@ class P01Service:
 
     def list_trials(
         self, *, experiment_id: int | None, limit: int, offset: int
-    ) -> tuple[list[tuple[P01CandidateTrial, int | None]], int]:
+    ) -> tuple[list[P01CandidateTrial], int]:
         filters = [P01Experiment.flow_type == self.flow_type]
         if experiment_id is not None:
             self.get_experiment(experiment_id)
@@ -125,64 +124,13 @@ class P01Service:
                 .offset(offset)
             )
         )
-        if not trials:
-            return [], int(total)
-        run_ids: dict[int, int] = {}
-        rows = self.session.execute(
-            select(P01FloorPlanRun.source_trial_id, P01FloorPlanRun.id).where(
-                P01FloorPlanRun.source_trial_id.in_([item.id for item in trials])
-            )
-        )
-        for source_trial_id, run_id in rows:
-            if source_trial_id is not None:
-                run_ids[source_trial_id] = run_id
-        return [(item, run_ids.get(item.id)) for item in trials], int(total)
+        return trials, int(total)
 
-    def get_trial(self, trial_id: int) -> tuple[P01CandidateTrial, int | None]:
+    def get_trial(self, trial_id: int) -> P01CandidateTrial:
         trial = self.session.get(P01CandidateTrial, trial_id)
         if trial is None or trial.experiment.flow_type != self.flow_type:
             raise NotFoundError(
                 f"{self.flow_type}_trial_not_found",
                 f"{self.flow_type.upper()} trial {trial_id} was not found.",
             )
-        run_id = self.session.scalar(
-            select(P01FloorPlanRun.id).where(P01FloorPlanRun.source_trial_id == trial.id)
-        )
-        return trial, run_id
-
-    def list_floor_plan_runs(
-        self, *, experiment_id: int | None, limit: int, offset: int
-    ) -> tuple[list[P01FloorPlanRun], int]:
-        filters = [P01Experiment.flow_type == self.flow_type]
-        if experiment_id is not None:
-            self.get_experiment(experiment_id)
-            filters.append(P01FloorPlanRun.experiment_id == experiment_id)
-        total = (
-            self.session.scalar(
-                select(func.count())
-                .select_from(P01FloorPlanRun)
-                .join(P01Experiment)
-                .where(*filters)
-            )
-            or 0
-        )
-        items = list(
-            self.session.scalars(
-                select(P01FloorPlanRun)
-                .join(P01Experiment)
-                .where(*filters)
-                .order_by(P01FloorPlanRun.created_at.desc(), P01FloorPlanRun.id.desc())
-                .limit(limit)
-                .offset(offset)
-            )
-        )
-        return items, int(total)
-
-    def get_floor_plan_run(self, run_id: int) -> P01FloorPlanRun:
-        run = self.session.get(P01FloorPlanRun, run_id)
-        if run is None or run.experiment.flow_type != self.flow_type:
-            raise NotFoundError(
-                f"{self.flow_type}_floor_plan_run_not_found",
-                f"{self.flow_type.upper()} floor-plan run {run_id} was not found.",
-            )
-        return run
+        return trial

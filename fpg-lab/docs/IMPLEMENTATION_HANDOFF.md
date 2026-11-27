@@ -129,32 +129,158 @@ Phase 2 can use an isolated revision-1 fixture. Keep evolution in maintenance,
 reuse the profile service for submission routes and preserve snapshot provenance
 as lifecycle code changes. Update this handoff with verified changes.
 
-## Phase 2 ? in progress
+## Phase 2 result
 
-Phase 2 is not complete. Shared `error_payload` and `result_document` moved to
-`fpg_lab.core.results`; timestamps reuse `database.models.common.utc_now`.
-Mapped row materialization moved to `database.serialization.row_document`,
-and hint-map validation to `integrations.fpg_core.hint_map.validate_export`;
-P01 trial export remains in `p01b_input`. `workers.executor.BackgroundExecutor`
-replaces `workers.p01_jobs.P01JobManager` without changing its queue semantics.
-The P01 headless result collection now caps each collection at 100 and reports
-total counts; use maintenance record inspection for further rows.
+Revision 2 removes `fpg_p01_floor_plan_run` and P01B/C runs without preset
+snapshots. Migration dry run reports `removed_floor_plan_runs` and
+`removed_legacy_experiments`; apply is transactional and retains profiles,
+templates, presets, saved plans and current runs. The Phase 1 section above is
+a historical record: new databases now initialize directly at revision 2.
+Stop Lab before maintenance. The configured development database remains
+untouched; its Phase 1 policy conflicts still need deliberate resolution before
+migration.
 
-Focused verification used the Lab virtual environment and a unique workspace
-`--basetemp`: E02A selected-profile and independent-failure tests, E02B storage
-and diagnostics, P01B export and refinement-failure tests, submission failure,
-queued termination, shutdown and immediate completion in `test_lab.py`, and
-`tests/test_quick_hint.py` (17 passed). `python -m scripts.verify_fpg_core`,
-changed UI and runner imports, `python tools/check_docs.py`, and the public API
-manifest check passed. The first pytest attempt could not access the system temp
-directory; the workspace-local rerun passed.
+Shared error/result helpers are `core.results`, row materialization is
+`database.serialization.row_document`, portable map validation and hint
+conversion are `integrations.fpg_core.hint_map`, portable plan decoding is
+`integrations.fpg_core.floor_plan`, and refinement preparation is
+`integrations.fpg_core.solver`. P01 trial and E02A stage export assembly stay
+in their respective owners. Historical floor-plan summary columns remain inert in
+the experiment table to avoid rebuilding it; active views no longer use them.
+`workers.executor.BackgroundExecutor` accepts work
+functions independently of P01, and workers own their sessions. Removed the
+unreachable P01B preview, the obsolete E03A result route, old floor-plan branch
+route/model/queries, historical
+P01C handling and old `e02b_input` module.
 
-Still required before Phase 3: trace and catalogue every active experiment;
-finish the neutral executor and shared portable-plan ownership as appropriate;
-review and remove obsolete preview, export, lifecycle and floor-plan-run paths
-after tracing readers and writers; evaluate genuinely common computation stages;
-prepare the seven-experiment real smoke catalogue and missing bounded fixtures;
-update experiment and skill guidance; run the remaining requested focused checks
-and record exact smoke commands and deadlines. No all-experiment smoke, full
-suite, browser regression or broad audit was run. Do not treat this record as
-a completed Phase 2 or start Phase 3 on its basis.
+E02A and P01B/C resolve the selected profile at submission. Optional initial
+time/seed overrides and the effective initial/refinement configurations are
+recorded in the snapshot; retries use the saved E02A configuration. P01C scores
+the openings result, while E02B stores official results and diagnostics separately.
+Failure of an individual case or iteration preserves previously stored stages.
+Each E flow remains independent of a mandatory persisted job or pipeline.
+
+### Focused verification completed
+
+From `fpg-lab/` with its environment active, the following passed **29 tests**:
+
+```powershell
+$scratch = './data/phase2-focused-' + [guid]::NewGuid().ToString('N')
+python -m pytest -q -p no:cacheprovider --basetemp $scratch tests/test_phase1_database.py tests/test_e02a.py::test_prepared_maps_and_selected_profile_snapshot tests/test_e02a.py::test_invalid_config_and_independent_failures tests/test_e02b.py::test_portable_stages_accept_architectural_defects tests/test_e02b.py::test_storage_snapshot_recovery_and_measurements tests/test_p01b_replacement.py::test_export_and_independent_iterations tests/test_p01b_replacement.py::test_failed_refinement_keeps_initial_and_continues tests/test_p01b_replacement.py::test_scoring_failure_retains_post_processed_plan tests/test_p01b_replacement.py::test_p01c_scores_the_opening_plan_and_keeps_it_on_score_failure tests/test_p01b_replacement.py::test_p01c_opening_failure_stops_iteration tests/test_lab.py::test_flows_and_persistence tests/test_lab.py::test_submission_failure_and_invalid_input tests/test_lab.py::test_termination_and_queued_job tests/test_lab.py::test_shutdown_terminates_active_and_queued_jobs tests/test_lab.py::test_immediate_completion_no_deadlock tests/test_quick_hint.py
+python -m scripts.verify_fpg_core
+```
+
+Changed-module imports and changed-file Ruff also passed. An isolated seeded
+revision-2 database and a reload-disabled NiceGUI startup returned HTTP 200 for
+the index and all seven `/experiments/<id>` setup routes. This is a route smoke,
+not a rendered interaction review. The original
+larger P01B/C smoke input hit its five-second initial limit; its parent status
+was completed but nested iterations failed. It is not the success fixture.
+
+### Prepared smoke catalogue
+
+Run nodes separately with `python -m pytest -q -p no:cacheprovider --basetemp
+<new-workspace-path> <node>` from `fpg-lab/`. Use a fresh basetemp for each
+invocation. Budget 120 seconds overall, with a 60-second wait deadline per
+background run; cancellation is cooperative and may wait for the current Core
+stage. Each row below was executed in Phase 2. No external DB IDs are guessed:
+pytest creates an isolated database, migrates and seeds it, and captures IDs
+returned by services.
+
+| Experiment | Node | Type and expected output |
+| --- | --- | --- |
+| E01A | `tests/test_e01a.py::test_concave_room_uses_walkable_interior_point` | Real Lab traffic: one valid veranda-to-living route. |
+| E02A | `tests/test_lab_smoke.py::test_real_e02a_solver_case` | Real Core solve/post-process/score; input loading alone is substituted; completed case, plan and score. |
+| E02B | `tests/test_e02b.py::test_storage_snapshot_recovery_and_measurements` | Real Core official scoring and diagnostic evaluations; official critical gate fails and two skipped-evaluator diagnostics are separate. |
+| E03A | `tests/test_e03a.py::test_dimension_gaps_and_axis` | Real exact Lab analysis: compatible dimensions and supported areas. |
+| P01A | `tests/test_lab_smoke.py::test_real_p01a_candidate` | Real Core preprocessing, search, circulation and scoring; completed trial with candidate and score. |
+| P01B | `tests/test_lab_smoke.py::test_real_p01_generation[p01b]` | Real Core initial solve, refinement, post-processing and score; completed iteration and plan. |
+| P01C | `tests/test_lab_smoke.py::test_real_p01_generation[p01c]` | Same real steps plus openings before scoring; completed iteration with openings stage and score. |
+
+The small success fixture is `tests/fixtures/small_hint_map.json`: one 20-by-20
+room, 10 units per metre. The isolated smoke profile clears solver hard/soft
+rules for that fixture, uses seed 42, one solver worker and two-second initial
+and refinement limits. This is a connectivity check, not a representative house
+quality result. P01A uses `scripts.run_experiment.sample_request` and one trial.
+The E02B test constructs its own flawed but structurally valid plan and profile.
+The focused E02A/P01B failure tests above mock expensive stages and test
+orchestration; they are not substitutes for the real nodes.
+
+For manual inspection, create a fresh database as in Phase 1, then list IDs with
+`python -m scripts.lab_db --database-url <URL> records <table> --limit 25 --json`.
+Use `record <table> <id> --json` or `export <table> <id> --output <new-path>`
+for one record. E02A cases are in its run's `cases` JSON; select the case or
+fields from that single record/export. P01B/C iterations are rows in
+`fpg_p01b_iteration`. The headless runner supports P01 only and bounds each
+returned trial/iteration collection to 100 while reporting counts.
+
+Full Lab pytest, all-page browser regression, full-tree lint/type checks, broad
+documentation audit and research sweeps remain deferred to Phase 4. Phase 3 may
+now proceed using the current services and the isolated fixtures above.
+
+## Phase 3 result
+
+E02B setup uses a dominant plan preview and a context panel with the selected
+profile, Run, saved plans and secondary import, scoring-settings and history
+dialogs. Findings and measurements use bounded visible radio lists. Official
+scores and critical gates remain separate from independent diagnostics.
+Configuration and template pages use a visible record navigator and a larger
+editor. E01A and P01B/C use the shared setup proportions; E02A exposes hint
+choices and case selection. E03A embeds the shared workspace without nesting
+top-level headers, retaining its direct analytical editor. Shared result panes
+size to the available page height, scroll independently and resize plots when
+views change. Room categories use `visualization.figures.ROOM_COLORS` across
+candidate, plan and replay views; labels distinguish instances.
+
+### Reproduce the UI review
+
+From `fpg-lab/`, choose a new isolated database and initialize it:
+
+```powershell
+$db = 'sqlite:///./data/phase3-review-new.db'
+python -m scripts.lab_db --database-url $db migrate --json
+python -m scripts.lab_db --database-url $db seed --json
+python -m scripts.lab_db --database-url $db profiles list --json
+$env:FPG_LAB_DATABASE_URL = $db
+@'
+import sys
+sys.path.insert(0, "tests")
+from test_e02b import portable_plan
+from fpg_lab.database.session import Database
+from fpg_lab.flows.e02b import save_layout
+from fpg_lab.core.settings import get_settings
+db = Database(get_settings().database_url)
+with db.session_factory() as session:
+    print("Saved plan ID:", save_layout(session, "Ring and notch", portable_plan()))
+db.dispose()
+'@ | python -
+$env:FPG_LAB_PORT = '8081'
+python run_lab.py
+```
+
+Use the printed plan ID; do not assume it. Stop Lab before resetting this
+fixture. Open `/experiments/e02b`, select that plan and the active profile,
+then Run. The resulting run page should show the official failed critical gate
+and independent diagnostics in the Overview. Select Geometry integrity and a
+finding to highlight the overlap; select Room size consistency to see official
+`skipped` alongside diagnostic `completed`. On `/configurations`, duplicate a
+profile, Save and Activate; edits left unsaved disappear after switching records
+and must not change a prior run snapshot. On `/experiments/e03a`, load that
+profile, edit Bedroom count, apply and save; the Rooms table and compatible
+analysis update, and stale saves are rejected by the profile hash.
+
+The review used a separate seeded revision-2 database and a reload-disabled
+server on localhost port 18932. It exercised the E02B sequence above, including
+scoring-settings validation, profile duplicate/save/activate and unsaved draft
+reload, and E03A edit/analyze/save. It also opened E01A and inspected a completed
+small-fixture E02A case with visible stage choices. The previously submitted E02B run retained
+its original profile ID. Result layout was checked at 1280 x 650 as well as the
+ordinary desktop viewport; its main area and sidebar remained within the page.
+Captured review screenshots: `.playwright-mcp/page-2026-11-27T12-28-35-434Z.png`
+(E02B finding) and `.playwright-mcp/page-2026-11-27T12-30-54-207Z.png` (E03A,
+short viewport). Screenshots are local review artifacts. The focused replay,
+E03A save/conflict, E02B scoring and serialization checks passed (9 tests).
+
+Deferred to Phase 4: full Lab suite, complete browser/viewport and keyboard
+matrix, long-list behavior, all replay/export/termination paths and full-tree
+static checks. No research sweeps were run.

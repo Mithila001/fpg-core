@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from hashlib import sha256
 from typing import Any
 
 import plotly.graph_objects as go
@@ -9,8 +8,15 @@ import plotly.graph_objects as go
 PALETTE = ("#4ec9b0", "#75beff", "#c586c0", "#dcdcaa", "#ce9178", "#9cdcfe")
 
 
-def color(key: str) -> str:
-    return PALETTE[int.from_bytes(sha256(key.encode()).digest()[:2]) % len(PALETTE)]
+ROOM_COLORS = {
+    "bedroom": "#b99bed", "bathroom": "#64b5f6", "attached_bathroom": "#64d7cf",
+    "living_room": "#e9b96e", "kitchen": "#e68b7e", "dining_room": "#d99dc2",
+    "hallway": "#aeb9c4", "veranda": "#8dc99c", "garage": "#c6b98b",
+}
+
+
+def color(room_type: str) -> str:
+    return ROOM_COLORS.get(room_type, "#b0b0b0")
 
 
 def figure(title: str, *, geometry: bool = False) -> go.Figure:
@@ -23,7 +29,7 @@ def figure(title: str, *, geometry: bool = False) -> go.Figure:
         margin=dict(l=40, r=20, t=50, b=40),
         font=dict(family="sans-serif", color="#d4d4d4"),
         uirevision=title,
-        legend=dict(orientation="h"),
+        legend=dict(orientation="h", yanchor="top", y=-0.16),
     )
     result.update_xaxes(gridcolor="#3c3c3c", zerolinecolor="#6b6b6b")
     result.update_yaxes(gridcolor="#3c3c3c", zerolinecolor="#6b6b6b")
@@ -74,7 +80,7 @@ def candidate_map(
                 name=key,
                 text=[key],
                 textposition="top center",
-                marker=dict(size=12, color=color(key)),
+                marker=dict(size=12, color=color(str(point.get("room_type", ""))), line=dict(color="#1e1e1e", width=1)),
                 hovertemplate=f"{key}<br>X=%{{x}}<br>Y=%{{y}}<extra></extra>",
             )
         )

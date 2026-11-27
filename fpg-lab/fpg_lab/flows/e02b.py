@@ -12,7 +12,7 @@ from fpg_core.floor_plan_scoring import (
 from fpg_lab.core.results import error_payload, result_document
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import E02BRun, E02BSavedPlan
-from fpg_lab.integrations.fpg_core.e02b_input import decode_plan
+from fpg_lab.integrations.fpg_core.floor_plan import decode_plan
 from fpg_lab.services.common import SystemConfigurationService
 
 

@@ -26,15 +26,15 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 1
-# Revision 1 adopts the reviewed revision-0 structure without changing its DDL.
+REVISION = 2
+# Revisions 0 and 1 share the reviewed schema; revision 2 drops obsolete runs.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
+CURRENT_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
 RUN_TABLES = {
     "fpg_e02_run",
     "fpg_e02b_run",
     "fpg_p01_experiment",
     "fpg_p01_candidate_trial",
-    "fpg_p01_floor_plan_run",
     "fpg_p01b_iteration",
 }
 
@@ -81,9 +81,9 @@ def _schema(connection):
     }
 
 
-def _matches_reviewed_schema(schema):
+def _matches_schema(schema, expected):
     encoded = json.dumps(schema, sort_keys=True).encode()
-    return hashlib.sha256(encoded).hexdigest() == REVIEWED_SCHEMA_HASH
+    return hashlib.sha256(encoded).hexdigest() == expected
 
 
 def _state(connection):
@@ -93,7 +93,8 @@ def _state(connection):
         return revision, "newer"
     if not schema and revision == 0:
         return revision, "empty"
-    if not _matches_reviewed_schema(schema):
+    expected = CURRENT_SCHEMA_HASH if revision == REVISION else REVIEWED_SCHEMA_HASH
+    if not _matches_schema(schema, expected):
         return revision, "unknown"
     return revision, "current" if revision == REVISION else "upgrade_required"
 
@@ -287,6 +288,24 @@ def _migration(connection, session, report, *, dry_run):
         return
     if compatibility not in {"empty", "upgrade_required"}:
         _require((revision, compatibility))
+    if revision == 1 and compatibility == "upgrade_required":
+        report["action"] = "remove obsolete floor-plan runs"
+        report["removed_floor_plan_runs"] = connection.exec_driver_sql(
+            "SELECT count(*) FROM fpg_p01_floor_plan_run"
+        ).scalar_one()
+        report["removed_legacy_experiments"] = connection.exec_driver_sql(
+            "SELECT count(*) FROM fpg_p01_experiment WHERE flow_type IN ('p01b', 'p01c') "
+            "AND (hint_points IS NULL OR json_extract(hint_points, '$.preset') IS NULL)"
+        ).scalar_one()
+        if not dry_run:
+            connection.exec_driver_sql("DROP TABLE fpg_p01_floor_plan_run")
+            connection.exec_driver_sql(
+                "DELETE FROM fpg_p01_experiment WHERE flow_type IN ('p01b', 'p01c') "
+                "AND (hint_points IS NULL OR json_extract(hint_points, '$.preset') IS NULL)"
+            )
+            connection.exec_driver_sql(f"PRAGMA user_version = {REVISION}")
+            report["applied"] = True
+        return
     source = _seed_document()
     codec = CoreConfigCodec()
     baseline = codec.validate_payload(source["configuration_data"])
@@ -325,12 +344,26 @@ def _migration(connection, session, report, *, dry_run):
     if not any(row.name == PRIMARY_PROFILE for row in rows):
         report["profiles"].append({"name": PRIMARY_PROFILE, "action": "create E02A baseline"})
     report["action"] = "initialize schema" if compatibility == "empty" else "adopt reviewed schema"
+    if compatibility == "upgrade_required":
+        report["removed_floor_plan_runs"] = connection.exec_driver_sql(
+            "SELECT count(*) FROM fpg_p01_floor_plan_run"
+        ).scalar_one()
+        report["removed_legacy_experiments"] = connection.exec_driver_sql(
+            "SELECT count(*) FROM fpg_p01_experiment WHERE flow_type IN ('p01b', 'p01c') "
+            "AND (hint_points IS NULL OR json_extract(hint_points, '$.preset') IS NULL)"
+        ).scalar_one()
     if report["conflicts"] or dry_run:
         return
+    if compatibility == "upgrade_required":
+        connection.exec_driver_sql("DROP TABLE fpg_p01_floor_plan_run")
+        connection.exec_driver_sql(
+            "DELETE FROM fpg_p01_experiment WHERE flow_type IN ('p01b', 'p01c') "
+            "AND (hint_points IS NULL OR json_extract(hint_points, '$.preset') IS NULL)"
+        )
     if compatibility == "empty":
         Base.metadata.create_all(connection)
-        if not _matches_reviewed_schema(_schema(connection)):
-            raise ValueError("Generated schema differs from supported Lab revision 1.")
+        if not _matches_schema(_schema(connection), CURRENT_SCHEMA_HASH):
+            raise ValueError("Generated schema differs from supported Lab revision 2.")
     for row, values in proposals:
         for key, value in values.items():
             setattr(row, key, value)
@@ -393,10 +426,12 @@ def reset(database: Database, *, scope: str):
                 if table.name in RUN_TABLES:
                     connection.execute(delete(table))
         else:
+            if state[1] == "upgrade_required":
+                connection.exec_driver_sql("DROP TABLE fpg_p01_floor_plan_run")
             Base.metadata.drop_all(connection)
             Base.metadata.create_all(connection)
-            if not _matches_reviewed_schema(_schema(connection)):
-                raise ValueError("Generated schema differs from supported Lab revision 1.")
+            if not _matches_schema(_schema(connection), CURRENT_SCHEMA_HASH):
+                raise ValueError("Generated schema differs from supported Lab revision 2.")
             result["seeded"] = _seed(session)
             session.flush()
             connection.exec_driver_sql(f"PRAGMA user_version = {REVISION}")

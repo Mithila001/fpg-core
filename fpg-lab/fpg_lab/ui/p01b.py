@@ -28,10 +28,10 @@ from fpg_lab.visualization import figures
 
 async def main_page(runtime, flow="p01b"):
     service_type = P01CService if flow == "p01c" else P01BService
-    shell(f"{format_experiment_code(flow)} · Setup", "Configure repeated floor-plan generation and refinement.")
+    shell(f"{format_experiment_code(flow)} - Setup", compact=True)
     state: dict[str, Any] = {"data": None}
-    with ui.element("div").classes("w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"):
-        with ui.column().classes("w-full gap-4") as controls:
+    with ui.element("div").classes("lab-setup-grid"):
+        with ui.column().classes("lab-setup-sidebar order-2") as controls:
             presets = ui.select({}, label="Hint map preset").classes("w-full")
             configs = ui.select({}, label="System configuration").classes("w-full")
             disable = ui.checkbox("Disable hint points", value=False)
@@ -45,7 +45,8 @@ async def main_page(runtime, flow="p01b"):
             seconds = ui.number("Initial solver time limit (seconds)", min=0.01, value=5).classes(
                 "w-full"
             )
-        preview = ui.column().classes("w-full min-w-0")
+            seed = ui.number("Random seed (blank uses profile)", min=0, precision=0).classes("w-full")
+        preview = ui.column().classes("lab-setup-main order-1")
     history = ui.column().classes("w-full")
     history_page = ui.number("History page", min=1, value=1, precision=0).classes("w-36")
     with ui.dialog() as dialog, ui.card().classes("w-[50rem] max-w-full"):
@@ -288,7 +289,7 @@ async def main_page(runtime, flow="p01b"):
         if selected:
             with preview:
                 ui.plotly(figures.candidate_map(selected["data"]["candidate"])).classes(
-                    "w-full h-80"
+                    "lab-setup-plot"
                 )
         else:
             with preview:
@@ -338,6 +339,7 @@ async def main_page(runtime, flow="p01b"):
                 "refinement_rounds": int(rounds.value),
                 "iterations": int(iterations.value),
                 "initial_time_limit": seconds.value,
+                "random_seed": int(seed.value) if seed.value is not None else None,
             }
             experiment_id = await run.io_bound(runtime.start_experiment, flow, payload)
             ui.navigate.to(f"/experiments/{flow}/runs/{experiment_id}")
@@ -355,9 +357,9 @@ async def main_page(runtime, flow="p01b"):
     history_page.on_value_change(refresh)
     with controls, ui.row():
         action_button("Quick Hint Map", on_click=open_quick)
-        action_button("Import preset", on_click=dialog.open)
-        action_button("Delete preset", role="danger", on_click=delete).props("outline")
-        action_button("Start experiment", role="main", on_click=start)
+        action_button("Import", on_click=dialog.open)
+        action_button("Delete", role="danger", on_click=delete).props("outline")
+        action_button("Run", role="main", on_click=start)
         action_button("Refresh history", role="subtle", on_click=refresh).props("flat")
     await refresh()
 
@@ -465,7 +467,7 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                         x=[point["x"]], y=[point["y"]], mode="markers+text",
                         text=[point["room_id"]], textposition="top center",
                         name=point["room_id"],
-                        marker={"size": 12, "color": figures.color(point["room_id"])},
+                        marker={"size": 12, "color": figures.color(point.get("room_type", ""))},
                     )
                 )
         figure.update_layout(showlegend=False)

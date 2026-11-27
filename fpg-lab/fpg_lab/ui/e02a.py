@@ -7,8 +7,8 @@ from sqlalchemy import select
 from fpg_lab.database.models.e02 import E02Run
 from fpg_lab.database.serialization import row_document
 from fpg_lab.flows.e02a import prepare, retry, start
+from fpg_lab.integrations.fpg_core.e02a_export import export_stage
 from fpg_lab.integrations.fpg_core.e02a_input import load_hint_maps
-from fpg_lab.integrations.fpg_core.e02b_input import export_stage
 from fpg_lab.ui.components import (
     action_button,
     db_call,
@@ -23,7 +23,7 @@ from fpg_lab.visualization import figures
 
 async def main_page(runtime):
     await ui.context.client.connected()
-    shell("E-02-A · Setup", "Run the solver pipeline with file-backed hint maps.")
+    shell("E-02-A - Setup", compact=True)
     profile = await profile_picker(runtime)
     try:
         maps = load_hint_maps()
@@ -32,13 +32,16 @@ async def main_page(runtime):
         ui.label(str(exc)).classes("text-rose-300")
     if not maps:
         ui.label("No hint maps are available. Add the supplied portable maps to hint_maps.json.").classes("text-amber-300")
-    values = {"__all__": "All maps", **{name: name for name in maps}}
+    values = {**({"__all__": "All maps"} if len(maps) == 4 else {}), **{name: name for name in maps}}
     stored_map = app.storage.tab.get("e02a_hint_map")
     default_map = next(iter(maps), "__all__")
-    picker = ui.select(values, label="Hint map", value=stored_map if stored_map in values else default_map).classes("min-w-80")
+    ui.label("Hint map").classes("font-semibold text-sm")
+    picker = ui.radio(values, value=stored_map if stored_map in values else default_map).props("dense").classes("max-h-48 overflow-auto")
     stored_count = app.storage.tab.get("e02a_refinement_count", 0)
     refinement_count = ui.radio({count: str(count) for count in range(6)}, value=stored_count if stored_count in range(6) else 0).props("inline")
     ui.label("Refinement stage count")
+    seconds = ui.number("Initial time limit (seconds; blank uses profile)", min=0.01)
+    seed = ui.number("Random seed (blank uses profile)", min=0, precision=0)
     feedback = ui.label().classes("text-sm whitespace-pre-wrap")
 
     def selection():
@@ -53,21 +56,21 @@ async def main_page(runtime):
 
     async def validate():
         try:
-            await run.io_bound(prepare, runtime, selection(), refinement_count.value, profile.value)
+            await run.io_bound(prepare, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None)
             feedback.set_text("Configuration and selected maps are valid.")
         except Exception as exc:
             feedback.set_text(str(exc))
 
     async def submit():
         try:
-            run_id = await run.io_bound(start, runtime, selection(), refinement_count.value, profile.value)
+            run_id = await run.io_bound(start, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None)
             ui.navigate.to(f"/experiments/e02a/runs/{run_id}")
         except Exception as exc:
             feedback.set_text(str(exc))
 
     with ui.row():
         action_button("Validate", on_click=validate)
-        action_button("Start generation", role="main", on_click=submit)
+        action_button("Run", role="main", on_click=submit)
     ui.label("Run history").classes("text-lg font-semibold mt-4")
     records = await db_call(runtime, lambda session: [row_document(row) for row in session.scalars(select(E02Run).order_by(E02Run.id.desc()).limit(50))])
     for record in records:
@@ -85,7 +88,8 @@ async def run_page(runtime, experiment_id):
         diagnostics = ui.column().classes("w-full")
     with workspace.controls:
         status = ui.label("Loading…")
-        case_picker = ui.select({}, label="Case").classes("w-full")
+        ui.label("Cases").classes("font-semibold text-sm")
+        case_picker = ui.radio({}).props("dense").classes("w-full max-h-48 overflow-auto")
         stage_picker = ui.radio({}, value=None).props("inline")
         stage_label = ui.label("Stage").classes("font-semibold text-sm")
         copy_button = action_button("Copy floor plan", role="subtle").props("flat dense")

@@ -25,7 +25,7 @@ upgrading from revision 0.
 | `profiles validate --all --json` | Validate every profile and report errors by ID. |
 | `records <table> --limit 25 --offset 0 --json` / `record <table> <id> --json` | Inspect a metadata page or the entire requested record. |
 | `export <table> <id> --output <path>` | Write one record to a new JSON file. |
-| `reset --scope runs --yes` | Delete E02 runs and P01 experiments, trials, floor-plan runs and iterations. |
+| `reset --scope runs --yes` | Delete E02 runs and P01 experiments, trials and iterations. |
 | `reset --scope all --yes` | Rebuild and seed the recognized selected database. |
 
 Collection commands default to 25 items and accept limits up to 500. Metadata
@@ -49,8 +49,13 @@ adapter and SQLite checks for data changes, `python ../tools/check_docs.py` for
 docs, and update the relevant records and family notes together. Use the
 [Phase 1 handoff](IMPLEMENTATION_HANDOFF.md) for exact verification commands.
 
-The P01 headless runner collects at most 100 trials, floor-plan runs and
-iterations per result, and includes total counts. Use `scripts.lab_db records`
+The P01 headless runner collects at most 100 trials and iterations per result,
+and includes total counts. Use `scripts.lab_db records`
 with a bounded page and `record` or `export` with a returned ID to inspect one
 row. E02 cases are contained in the E02 run record; select the desired case or
 fields from its exported JSON.
+
+Revision 2 migration removes the obsolete floor-plan-run table and old P01B/C
+runs without a saved preset snapshot. The dry run reports both counts. Profiles,
+templates, presets, saved plans and current runs remain. Export observations
+that matter before applying the migration. Stop Lab before maintenance.

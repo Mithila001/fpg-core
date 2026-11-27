@@ -42,10 +42,7 @@ EXPERIMENTS = {
 def register_pages(runtime: LabRuntime) -> None:
     @ui.page("/")
     async def home() -> None:
-        shell(
-            None,
-            "Run and inspect floor-plan prototypes and experiments directly in Python.",
-        )
+        shell(None)
         # Family grouping is display-only; experiment keys and route paths stay unchanged.
         categories = {flow[0].lower() for flow in EXPERIMENTS}
         order: list[str] = [code for code in ("e", "p") if code in categories]
@@ -69,7 +66,7 @@ def register_pages(runtime: LabRuntime) -> None:
                         ui.label(title).classes("text-lg font-semibold")
                         ui.label(description).classes("lab-muted text-sm flex-1")
                         action_button(
-                            "Open setup",
+                            "Open",
                             on_click=lambda f=flow: ui.navigate.to(f"/experiments/{f}"),
                         ).props("dense outline")
         ui.label(
@@ -89,11 +86,12 @@ def register_pages(runtime: LabRuntime) -> None:
 
 async def records_page(runtime: LabRuntime, kind: str) -> None:
     is_config = kind == "configuration"
-    shell(
-        "System configurations" if is_config else "Floor-plan templates",
-        "Edit a JSON draft, validate it, then save. Existing experiment snapshots stay unchanged.",
-    )
-    state: dict[str, Any] = {"id": None, "baseline": {}, "records": {}}
+    shell("System configurations" if is_config else "Floor-plan templates", compact=True)
+    state: dict[str, Any] = {"id": None, "baseline": {}, "records": {}, "loading": False}
+
+    def mark_dirty() -> None:
+        if not state["loading"]:
+            feedback.set_text("Unsaved changes")
 
     def service(session: Any) -> Any:
         return (
@@ -119,11 +117,13 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
         record = state["records"].get(picker.value)
         if record is None:
             return
+        state["loading"] = True
         state["id"] = record["id"]
         state["expected_hash"] = record.get("config_hash")
         name.value, description.value = record["name"], record.get("description") or ""
         state["baseline"] = deepcopy(record["configuration_data" if is_config else "template_data"])
         set_editor(editor, state["baseline"])
+        state["loading"] = False
         feedback.set_text(
             f"Loaded {record['name']}"
             + (
@@ -240,36 +240,30 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
         except Exception as exc:
             notify_error(exc)
 
-    with ui.card().classes("w-full p-5 gap-4"):
-        with ui.row().classes("w-full items-center gap-3"):
-            picker = ui.select(
-                {},
-                label="Saved profiles" if is_config else "Saved templates",
-                on_change=load_record,
-            ).classes("min-w-80")
-            action_button("New from active" if is_config else "New from default", on_click=new_record)
-            action_button("Duplicate draft", role="subtle", on_click=duplicate)
-            action_button("Refresh list", role="subtle", on_click=refresh).props("flat")
-        with ui.row().classes("w-full"):
-            name = ui.input("Name").classes("flex-1")
-            description = ui.input("Description").classes("flex-[2]")
-        # NiceGUI's browser validator rejects Pydantic's discriminated-union schemas.
-        # Validate configuration drafts with the Python codec instead.
-        editor = ui.json_editor({"content": {"json": {}}}).classes(
-            "nicegui-json-editor w-full min-h-96"
-        )
-        feedback = ui.label().classes("text-sm lab-text whitespace-pre-wrap")
-        with ui.row():
-            action_button("Validate", on_click=validate).props("outline")
-            action_button("Save", role="main", on_click=save)
-            action_button(
-                "Reset draft", role="danger", on_click=lambda: set_editor(editor, state["baseline"])
-            ).props("flat")
-            if is_config:
-                action_button("Activate saved profile", role="main", on_click=activate).props(
-                    "outline"
-                )
-            action_button("Delete saved record", role="danger", on_click=delete).props("flat")
+    with ui.element("div").classes("lab-record-grid"):
+        with ui.column().classes("lab-panel border rounded p-3 gap-2"):
+            ui.label("Profiles" if is_config else "Templates").classes("font-semibold")
+            picker = ui.radio({}, on_change=load_record).props("dense").classes("lab-record-list")
+            with ui.row().classes("gap-1"):
+                action_button("New", on_click=new_record).props("dense outline")
+                action_button("Refresh", role="subtle", on_click=refresh).props("dense")
+        with ui.column().classes("lab-panel border rounded p-3 gap-3 min-w-0"):
+            with ui.row().classes("w-full items-center gap-2"):
+                name = ui.input("Name", on_change=mark_dirty).props("dense outlined").classes("flex-1")
+                description = ui.input("Description", on_change=mark_dirty).props("dense outlined").classes("flex-[2]")
+            # Python validates configuration drafts against the authoritative codec.
+            editor = ui.json_editor({"content": {"json": {}}}, on_change=mark_dirty).classes(
+                "nicegui-json-editor w-full min-h-96"
+            )
+            feedback = ui.label().classes("text-sm lab-text whitespace-pre-wrap")
+            with ui.row().classes("items-center gap-2"):
+                action_button("Save", role="main", on_click=save).props("dense")
+                action_button("Validate", on_click=validate).props("dense outline")
+                action_button("Duplicate", role="subtle", on_click=duplicate).props("dense")
+                action_button("Reset", role="subtle", on_click=lambda: set_editor(editor, state["baseline"])).props("dense")
+                if is_config:
+                    action_button("Activate", on_click=activate).props("dense outline")
+                action_button("Delete", role="danger", on_click=delete).props("dense flat")
     await refresh()
     if state["records"]:
         picker.value = next((row["id"] for row in state["records"].values()

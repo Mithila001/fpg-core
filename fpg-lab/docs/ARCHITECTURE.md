@@ -28,10 +28,22 @@ runs. See [maintenance and run retention](adr/0002-maintenance.md).
 
 E and P describe research scope. Choose useful views, stages, storage and
 execution mechanisms for each question. Use [existing patterns](EXPERIMENTS.md)
-when they fit. Phase 2 lifecycle cleanup and Phase 3 visual redesign are pending.
+when they fit.
 
 Shared execution utilities live in `fpg_lab.core.results`, database row
 materialization in `fpg_lab.database.serialization`, and portable hint-map
 validation in `fpg_lab.integrations.fpg_core.hint_map`. P01 trial export remains
 owned by `p01b_input`. The `BackgroundExecutor` serves P01, E02 and quick hint
 work; workers own their database sessions.
+
+Portable floor-plan decoding lives in `integrations.fpg_core.floor_plan`;
+E02A stage export assembly remains in `integrations.fpg_core.e02a_export`.
+
+The shared refinement profile and candidate-hint conversion live under
+`integrations.fpg_core.solver` and `hint_map`; stage ordering, failure policy
+and persistence remain in each experiment flow.
+
+The shared `ResultWorkspace` supplies view switching, a dominant main area and
+contextual sidebar; E03A embeds it below its profile selector. Setup pages adapt
+the same priorities to their task. See [UI composition](adr/0003-ui-workspaces.md)
+and [UI standards](UI_STANDARDS.md).

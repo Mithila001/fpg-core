@@ -10,7 +10,7 @@ from typing import Any
 
 import plotly.graph_objects as go
 
-from fpg_lab.visualization.figures import candidate_map
+from fpg_lab.visualization.figures import candidate_map, color
 
 
 def frames(trials: Sequence[dict[str, Any]], *, improvements: bool = False) -> list[dict[str, Any]]:
@@ -47,7 +47,7 @@ def room_styles(rooms: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, str]]
     }
     counts: Counter[str] = Counter()
     result = {}
-    for index, room in enumerate(rooms):
+    for room in rooms:
         kind = str(room.get("room_type", "room"))
         prefix = abbreviations.get(kind, kind[:3].upper())
         counts[prefix] += 1
@@ -55,7 +55,7 @@ def room_styles(rooms: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, str]]
         result[key] = {
             "label": f"{prefix}{counts[prefix]}",
             "name": str(room.get("name") or key),
-            "color": f"hsl({index * 137.508 % 360:.3f},70%,68%)",
+            "color": color(kind),
         }
     return result
 

@@ -57,7 +57,8 @@ def test_geometry_identity_and_onion_skins() -> None:
         {"id": f"bed{i}", "room_type": "bedroom", "name": f"Bedroom {i}"} for i in range(8)
     ] + [{"id": "hall", "room_type": "hallway"}]
     styles = replay.room_styles(rooms)
-    assert len({s["color"] for s in styles.values()}) == len(rooms)
+    assert styles["bed0"]["color"] == styles["bed1"]["color"] == figures.color("bedroom")
+    assert styles["hall"]["color"] == figures.color("hallway") != styles["bed0"]["color"]
     assert styles == replay.room_styles(rooms)
     assert styles["bed0"]["label"] == "BED1"
     assert styles["bed1"]["label"] == "BED2"

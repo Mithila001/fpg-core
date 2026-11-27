@@ -1,6 +1,7 @@
 """Phase 1 SQLite integrity fixtures. Every database lives under pytest's tmp_path."""
 
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 from sqlalchemy import event, select
@@ -17,7 +18,6 @@ from fpg_lab.database.models import (
     P01BPreset,
     P01CandidateTrial,
     P01Experiment,
-    P01FloorPlanRun,
     SystemConfiguration,
 )
 from fpg_lab.database.session import Database
@@ -31,6 +31,11 @@ PROFILE = SystemConfiguration.__tablename__
 def reviewed_database(path, *, conflict=False):
     database = Database(f"sqlite:///{path}")
     Base.metadata.create_all(database.engine)
+    ddl = (Path(__file__).parent / "revision1_floor_plan_run.sql").read_text(encoding="utf-8")
+    with database.engine.begin() as connection:
+        for statement in ddl.split(";"):
+            if statement.strip():
+                connection.exec_driver_sql(statement)
     codec = CoreConfigCodec()
     old = codec.default_configuration().payload
     del old["experiments"]["e03a"]
@@ -226,9 +231,6 @@ def test_resets_preserve_reusable_records_and_require_stopped_execution(tmp_path
             [
                 E02Run(status="completed", snapshot={}, cases=[{"fixture": True}]),
                 E02BRun(status="completed", snapshot={}),
-                P01FloorPlanRun(
-                    experiment_id=experiment.id, source_trial_id=trial.id, status="completed"
-                ),
                 P01BIteration(experiment_id=experiment.id, number=1, status="completed"),
                 P01BPreset(name="retain preset", data={"fixture": True}),
                 E02BSavedPlan(name="retain plan", document={"fixture": True}),
@@ -249,4 +251,51 @@ def test_resets_preserve_reusable_records_and_require_stopped_execution(tmp_path
     assert final["fpg_e02b_saved_plan"] == final["fpg_p01b_preset"] == 0
     assert final[PROFILE] == 1
     assert final[FloorPlanTemplate.__tablename__] == 5
+    database.dispose()
+
+
+def test_revision1_removes_obsolete_runs_atomically(tmp_path):
+    database = Database(f"sqlite:///{tmp_path / 'revision1.db'}")
+    db.migrate(database)
+    db.seed(database)
+    ddl = (Path(__file__).parent / "revision1_floor_plan_run.sql").read_text(encoding="utf-8")
+    with database.engine.begin() as connection:
+        for statement in ddl.split(";"):
+            if statement.strip():
+                connection.exec_driver_sql(statement)
+        connection.exec_driver_sql("PRAGMA user_version = 1")
+    with database.session_factory() as session:
+        profile = SystemConfigurationService(session).get_active()
+        for flow, hints in (("p01c", None), ("p01b", {"preset": {"version": 1}})):
+            session.add(P01Experiment(
+                flow_type=flow, status="completed", floor_plan_request={}, hint_points=hints,
+                system_configuration_id=profile.id, system_configuration_snapshot={},
+                system_configuration_hash=profile.config_hash, fpg_core_version=profile.fpg_core_version,
+            ))
+        session.commit()
+        rows = list(session.scalars(select(P01Experiment).order_by(P01Experiment.id)))
+        legacy_id, current_id, profile_id = rows[0].id, rows[1].id, profile.id
+    with database.engine.begin() as connection:
+        connection.exec_driver_sql(
+            "INSERT INTO fpg_p01_floor_plan_run (experiment_id, status, duration_ms, created_at) "
+            "VALUES (?, 'completed', 0, CURRENT_TIMESTAMP)", (legacy_id,)
+        )
+    planned = db.migrate(database, dry_run=True)
+    assert planned["removed_floor_plan_runs"] == planned["removed_legacy_experiments"] == 1
+    assert db.status(database)["revision"] == 1
+    def fail_revision(_conn, _cursor, statement, *_):
+        if statement.startswith("PRAGMA user_version ="):
+            raise RuntimeError("revision failure")
+    event.listen(database.engine, "before_cursor_execute", fail_revision)
+    with pytest.raises(RuntimeError, match="revision failure"):
+        db.migrate(database)
+    event.remove(database.engine, "before_cursor_execute", fail_revision)
+    assert db.status(database)["revision"] == 1
+    assert db.migrate(database)["applied"]
+    with database.session_factory() as session:
+        assert session.get(P01Experiment, legacy_id) is None
+        assert session.get(P01Experiment, current_id) is not None
+        assert session.get(SystemConfiguration, profile_id) is not None
+    with database.engine.connect() as connection:
+        assert connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE name = 'fpg_p01_floor_plan_run'").first() is None
     database.dispose()

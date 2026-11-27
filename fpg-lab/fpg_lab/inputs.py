@@ -79,6 +79,7 @@ class P01BInput(StrictModel):
     refinement_rounds: int = Field(default=0, ge=0, le=5, strict=True)
     iterations: int = Field(default=1, ge=1, le=100, strict=True)
     initial_time_limit: PositiveFinite
+    random_seed: int | None = Field(default=None, ge=0, strict=True)
     system_configuration_id: int | None = Field(default=None, gt=0)
 
     @model_validator(mode="after")

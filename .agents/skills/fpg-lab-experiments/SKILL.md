@@ -5,7 +5,7 @@ description: Create, extend, or reorganize FPG Lab experiments using the local C
 
 # Develop Lab experiments
 
-For experiment UI creation or updates, follow the canonical [UI standards](../../../fpg-lab/docs/UI_STANDARDS.md): adaptable desktop layout. Use the shared semantic button roles and family-grouped, display-only experiment codes; keep internal route identifiers unchanged.
+For UI changes, start with the shared workspace and [UI standards](../../../fpg-lab/docs/UI_STANDARDS.md), then adapt them to the task. Use concise copy, semantic button roles and the shared room palette; keep route identifiers unchanged.
 
 Read [Lab instructions](../../../fpg-lab/AGENTS.md), its
 [development guide](../../../fpg-lab/docs/DEVELOPMENT.md), and the relevant family
@@ -35,3 +35,7 @@ changes and choose bounded verification from the
 [policy](../../../docs/development/verification.md). Use isolated databases, inspect
 nested branch failures, and reserve costly real experiments for relevant changes.
 Report the experiment behavior, documentation changes and actual verification.
+
+When a significant feature changes, synchronize its schema, seed assets and
+current DB profiles through maintenance, and remove superseded callers and docs.
+Use the catalogue patterns as adaptable examples, not mandatory lifecycles.

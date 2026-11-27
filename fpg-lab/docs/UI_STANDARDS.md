@@ -23,3 +23,9 @@ E02B uses a plan workspace with measurement context. E03A uses tables and a
 relationship matrix for analysis. Check edited pages at typical desktop widths
 such as 1440 and 1280 pixels. Review the primary action, selection and feedback,
 visible room distinctions where applicable, and whether text earns its space.
+
+Use `ResultWorkspace`, `shell`, and `action_button` before adding new page
+primitives. Room colors come from `visualization.figures.ROOM_COLORS` by room
+type; labels distinguish instances. Keep status and diagnostic colors independent.
+Visible selection rows are useful for repeated choices; bound long lists.
+Existing screens are examples to adapt, not mandatory layouts.

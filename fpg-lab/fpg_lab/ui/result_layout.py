@@ -24,6 +24,7 @@ class ResultWorkspace:
         views: Sequence[str] = ("Canvas",),
         default: str | None = None,
         on_view_change: Callable[[str], None] | None = None,
+        with_shell: bool = True,
     ) -> None:
         if not views or len(set(views)) != len(views):
             raise ValueError("Result views must be a non-empty set of unique labels")
@@ -31,7 +32,8 @@ class ResultWorkspace:
         if self.active_view not in views:
             raise ValueError("Default view must be present in views")
         self.on_view_change = on_view_change
-        shell(None)
+        if with_shell:
+            shell(None)
         ui.query(".nicegui-content").classes("lab-result-root")
         with ui.column().classes("lab-result-frame"):
             with ui.row().classes("lab-result-toolbar"):

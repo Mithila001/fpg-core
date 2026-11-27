@@ -5,7 +5,6 @@ from time import perf_counter
 
 from fpg_core.floor_plan_solver import (
     FloorPlanSolveRequest,
-    RoomPlacementHint,
     SeedSource,
     generate_floor_plan,
 )
@@ -14,12 +13,12 @@ from fpg_lab.core.results import error_payload, result_document
 from fpg_lab.database.models import P01BIteration
 from fpg_lab.database.models.common import utc_now
 from fpg_lab.flows.p01 import PipelineTerminated
-from fpg_lab.integrations.fpg_core.hint_map import validate_export
+from fpg_lab.integrations.fpg_core.hint_map import candidate_hints, validate_export
+from fpg_lab.integrations.fpg_core.solver import refinement_profile
 
 
 def effective_profiles(config, settings):
     initial = config.floor_plan_solver.initial
-    refinement = config.floor_plan_solver.refinement_a
     enabled = not settings["disable_hints"]
     initial = replace(
         initial,
@@ -29,12 +28,12 @@ def effective_profiles(config, settings):
             require_source=enabled,
             apply_hints=enabled,
         ),
-        solver=replace(initial.solver, max_time_seconds=settings["initial_time_limit"]),
+        solver=replace(
+            initial.solver, max_time_seconds=settings["initial_time_limit"],
+            random_seed=settings.get("random_seed") if settings.get("random_seed") is not None else initial.solver.random_seed,
+        ),
     )
-    refinement = replace(refinement, seed=replace(
-        refinement.seed, source=SeedSource.EXISTING_FLOOR_PLAN, require_source=True
-    ))
-    return initial, refinement
+    return initial, refinement_profile(config)
 
 
 def run_p01b(runner, session, experiment):
@@ -52,14 +51,7 @@ def run_p01b(runner, session, experiment):
                 adapter.core_config.floor_plan_solver, refinement_a=refinement_config
             ),
         )
-        hints = (
-            ()
-            if settings["disable_hints"]
-            else tuple(
-                RoomPlacementHint(room_id=p["room_id"], x=p["x"], y=p["y"])
-                for p in preset["candidate"]["points"]
-            )
-        )
+        hints = () if settings["disable_hints"] else candidate_hints(preset)
         for number in range(1, settings["iterations"] + 1):
             runner._check_termination(experiment.id)
             started = perf_counter()

@@ -39,7 +39,7 @@ def test_prepared_maps_and_selected_profile_snapshot(tmp_path, monkeypatch):
         assert snapshot["configuration_id"] == profile_id
         assert list(snapshot["maps"]) == ["one"]
         assert len(e02a.prepare(runtime, None)["maps"]) == 4
-        run_id = e02a.start(runtime, "one")
+        run_id = e02a.start(runtime, "one", initial_time_limit=1, random_seed=19)
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline:
             with runtime.database.session_factory() as session:
@@ -52,6 +52,9 @@ def test_prepared_maps_and_selected_profile_snapshot(tmp_path, monkeypatch):
         assert [stage["name"] for stage in row.cases[0]["stages"]] == ["Initial", "Post-process"]
         assert row.cases[0]["scoring"]["result"]["total_score"] == 90
         assert calls[0].candidate_hints and row.snapshot["effective_solver"]
+        assert calls[0].config.solver.random_seed == 19
+        assert row.snapshot["effective_solver"]["initial"]["solver"]["max_time_seconds"] == 1
+        assert row.snapshot["effective_solver"]["initial"]["solver"]["random_seed"] == 19
         with runtime.database.session_factory() as session:
             assert profiles == session.scalar(select(func.count()).select_from(SystemConfiguration))
             assert presets == session.scalar(select(func.count()).select_from(P01BPreset))

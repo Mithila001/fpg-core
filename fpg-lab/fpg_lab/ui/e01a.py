@@ -67,26 +67,24 @@ def traffic_figure(plan: dict, result: dict | None, mode: str, selected: set[int
 
 async def main_page() -> None:
     """Choose a plan and start one tab-local traffic run."""
-    shell(f"{DISPLAY_CODE} · Floor Traffic", "Choose a plan to simulate its preset walking trips.", back_link="/")
+    shell(f"{DISPLAY_CODE} - Floor Traffic", compact=True, back_link="/")
     fixtures = plans()
-    with ui.element("div").classes(
-        "w-full grid grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)] gap-4 items-start"
-    ):
-        with ui.card().classes("w-full p-4 gap-3"):
-            picker = ui.select(
-                {key: plan["name"] for key, plan in fixtures.items()},
-                value="compact", label="Floor plan",
-            ).classes("w-full")
+    with ui.element("div").classes("lab-setup-grid"):
+        with ui.column().classes("lab-setup-sidebar order-2"):
+            ui.label("Floor plan").classes("font-semibold text-sm")
+            picker = ui.radio(
+                {key: plan["name"] for key, plan in fixtures.items()}, value="compact",
+            ).props("dense").classes("w-full max-h-48 overflow-auto")
             with ui.expansion("Paste a floor plan").classes("w-full"):
                 pasted = ui.textarea("Copied floor-plan JSON").classes("w-full")
                 action_button("Load pasted plan", on_click=lambda: load_pasted()).props("outline")
-            button = action_button("Simulate traffic", role="main").classes("w-full")
+            button = action_button("Run", role="main").classes("w-full")
             status = ui.label("Results will be available in this browser tab only.").classes(
                 "text-sm lab-muted"
             )
-        with ui.card().classes("w-full min-w-0 p-3"):
+        with ui.column().classes("lab-setup-main order-1"):
             preview = ui.plotly(traffic_figure(fixtures["compact"], None, "Floor plan")).classes(
-                "w-full h-[32rem]"
+                "lab-setup-plot"
             )
 
     def update_preview() -> None:

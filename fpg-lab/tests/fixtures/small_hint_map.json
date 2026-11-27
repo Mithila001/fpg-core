@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "candidate": {
+    "grid": {
+      "x_positions": [
+        0,
+        10,
+        20
+      ],
+      "y_positions": [
+        0,
+        10,
+        20
+      ]
+    },
+    "points": [
+      {
+        "room_id": "living",
+        "x": 10,
+        "y": 10,
+        "room_type": "living_room",
+        "hint_index": 1
+      }
+    ]
+  },
+  "specification": {
+    "floor": {
+      "width": 20,
+      "length": 20
+    },
+    "rooms": [
+      {
+        "id": "living",
+        "room_type": "living_room",
+        "name": "Living",
+        "size": {
+          "min_width": 20,
+          "max_width": 20,
+          "min_area": 400,
+          "max_area": 400,
+          "width_axis": "any"
+        }
+      }
+    ],
+    "room_relations": []
+  },
+  "request": {
+    "floor_limits": {
+      "max_width": 20,
+      "max_length": 20
+    },
+    "aspect_ratio": "1:1",
+    "rooms": [
+      {
+        "id": "living",
+        "room_type": "living_room",
+        "name": "Living"
+      }
+    ]
+  },
+  "project_units_per_meter": 10
+}

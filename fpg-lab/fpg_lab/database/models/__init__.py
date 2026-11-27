@@ -9,7 +9,6 @@ from fpg_lab.database.models.p01 import (
     P01BPreset,
     P01CandidateTrial,
     P01Experiment,
-    P01FloorPlanRun,
 )
 
 __all__ = [
@@ -22,6 +21,5 @@ __all__ = [
     "P01BPreset",
     "P01CandidateTrial",
     "P01Experiment",
-    "P01FloorPlanRun",
     "SystemConfiguration",
 ]

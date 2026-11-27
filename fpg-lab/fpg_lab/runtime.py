@@ -12,7 +12,6 @@ from sqlalchemy import select, update
 
 from fpg_lab.core.exceptions import AppError, InvalidInputError
 from fpg_lab.core.results import error_payload
-from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import get_settings
 from fpg_lab.database.maintenance import execution_lock, require_current
 from fpg_lab.database.models import E02BRun, E02Run, P01Experiment
@@ -23,7 +22,7 @@ from fpg_lab.flows.p01 import (
     P01FlowRunner,
     recover_interrupted_experiments,
 )
-from fpg_lab.inputs import FloorPlanRequest, ManualHints, P01AInput, P01BInput, P01CInput
+from fpg_lab.inputs import P01AInput, P01BInput, P01CInput
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter
 from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
 from fpg_lab.services.common import SystemConfigurationService
@@ -51,7 +50,7 @@ class LabRuntime:
         self.adapter_factory = adapter_factory
         self.runner = P01FlowRunner(self.database, self.codec, adapter_factory)
         self.jobs = BackgroundExecutor(
-            self.runner, max_workers=max_workers or settings.max_background_workers
+            max_workers=max_workers or settings.max_background_workers
         )
         self._execution = ExitStack()
         self._started = False
@@ -142,7 +141,7 @@ class LabRuntime:
             service = FLOW_SERVICES[flow_type](session, self.codec)
             experiment = service.create_experiment(validated)
             try:
-                self.jobs.submit(experiment.id, flow_type)
+                self.jobs.submit(experiment.id, self.runner.run, experiment.id, flow_type)
             except Exception as exc:
                 experiment.status = "failed"
                 experiment.stop_reason = "job_submission_failed"
@@ -157,47 +156,6 @@ class LabRuntime:
                     details={"experiment_id": experiment.id},
                 ) from exc
             return experiment.id
-
-    def preview_p01b(
-        self,
-        request: Mapping[str, Any],
-        configuration_id: int | None,
-        hints: Mapping[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        validated = FloorPlanRequest.model_validate(request)
-        with self.database.session_factory() as session:
-            configuration, validated_config = SystemConfigurationService(session, self.codec).for_flow(
-                configuration_id, "p01_preview"
-            )
-            result = self._manual_preview(validated, validated_config.config, hints)
-            return {
-                "configuration_id": configuration.id,
-                "configuration_hash": configuration.config_hash,
-                **result,
-            }
-
-    def _manual_preview(
-        self,
-        request: FloorPlanRequest,
-        configuration: Any,
-        hints: Mapping[str, Any] | None,
-    ) -> dict[str, Any]:
-        ids = [room.id for room in request.rooms if room.room_type.value != "hallway"]
-        if not ids or any(not item for item in ids) or len(ids) != len(set(ids)):
-            raise InvalidInputError(
-                "explicit_room_ids_required", "P01B rooms require unique explicit IDs."
-            )
-        adapter = self.adapter_factory(configuration)
-        execution = adapter.preprocess(request.model_dump(mode="json"), debug=True)
-        validated_hints = (
-            ManualHints.model_validate(hints).model_dump(mode="json") if hints is not None else None
-        )
-        candidate = (
-            adapter.build_manual_candidate(execution.result, validated_hints)
-            if validated_hints is not None
-            else None
-        )
-        return {"preprocessing": to_jsonable(execution), "candidate": to_jsonable(candidate)}
 
     def close(self) -> None:
         if self._closed:
@@ -214,10 +172,6 @@ class LabRuntime:
                     for experiment in session.scalars(
                         select(P01Experiment).where(P01Experiment.status.in_(ACTIVE_STATUSES))
                     ):
-                        if experiment.flow_type == "p01c" and not (
-                            experiment.hint_points or {}
-                        ).get("preset"):
-                            continue
                         FLOW_SERVICES[experiment.flow_type](session).request_termination(
                             experiment.id
                         )

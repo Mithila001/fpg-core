@@ -68,6 +68,7 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
                 "preset_id": preset_id,
                 "system_configuration_id": profile_id,
                 "initial_time_limit": 1,
+                "random_seed": 19,
                 "iterations": 2,
                 "refinement_rounds": 2,
                 "disable_hints": True,
@@ -99,6 +100,8 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
             assert all(row.scoring["result"]["total_score"] == 90 for row in rows)
         assert len(calls) == 2 and all(not call.candidate_hints for call in calls)
         assert calls[0].config == calls[1].config
+        assert calls[0].config.solver.random_seed == 19
+        assert experiment["hint_points"]["effective_solver"]["initial"]["solver"]["random_seed"] == 19
 
 
 def test_failed_refinement_keeps_initial_and_continues(tmp_path, monkeypatch):

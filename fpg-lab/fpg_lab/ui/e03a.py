@@ -149,10 +149,11 @@ def _whole_number(value: str) -> int | str:
 
 
 async def setup_page(runtime) -> None:
+    shell(None)
     with ui.row().classes("items-center"):
         profile = await profile_picker(runtime)
         load_button = action_button("Load profile")
-    area = ui.column().classes("w-full")
+    area = ui.column().classes("w-full min-h-0 flex-1")
     workspace = None
 
     async def load():
@@ -172,11 +173,6 @@ async def setup_page(runtime) -> None:
 
     load_button.on_click(load)
     await load()
-
-
-async def result_page(run_id: str) -> None:
-    shell("E-03-A · Session ended", back_link=SETUP)
-    ui.link("Open room sizing workspace", SETUP)
 
 
 def _compute(
@@ -203,7 +199,7 @@ class Workspace:
         self.before_rule: Analysis | None = None
         ui.context.client.on_delete(self.close)
         self.workspace = ResultWorkspace(
-            TITLE, back_link="/", back_label="Experiments", views=VIEWS
+            TITLE, back_link="/", back_label="Experiments", views=VIEWS, with_shell=False
         )
         with self.workspace.controls:
             with ui.column().classes("w-full rounded border border-white/10 bg-white/5 p-3 gap-2"):

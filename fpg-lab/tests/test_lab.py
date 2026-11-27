@@ -18,7 +18,7 @@ from fpg_lab.core.results import result_document
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import ROOT
 from fpg_lab.database.models import P01Experiment
-from fpg_lab.flows.p01 import P01FlowRunner, recover_interrupted_experiments
+from fpg_lab.flows.p01 import recover_interrupted_experiments
 from fpg_lab.inputs import ManualHints, P01AInput, SystemConfigurationCreate
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter, FpgCoreCandidateRejected
 from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
@@ -236,17 +236,6 @@ def test_flows_and_persistence(tmp_path: Path, flow: str, debug: bool) -> None:
             assert experiment["completed_trial_count"] == 2
             assert experiment["best_candidate_score"] == 80
             assert len(trace["trials"]) == (0 if flow == "p01a" and not debug else 2)
-        if flow != "p01a":
-            assert experiment["best_floor_plan_score"] == 90
-            assert len(trace["floor_plan_runs"]) == (1 if flow == "p01b" else 2)
-            assert [
-                "initial",
-                "refinement_a",
-                "refinement_b",
-                "post",
-                "openings",
-                "floor_score",
-            ] == adapters[-1].calls[-6:]
         if debug and flow != "p01b":
             assert trace["trials"][0]["candidate_scoring_data"]["new_core_diagnostic"]
         with runtime.database.session_factory() as session:
@@ -386,10 +375,10 @@ def test_immediate_completion_no_deadlock() -> None:
         def shutdown(self, **_: Any) -> None:
             pass
 
-    manager = BackgroundExecutor(cast(P01FlowRunner, Runner()))
+    manager = BackgroundExecutor()
     manager._executor.shutdown()
     manager._executor = cast(ThreadPoolExecutor, Executor())
-    thread = Thread(target=manager.submit, args=(1, "p01a"), daemon=True)
+    thread = Thread(target=manager.submit, args=(1, Runner().run, 1, "p01a"), daemon=True)
     thread.start()
     thread.join(1)
     assert not thread.is_alive()

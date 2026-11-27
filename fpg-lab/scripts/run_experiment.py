@@ -60,19 +60,16 @@ def collect(runtime: LabRuntime, flow: str, experiment_id: int) -> dict[str, Any
         service = FLOW_SERVICES[flow](session)
         experiment = service.get_experiment(experiment_id)
         trials, trial_count = service.list_trials(experiment_id=experiment_id, limit=100, offset=0)
-        runs, run_count = service.list_floor_plan_runs(experiment_id=experiment_id, limit=100, offset=0)
         return {
             "collection_limit": 100,
             "trial_count": trial_count,
-            "floor_plan_run_count": run_count,
             "iteration_count": session.scalar(
                 select(func.count()).select_from(P01BIteration).where(
                     P01BIteration.experiment_id == experiment_id
                 )
             ) if flow in ("p01b", "p01c") else 0,
             "experiment": row_document(experiment),
-            "trials": [row_document(t) for t, _ in trials],
-            "floor_plan_runs": [row_document(r) for r in runs],
+            "trials": [row_document(t) for t in trials],
             "iterations": [
                 row_document(r)
                 for r in session.scalars(
@@ -99,6 +96,7 @@ def main() -> None:
     parser.add_argument("--refinement-rounds", type=int, default=0)
     parser.add_argument("--initial-time-limit", type=float, default=5)
     parser.add_argument("--disable-hints", action="store_true")
+    parser.add_argument("--random-seed", type=int, help="Override the selected profile solver seed")
     parser.add_argument("--configuration-id", type=int)
     parser.add_argument(
         "--database-url", help="Override the configured database, useful for isolated smoke runs"
@@ -132,6 +130,7 @@ def main() -> None:
                     "refinement_rounds": args.refinement_rounds,
                     "initial_time_limit": args.initial_time_limit,
                     "disable_hints": args.disable_hints,
+                    "random_seed": args.random_seed,
                 }
             else:
                 payload["trial_count"] = args.trial_count

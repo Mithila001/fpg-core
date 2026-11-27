@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import ROOT
-from fpg_lab.database.models import P01CandidateTrial, P01FloorPlanRun
+from fpg_lab.database.models import P01CandidateTrial
 from fpg_lab.database.serialization import row_document
 from fpg_lab.flows.p01 import ACTIVE_STATUSES
 from fpg_lab.inputs import FloorPlanRequest
@@ -28,15 +28,6 @@ from fpg_lab.ui.components import (
 from fpg_lab.ui.replay import candidate_replay
 from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures
-
-STAGES = {
-    "initial_solver_data": "Initial",
-    "refinement_a_data": "Refinement A",
-    "refinement_b_data": "Refinement B",
-    "post_processing_data": "Post-processing",
-    "opening_generation_data": "Openings",
-    "final_floor_plan": "Final",
-}
 
 
 def table(
@@ -129,23 +120,14 @@ def register_experiments(runtime: LabRuntime) -> None:
         except Exception as exc:
             ui.label(str(exc)).classes("text-rose-300")
             return
-        state: dict[str, Any] = {"preview": None, "request": None, "hints": None}
         default_template = next(
             (t for t in templates if t["name"] == "Full Template (Default)"), None
         )
-
-        def invalidate() -> None:
-            state["preview"] = None
-            preview_area.clear()
-            hint_area.clear()
-            state["hints"] = None
 
         def apply_template() -> None:
             selected = next((t for t in templates if t["id"] == template.value), None)
             if selected:
                 set_editor(request_editor, selected["template_data"])
-                if flow == "p01b":
-                    invalidate()
 
         with ui.card().classes("w-full p-5 gap-4"):
             with ui.row().classes("w-full items-center"):
@@ -156,7 +138,6 @@ def register_experiments(runtime: LabRuntime) -> None:
                     },
                     value=next((c["id"] for c in configurations if c["is_active"]), None),
                     label="System configuration",
-                    on_change=lambda: invalidate() if flow == "p01b" else None,
                 ).classes("min-w-80")
                 template = ui.select(
                     {t["id"]: t["name"] for t in templates},
@@ -164,11 +145,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                     label="Load a template",
                     on_change=apply_template,
                 ).classes("min-w-80")
-                trial_count = (
-                    ui.number("Trials", value=100, min=1, max=100000, precision=0).classes("w-32")
-                    if flow != "p01b"
-                    else None
-                )
+                trial_count = ui.number("Trials", value=100, min=1, max=100000, precision=0).classes("w-32")
                 debug = ui.checkbox("Store debug data", value=True)
             if not configurations:
                 ui.label(
@@ -188,112 +165,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                     }
                 },
                 schema=FloorPlanRequest.model_json_schema(),
-                on_change=lambda: invalidate() if flow == "p01b" else None,
             ).classes("nicegui-json-editor w-full min-h-72")
-            preview_area = ui.column().classes("w-full")
-            hint_area = ui.column().classes("w-full")
-
-            async def preview() -> None:
-                try:
-                    if profile.value is None:
-                        raise ValueError("Select a system configuration")
-                    request = await editor_value(request_editor)
-                    prepared = await run.io_bound(runtime.preview_p01b, request, profile.value)
-                    if prepared is None:
-                        raise ValueError("Preview returned no result")
-                    state["preview"], state["request"] = prepared, request
-                    result = prepared["preprocessing"]["result"]
-                    grid = result["candidate_grid"]
-                    xs, ys = grid["x_positions"], grid["y_positions"]
-                    rooms = [
-                        r for r in result["generation_spec"]["rooms"] if r["room_type"] != "hallway"
-                    ]
-                    hints: dict[str, Any] = {
-                        "rooms": [
-                            {
-                                "room_id": r["id"],
-                                "x": xs[min(len(xs) - 1, round((i % 3 + 1) * (len(xs) - 1) / 4))],
-                                "y": ys[min(len(ys) - 1, round((i // 3 + 1) * (len(ys) - 1) / 3))],
-                            }
-                            for i, r in enumerate(rooms)
-                        ],
-                        "hallways": [{"x": xs[len(xs) // 2], "y": ys[len(ys) // 2]}],
-                    }
-                    state["hints"] = hints
-                    preview_area.clear()
-                    with preview_area:
-                        ui.plotly(
-                            figures.candidate_map(
-                                {"grid": grid, "points": []}, title="Prepared candidate grid"
-                            )
-                        ).classes("w-full h-80")
-                        ui.label(
-                            "Starter hint positions are editable. Coordinates must use the prepared grid."
-                        ).classes("lab-muted")
-                    hint_area.clear()
-                    with hint_area:
-                        for point in hints["rooms"]:
-                            with ui.row().classes("items-center"):
-                                ui.label(point["room_id"]).classes("w-48")
-                                ui.number("X").bind_value(point, "x").classes("w-32")
-                                ui.number("Y").bind_value(point, "y").classes("w-32")
-                        hallways = ui.column()
-
-                        @ui.refreshable
-                        def hallway_rows() -> None:
-                            for i, point in enumerate(hints["hallways"]):
-                                with ui.row().classes("items-center"):
-                                    ui.label(f"Hallway {i + 1}").classes("w-48")
-                                    ui.number("X").bind_value(point, "x").classes("w-32")
-                                    ui.number("Y").bind_value(point, "y").classes("w-32")
-
-                        with hallways:
-                            hallway_rows()
-
-                        def add_hallway() -> None:
-                            maximum = result["hallway_room_count_range"]["maximum"]
-                            if len(hints["hallways"]) >= maximum:
-                                ui.notify(f"Maximum {maximum} hallway hints", type="warning")
-                                return
-                            hints["hallways"].append({"x": xs[len(xs) // 2], "y": ys[len(ys) // 2]})
-                            hallway_rows.refresh()
-
-                        def remove_hallway() -> None:
-                            if (
-                                len(hints["hallways"])
-                                > result["hallway_room_count_range"]["minimum"]
-                            ):
-                                hints["hallways"].pop()
-                                hallway_rows.refresh()
-
-                        with ui.row():
-                            action_button("Add hallway", on_click=add_hallway).props("outline")
-                            action_button("Remove last hallway", role="subtle", on_click=remove_hallway).props("flat")
-
-                        async def inspect_hints() -> None:
-                            try:
-                                checked = await run.io_bound(
-                                    runtime.preview_p01b, request, profile.value, hints
-                                )
-                                if checked is None or checked["candidate"] is None:
-                                    raise ValueError("Hint validation returned no candidate")
-                                preview_area.clear()
-                                with preview_area:
-                                    ui.plotly(
-                                        figures.candidate_map(
-                                            checked["candidate"], title="Validated manual hints"
-                                        )
-                                    ).classes("w-full h-96")
-                            except Exception as exc:
-                                notify_error(exc)
-
-                        action_button("Validate and inspect hints", on_click=inspect_hints).props(
-                            "outline"
-                        )
-                except Exception as exc:
-                    invalidate()
-                    notify_error(exc)
-
             async def start() -> None:
                 start_button.disable()
                 try:
@@ -305,25 +177,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                         "system_configuration_id": profile.value,
                         "should_save": debug.value,
                     }
-                    if flow == "p01b":
-                        prepared = state["preview"]
-                        if not prepared or request != state["request"]:
-                            raise ValueError("Preview the current request before starting P-01-B")
-                        current = await db_call(
-                            runtime,
-                            lambda session: (
-                                SystemConfigurationService(session, runtime.codec)
-                                .resolve(profile.value)
-                                .config_hash
-                            ),
-                        )
-                        if current != prepared["configuration_hash"]:
-                            invalidate()
-                            raise ValueError("The saved profile changed; preview it again")
-                        payload["hint_points"] = state["hints"]
-                    else:
-                        assert trial_count is not None
-                        payload["trial_count"] = trial_count.value
+                    payload["trial_count"] = trial_count.value
                     experiment_id = await run.io_bound(runtime.start_experiment, flow, payload)
                     ui.navigate.to(f"/experiments/{flow}/runs/{experiment_id}")
                 except Exception as exc:
@@ -332,8 +186,6 @@ def register_experiments(runtime: LabRuntime) -> None:
                     start_button.enable()
 
             with ui.row():
-                if flow == "p01b":
-                    action_button("Preview request and edit hints", on_click=preview).props("outline")
                 start_button = action_button(f"Start {format_experiment_code(flow)}", role="main", on_click=start)
 
         area = ui.column().classes("w-full")
@@ -356,7 +208,6 @@ def register_experiments(runtime: LabRuntime) -> None:
                             "completed_trial_count",
                             "requested_trial_count",
                             "best_candidate_score",
-                            "best_floor_plan_score",
                             "created_at",
                         ),
                         f"/experiments/{flow}/runs/",
@@ -375,12 +226,6 @@ def register_experiments(runtime: LabRuntime) -> None:
     @ui.page("/experiments/e01a/runs/{run_id}")
     async def e01a_run_page(run_id: str) -> None:
         from fpg_lab.ui.e01a import result_page
-
-        await result_page(run_id)
-
-    @ui.page("/experiments/e03a/runs/{run_id}")
-    async def e03a_run_page(run_id: str) -> None:
-        from fpg_lab.ui.e03a import result_page
 
         await result_page(run_id)
 
@@ -468,13 +313,13 @@ def register_experiments(runtime: LabRuntime) -> None:
         async def refresh_run() -> None:
             nonlocal replay_loaded, replay_seek, last_snapshot
             try:
-                item, trials, scores, runs = await db_call(
+                item, trials, scores = await db_call(
                     runtime,
                     lambda session: _run_data(
                         session, flow, experiment_id, int(trial_page.value or 1)
                     ),
                 )
-                snapshot = (item, trials, scores, runs)
+                snapshot = (item, trials, scores)
                 if snapshot == last_snapshot:
                     if item["status"] not in ACTIVE_STATUSES:
                         timer.deactivate()
@@ -537,13 +382,6 @@ def register_experiments(runtime: LabRuntime) -> None:
                         f"/experiments/{flow}/runs/{experiment_id}/trials/",
                         on_trial=seek_saved_trial if replay_seek else None,
                     )
-                    if runs:
-                        ui.label("Floor-plan branches").classes("font-semibold")
-                        table(
-                            runs,
-                            ("id", "source_trial_id", "status", "final_score", "duration_ms"),
-                            f"/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/",
-                        )
                 provenance_area.clear()
                 with provenance_area:
                     ui.label(
@@ -572,17 +410,17 @@ def register_experiments(runtime: LabRuntime) -> None:
 
     @ui.page("/experiments/{flow}/runs/{experiment_id}/trials/{trial_id}")
     async def trial_page(flow: str, experiment_id: int, trial_id: int) -> None:
-        if flow not in ("p01a", "p01c"):
+        if flow != "p01a":
             shell("This experiment has no candidate trials")
             return
         try:
             def read(session: Any) -> Any:
-                trial, linked = FLOW_SERVICES[flow](session).get_trial(trial_id)
+                trial = FLOW_SERVICES[flow](session).get_trial(trial_id)
                 if trial.experiment_id != experiment_id:
                     raise ValueError("Trial does not belong to this run")
-                return row_document(trial), linked
+                return row_document(trial)
 
-            item, linked = await db_call(runtime, read)
+            item = await db_call(runtime, read)
             exported = None
             if flow == "p01a":
                 from fpg_lab.integrations.fpg_core.p01b_input import export_trial
@@ -635,11 +473,6 @@ def register_experiments(runtime: LabRuntime) -> None:
                             f"navigator.clipboard.writeText({json.dumps(json.dumps(exported))})"
                         ),
                     ).props("dense flat")
-                if linked:
-                    ui.link(
-                        "Open floor-plan branch",
-                        f"/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/{linked}",
-                    )
             with workspace.context("Canvas"):
                 ui.label("Saved candidate hints and their prepared grid.").classes(
                     "text-sm lab-muted"
@@ -652,98 +485,6 @@ def register_experiments(runtime: LabRuntime) -> None:
             shell("Candidate trial unavailable", back_link=f"/experiments/{flow}/runs/{experiment_id}")
             ui.label(str(exc)).classes("text-rose-300")
 
-    @ui.page("/experiments/{flow}/runs/{experiment_id}/floor-plan-runs/{run_id}")
-    async def floor_page(flow: str, experiment_id: int, run_id: int) -> None:
-        timer: ui.timer
-        if flow not in ("p01b", "p01c"):
-            shell("This experiment has no floor-plan branches")
-            return
-        workspace = ResultWorkspace(
-            f"Floor-plan run #{run_id}",
-            back_link=f"/experiments/{flow}/runs/{experiment_id}",
-            back_label="Back to run",
-            views=("Canvas", "Scores", "Diagnostics"),
-        )
-        state: dict[str, Any] = {"run": None}
-        with workspace.main("Canvas"):
-            chart = ui.plotly(figures.floor_plan(None)).classes("lab-primary-plot")
-        with workspace.main("Scores"):
-            scores_area = ui.column().classes("w-full")
-        with workspace.main("Diagnostics"):
-            raw_area = ui.column().classes("w-full gap-3")
-        with workspace.controls:
-            selector = ui.select(
-                STAGES, value="final_floor_plan", label="Pipeline stage"
-            ).classes("w-full").props("dense")
-            action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props("dense flat")
-        with workspace.context("Canvas"):
-            details = ui.column().classes("w-full gap-2")
-        with workspace.context("Scores"):
-            ui.label("Final floor-plan evaluator breakdown, if stored.").classes("lab-muted text-sm")
-        with workspace.context("Diagnostics"):
-            ui.label("Stage data, errors and saved pipeline records.").classes("lab-muted text-sm")
-
-        def render() -> None:
-            item = state["run"]
-            if item is None:
-                return
-            stage = selector.value
-            data = item.get(stage)
-            plan = (
-                data if stage == "final_floor_plan"
-                else ((data or {}).get("result") or {}).get("floor_plan")
-            )
-            chart.figure = figures.floor_plan(plan, title=STAGES[stage])
-            chart.update()
-            details.clear()
-            with details:
-                ui.label(
-                    f"{item['status']} · final score {item['final_score']}"
-                    f" · {item['duration_ms']} ms"
-                ).classes("text-sm font-medium")
-                if not plan:
-                    ui.label("No plan for this stage. Try another stage or Diagnostics.").classes(
-                        "text-sm text-amber-300"
-                    )
-                else:
-                    for room in plan.get("rooms", []):
-                        with ui.row().classes("items-center gap-2"):
-                            ui.icon("square", color=figures.color(str(room.get("room_type", room["id"]))))
-                            ui.label(room.get("name") or room["id"]).classes("text-sm")
-            scores_area.clear()
-            with scores_area:
-                if item["floor_plan_scoring_data"]:
-                    ui.plotly(figures.score_breakdown(item["floor_plan_scoring_data"])).classes(
-                        "w-full h-[32rem]"
-                    )
-                else:
-                    ui.label("No final scoring data was stored.").classes("lab-muted")
-            raw_area.clear()
-            with raw_area:
-                json_panel(f"{STAGES[stage]} result and diagnostics", data)
-                json_panel("All saved pipeline stages", item)
-
-        async def refresh_floor() -> None:
-            try:
-                def read(session: Any) -> Any:
-                    item = FLOW_SERVICES[flow](session).get_floor_plan_run(run_id)
-                    if item.experiment_id != experiment_id:
-                        raise ValueError("Floor-plan run does not belong to this experiment")
-                    return row_document(item)
-
-                updated = await db_call(runtime, read)
-                if state["run"] != updated:
-                    state["run"] = updated
-                    render()
-                if state["run"]["status"] != "running":
-                    timer.deactivate()
-            except Exception as exc:
-                timer.deactivate()
-                notify_error(exc)
-
-        selector.on_value_change(render)
-        timer = ui.timer(1, refresh_floor, immediate=False)
-        await refresh_floor()
 
 
 def _history(session: Any, flow: str, page: int) -> Any:
@@ -779,18 +520,4 @@ def _run_data(session: Any, flow: str, experiment_id: int, page: int) -> Any:
             .order_by(P01CandidateTrial.trial_no)
         ).mappings()
     ]
-    runs = [
-        dict(row)
-        for row in session.execute(
-            select(
-                P01FloorPlanRun.id,
-                P01FloorPlanRun.source_trial_id,
-                P01FloorPlanRun.status,
-                P01FloorPlanRun.final_score,
-                P01FloorPlanRun.duration_ms,
-            )
-            .where(P01FloorPlanRun.experiment_id == experiment_id)
-            .order_by(P01FloorPlanRun.id)
-        ).mappings()
-    ]
-    return row_document(item), to_jsonable(trials), to_jsonable(scores), to_jsonable(runs)
+    return row_document(item), to_jsonable(trials), to_jsonable(scores)
