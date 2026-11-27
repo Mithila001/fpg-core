@@ -228,7 +228,6 @@ Critical evaluators, all requiring score `100`:
 | Evaluator | Order | Exact settings |
 |---|---:|---|
 | `geometry_integrity` | 10 | tolerance `1e-6` |
-| `required_adjacency` | 20 | minimum shared boundary `10.0`, tolerance `1e-6` |
 | `enclosed_voids` | 30 | area tolerance `1e-6` |
 | `inward_recess` | 40 | maximum depth-to-width ratio `1.0`, maximum levels and branches `1`, tolerance `1e-6` |
 
@@ -237,11 +236,57 @@ Functional evaluators:
 | Evaluator | Order | Weight | Exact settings |
 |---|---:|---:|---|
 | `room_size_consistency` | 10 | `2.0` | exact rules listed above |
-| `kitchen_dining_proximity` | 20 | `1.0` | minimum shared boundary `10.0`, maximum distance `2000.0`, tolerance `1e-6` |
+| `room_relationship_quality` | 20 | `1.0` | four configurable distance rules |
 
 `LivingRoomBalanceEvaluator` and `BedroomQualityEvaluator` remain exported and are
 still registered by `create_default_registry()` for compatibility with custom
 configs. They are **not enabled by the default scoring config**.
+
+## Room Relationship Quality
+
+The functional `RoomRelationshipQualityEvaluator` scores practical room
+positioning independently of generation constraints. Final scoring leaves
+required adjacency enforcement to the solver because it measures the quality of
+completed geometry. Room Relationship Quality belongs in the functional group
+and cannot act as a critical scoring gate.
+
+`RoomRelationshipQualitySettings` takes two tuples, `proximity_rules` and
+`clustering_rules`, both empty when constructed without arguments. The default
+scoring configuration supplies the four rules below. Each rule takes a nonblank
+`rule_id` unique across both tuples, `enabled` (default `True`),
+`preferred_maximum_distance`, `zero_score_distance` and `weight` (default
+`1.0`). Distances and weights must be finite. The preferred distance must be
+nonnegative, the zero-score distance must exceed it, and the weight must be
+positive. Settings raise `ScoringConfigurationError` on invalid values.
+
+- `RoomProximityRule` takes canonical `RoomType` members `source_type` and
+  `target_type`. Each source is scored against its nearest eligible target
+  using minimum Euclidean distance between room boundaries. Self-comparisons
+  are excluded. A shared edge or corner has zero distance. The rule averages
+  the source scores and is inapplicable if there are no eligible pairs.
+- `RoomClusteringRule` takes a nonempty `room_types` tuple of canonical
+  `RoomType` members. The longest Euclidean distance between any pair of
+  participating room centroids determines the score. Room dimensions can
+  influence this measurement. The rule requires every configured type to be
+  present and at least two participating rooms.
+
+Scores are 100 at or below the preferred maximum and 0 at or above the zero-score
+distance. Between these thresholds the score decreases linearly. The evaluator
+uses a weighted average of applicable enabled rules and returns
+`NOT_APPLICABLE` if none apply. The manager handles evaluator and group
+weighting. Spatial proximity alone cannot establish physical accessibility.
+
+These thresholds are experimental defaults. Values below use project units
+(10 units per metre at the default scale).
+
+| Rule ID | Room selection | Preferred maximum | Zero-score distance | Weight |
+| --- | --- | ---: | ---: | ---: |
+| `kitchen_dining` | Kitchen → dining room | 5 | 30 | 1.0 |
+| `living_dining` | Living room → dining room | 5 | 30 | 1.0 |
+| `communal` | Living room, dining room and kitchen | 60 | 120 | 0.5 |
+| `bedrooms` | All bedrooms | 50 | 100 | 1.0 |
+
+For saved Lab profiles, follow the [revision 3 migration](../../fpg-lab/docs/DEVELOPMENT.md#revision-3-scoring-profile-migration).
 
 ## Inward recesses
 
@@ -299,7 +344,7 @@ official findings.
 
 Use `create_default_config()` as the canonical baseline. The four critical checks are
 strict 100-point gates. The default functional allocation gives
-`room_size_consistency` twice the configured weight of `kitchen_dining_proximity` before
+`room_size_consistency` twice the configured weight of `room_relationship_quality` before
 normalization. Treat the built-in room-size ratios as package preferences that can be
 replaced by project-specific values.
 
@@ -334,17 +379,14 @@ Each evaluator owns its payload. Payloads may be absent for skipped or inapplica
 evaluations. Built-in payloads include successful measurements where available.
 Coordinates and lengths use project units. Areas use square project units.
 Geometry objects use GeoJSON geometry structure with project coordinates.
-Adjacency and kitchen–dining pairs include `measurement_available`, which
-distinguishes a measured zero shared length from a zero scoring fallback.
 
 | Evaluator | Payload |
 | --- | --- |
 | `geometry_integrity` | Tolerance and `findings`, an array of geometry lists aligned with the evaluator findings. Entries contain affected polygons, diagonal segments, overlap intersections or regions outside the boundary. An entry can be empty when its geometry operation failed. |
-| `required_adjacency` | Settings and `relations` with specification and physical room IDs, source centroid, AND/OR result, and each target's centroid, shared length, shared geometry and pass flag. |
 | `enclosed_voids` | Area tolerance and each void's ring, area and `affects_score` flag. The `enclosed_void_area` metric sums voids exceeding tolerance. |
 | `inward_recess` | Settings, recess regions, sections, entrances and room contacts as described above. |
 | `room_size_consistency` | Measured room areas and centroids, plus applied rule configuration, actual, feasible and effective ratios or spreads, contributing rooms, measured areas, scores, penalties and violation deltas. |
-| `kitchen_dining_proximity` | Settings, each pair's centroids, distance, shared length, shared wall and pass flag, both measured extrema and the `applied_rule` (`shared_boundary` or `centroid_distance`). The two extrema can come from different pairs. |
+| `room_relationship_quality` | Applicable `rules` with the rule configuration, kind and score. Proximity entries include each source ID, nearest target ID, boundary distance and individual score. Clustering entries include participant IDs, the farthest pair and its centroid distance. The `applicable_rule_count` metric counts scored rules. |
 
 ### Independent diagnostics
 
@@ -418,10 +460,9 @@ Floor-plan scoring uses structured `ScoreFinding` values instead of free-form wa
 | `FUNCTIONAL_GROUP` | constant/type alias | `'functional'` | Documented in the corresponding feature/shared section. |
 | `GEOMETRY_INTEGRITY_KEY` | constant/type alias | `'geometry_integrity'` | Documented in the corresponding feature/shared section. |
 | `INWARD_RECESS_KEY` | constant/type alias | `'inward_recess'` | Documented in the corresponding feature/shared section. |
-| `KITCHEN_DINING_KEY` | constant/type alias | `'kitchen_dining_proximity'` | Documented in the corresponding feature/shared section. |
+| `ROOM_RELATIONSHIP_QUALITY_KEY` | constant/type alias | `'room_relationship_quality'` | Built-in functional evaluator key. |
 | `LIVING_ROOM_BALANCE_KEY` | constant/type alias | `'living_room_balance'` | Documented in the corresponding feature/shared section. |
 | `ROOM_SIZE_CONSISTENCY_KEY` | constant/type alias | `'room_size_consistency'` | Stable key for the configurable room-size consistency evaluator. |
-| `REQUIRED_ADJACENCY_KEY` | constant/type alias | `'required_adjacency'` | Documented in the corresponding feature/shared section. |
 | `BedroomQualityEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
 | `BedroomQualitySettings` | dataclass/contract | `(area_compliance_weight: 'float', consistency_weight: 'float', full_spread_penalty_ratio: 'float', maximum_spread_penalty: 'float') -> None` | BedroomQualitySettings(area_compliance_weight: 'float', consistency_weight: 'float', full_spread_penalty_ratio: 'float', maximum_spread_penalty: 'float') |
 | `EnclosedVoidsEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
@@ -453,17 +494,17 @@ Floor-plan scoring uses structured `ScoreFinding` values instead of free-form wa
 | `RecessRoomBoundary` | dataclass/contract | `(room_id, segments, shared_length)` | Physical room boundary shared with a recess region or section. |
 | `RecessSectionVisualization` | dataclass/contract | `(polygons, width, depth, area, depth_to_width_ratio, level, parent_indices, direction, room_boundaries, violation_codes, entrances=())` | Geometry and evaluation measurements for one region or section. |
 | `RecessVisualization` | dataclass/contract | `(region, entrance, direction, branch_count, sections)` | A recess and its connected sections. |
-| `KitchenDiningEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
-| `KitchenDiningSettings` | dataclass/contract | `(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') -> None` | KitchenDiningSettings(minimum_shared_boundary: 'float', maximum_distance: 'float', tolerance: 'float') |
 | `LivingRoomBalanceEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
 | `LivingRoomBalanceSettings` | dataclass/contract | `(maximum_excess_ratio: 'float') -> None` | LivingRoomBalanceSettings(maximum_excess_ratio: 'float') |
+| `RoomClusteringRule` | dataclass/contract | `(*, rule_id: 'str', preferred_maximum_distance: 'float', zero_score_distance: 'float', weight: 'float' = 1.0, enabled: 'bool' = True, room_types: 'tuple[RoomType, ...]') -> None` | See [Room Relationship Quality](#room-relationship-quality). |
+| `RoomProximityRule` | dataclass/contract | `(*, rule_id: 'str', preferred_maximum_distance: 'float', zero_score_distance: 'float', weight: 'float' = 1.0, enabled: 'bool' = True, source_type: 'RoomType', target_type: 'RoomType') -> None` | See [Room Relationship Quality](#room-relationship-quality). |
+| `RoomRelationshipQualityEvaluator` | class/interface/registry | `()` | See [Room Relationship Quality](#room-relationship-quality). |
+| `RoomRelationshipQualitySettings` | dataclass/contract | `(proximity_rules: 'tuple[RoomProximityRule, ...]' = (), clustering_rules: 'tuple[RoomClusteringRule, ...]' = ()) -> None` | See [Room Relationship Quality](#room-relationship-quality). |
 | `RoomAreaAggregation` | enum | `MIN='min'; AVERAGE='average'; MAX='max'; TOTAL='total'` | Controls how multiple rooms of one type are reduced to one area for a relation rule. |
 | `RoomSizeConsistencyEvaluator` | class/interface/registry | `()` | Evaluates configurable inter-type area ratios and same-type area spread. |
 | `RoomSizeConsistencySettings` | dataclass/contract | `(relation_rules: 'tuple[RoomSizeRelationRule, ...]' = (), consistency_rules: 'tuple[RoomTypeConsistencyRule, ...]' = (), default_full_penalty_ratio_delta: 'float' = 0.5) -> None` | Settings container; requires at least one relation or consistency rule. |
 | `RoomSizeRelationRule` | dataclass/contract | `(reference_type: 'RoomType', compared_type: 'RoomType', min_ratio: 'float | None' = None, max_ratio: 'float | None' = None, reference_aggregation: 'RoomAreaAggregation' = MAX, compared_aggregation: 'RoomAreaAggregation' = MAX, weight: 'float' = 1.0, full_penalty_ratio_delta: 'float | None' = None) -> None` | Configures preferred `compared_area / reference_area` bounds. |
 | `RoomTypeConsistencyRule` | dataclass/contract | `(room_type: 'RoomType', maximum_spread_ratio: 'float', weight: 'float' = 1.0, full_penalty_ratio_delta: 'float | None' = None) -> None` | Configures preferred same-type area spread, `largest / smallest - 1`. |
-| `RequiredAdjacencyEvaluator` | class/interface/registry | `()` | Documented in the corresponding feature/shared section. |
-| `RequiredAdjacencySettings` | dataclass/contract | `(minimum_shared_boundary: 'float', tolerance: 'float') -> None` | RequiredAdjacencySettings(minimum_shared_boundary: 'float', tolerance: 'float') |
 | `ScoreFinding` | dataclass/contract | `(code: 'str', message: 'str', severity: 'FindingSeverity' = <FindingSeverity.INFO: 'info'>, subject_ids: 'tuple[str, ...]' = (), metrics: 'tuple[ScoreMetric, ...]' = ()) -> None` | ScoreFinding(code: 'str', message: 'str', severity: 'FindingSeverity' = <FindingSeverity.INFO: 'info'>, subject_ids: 'tuple[str, ...]' = (), metrics: 'tuple[ScoreMetric, ...]' = ()) |
 | `ScoreMetric` | dataclass/contract | `(name: 'str', value: 'float', unit: 'str \| None' = None) -> None` | ScoreMetric(name: 'str', value: 'float', unit: 'str \| None' = None) |
 | `ScoringConfigurationError` | exception | `constructor has no separately inspectable signature` | Raised when a scoring profile or registry is inconsistent. |

@@ -167,10 +167,18 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
             interrupted_id = interrupted.id
         changed = deepcopy(config)
         changed["groups"][1]["weight"] = 3
+        settings = next(rule["settings"] for rule in changed["evaluators"]
+                        if rule["key"] == "room_relationship_quality")
+        settings["proximity_rules"][0]["preferred_maximum_distance"] = 6
+        settings["proximity_rules"].append({
+            **settings["proximity_rules"][0], "rule_id": "custom", "target_type": "living_room",
+        })
+        settings["clustering_rules"].pop()
         with runtime.database.session_factory() as session:
-            SystemConfigurationService(session).save_section(
-                profile_id, "floor_plan_scoring", changed, expected_hash=profile_hash
-            )
+            service = SystemConfigurationService(session)
+            service.save_section(profile_id, "floor_plan_scoring", changed, expected_hash=profile_hash)
+            _, validated = service.for_flow(profile_id, "e02b")
+            assert validated.payload["floor_plan_scoring"] == changed
 
     with (
         initialized_runtime(database_url=database_url) as reopened,
@@ -201,17 +209,18 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
             results[attempt["evaluator_key"]] = attempt["evaluation"]
         assert len(historical.diagnostics) == 2
         assert results["geometry_integrity"]["findings"][0]["metrics"][0]["value"] == 195
-        assert results["required_adjacency"]["visualization_payload"]["relations"][1]["passed"]
         assert results["enclosed_voids"]["visualization_payload"]["voids"][0]["area"] == 3000
         recess = results["inward_recess"]["visualization_payload"]["recesses"][0]
         assert recess["region"]["depth_to_width_ratio"] == 2
         assert recess["sections"][0]["entrances"]
-        assert (
-            results["kitchen_dining_proximity"]["visualization_payload"]["pairs"][0][
-                "shared_length"
-            ]
-            == 20
-        )
+        relationships = results["room_relationship_quality"]["visualization_payload"]["rules"]
+        assert [rule["rule"]["rule_id"] for rule in relationships] == [
+            "kitchen_dining", "living_dining", "communal",
+        ]
+        assert relationships[0]["pairs"] == [
+            {"source_id": "k", "target_id": "d", "distance": 0, "score": 100},
+        ]
+        assert relationships[1]["score"] == 0
         assert plots.size_matrix(results["room_size_consistency"]["visualization_payload"])
         for key, evaluation in results.items():
             observations = plots.observations(key, evaluation, document["floor_plan"])
@@ -221,11 +230,11 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
                 document["floor_plan"], key, 10, observations, evaluation, 0, enabled
             )
             assert fig.layout.yaxis.scaleanchor == "x"
-            if key != "room_size_consistency":
+            if key not in {"room_size_consistency", "room_relationship_quality"}:
                 assert len(fig.data) > len(plan.rooms) + 1
 
 
-def test_diagnostics_recover_valid_pairs_and_report_invalid_inputs():
+def test_diagnostics_measure_relationships_with_unrelated_invalid_geometry():
     document = portable_plan()
     document["floor_plan"]["rooms"][-1]["boundary"] = polygon(
         [(30, 5), (45, 18), (45, 5), (30, 18)]
@@ -235,7 +244,7 @@ def test_diagnostics_recover_valid_pairs_and_report_invalid_inputs():
     official = score_floor_plan(request, mode=ExecutionMode.DEBUG)
     results = {item.evaluator_key: item for item in diagnose_skipped_evaluators(request, official)}
     assert results["room_size_consistency"].status == "unavailable"
-    assert results["kitchen_dining_proximity"].status == "completed"
+    assert results["room_relationship_quality"].status == "completed"
 
 
 def test_diagnostics_handle_exceptions_inapplicability_and_passed_gate():
@@ -270,3 +279,29 @@ def test_diagnostics_handle_exceptions_inapplicability_and_passed_gate():
     assert official.result.passed_critical
     assert official.result == score_floor_plan(request).result
     assert diagnose_skipped_evaluators(request, official) == ()
+
+def test_unmet_solver_adjacency_does_not_gate_functional_scoring():
+    document = portable_plan()
+    floor_plan = document["floor_plan"]
+    floor_plan["rooms"] = floor_plan["rooms"][:3]
+    floor_plan["identity_redirects"] = {}
+    floor_plan["boundary"] = polygon(rectangle(0, 0, 110, 10))
+    for entry, (left, right) in zip(floor_plan["rooms"], [(0, 10), (10, 100), (100, 110)], strict=True):
+        entry["boundary"] = polygon(rectangle(left, 0, right, 10))
+
+    spec = document["specification"]
+    spec["floor"] = {"width": 110, "length": 10}
+    spec["rooms"] = spec["rooms"][:3]
+    spec["room_relations"] = [
+        {"source_room_id": "k", "target_room_ids": ["l"], "match_policy": "and", "strength": "hard"}
+    ]
+
+    request = FloorPlanScoringInput(*decode_plan(document), decode_config(default_config_document()))
+    execution = score_floor_plan(request, mode=ExecutionMode.DEBUG)
+    assert execution.result.passed_critical
+    evaluations = {item.evaluator_key: item for item in execution.details.evaluator_results}
+    relationship = evaluations["room_relationship_quality"]
+    assert relationship.status.value == "completed"
+    assert relationship.threshold is None
+    assert relationship.normalized_weight == pytest.approx(1 / 3)
+    assert 0 < relationship.raw_score < 100

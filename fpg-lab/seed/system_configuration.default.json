@@ -2071,18 +2071,6 @@
         {
           "group_key": "critical",
           "enabled": true,
-          "order": 20,
-          "weight": 1.0,
-          "minimum_score": 100.0,
-          "key": "required_adjacency",
-          "settings": {
-            "minimum_shared_boundary": 10.0,
-            "tolerance": 1e-06
-          }
-        },
-        {
-          "group_key": "critical",
-          "enabled": true,
           "order": 30,
           "weight": 1.0,
           "minimum_score": 100.0,
@@ -2251,11 +2239,52 @@
           "order": 20,
           "weight": 1.0,
           "minimum_score": null,
-          "key": "kitchen_dining_proximity",
+          "key": "room_relationship_quality",
           "settings": {
-            "minimum_shared_boundary": 10.0,
-            "maximum_distance": 2000.0,
-            "tolerance": 1e-06
+            "proximity_rules": [
+              {
+                "rule_id": "kitchen_dining",
+                "preferred_maximum_distance": 5,
+                "zero_score_distance": 30,
+                "weight": 1.0,
+                "enabled": true,
+                "source_type": "kitchen",
+                "target_type": "dining_room"
+              },
+              {
+                "rule_id": "living_dining",
+                "preferred_maximum_distance": 5,
+                "zero_score_distance": 30,
+                "weight": 1.0,
+                "enabled": true,
+                "source_type": "living_room",
+                "target_type": "dining_room"
+              }
+            ],
+            "clustering_rules": [
+              {
+                "rule_id": "communal",
+                "preferred_maximum_distance": 60,
+                "zero_score_distance": 120,
+                "weight": 0.5,
+                "enabled": true,
+                "room_types": [
+                  "living_room",
+                  "dining_room",
+                  "kitchen"
+                ]
+              },
+              {
+                "rule_id": "bedrooms",
+                "preferred_maximum_distance": 50,
+                "zero_score_distance": 100,
+                "weight": 1.0,
+                "enabled": true,
+                "room_types": [
+                  "bedroom"
+                ]
+              }
+            ]
           }
         }
       ]

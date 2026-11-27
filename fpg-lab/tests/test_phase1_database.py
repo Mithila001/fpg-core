@@ -299,3 +299,58 @@ def test_revision1_removes_obsolete_runs_atomically(tmp_path):
     with database.engine.connect() as connection:
         assert connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE name = 'fpg_p01_floor_plan_run'").first() is None
     database.dispose()
+
+
+def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
+    database = Database(f"sqlite:///{tmp_path / 'revision2.db'}")
+    codec = CoreConfigCodec()
+    assert db.migrate(database)["applied"]
+    with database.session_factory() as session:
+        profile = SystemConfigurationService(session).get_active()
+        profile_id = profile.id
+        old = deepcopy(profile.configuration_data)
+        scoring = old["floor_plan_scoring"]
+        scoring["groups"][1]["weight"] = 3
+        scoring["evaluators"] = [
+            rule for rule in scoring["evaluators"] if rule["key"] != "room_relationship_quality"
+        ]
+        scoring["evaluators"].extend([
+            {
+                "key": "required_adjacency", "group_key": "critical", "enabled": True,
+                "order": 20, "weight": 1, "minimum_score": 100,
+                "settings": {"minimum_shared_boundary": 10, "tolerance": 1e-6},
+            },
+            {
+                "key": "kitchen_dining_proximity", "group_key": "functional", "enabled": True,
+                "order": 20, "weight": 1, "minimum_score": None,
+                "settings": {"minimum_shared_boundary": 10, "maximum_distance": 2000,
+                             "tolerance": 1e-6},
+            },
+        ])
+        profile.configuration_data = old
+        profile.config_hash = old_hash = codec.hash_payload(old)
+        session.commit()
+    with database.engine.begin() as connection:
+        connection.exec_driver_sql("PRAGMA user_version = 2")
+
+    planned = db.migrate(database, dry_run=True)
+    assert not planned["applied"] and not planned["conflicts"]
+    assert [item["id"] for item in planned["profiles"]] == [profile_id]
+    assert db.status(database)["revision"] == 2
+    assert db.migrate(database)["applied"]
+    assert db.status(database)["revision"] == 3
+    assert not db.migrate(database)["applied"]
+    with database.session_factory() as session:
+        updated = session.get(SystemConfiguration, profile_id)
+        assert updated.is_active and updated.config_hash != old_hash
+        validated = codec.validate_payload(updated.configuration_data)
+        scoring = validated.payload["floor_plan_scoring"]
+        assert scoring["groups"][1]["weight"] == 3
+        assert {rule["key"] for rule in scoring["evaluators"]} == {
+            "geometry_integrity", "enclosed_voids", "inward_recess",
+            "room_size_consistency", "room_relationship_quality",
+        }
+        assert scoring["evaluators"][-1]["settings"] == (
+            codec.default_configuration().payload["floor_plan_scoring"]["evaluators"][-1]["settings"]
+        )
+    database.dispose()

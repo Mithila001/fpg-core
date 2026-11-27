@@ -7,17 +7,14 @@ from .config import EvaluatorRule, FloorPlanScoringConfig, ScoringGroupRule
 from .context import (
     ScoringContext,
     ScoringContextFactory,
-    has_shared_boundary_measurement,
-    recover_diagnostic_shared_boundaries,
 )
 from .contracts import EvaluatorDiagnostic, FloorPlanScoringDetails
 from .evaluators import (
     BEDROOM_QUALITY_KEY,
     ENCLOSED_VOIDS_KEY,
     INWARD_RECESS_KEY,
-    KITCHEN_DINING_KEY,
     LIVING_ROOM_BALANCE_KEY,
-    REQUIRED_ADJACENCY_KEY,
+    RoomRelationshipQualitySettings,
     RoomSizeConsistencySettings,
 )
 from .exceptions import (
@@ -198,7 +195,6 @@ class FloorPlanScoreManager:
         if not skipped:
             return ()
         context = self._context_factory.build(floor_plan, specification, mode=ExecutionMode.DEBUG)
-        context = recover_diagnostic_shared_boundaries(context)
         results = []
         for group in self._ordered_groups():
             for rule in self._ordered_rules(group):
@@ -368,22 +364,7 @@ def _unavailable_inputs(rule: EvaluatorRule, context: ScoringContext) -> str | N
 
     room_types = {room.room_type for room in context.rooms}
     relevant_types: set[RoomType] = set()
-    if rule.key == KITCHEN_DINING_KEY:
-        pair = {RoomType.KITCHEN, RoomType.DINING_ROOM}
-        if pair <= room_types:
-            relevant_types = pair
-            for kitchen in (r for r in context.rooms if r.room_type is RoomType.KITCHEN):
-                for dining in (r for r in context.rooms if r.room_type is RoomType.DINING_ROOM):
-                    if not has_shared_boundary_measurement(context, kitchen.room_id, dining.room_id):
-                        return "A kitchen–dining shared-wall measurement is unavailable."
-    elif rule.key == REQUIRED_ADJACENCY_KEY:
-        for relation in context.relations:
-            if relation.strength != "hard":
-                continue
-            for target_id in relation.target_room_ids:
-                if not has_shared_boundary_measurement(context, relation.source_room_id, target_id):
-                    return "A required shared-wall measurement is unavailable."
-    elif isinstance(rule.settings, RoomSizeConsistencySettings):
+    if isinstance(rule.settings, RoomSizeConsistencySettings):
         for relation_rule in rule.settings.relation_rules:
             pair = {relation_rule.reference_type, relation_rule.compared_type}
             if pair <= room_types:
@@ -391,6 +372,18 @@ def _unavailable_inputs(rule: EvaluatorRule, context: ScoringContext) -> str | N
         for consistency in rule.settings.consistency_rules:
             if sum(room.room_type == consistency.room_type for room in context.rooms) >= 2:
                 relevant_types.add(consistency.room_type)
+    elif isinstance(rule.settings, RoomRelationshipQualitySettings):
+        for proximity in rule.settings.proximity_rules:
+            pair = {proximity.source_type, proximity.target_type}
+            if proximity.enabled and pair <= room_types and sum(
+                room.room_type in pair for room in context.rooms
+            ) >= 2:
+                relevant_types.update(pair)
+        for clustering in rule.settings.clustering_rules:
+            if clustering.enabled and set(clustering.room_types) <= room_types and sum(
+                room.room_type in clustering.room_types for room in context.rooms
+            ) >= 2:
+                relevant_types.update(clustering.room_types)
     elif rule.key == BEDROOM_QUALITY_KEY:
         relevant_types = {RoomType.BEDROOM}
     elif rule.key == LIVING_ROOM_BALANCE_KEY and RoomType.LIVING_ROOM in room_types:

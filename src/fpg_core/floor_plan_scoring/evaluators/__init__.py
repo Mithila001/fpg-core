@@ -23,20 +23,17 @@ from .inward_recess import (
     RecessSectionVisualization,
     RecessVisualization,
 )
-from .kitchen_dining import (
-    KITCHEN_DINING_KEY,
-    KitchenDiningEvaluator,
-    KitchenDiningSettings,
-)
 from .living_room_balance import (
     LIVING_ROOM_BALANCE_KEY,
     LivingRoomBalanceEvaluator,
     LivingRoomBalanceSettings,
 )
-from .required_adjacency import (
-    REQUIRED_ADJACENCY_KEY,
-    RequiredAdjacencyEvaluator,
-    RequiredAdjacencySettings,
+from .room_relationship_quality import (
+    ROOM_RELATIONSHIP_QUALITY_KEY,
+    RoomClusteringRule,
+    RoomProximityRule,
+    RoomRelationshipQualityEvaluator,
+    RoomRelationshipQualitySettings,
 )
 from .room_size_consistency import (
     ROOM_SIZE_CONSISTENCY_KEY,
@@ -52,10 +49,9 @@ __all__ = [
     "ENCLOSED_VOIDS_KEY",
     "GEOMETRY_INTEGRITY_KEY",
     "INWARD_RECESS_KEY",
-    "KITCHEN_DINING_KEY",
+    "ROOM_RELATIONSHIP_QUALITY_KEY",
     "LIVING_ROOM_BALANCE_KEY",
     "ROOM_SIZE_CONSISTENCY_KEY",
-    "REQUIRED_ADJACENCY_KEY",
     "BedroomQualityEvaluator",
     "BedroomQualitySettings",
     "EnclosedVoidsEvaluator",
@@ -69,8 +65,10 @@ __all__ = [
     "RecessRoomBoundary",
     "RecessSectionVisualization",
     "RecessVisualization",
-    "KitchenDiningEvaluator",
-    "KitchenDiningSettings",
+    "RoomRelationshipQualityEvaluator",
+    "RoomClusteringRule",
+    "RoomProximityRule",
+    "RoomRelationshipQualitySettings",
     "LivingRoomBalanceEvaluator",
     "LivingRoomBalanceSettings",
     "RoomAreaAggregation",
@@ -78,6 +76,4 @@ __all__ = [
     "RoomSizeConsistencySettings",
     "RoomSizeRelationRule",
     "RoomTypeConsistencyRule",
-    "RequiredAdjacencyEvaluator",
-    "RequiredAdjacencySettings",
 ]

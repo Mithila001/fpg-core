@@ -3,9 +3,10 @@ from __future__ import annotations
 import math
 
 from .config import FloorPlanScoringConfig, ScoringProfile
+from .evaluators import ROOM_RELATIONSHIP_QUALITY_KEY
 from .exceptions import EvaluatorContractError, ScoringConfigurationError
 from .registry import EvaluatorRegistry
-from .types import CRITICAL_GROUP, EvaluationStatus, EvaluatorResult
+from .types import CRITICAL_GROUP, FUNCTIONAL_GROUP, EvaluationStatus, EvaluatorResult
 
 
 def validate_config(
@@ -69,6 +70,8 @@ def validate_config(
             raise ScoringConfigurationError(
                 f"Evaluator '{key}' references unknown group '{group_key}'."
             )
+        if rule.key == ROOM_RELATIONSHIP_QUALITY_KEY and rule.group_key != FUNCTIONAL_GROUP:
+            raise ScoringConfigurationError("Room Relationship Quality requires the functional group.")
         effectively_enabled = rule.enabled and group_key in enabled_groups
         if effectively_enabled:
             if not registry.contains(rule.key):

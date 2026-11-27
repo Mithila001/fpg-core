@@ -6,6 +6,11 @@
 
 ## Unreleased
 
+- Breaking. Room Relationship Quality replaces the shared-wall adjacency gate
+  and the former kitchen/dining evaluator. Replace obsolete scoring rules with
+  `room_relationship_quality` and use the [Lab profile migration](../../fpg-lab/docs/DEVELOPMENT.md#revision-3-scoring-profile-migration)
+  for existing databases.
+
 - Breaking: `inward_recess` replaces `maximum_length` with
   `max_depth_to_width_ratio` (default 1.0) and `max_recess_levels` (default 1).
   Update Python settings and saved Lab profiles or use the current seed.

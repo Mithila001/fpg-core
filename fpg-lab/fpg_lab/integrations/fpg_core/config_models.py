@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from fpg_core.floor_plan_scoring import RoomSizeConsistencySettings
+from fpg_core.floor_plan_scoring import (
+    RoomRelationshipQualitySettings,
+    RoomSizeConsistencySettings,
+)
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from fpg_lab.e03a_config import Configuration as E03AConfiguration
@@ -501,11 +504,6 @@ class GeometryIntegritySettingsDocument(StrictModel):
     tolerance: float = Field(ge=0, allow_inf_nan=False)
 
 
-class RequiredAdjacencySettingsDocument(StrictModel):
-    minimum_shared_boundary: float = Field(ge=0, allow_inf_nan=False)
-    tolerance: float = Field(ge=0, allow_inf_nan=False)
-
-
 class EnclosedVoidsSettingsDocument(StrictModel):
     area_tolerance: float = Field(ge=0, allow_inf_nan=False)
 
@@ -527,12 +525,6 @@ class BedroomQualitySettingsDocument(StrictModel):
     maximum_spread_penalty: float = Field(ge=0, allow_inf_nan=False)
 
 
-class KitchenDiningSettingsDocument(StrictModel):
-    minimum_shared_boundary: float = Field(ge=0, allow_inf_nan=False)
-    maximum_distance: float = Field(gt=0, allow_inf_nan=False)
-    tolerance: float = Field(ge=0, allow_inf_nan=False)
-
-
 class FloorEvaluatorBaseDocument(StrictModel):
     group_key: str = Field(min_length=1)
     enabled: bool = True
@@ -544,11 +536,6 @@ class FloorEvaluatorBaseDocument(StrictModel):
 class GeometryIntegrityEvaluatorDocument(FloorEvaluatorBaseDocument):
     key: Literal["geometry_integrity"]
     settings: GeometryIntegritySettingsDocument
-
-
-class RequiredAdjacencyEvaluatorDocument(FloorEvaluatorBaseDocument):
-    key: Literal["required_adjacency"]
-    settings: RequiredAdjacencySettingsDocument
 
 
 class EnclosedVoidsEvaluatorDocument(FloorEvaluatorBaseDocument):
@@ -571,9 +558,9 @@ class BedroomQualityEvaluatorDocument(FloorEvaluatorBaseDocument):
     settings: BedroomQualitySettingsDocument
 
 
-class KitchenDiningEvaluatorDocument(FloorEvaluatorBaseDocument):
-    key: Literal["kitchen_dining_proximity"]
-    settings: KitchenDiningSettingsDocument
+class RoomRelationshipQualityEvaluatorDocument(FloorEvaluatorBaseDocument):
+    key: Literal["room_relationship_quality"]
+    settings: RoomRelationshipQualitySettings
 
 
 class RoomSizeConsistencyEvaluatorDocument(FloorEvaluatorBaseDocument):
@@ -583,12 +570,11 @@ class RoomSizeConsistencyEvaluatorDocument(FloorEvaluatorBaseDocument):
 
 FloorEvaluatorDocument = Annotated[
     GeometryIntegrityEvaluatorDocument
-    | RequiredAdjacencyEvaluatorDocument
     | EnclosedVoidsEvaluatorDocument
     | InwardRecessEvaluatorDocument
     | LivingRoomBalanceEvaluatorDocument
     | BedroomQualityEvaluatorDocument
-    | KitchenDiningEvaluatorDocument
+    | RoomRelationshipQualityEvaluatorDocument
     | RoomSizeConsistencyEvaluatorDocument,
     Field(discriminator="key"),
 ]

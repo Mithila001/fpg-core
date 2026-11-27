@@ -46,15 +46,6 @@ def area(value):
     return f"{number(value)} u²"
 
 
-def _shared_length(pair):
-    measured = length(pair["shared_length"])
-    return (
-        measured
-        if pair.get("measurement_available", True)
-        else f"Unavailable · scoring used {measured}"
-    )
-
-
 def _geo(shape, name, color, overlay):
     if not shape:
         return []
@@ -122,56 +113,6 @@ def observations(key, evaluation, plan):
             )
             for index, finding in enumerate(evaluation["findings"])
         ]
-    if key == "required_adjacency":
-        result = []
-        for i, relation in enumerate(payload.get("relations", []), start=1):
-            source = names.get(relation["physical_source_id"], relation["source_room_id"])
-            condition = relation["match_policy"].upper()
-            for target in relation["targets"]:
-                destination = names.get(target["physical_room_id"], target["room_id"])
-                status = "Satisfied" if target["passed"] else "Unsatisfied"
-                color = PASS if target["passed"] else FAIL
-                link = (
-                    [relation["source_centroid"], target["centroid"]]
-                    if target["centroid"] is not None
-                    else []
-                )
-                layers = (
-                    [
-                        Layer(
-                            status,
-                            link,
-                            color,
-                            "Relationships",
-                            "solid" if target["passed"] else "dot",
-                            markers=True,
-                        )
-                    ]
-                    if link
-                    else []
-                )
-                layers.extend(
-                    _geo(target["shared_boundary"], "Measured shared wall", color, "Shared walls")
-                )
-                result.append(
-                    Observation(
-                        f"{i}. {source} → {destination}",
-                        {
-                            "Pair": status,
-                            "Relationship": f"{condition} · {'satisfied' if relation['passed'] else 'unsatisfied'}",
-                            "Specification identities": f"{relation['source_room_id']} → {target['room_id']}",
-                            "Measured shared wall": _shared_length(target),
-                            "Required shared wall": length(
-                                payload["settings"]["minimum_shared_boundary"]
-                            ),
-                            "Length tolerance": length(payload["settings"]["tolerance"]),
-                        },
-                        color,
-                        layers,
-                        (relation["physical_source_id"], target["physical_room_id"]),
-                    )
-                )
-        return result
     if key == "enclosed_voids":
         return [
             Observation(
@@ -234,42 +175,36 @@ def observations(key, evaluation, plan):
                 )
             )
         return result
-    if key == "kitchen_dining_proximity":
+    if key == "room_relationship_quality":
         result = []
-        for pair in payload.get("pairs", []):
-            name = f"{names[pair['kitchen_id']]} ↔ {names[pair['dining_id']]}"
-            color = PASS if pair["meets_shared_minimum"] else WARN
-            result.append(
-                Observation(
-                    name,
-                    {
-                        "Shared wall": _shared_length(pair),
-                        "Centroid distance": length(pair["distance"]),
-                        "Shared wall check": "Satisfied"
-                        if pair["meets_shared_minimum"]
-                        else "Below minimum",
-                        "Longest shared wall": "Yes"
-                        if pair["shared_length"] == payload["maximum_shared_boundary"]
-                        else "No",
-                        "Nearest centroids": "Yes"
-                        if pair["distance"] == payload["minimum_centroid_distance"]
-                        else "No",
-                    },
-                    color,
-                    [
-                        Layer(
-                            "Centroid distance",
-                            pair["centroids"],
-                            color,
-                            "Centroids",
-                            "dot",
-                            markers=True,
-                        ),
-                        *_geo(pair["shared_boundary"], "Shared wall", color, "Shared walls"),
-                    ],
-                    (pair["kitchen_id"], pair["dining_id"]),
-                )
-            )
+        for measured in payload.get("rules", []):
+            rule = measured["rule"]
+            score = measured["score"]
+            details = {
+                "Rule type": measured["kind"].capitalize(),
+                "Rule score": number(score),
+                "Preferred maximum": length(rule["preferred_maximum_distance"]),
+                "Zero-score distance": length(rule["zero_score_distance"]),
+                "Weight": number(rule["weight"]),
+            }
+            if measured["kind"] == "proximity":
+                room_ids = []
+                for pair in measured["pairs"]:
+                    source, target = pair["source_id"], pair["target_id"]
+                    details[names.get(source, source)] = (
+                        f"Nearest target {names.get(target, target)} · "
+                        f"{length(pair['distance'])} · score {number(pair['score'])}"
+                    )
+                    room_ids.extend((source, target))
+            else:
+                room_ids = measured["room_ids"]
+                details["Participants"] = ", ".join(names.get(room_id, room_id) for room_id in room_ids)
+                details["Farthest pair"] = " ↔ ".join(names.get(room_id, room_id) for room_id in measured["pair"])
+                details["Maximum centroid distance"] = length(measured["distance"])
+            result.append(Observation(
+                f"{rule['rule_id']} · {number(score)}", details, PASS if score == 100 else WARN,
+                room_ids=tuple(dict.fromkeys(room_ids)),
+            ))
         return result
     return []
 

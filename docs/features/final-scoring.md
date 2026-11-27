@@ -4,8 +4,8 @@ Final scoring is distinct from candidate hint scoring. Call `score_floor_plan(Fl
 
 ## Default scoring policy
 
-- **Critical group:** geometry integrity, required adjacency, enclosed voids, and inward recess. Each default critical evaluator requires score `100`. Critical failure can stop later groups.
-- **Functional group:** room-size consistency and kitchen/dining relationship.
+- **Critical group:** geometry integrity, enclosed voids, and inward recess. Each default critical evaluator requires score `100`. Critical failure can stop later groups.
+- **Functional group:** room-size consistency and [Room Relationship Quality](../feature_documentations/floor_plan_scoring.md#room-relationship-quality). Solver adjacency stays in generation so functional scoring can assess the practical positioning of completed rooms.
 - `total_score`, `passed_critical`, and `critical_failure` are production result fields; `DEBUG` gives group/evaluator results, weighted contributions, findings, metrics, and optional visualization data.
 
 Default room-size preferences use the same 12 upper-bound relationships as the solver: bathrooms and attached bathrooms versus bedrooms, living rooms, dining rooms, kitchens and garages, plus bedrooms and kitchens versus living rooms. The largest compared room is measured against the smallest reference room, with a maximum ratio of 1.0. Bedroom largest/smallest spread is separately limited to 25% as a scoring preference.

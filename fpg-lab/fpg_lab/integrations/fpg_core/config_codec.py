@@ -628,20 +628,16 @@ class CoreConfigCodec:
             GeometryIntegritySettings,
             GroupKey,
             InwardRecessSettings,
-            KitchenDiningSettings,
             LivingRoomBalanceSettings,
-            RequiredAdjacencySettings,
             ScoringGroupRule,
         )
 
         setting_types = {
             "geometry_integrity": GeometryIntegritySettings,
-            "required_adjacency": RequiredAdjacencySettings,
             "enclosed_voids": EnclosedVoidsSettings,
             "inward_recess": InwardRecessSettings,
             "living_room_balance": LivingRoomBalanceSettings,
             "bedroom_quality": BedroomQualitySettings,
-            "kitchen_dining_proximity": KitchenDiningSettings,
         }
         config = FloorPlanScoringConfig(
             groups=tuple(
@@ -655,7 +651,7 @@ class CoreConfigCodec:
                     key=EvaluatorKey(x.key),
                     group_key=GroupKey(x.group_key),
                     settings=x.settings
-                    if x.key == "room_size_consistency"
+                    if x.key in {"room_size_consistency", "room_relationship_quality"}
                     else setting_types[x.key](**x.settings.model_dump()),
                     enabled=x.enabled,
                     order=x.order,

@@ -59,3 +59,25 @@ Revision 2 migration removes the obsolete floor-plan-run table and old P01B/C
 runs without a saved preset snapshot. The dry run reports both counts. Profiles,
 templates, presets, saved plans and current runs remain. Export observations
 that matter before applying the migration. Stop Lab before maintenance.
+
+## Revision 3 scoring profile migration
+
+Stop Lab and headless execution. Run these commands from `fpg-lab/` using
+the Lab environment. Include `--database-url <URL>` before the command name
+to select a different database.
+
+```powershell
+python -m scripts.lab_db migrate --dry-run --json
+python -m scripts.lab_db migrate --json
+```
+
+Revision 3 updates saved scoring configuration in place. It deletes both
+retired evaluator entries from profiles and seeds the four new defaults where
+the former kitchen/dining evaluator was configured. It preserves the other
+scoring settings, profile IDs, active selection, saved layouts and run snapshots.
+Snapshot exports still contain the original measurements. E02B's evaluator views
+use the current set of evaluators. New databases seed the current configuration.
+The dry run reports profiles and hashes that would change. If a custom profile
+would leave an enabled group without an evaluator, the dry run reports a conflict
+and the migration stops without writing. Update the profile so its enabled
+groups have current evaluators before applying the migration.

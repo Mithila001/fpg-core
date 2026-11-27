@@ -15,8 +15,7 @@ from .evaluators import (
     ENCLOSED_VOIDS_KEY,
     GEOMETRY_INTEGRITY_KEY,
     INWARD_RECESS_KEY,
-    KITCHEN_DINING_KEY,
-    REQUIRED_ADJACENCY_KEY,
+    ROOM_RELATIONSHIP_QUALITY_KEY,
     ROOM_SIZE_CONSISTENCY_KEY,
     BedroomQualityEvaluator,
     EnclosedVoidsEvaluator,
@@ -25,12 +24,12 @@ from .evaluators import (
     GeometryIntegritySettings,
     InwardRecessEvaluator,
     InwardRecessSettings,
-    KitchenDiningEvaluator,
-    KitchenDiningSettings,
     LivingRoomBalanceEvaluator,
-    RequiredAdjacencyEvaluator,
-    RequiredAdjacencySettings,
     RoomAreaAggregation,
+    RoomClusteringRule,
+    RoomProximityRule,
+    RoomRelationshipQualityEvaluator,
+    RoomRelationshipQualitySettings,
     RoomSizeConsistencyEvaluator,
     RoomSizeConsistencySettings,
     RoomSizeRelationRule,
@@ -40,21 +39,18 @@ from .registry import EvaluatorRegistry
 from .types import CRITICAL_GROUP, FUNCTIONAL_GROUP
 
 DEFAULT_GEOMETRY_TOLERANCE = 1e-6
-DEFAULT_MINIMUM_SHARED_BOUNDARY = 10.0
-DEFAULT_KITCHEN_DINING_MAXIMUM_DISTANCE = 2000.0
 
 
 def create_default_registry() -> EvaluatorRegistry:
     return EvaluatorRegistry(
         (
             GeometryIntegrityEvaluator(),
-            RequiredAdjacencyEvaluator(),
             EnclosedVoidsEvaluator(),
             InwardRecessEvaluator(),
             LivingRoomBalanceEvaluator(),
             BedroomQualityEvaluator(),
             RoomSizeConsistencyEvaluator(),
-            KitchenDiningEvaluator(),
+            RoomRelationshipQualityEvaluator(),
         )
     )
 
@@ -70,16 +66,6 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
             CRITICAL_GROUP,
             GeometryIntegritySettings(DEFAULT_GEOMETRY_TOLERANCE),
             order=10,
-            minimum_score=100.0,
-        ),
-        EvaluatorRule(
-            REQUIRED_ADJACENCY_KEY,
-            CRITICAL_GROUP,
-            RequiredAdjacencySettings(
-                DEFAULT_MINIMUM_SHARED_BOUNDARY,
-                DEFAULT_GEOMETRY_TOLERANCE,
-            ),
-            order=20,
             minimum_score=100.0,
         ),
         EvaluatorRule(
@@ -121,12 +107,32 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
             weight=2.0,
         ),
         EvaluatorRule(
-            KITCHEN_DINING_KEY,
+            ROOM_RELATIONSHIP_QUALITY_KEY,
             FUNCTIONAL_GROUP,
-            KitchenDiningSettings(
-                minimum_shared_boundary=DEFAULT_MINIMUM_SHARED_BOUNDARY,
-                maximum_distance=DEFAULT_KITCHEN_DINING_MAXIMUM_DISTANCE,
-                tolerance=DEFAULT_GEOMETRY_TOLERANCE,
+            RoomRelationshipQualitySettings(
+                proximity_rules=(
+                    RoomProximityRule(
+                        rule_id="kitchen_dining", source_type=RoomType.KITCHEN,
+                        target_type=RoomType.DINING_ROOM,
+                        preferred_maximum_distance=5, zero_score_distance=30,
+                    ),
+                    RoomProximityRule(
+                        rule_id="living_dining", source_type=RoomType.LIVING_ROOM,
+                        target_type=RoomType.DINING_ROOM,
+                        preferred_maximum_distance=5, zero_score_distance=30,
+                    ),
+                ),
+                clustering_rules=(
+                    RoomClusteringRule(
+                        rule_id="communal",
+                        room_types=(RoomType.LIVING_ROOM, RoomType.DINING_ROOM, RoomType.KITCHEN),
+                        preferred_maximum_distance=60, zero_score_distance=120, weight=0.5,
+                    ),
+                    RoomClusteringRule(
+                        rule_id="bedrooms", room_types=(RoomType.BEDROOM,),
+                        preferred_maximum_distance=50, zero_score_distance=100,
+                    ),
+                ),
             ),
             order=20,
         ),

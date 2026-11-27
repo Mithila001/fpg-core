@@ -31,11 +31,10 @@ PATH = "/experiments/e02b"
 VIEWS = {
     "Overview": None,
     "Geometry integrity": "geometry_integrity",
-    "Required adjacency": "required_adjacency",
     "Enclosed voids": "enclosed_voids",
     "Inward recesses": "inward_recess",
     "Room size consistency": "room_size_consistency",
-    "Kitchen–dining proximity": "kitchen_dining_proximity",
+    "Room Relationship Quality": "room_relationship_quality",
 }
 
 
@@ -261,6 +260,10 @@ async def _config_editor(runtime, profile, area, feedback, save, validate, disca
                     .props("dense")
                     .classes("w-full lab-panel")
                 ):
+                    if rule["key"] == "room_relationship_quality":
+                        ui.label(
+                            "Edit the proximity and clustering rule lists. Distances use project units."
+                        ).classes("text-sm lab-muted")
                     editor = ui.json_editor(
                         {"content": {"json": rule["settings"]}, "mode": "tree"}
                     ).classes("w-full max-h-64")
@@ -523,23 +526,6 @@ def _inspection(workspace, title, key, official, diagnostic, document):
         )
         if diagnostic and diagnostic["error"]:
             ui.label(diagnostic["error"]).classes("text-sm").style(f"color: {plots.WARN}")
-        if key == "kitchen_dining_proximity" and payload:
-            ui.label("Score rule").classes("font-semibold")
-            ui.label(
-                "Any pair meeting the shared-wall minimum earns 100. Otherwise the score decreases linearly from 100 to 0 over the maximum centroid distance."
-            ).classes("text-sm")
-            _measurements(
-                {
-                    "Applied rule": plots.label(payload["applied_rule"]),
-                    "Shared-wall minimum": plots.length(
-                        payload["settings"]["minimum_shared_boundary"]
-                    ),
-                    "Shared-wall tolerance": plots.length(payload["settings"]["tolerance"]),
-                    "Maximum distance": plots.length(payload["settings"]["maximum_distance"]),
-                    "Longest shared wall": plots.length(payload["maximum_shared_boundary"]),
-                    "Shortest distance": plots.length(payload["minimum_centroid_distance"]),
-                }
-            )
         if key == "inward_recess" and payload:
             _measurements(
                 {

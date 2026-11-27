@@ -26,8 +26,8 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 2
-# Revisions 0 and 1 share the reviewed schema; revision 2 drops obsolete runs.
+REVISION = 3
+# Revisions 2 and 3 share the same DDL; revision 3 updates scoring profiles.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 CURRENT_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
 RUN_TABLES = {
@@ -93,7 +93,7 @@ def _state(connection):
         return revision, "newer"
     if not schema and revision == 0:
         return revision, "empty"
-    expected = CURRENT_SCHEMA_HASH if revision == REVISION else REVIEWED_SCHEMA_HASH
+    expected = CURRENT_SCHEMA_HASH if revision >= 2 else REVIEWED_SCHEMA_HASH
     if not _matches_schema(schema, expected):
         return revision, "unknown"
     return revision, "current" if revision == REVISION else "upgrade_required"
@@ -281,6 +281,23 @@ def _upgrade_profile(original, baseline):
     return data
 
 
+def _reseed_relationship_evaluator(data, baseline):
+    scoring = data.get("floor_plan_scoring")
+    if scoring is None:
+        return data
+    obsolete = {"required_adjacency", "kitchen_dining_proximity"}
+    rules = scoring["evaluators"]
+    keys = {rule["key"] for rule in rules}
+    if keys & obsolete:
+        scoring["evaluators"] = [rule for rule in rules if rule["key"] not in obsolete]
+        if "room_relationship_quality" not in keys and "kitchen_dining_proximity" in keys:
+            scoring["evaluators"].append(deepcopy(next(
+                rule for rule in baseline["evaluators"]
+                if rule["key"] == "room_relationship_quality"
+            )))
+    return data
+
+
 def _migration(connection, session, report, *, dry_run):
     revision, compatibility = _state(connection)
     report.update(from_revision=revision, compatibility=compatibility)
@@ -288,24 +305,6 @@ def _migration(connection, session, report, *, dry_run):
         return
     if compatibility not in {"empty", "upgrade_required"}:
         _require((revision, compatibility))
-    if revision == 1 and compatibility == "upgrade_required":
-        report["action"] = "remove obsolete floor-plan runs"
-        report["removed_floor_plan_runs"] = connection.exec_driver_sql(
-            "SELECT count(*) FROM fpg_p01_floor_plan_run"
-        ).scalar_one()
-        report["removed_legacy_experiments"] = connection.exec_driver_sql(
-            "SELECT count(*) FROM fpg_p01_experiment WHERE flow_type IN ('p01b', 'p01c') "
-            "AND (hint_points IS NULL OR json_extract(hint_points, '$.preset') IS NULL)"
-        ).scalar_one()
-        if not dry_run:
-            connection.exec_driver_sql("DROP TABLE fpg_p01_floor_plan_run")
-            connection.exec_driver_sql(
-                "DELETE FROM fpg_p01_experiment WHERE flow_type IN ('p01b', 'p01c') "
-                "AND (hint_points IS NULL OR json_extract(hint_points, '$.preset') IS NULL)"
-            )
-            connection.exec_driver_sql(f"PRAGMA user_version = {REVISION}")
-            report["applied"] = True
-        return
     source = _seed_document()
     codec = CoreConfigCodec()
     baseline = codec.validate_payload(source["configuration_data"])
@@ -319,12 +318,16 @@ def _migration(connection, session, report, *, dry_run):
         try:
             if row.schema_version != "6" or row.configuration_data.get("schema_version") != 6:
                 raise ValueError("schema_version: only reviewed version 6 profiles can be upgraded")
-            primary = row.name == PRIMARY_PROFILE
+            primary = revision == 0 and row.name == PRIMARY_PROFILE
             validated = (
                 baseline
                 if primary
                 else codec.validate_payload(
-                    _upgrade_profile(row.configuration_data, baseline.payload)
+                    _reseed_relationship_evaluator(
+                        _upgrade_profile(row.configuration_data, baseline.payload)
+                        if revision == 0 else deepcopy(row.configuration_data),
+                        baseline.payload["floor_plan_scoring"],
+                    )
                 )
             )
             values = SystemConfigurationService.configuration_values(validated)
@@ -334,7 +337,7 @@ def _migration(connection, session, report, *, dry_run):
                     {
                         "id": row.id,
                         "name": row.name,
-                        "action": "promote E02A baseline" if primary else "upgrade custom profile",
+                        "action": "promote E02A baseline" if primary else "upgrade scoring profile",
                         "old_hash": row.config_hash,
                         "new_hash": validated.config_hash,
                     }
@@ -343,8 +346,11 @@ def _migration(connection, session, report, *, dry_run):
             report["conflicts"].append({"id": row.id, "name": row.name, "error": str(exc)})
     if not any(row.name == PRIMARY_PROFILE for row in rows):
         report["profiles"].append({"name": PRIMARY_PROFILE, "action": "create E02A baseline"})
-    report["action"] = "initialize schema" if compatibility == "empty" else "adopt reviewed schema"
-    if compatibility == "upgrade_required":
+    report["action"] = (
+        "initialize schema" if compatibility == "empty"
+        else "upgrade scoring profiles"
+    )
+    if compatibility == "upgrade_required" and revision < 2:
         report["removed_floor_plan_runs"] = connection.exec_driver_sql(
             "SELECT count(*) FROM fpg_p01_floor_plan_run"
         ).scalar_one()
@@ -354,7 +360,7 @@ def _migration(connection, session, report, *, dry_run):
         ).scalar_one()
     if report["conflicts"] or dry_run:
         return
-    if compatibility == "upgrade_required":
+    if compatibility == "upgrade_required" and revision < 2:
         connection.exec_driver_sql("DROP TABLE fpg_p01_floor_plan_run")
         connection.exec_driver_sql(
             "DELETE FROM fpg_p01_experiment WHERE flow_type IN ('p01b', 'p01c') "
@@ -363,7 +369,7 @@ def _migration(connection, session, report, *, dry_run):
     if compatibility == "empty":
         Base.metadata.create_all(connection)
         if not _matches_schema(_schema(connection), CURRENT_SCHEMA_HASH):
-            raise ValueError("Generated schema differs from supported Lab revision 2.")
+            raise ValueError("Generated schema differs from supported Lab schema.")
     for row, values in proposals:
         for key, value in values.items():
             setattr(row, key, value)
@@ -426,12 +432,12 @@ def reset(database: Database, *, scope: str):
                 if table.name in RUN_TABLES:
                     connection.execute(delete(table))
         else:
-            if state[1] == "upgrade_required":
+            if state[1] == "upgrade_required" and state[0] < 2:
                 connection.exec_driver_sql("DROP TABLE fpg_p01_floor_plan_run")
             Base.metadata.drop_all(connection)
             Base.metadata.create_all(connection)
             if not _matches_schema(_schema(connection), CURRENT_SCHEMA_HASH):
-                raise ValueError("Generated schema differs from supported Lab revision 2.")
+                raise ValueError("Generated schema differs from supported Lab schema.")
             result["seeded"] = _seed(session)
             session.flush()
             connection.exec_driver_sql(f"PRAGMA user_version = {REVISION}")
