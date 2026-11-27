@@ -246,56 +246,67 @@ def test_p01c_scores_the_opening_plan_and_keeps_it_on_score_failure(tmp_path, mo
 def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
     from copy import deepcopy
 
-    from fpg_lab.database.models import P01Experiment, SystemConfiguration
+    from test_phase1_database import reviewed_database
 
-    database_url = f"sqlite:///{tmp_path / 'migration.db'}"
-    from fpg_lab.database.base import Base
     from fpg_lab.database.maintenance import migrate
+    from fpg_lab.database.models import P01Experiment, SystemConfiguration
+    from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
     from fpg_lab.runtime import LabRuntime
 
-    runtime = LabRuntime(database_url=database_url)
-    Base.metadata.create_all(runtime.database.engine)
-    old = deepcopy(runtime.codec.default_configuration().payload)
-    old["preprocessing"]["hallway_min_width"] = 8
-    old["openings"]["dimensions"]["door_width"] = 8
-    old["experiments"]["p01c"] = {"floor_plan_generation_score_threshold": 80}
-    for stage in old["floor_plan_solver"].values():
-        if isinstance(stage, dict):
-            for constraint in stage.get("hard_constraints", []):
-                if constraint["key"] == "hallway_dimensions":
-                    constraint["settings"]["minimum_width"] = 8
-    old["experiments"]["p01b_refinement"] = deepcopy(old["floor_plan_solver"]["refinement_a"])
-    with runtime.database.session_factory() as session:
-        config = SystemConfiguration(name="old", configuration_data=deepcopy(old),
-                                     schema_version="6", config_hash="old", fpg_core_version="old", is_active=True)
-        session.add(config)
-        session.flush()
-        experiment = P01Experiment(flow_type="p01a", status="completed", floor_plan_request={},
-                                   system_configuration_id=config.id, system_configuration_snapshot=deepcopy(old),
-                                   system_configuration_hash="old", fpg_core_version="old")
-        session.add(experiment)
-        session.commit()
-        config_id, experiment_id = config.id, experiment.id
-    with pytest.raises(ValueError, match="lab_db.* migrate"):
+    legacy_database = reviewed_database(tmp_path / "migration.db")
+    runtime = LabRuntime(database_url=legacy_database.database_url)
+    try:
+        codec = CoreConfigCodec()
+        with runtime.database.session_factory() as session:
+            config = session.get(SystemConfiguration, 42)
+            old = deepcopy(config.configuration_data)
+            old["preprocessing"]["hallway_min_width"] = 8
+            old["openings"]["dimensions"]["door_width"] = 8
+            old["experiments"]["p01c"] = {"floor_plan_generation_score_threshold": 80}
+            for stage in old["floor_plan_solver"].values():
+                if isinstance(stage, dict):
+                    for constraint in stage.get("hard_constraints", []):
+                        if constraint["key"] == "hallway_dimensions":
+                            constraint["settings"]["minimum_width"] = 8
+            old["experiments"]["p01b_refinement"] = deepcopy(
+                old["floor_plan_solver"]["refinement_a"]
+            )
+            config.configuration_data = deepcopy(old)
+            config.config_hash = codec.hash_payload(old)
+            experiment = P01Experiment(
+                flow_type="p01a",
+                status="completed",
+                floor_plan_request={},
+                system_configuration_id=config.id,
+                system_configuration_snapshot=deepcopy(old),
+                system_configuration_hash="old",
+                fpg_core_version="old",
+            )
+            session.add(experiment)
+            session.commit()
+            config_id, experiment_id = config.id, experiment.id
+        with pytest.raises(ValueError, match="lab_db.* migrate"):
+            runtime.start()
+        assert migrate(runtime.database)["applied"]
         runtime.start()
-    assert migrate(runtime.database)["applied"]
-    runtime.start()
-    with runtime.database.session_factory() as session:
-        migrated = session.get(SystemConfiguration, config_id)
-        assert migrated.configuration_data["preprocessing"]["hallway_min_width"] == 10
-        assert migrated.configuration_data["openings"]["dimensions"]["door_width"] == 10
-        assert "p01c" not in migrated.configuration_data["experiments"]
-        assert migrated.config_hash != "old"
-        assert session.get(P01Experiment, experiment_id).system_configuration_snapshot == old
-        migrated_data = deepcopy(migrated.configuration_data)
-        migrated_hash = migrated.config_hash
-    runtime.close()
-    assert not migrate(runtime.database)["applied"]
-    with runtime.database.session_factory() as session:
-        migrated = session.get(SystemConfiguration, config_id)
-        assert migrated.configuration_data == migrated_data
-        assert migrated.config_hash == migrated_hash
-    runtime.close()
+        with runtime.database.session_factory() as session:
+            migrated = session.get(SystemConfiguration, config_id)
+            assert migrated.configuration_data["preprocessing"]["hallway_min_width"] == 10
+            assert migrated.configuration_data["openings"]["dimensions"]["door_width"] == 10
+            assert "p01c" not in migrated.configuration_data["experiments"]
+            assert migrated.config_hash != "old"
+            assert session.get(P01Experiment, experiment_id).system_configuration_snapshot == old
+            migrated_data = deepcopy(migrated.configuration_data)
+            migrated_hash = migrated.config_hash
+        runtime.close()
+        assert not migrate(runtime.database)["applied"]
+        with runtime.database.session_factory() as session:
+            migrated = session.get(SystemConfiguration, config_id)
+            assert migrated.configuration_data == migrated_data
+            assert migrated.config_hash == migrated_hash
+    finally:
+        legacy_database.dispose()
+        runtime.close()
 
 
 def test_p01c_opening_failure_stops_iteration(tmp_path, monkeypatch):

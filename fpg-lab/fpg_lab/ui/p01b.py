@@ -6,6 +6,7 @@ from typing import Any
 
 import plotly.graph_objects as go
 from nicegui import run, ui
+from nicegui.timer import Timer
 from sqlalchemy import select
 
 from fpg_lab.database.models import FloorPlanTemplate, P01BIteration, P01BPreset
@@ -92,7 +93,7 @@ async def main_page(runtime, flow="p01b"):
 
         action_button("Save preset", role="main", on_click=save)
 
-    quick = {"job": None, "cancel": None, "suggested": None, "timer": None}
+    quick: dict[str, Any] = {"job": None, "cancel": None, "suggested": None, "timer": None}
     with (
         ui.dialog() as quick_dialog,
         ui.card().classes("w-[80vw] h-[80vh] max-w-none overflow-auto"),
@@ -371,6 +372,7 @@ async def run_page(runtime, experiment_id, flow="p01b"):
         "iteration": 0, "stage": 0, "rows": [], "experiment": None,
         "selected_stage": "Initial",
     }
+    timer: Timer
     workspace = ResultWorkspace(
         f"{format_experiment_code(flow)} run #{experiment_id}",
         back_link=f"/experiments/{flow}",

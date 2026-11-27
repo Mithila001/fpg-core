@@ -284,3 +284,85 @@ E03A save/conflict, E02B scoring and serialization checks passed (9 tests).
 Deferred to Phase 4: full Lab suite, complete browser/viewport and keyboard
 matrix, long-list behavior, all replay/export/termination paths and full-tree
 static checks. No research sweeps were run.
+
+## Phase 4 verification result
+
+Reviewed HEAD `6a4e7647e00dd753aab9505c9390b56a03c85c0f` with the Phase 1–3
+worktree changes already present. Environment: Lab `.venv`, Python 3.13.2,
+Lab 1.0.0, Core 0.2.0 and NiceGUI 3.17.1. Automated CLI and browser databases
+were isolated under
+`C:\Users\user\AppData\Local\Temp\fpg-phase4-42e82247a66b481fa5bbcab93abc04ea`;
+the browser server used port 18933 and one background worker. The research DB
+and `.env` were not read or modified.
+
+From `fpg-lab/`, these explicit-URL commands returned exit code 0:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.lab_db --database-url sqlite:///C:/Users/user/AppData/Local/Temp/fpg-phase4-42e82247a66b481fa5bbcab93abc04ea/lab-cli.db migrate --json
+.\.venv\Scripts\python.exe -m scripts.lab_db --database-url sqlite:///C:/Users/user/AppData/Local/Temp/fpg-phase4-42e82247a66b481fa5bbcab93abc04ea/lab-cli.db seed --json
+.\.venv\Scripts\python.exe -m scripts.lab_db --database-url sqlite:///C:/Users/user/AppData/Local/Temp/fpg-phase4-42e82247a66b481fa5bbcab93abc04ea/lab-cli.db status --json
+.\.venv\Scripts\python.exe -m scripts.lab_db --database-url sqlite:///C:/Users/user/AppData/Local/Temp/fpg-phase4-42e82247a66b481fa5bbcab93abc04ea/lab-cli.db profiles validate --all --json
+.\.venv\Scripts\python.exe -m scripts.verify_fpg_core
+```
+
+The fresh database migrated to revision 2, seeded five templates and one
+active `research-default` profile, and validated with zero profile errors.
+Repeated migration reported no work; repeated seed inserted or changed
+nothing. Read-only inspection confirmed `fully_shared_wall` exactly once in
+`initial`, `refinement_a` and `refinement_b`. `verify_fpg_core` confirmed the
+checkout's public imports and configuration mappings. Reset and migration
+failure behavior were covered by the Phase 1 tests in the full suite; the
+user's existing revision-0 development database was deliberately left
+untouched, so this run does not claim it was migrated.
+
+The deferred Lab gates then completed: `.venv\Scripts\python.exe -m pytest`
+reported **72 passed** (17.36 s); `ruff check fpg_lab scripts tests` passed;
+`mypy fpg_lab scripts` passed across 71 source files; `python
+../tools/check_docs.py` and `python ../tools/generate_public_api_manifest.py
+--check` passed. The root repository-tool tests were not rerun because Phase 4
+changed no root tools. After the browser-discovered E01A toggle correction,
+`ruff check fpg_lab/ui/e01a.py`, `mypy fpg_lab/ui/e01a.py` and the E01A browser
+flow passed. No Core algorithm suite or research sweep was run.
+
+Real smoke outcomes from the temporary browser database:
+
+| Flow | Observed result |
+| --- | --- |
+| E01A | The selected prepared plan returned 8 routes and 0 unreachable destinations; temporary results exposed floor-plan, path and heatmap controls. |
+| E02A | `phase4-small`, one case and one refinement stage validated and completed. Initial, refinement and post-process stages were selectable; Retry created a second completed run (score 100). |
+| E02B | The imported five-room plan completed evaluation. Official score was 0 with the critical gate failed; Geometry integrity exposed a Kitchen/Bathroom overlap of 195 square units. Room-size official status was skipped while independent diagnostics completed at 75. Scoring-settings validation and history dialog close worked. |
+| E03A | Bedroom edits, explicit save, stale-save rejection, temporary lock removal, profile refresh preview and cancel worked; the saved room table updated. |
+| P01A | The one-trial baseline completed and copied a cleaned current-format hint map. A single bounded two-trial run enabled replay verification: playback advanced, Pause was observable and stopped it, Home scrubbed to Trial 1, and room/path filters updated the canvas. |
+| P01B | One iteration completed at score 100; Initial/Post-process stage selection and running/finished terminate states were visible. |
+| P01C | One iteration completed at score 100; Initial/Post-process/Openings stages were visible and copying the final plan produced “Floor plan and openings copied.” |
+
+Configuration duplication, save, validation, activation and unsaved-draft
+discard were checked. Deleting a saved profile with run references was
+rejected by the database; an unreferenced disposable duplicate was deleted
+successfully. The selected active profile was restored to `research-default`.
+Existing run results continued to display their captured profile hash after
+the active profile changed.
+
+All seven active experiment routes, the index, configuration editor and
+template editor rendered. Principal E02B canvas, E03A analytical workspace and
+configuration editor were checked at 1280×720, 1440×900 and 1920×1080; the
+other experiment result/setup screens were checked at the most affected short
+and ordinary desktop sizes. Empty, loading, disabled, selected, success and
+error states, keyboard focus, accessible control names, independent scrolling
+and the main/sidebar balance were inspected. Representative screenshots are
+in `.playwright-mcp/phase4-e01a-result-fixed.png`,
+`.playwright-mcp/phase4-e02b-geometry-1440.png`,
+`.playwright-mcp/phase4-e03a-1280.png`,
+`.playwright-mcp/phase4-config-edit.png` and
+`.playwright-mcp/phase4-p01a-replay-1280.png`.
+
+The browser pass found one concrete UI defect: NiceGUI's toggle rejected the
+tuple supplied by E01A and raised `AttributeError` on the result page. Passing
+the same three options as a list fixed it; the rerun displayed and exercised
+the controls. Profile deletion remains protected when a run references that
+profile; its UI currently reports a generic database-rejection message. This
+preserves run provenance, and no profile or run data from the research DB was
+involved. The temporary databases and unretained Playwright snapshots were
+removed after the server stopped. Phase 4 acceptance passed for this checkout;
+the existing local revision-0 database state remains a separate, unmodified
+environment item.

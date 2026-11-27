@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from nicegui import run, ui
+from nicegui.elements.dialog import Dialog
 from sqlalchemy import select
 
 from fpg_lab.core.serialization import to_jsonable
@@ -41,6 +42,9 @@ VIEWS = {
 async def main_page(runtime):
     shell("E-02-B - Floor plan evaluation", compact=True, back_link="/")
     plan_state = {"document": None, "layout_id": None}
+    import_dialog: Dialog
+    config_dialog: Dialog
+    history_dialog: Dialog
     with ui.element("div").classes("lab-setup-grid"):
         with ui.column().classes("lab-setup-main"):
             layout_status = ui.label("Select or import a floor plan.").classes("text-sm lab-muted")

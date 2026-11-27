@@ -169,7 +169,7 @@ async def result_page(run_id: str) -> None:
         ).classes("w-full")
     with workspace.controls:
         ui.label("Canvas mode").classes("font-semibold text-sm")
-        mode = ui.toggle(("Floor plan", "Paths", "Heatmap"), value="Paths").props(
+        mode = ui.toggle(["Floor plan", "Paths", "Heatmap"], value="Paths").props(
             "dense no-caps"
         ).classes("w-full")
         with ui.row().classes("w-full gap-1"):

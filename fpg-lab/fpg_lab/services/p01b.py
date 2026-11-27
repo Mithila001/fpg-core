@@ -53,6 +53,8 @@ class P01BService(P01Service):
         if preset is None and payload.preset_data is None:
             raise ValueError("Hint map preset not found")
         data = preset.data if preset is not None else payload.preset_data
+        if data is None:
+            raise ValueError("Hint map preset has no data")
         validate_export(data)
         return self._create_experiment(
             floor_plan_request=data["request"],
