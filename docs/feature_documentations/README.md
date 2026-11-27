@@ -13,6 +13,7 @@ These files are the consumer-facing documentation for individual `fpg-core` feat
 | Floor Plan Solver | [floor_plan_solver.md](floor_plan_solver.md) |
 | Floor Plan Post-Processing | [floor_plan_post_processing.md](floor_plan_post_processing.md) |
 | Floor Plan Openings | [floor_plan_openings.md](floor_plan_openings.md) |
+| Geometry Analysis | [geometry_analysis.md](geometry_analysis.md) |
 | Floor Plan Scoring | [floor_plan_scoring.md](floor_plan_scoring.md) |
 
 Internal architecture and feature notes are linked from the [documentation map](../README.md); they explain implementation rationale separately from these consumer contracts.

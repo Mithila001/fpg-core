@@ -133,6 +133,7 @@ which mechanism it uses.
 | Floor Plan Solver | [floor_plan_solver.md](feature_documentations/floor_plan_solver.md) | `generate_floor_plan` |
 | Floor Plan Post-Processing | [floor_plan_post_processing.md](feature_documentations/floor_plan_post_processing.md) | `post_process_floor_plan` |
 | Floor Plan Openings | [floor_plan_openings.md](feature_documentations/floor_plan_openings.md) | `generate_openings` |
+| Geometry Analysis | [geometry_analysis.md](feature_documentations/geometry_analysis.md) | `detect_recesses`, `detect_voids` |
 | Floor Plan Scoring | [floor_plan_scoring.md](feature_documentations/floor_plan_scoring.md) | `score_floor_plan` |
 ## Reusable Example Fixtures
 

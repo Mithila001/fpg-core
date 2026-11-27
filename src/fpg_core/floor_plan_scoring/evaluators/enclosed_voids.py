@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from shapely.geometry import MultiPolygon, Polygon
-
 from ...domain import ExecutionMode
+from ...geometry_analysis import detect_voids
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,
@@ -74,22 +73,7 @@ class EnclosedVoidsEvaluator(FloorPlanEvaluator):
                 ),
             )
 
-        polygons: tuple[Polygon, ...]
-        if isinstance(context.room_union, Polygon):
-            polygons = (context.room_union,)
-        elif isinstance(context.room_union, MultiPolygon):
-            polygons = tuple(context.room_union.geoms)
-        else:
-            polygons = tuple(
-                geometry
-                for geometry in getattr(context.room_union, "geoms", ())
-                if isinstance(geometry, Polygon)
-            )
-        void_polygons = [
-            Polygon(interior)
-            for polygon in polygons
-            for interior in polygon.interiors
-        ]
+        void_polygons = detect_voids(context.room_union)
         void_areas = [float(void.area) for void in void_polygons]
         significant = [area for area in void_areas if area > config.area_tolerance]
         total_area = sum(significant)

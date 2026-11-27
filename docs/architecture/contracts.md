@@ -13,6 +13,8 @@
 
 Do not redefine common `RoomType`, room IDs, `FloorPlan`, `FloorPlanGenerationSpec`, `CandidateMap`, `ResolvedCandidateGrid`, geometry, or execution types within a feature. Do not import sibling feature implementation modules. The root `fpg_core` package exposes selected configuration conveniences lazily; individual feature packages expose their own supported entry points.
 
+Geometry analysis is a shared computational feature: scoring consumes its measurements, and post-processing may consume them without importing scoring. It intentionally exposes Shapely geometry through its [public contract](../feature_documentations/geometry_analysis.md); policy and geometry modifications remain with consumers.
+
 ## Units and coordinate ownership
 
 Repository examples and Lab use **10 project units = 1 metre** (1 unit = 10 cm). Core processes consistent project units supplied by its consumer; `project_units_per_meter` records the physical conversion and is not a universal enforced scale. Geometry may use floats; preprocessing's chosen floor extents use whole project units and a centered candidate grid may start at half units. Solver/opening CP-SAT integer coordinate scales are internal **conversion settings**, not a new consumer unit system. Make every conversion explicit.

@@ -10,9 +10,9 @@ from typing import Any
 from shapely.errors import ShapelyError
 from shapely.geometry import Polygon
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import unary_union
 
 from ..domain import ExecutionMode, FloorPlan, FloorPlanGenerationSpec, RoomType
+from ..geometry_analysis import occupied_footprint, room_polygon, shared_boundary
 from .exceptions import ScoringInputError
 
 
@@ -141,12 +141,10 @@ class ScoringContextFactory:
         room_union: BaseGeometry | None = None
         shared_lengths: dict[tuple[str, str], float] = {}
         try:
-            room_union = unary_union([room.polygon for room in rooms])
+            room_union = occupied_footprint(room.polygon for room in rooms)
             for index, room_a in enumerate(rooms):
                 for room_b in rooms[index + 1 :]:
-                    shared = room_a.polygon.boundary.intersection(
-                        room_b.polygon.boundary
-                    )
+                    shared = shared_boundary(room_a.polygon, room_b.polygon)
                     key = _pair_key(room_a.room_id, room_b.room_id)
                     shared_lengths[key] = float(shared.length)
         except ShapelyError as exc:
@@ -327,7 +325,7 @@ def _normalize_rooms(
         points = _normalize_points(
             _required_attr(boundary, "points", f"{label}.boundary"), f"{label}.boundary"
         )
-        polygon = Polygon(points)
+        polygon = room_polygon(points)
         centroid = polygon.centroid
         rooms.append(
             NormalizedRoom(

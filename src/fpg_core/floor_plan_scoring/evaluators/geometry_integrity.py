@@ -7,6 +7,7 @@ from shapely.geometry import LineString, box
 from shapely.geometry.base import BaseGeometry
 
 from ...domain import ExecutionMode
+from ...geometry_analysis import is_rectilinear
 from ..context import ScoringContext
 from ..types import (
     EvaluationStatus,
@@ -17,7 +18,7 @@ from ..types import (
     ScoreMetric,
 )
 from .base import FloorPlanEvaluator
-from .common import is_rectilinear, require_non_negative, typed_settings
+from .common import require_non_negative, typed_settings
 
 GEOMETRY_INTEGRITY_KEY = EvaluatorKey("geometry_integrity")
 

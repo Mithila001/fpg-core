@@ -10,6 +10,8 @@ gates. The default functional scoring now uses the generic `room_size_consistenc
 evaluator instead of the former default `living_room_balance` and `bedroom_quality`
 evaluators.
 
+Physical measurements are supplied by [Geometry Analysis](geometry_analysis.md); scoring retains specification validation, tolerances, evaluation and diagnostic payloads. Proximity uses boundary distance, while clustering uses centroid distance.
+
 ## Public API
 
 ```python

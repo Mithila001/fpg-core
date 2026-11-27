@@ -7,6 +7,7 @@ from shapely.geometry.base import BaseGeometry
 from shapely.ops import linemerge
 
 from ...domain import ExecutionMode
+from ...geometry_analysis import detect_recesses, lines, polygons, shared_boundary
 from ..context import ScoringContext
 from ..exceptions import ScoringConfigurationError
 from ..types import (
@@ -19,7 +20,6 @@ from ..types import (
 )
 from .base import FloorPlanEvaluator
 from .common import require_non_negative, require_positive, typed_settings
-from .recess_geometry import detect_recesses, lines, polygons
 
 INWARD_RECESS_KEY = EvaluatorKey("inward_recess")
 _Rings = tuple[tuple[tuple[float, float], ...], ...]
@@ -109,7 +109,7 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
                 else None,
             )
 
-        recesses = detect_recesses(union, config.tolerance, debug=debug)
+        recesses = detect_recesses(union, config.tolerance, include_section_entrances=debug)
         findings: list[ScoreFinding] = []
         visuals: list[RecessVisualization] = []
         violating_count = 0
@@ -230,9 +230,8 @@ def _boundaries(
     shape: BaseGeometry,
 ) -> tuple[RecessRoomBoundary, ...]:
     result = []
-    boundary = shape.boundary
     for room in sorted(context.rooms, key=lambda room: room.room_id):
-        shared = boundary.intersection(room.polygon.boundary)
+        shared = shared_boundary(shape, room.polygon)
         parts = lines(shared)
         if not parts:
             continue

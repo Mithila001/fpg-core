@@ -51,7 +51,7 @@ def lines(geometry: BaseGeometry) -> tuple[LineString, ...]:
     )
 
 
-def detect_recesses(footprint: BaseGeometry, tolerance: float, *, debug: bool = False) -> tuple[Recess, ...]:
+def detect_recesses(footprint: BaseGeometry, tolerance: float, *, include_section_entrances: bool = False) -> tuple[Recess, ...]:
     # Interior rings belong to the enclosed-void evaluator.
     solid = unary_union(
         [Polygon(poly.exterior) for poly in polygons(footprint)]
@@ -59,8 +59,8 @@ def detect_recesses(footprint: BaseGeometry, tolerance: float, *, debug: bool = 
     if solid.is_empty:
         return ()
     candidates = [
-        *_sweep(solid, False, tolerance, debug),
-        *_sweep(_swap_axes(solid), True, tolerance, debug),
+        *_sweep(solid, False, tolerance, include_section_entrances),
+        *_sweep(_swap_axes(solid), True, tolerance, include_section_entrances),
     ]
     regions: list[Recess] = []
     for recess in sorted(candidates, key=lambda item: -item.polygon.area):

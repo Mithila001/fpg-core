@@ -25,6 +25,8 @@ land boundary + entry road + setback policy
   -> consumer-owned validation, storage, presentation
 ```
 
+Scoring uses [geometry analysis](../feature_documentations/geometry_analysis.md) for physical measurements. Post-processing may independently use the same foundation for future analysis; it owns modifications and room selection.
+
 ## Crucial hand-offs
 
 - `BuildableLandResult.normalized_land` supplies the road orientation needed by usable-land search; `buildable_land` supplies the allowed polygon.

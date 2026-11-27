@@ -11,6 +11,7 @@
     "fpg_core.floor_plan_preprocessing",
     "fpg_core.floor_plan_scoring",
     "fpg_core.floor_plan_solver",
+    "fpg_core.geometry_analysis",
     "fpg_core.usable_land"
   ],
   "modules": {
@@ -420,6 +421,23 @@
         "SolverStatus",
         "build_default_profiles",
         "generate_floor_plan"
+      ]
+    },
+    "fpg_core.geometry_analysis": {
+      "source": "src/fpg_core/geometry_analysis/__init__.py",
+      "export_count": 11,
+      "exports": [
+        "Recess",
+        "Section",
+        "boundary_distance",
+        "detect_recesses",
+        "detect_voids",
+        "is_rectilinear",
+        "lines",
+        "occupied_footprint",
+        "polygons",
+        "room_polygon",
+        "shared_boundary"
       ]
     },
     "fpg_core.usable_land": {

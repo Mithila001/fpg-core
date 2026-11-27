@@ -6,6 +6,7 @@ from math import dist
 from statistics import mean
 
 from ...domain import ExecutionMode, RoomType
+from ...geometry_analysis import boundary_distance
 from ..context import ScoringContext
 from ..exceptions import ScoringConfigurationError
 from ..types import EvaluationStatus, EvaluatorKey, EvaluatorResult, ScoreMetric
@@ -116,7 +117,7 @@ class RoomRelationshipQualityEvaluator(FloorPlanEvaluator):
             if not rule.enabled:
                 continue
             targets = [
-                (room.room_id, room.polygon.boundary)
+                (room.room_id, room.polygon)
                 for room in context.rooms
                 if room.room_type is rule.target_type
             ]
@@ -125,10 +126,9 @@ class RoomRelationshipQualityEvaluator(FloorPlanEvaluator):
             for source in context.rooms:
                 if source.room_type is not rule.source_type:
                     continue
-                boundary = source.polygon.boundary
                 nearest = min(
                     (
-                        (boundary.distance(target), target_id)
+                        (boundary_distance(source.polygon, target), target_id)
                         for target_id, target in targets
                         if source.room_id != target_id
                     ),
