@@ -40,8 +40,11 @@ async def main_page(runtime):
     stored_count = app.storage.tab.get("e02a_refinement_count", 0)
     refinement_count = ui.radio({count: str(count) for count in range(6)}, value=stored_count if stored_count in range(6) else 0).props("inline")
     ui.label("Refinement stage count")
-    seconds = ui.number("Initial time limit (seconds; blank uses profile)", min=0.01)
-    seed = ui.number("Random seed (blank uses profile)", min=0, precision=0)
+    seconds = ui.number("Initial time limit (seconds; blank uses profile)", min=0.01, value=app.storage.tab.get("e02a_initial_time_limit"))
+    seed = ui.number("Random seed (blank uses profile)", min=0, precision=0, value=app.storage.tab.get("e02a_random_seed"))
+    retry_feasible = ui.checkbox("Retry until a feasible floor plan is found", value=app.storage.tab.get("e02a_retry_feasible", False))
+    maximum_attempts = ui.number("Maximum generation attempts", min=1, precision=0, value=app.storage.tab.get("e02a_maximum_attempts", 10))
+    maximum_attempts.bind_enabled_from(retry_feasible, "value")
     feedback = ui.label().classes("text-sm whitespace-pre-wrap")
 
     def selection():
@@ -53,17 +56,20 @@ async def main_page(runtime):
     refinement_count.on_value_change(
         lambda event: app.storage.tab.update(e02a_refinement_count=event.value)
     )
+    for element, key in ((seconds, "e02a_initial_time_limit"), (seed, "e02a_random_seed"),
+                         (retry_feasible, "e02a_retry_feasible"), (maximum_attempts, "e02a_maximum_attempts")):
+        element.on_value_change(lambda event, key=key: app.storage.tab.update({key: event.value}))
 
     async def validate():
         try:
-            await run.io_bound(prepare, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None)
+            await run.io_bound(prepare, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None, retry_feasible.value, maximum_attempts.value)
             feedback.set_text("Configuration and selected maps are valid.")
         except Exception as exc:
             feedback.set_text(str(exc))
 
     async def submit():
         try:
-            run_id = await run.io_bound(start, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None)
+            run_id = await run.io_bound(start, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None, retry_feasible.value, maximum_attempts.value)
             ui.navigate.to(f"/experiments/e02a/runs/{run_id}")
         except Exception as exc:
             feedback.set_text(str(exc))
@@ -134,6 +140,8 @@ async def run_page(runtime, experiment_id):
         details.clear()
         with details:
             if case:
+                if case["status"] == "running" and case.get("current_attempt"):
+                    ui.label(f"Generation attempt {case['current_attempt']}")
                 score = ((case.get("scoring") or {}).get("result") or {}).get("total_score")
                 ui.label(f"{case['status']} · score {score if score is not None else '—'} · {case.get('duration_ms', 0)} ms")
                 if case.get("error"):

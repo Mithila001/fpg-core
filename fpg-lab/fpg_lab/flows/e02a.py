@@ -32,13 +32,17 @@ def effective_profiles(config, initial_time_limit=None, random_seed=None):
     return initial, refinement_profile(config)
 
 
-def prepare(runtime, selection, refinement_rounds=0, configuration_id=None, initial_time_limit=None, random_seed=None):
+def prepare(runtime, selection, refinement_rounds=0, configuration_id=None, initial_time_limit=None, random_seed=None, retry_until_feasible=False, maximum_attempts=10):
     if isinstance(refinement_rounds, bool) or not isinstance(refinement_rounds, int) or not 0 <= refinement_rounds <= 5:
         raise ValueError("Refinement stage count must be an integer from 0 to 5")
     if initial_time_limit is not None and (isinstance(initial_time_limit, bool) or not isinstance(initial_time_limit, (int, float)) or not isfinite(initial_time_limit) or initial_time_limit <= 0):
         raise ValueError("Initial time limit must be positive and finite")
     if random_seed is not None and (type(random_seed) is not int or random_seed < 0):
         raise ValueError("Random seed must be a nonnegative integer")
+    if type(retry_until_feasible) is not bool:
+        raise ValueError("Retry until feasible must be a boolean")
+    if retry_until_feasible and (isinstance(maximum_attempts, bool) or not isinstance(maximum_attempts, (int, float)) or not isfinite(maximum_attempts) or maximum_attempts < 1 or maximum_attempts % 1):
+        raise ValueError("Maximum attempts must be a positive integer")
     with runtime.database.session_factory() as session:
         record, config = SystemConfigurationService(session, runtime.codec).for_flow(configuration_id, "e02a")
         profile_id, profile_hash = record.id, record.config_hash
@@ -49,15 +53,16 @@ def prepare(runtime, selection, refinement_rounds=0, configuration_id=None, init
     return {"configuration_id": profile_id, "configuration": config.payload, "refinement_rounds": refinement_rounds,
             "configuration_hash": profile_hash, "core_version": config.fpg_core_version,
             "initial_time_limit": initial_time_limit, "random_seed": random_seed,
+            "retry_until_feasible": retry_until_feasible, "maximum_attempts": int(maximum_attempts) if retry_until_feasible else 1,
             "effective_solver": to_jsonable(dict(zip(
                 ("initial", "refinement"), effective_profiles(config.config, initial_time_limit, random_seed), strict=True
             ))), "maps": maps}
 
 
-def start(runtime, selection, refinement_rounds=0, configuration_id=None, initial_time_limit=None, random_seed=None):
+def start(runtime, selection, refinement_rounds=0, configuration_id=None, initial_time_limit=None, random_seed=None, retry_until_feasible=False, maximum_attempts=10):
     if not runtime._started or runtime._closed:
         raise RuntimeError("Start the Lab runtime before submitting experiments")
-    snapshot = prepare(runtime, selection, refinement_rounds, configuration_id, initial_time_limit, random_seed)
+    snapshot = prepare(runtime, selection, refinement_rounds, configuration_id, initial_time_limit, random_seed, retry_until_feasible, maximum_attempts)
     return _queue_snapshot(runtime, snapshot)
 
 
@@ -136,7 +141,21 @@ def execute(runtime, run_id):
                     current_case["stages"].append({"name": label, "data": result_document(result), "duration_ms": int((perf_counter()-begin)*1000)})
                     save(cases)
                     return result
-                execution = record("Initial", generate_floor_plan, FloorPlanSolveRequest(specification=spec, config=initial, candidate_hints=hints), mode=adapter.execution_mode(debug=True))
+                attempts = snapshot.get("maximum_attempts", 1) if snapshot.get("retry_until_feasible") else 1
+                for attempt in range(1, attempts + 1):
+                    case["current_attempt"] = attempt
+                    solver = initial.solver
+                    if snapshot.get("retry_until_feasible"):
+                        solver = replace(solver, random_seed=((solver.random_seed or 0) + attempt - 1) % 2147483647)
+                    attempt_config = replace(initial, solver=solver)
+                    save(cases)
+                    begin = perf_counter()
+                    execution = generate_floor_plan(FloorPlanSolveRequest(specification=spec, config=attempt_config, candidate_hints=hints), mode=adapter.execution_mode(debug=True))
+                    if execution.result.solved:
+                        case["stages"].append({"name": "Initial", "data": result_document(execution), "duration_ms": int((perf_counter()-begin)*1000)})
+                        save(cases)
+                        break
+                case.pop("current_attempt", None)
                 if not execution.result.solved:
                     raise RuntimeError(f"{execution.result.status.value}: {execution.result.message}")
                 plan = execution.result.floor_plan

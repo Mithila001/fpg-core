@@ -106,6 +106,47 @@ def test_invalid_config_and_independent_failures(tmp_path, monkeypatch):
         assert row.cases[0]["error"]["stage"] == "refinement_1"
 
 
+def test_retry_initial_solve_and_attempt_limit(tmp_path, monkeypatch):
+    calls = []
+    def solve(request, *, mode):
+        calls.append(request.config.solver)
+        return Execution(Solve(PLAN, solved=len(calls) >= 2))
+    monkeypatch.setattr(e02a, "generate_floor_plan", solve)
+    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=RecordingAdapter) as runtime:
+        create_profile(runtime)
+        source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
+        document = export_trial(source["experiment"], source["trials"][0])
+        monkeypatch.setattr(e02a, "load_hint_maps", lambda: {"one": document})
+        with pytest.raises(ValueError, match="Maximum attempts"):
+            e02a.prepare(runtime, "one", retry_until_feasible=True, maximum_attempts=0)
+        run_id = e02a.start(runtime, "one", initial_time_limit=2, random_seed=19, retry_until_feasible=True, maximum_attempts=10.0)
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            with runtime.database.session_factory() as session:
+                row = session.get(E02Run, run_id)
+                if row.status not in ("queued", "running"):
+                    break
+            time.sleep(.02)
+        assert row.cases[0]["status"] == "completed", row.cases
+        assert [s["name"] for s in row.cases[0]["stages"]] == ["Initial", "Post-process"]
+        assert [call.random_seed for call in calls] == [19, 20]
+        assert all(call.max_time_seconds <= 2 for call in calls)
+
+        calls.clear()
+        monkeypatch.setattr(e02a, "generate_floor_plan", lambda request, *, mode: (calls.append(request) or Execution(Solve(PLAN, solved=False))))
+        run_id = e02a.start(runtime, "one", retry_until_feasible=True, maximum_attempts=3)
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            with runtime.database.session_factory() as session:
+                row = session.get(E02Run, run_id)
+                if row.status not in ("queued", "running"):
+                    break
+            time.sleep(.02)
+        assert row.cases[0]["status"] == "failed"
+        assert len(calls) == 3
+        assert row.cases[0]["stages"] == []
+
+
 def test_exposure_rules_map_for_all_e02a_profiles():
     from fpg_core.domain import RoomType
 
