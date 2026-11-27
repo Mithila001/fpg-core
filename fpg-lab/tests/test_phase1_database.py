@@ -338,7 +338,7 @@ def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
     assert [item["id"] for item in planned["profiles"]] == [profile_id]
     assert db.status(database)["revision"] == 2
     assert db.migrate(database)["applied"]
-    assert db.status(database)["revision"] == 4
+    assert db.status(database)["revision"] == 5
     assert not db.migrate(database)["applied"]
     with database.session_factory() as session:
         updated = session.get(SystemConfiguration, profile_id)
@@ -353,4 +353,41 @@ def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
         assert scoring["evaluators"][-1]["settings"] == (
             codec.default_configuration().payload["floor_plan_scoring"]["evaluators"][-1]["settings"]
         )
+    database.dispose()
+
+
+def test_revision5_preserves_profiles_and_snapshots(tmp_path):
+    database = Database(f"sqlite:///{tmp_path / 'revision5.db'}")
+    db.migrate(database)
+    codec = CoreConfigCodec()
+    with database.session_factory() as session:
+        service = SystemConfigurationService(session)
+        profile = service.get_active()
+        custom = service.duplicate(profile.id, "custom setback")
+        ids = (profile.id, custom.id)
+        original = deepcopy(profile.configuration_data)
+        custom_data = deepcopy(custom.configuration_data)
+        for name in ("initial", "refinement_a", "refinement_b"):
+            rules = original["floor_plan_solver"][name]["hard_constraints"]
+            rules[:] = [rule for rule in rules if rule["key"] != "front_wall_setback"]
+        custom_rule = next(rule for rule in custom_data["floor_plan_solver"]["initial"]["hard_constraints"] if rule["key"] == "front_wall_setback")
+        custom_rule["settings"]["rules"][0]["maximum_setback"] = 7
+        profile.configuration_data, custom.configuration_data = original, custom_data
+        profile.config_hash, custom.config_hash = codec.hash_payload(original), codec.hash_payload(custom_data)
+        snapshot = {"historical": {"configuration": original}}
+        run = E02Run(status="completed", snapshot=snapshot, cases=[])
+        session.add(run)
+        session.commit()
+        run_id = run.id
+    with database.engine.begin() as connection:
+        connection.exec_driver_sql("PRAGMA user_version = 4")
+    assert not db.migrate(database, dry_run=True)["conflicts"]
+    assert db.migrate(database)["applied"]
+    with database.session_factory() as session:
+        assert session.get(E02Run, run_id).snapshot == snapshot
+        updated, retained = (session.get(SystemConfiguration, i) for i in ids)
+        for name in ("initial", "refinement_a", "refinement_b"):
+            assert any(r["key"] == "front_wall_setback" for r in updated.configuration_data["floor_plan_solver"][name]["hard_constraints"])
+        assert retained.configuration_data == custom_data
+    assert not db.migrate(database)["applied"]
     database.dispose()
