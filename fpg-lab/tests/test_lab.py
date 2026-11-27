@@ -14,10 +14,11 @@ from pydantic import ValidationError
 from sqlalchemy import select
 
 from fpg_lab.core.exceptions import AppError
+from fpg_lab.core.results import result_document
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import ROOT
 from fpg_lab.database.models import P01Experiment
-from fpg_lab.flows.p01 import P01FlowRunner, recover_interrupted_experiments, result_document
+from fpg_lab.flows.p01 import P01FlowRunner, recover_interrupted_experiments
 from fpg_lab.inputs import ManualHints, P01AInput, SystemConfigurationCreate
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreAdapter, FpgCoreCandidateRejected
 from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
@@ -26,7 +27,7 @@ from fpg_lab.runtime import LabRuntime
 from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01_common import TERMINAL_STATUSES
 from fpg_lab.visualization.figures import candidate_map, floor_plan, score_breakdown
-from fpg_lab.workers.p01_jobs import P01JobManager
+from fpg_lab.workers.executor import BackgroundExecutor
 from scripts.run_experiment import collect, sample_hints, sample_request
 
 
@@ -385,7 +386,7 @@ def test_immediate_completion_no_deadlock() -> None:
         def shutdown(self, **_: Any) -> None:
             pass
 
-    manager = P01JobManager(cast(P01FlowRunner, Runner()))
+    manager = BackgroundExecutor(cast(P01FlowRunner, Runner()))
     manager._executor.shutdown()
     manager._executor = cast(ThreadPoolExecutor, Executor())
     thread = Thread(target=manager.submit, args=(1, "p01a"), daemon=True)

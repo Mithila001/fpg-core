@@ -48,3 +48,9 @@ in `fpg_lab.database.maintenance`, validated profile edits in
 adapter and SQLite checks for data changes, `python ../tools/check_docs.py` for
 docs, and update the relevant records and family notes together. Use the
 [Phase 1 handoff](IMPLEMENTATION_HANDOFF.md) for exact verification commands.
+
+The P01 headless runner collects at most 100 trials, floor-plan runs and
+iterations per result, and includes total counts. Use `scripts.lab_db records`
+with a bounded page and `record` or `export` with a returned ID to inspect one
+row. E02 cases are contained in the E02 run record; select the desired case or
+fields from its exported JSON.

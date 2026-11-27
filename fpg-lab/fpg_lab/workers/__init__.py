@@ -1,3 +1,3 @@
-from fpg_lab.workers.p01_jobs import P01JobManager
+from fpg_lab.workers.executor import BackgroundExecutor
 
-__all__ = ["P01JobManager"]
+__all__ = ["BackgroundExecutor"]

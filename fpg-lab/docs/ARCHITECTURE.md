@@ -29,3 +29,9 @@ runs. See [maintenance and run retention](adr/0002-maintenance.md).
 E and P describe research scope. Choose useful views, stages, storage and
 execution mechanisms for each question. Use [existing patterns](EXPERIMENTS.md)
 when they fit. Phase 2 lifecycle cleanup and Phase 3 visual redesign are pending.
+
+Shared execution utilities live in `fpg_lab.core.results`, database row
+materialization in `fpg_lab.database.serialization`, and portable hint-map
+validation in `fpg_lab.integrations.fpg_core.hint_map`. P01 trial export remains
+owned by `p01b_input`. The `BackgroundExecutor` serves P01, E02 and quick hint
+work; workers own their database sessions.

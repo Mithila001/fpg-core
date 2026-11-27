@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -12,13 +11,10 @@ from fpg_lab.database.models import (
     P01Experiment,
     P01FloorPlanRun,
 )
+from fpg_lab.database.models.common import utc_now
 from fpg_lab.services.common import SystemConfigurationService
 
 TERMINAL_STATUSES = {"completed", "terminated", "failed", "interrupted"}
-
-
-def utc_now() -> datetime:
-    return datetime.now(UTC)
 
 
 class P01Service:

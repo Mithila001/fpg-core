@@ -7,10 +7,10 @@ from typing import Any
 from fpg_lab.flows.p01 import P01FlowRunner
 
 
-class P01JobManager:
+class BackgroundExecutor:
     def __init__(self, runner: P01FlowRunner, *, max_workers: int = 1) -> None:
         self.runner = runner
-        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="p01")
+        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="lab")
         self._futures: dict[int, Future[None]] = {}
         self._lock = Lock()
         self._closed = False
@@ -18,7 +18,7 @@ class P01JobManager:
     def submit(self, experiment_id: int, flow_type: str) -> None:
         with self._lock:
             if self._closed:
-                raise RuntimeError("The P01 job manager is closed")
+                raise RuntimeError("The Lab background executor is closed")
             existing = self._futures.get(experiment_id)
             if existing is not None and not existing.done():
                 return
@@ -39,7 +39,7 @@ class P01JobManager:
     def submit_task(self, function, *args):
         with self._lock:
             if self._closed:
-                raise RuntimeError("The P01 job manager is closed")
+                raise RuntimeError("The Lab background executor is closed")
             return self._executor.submit(function, *args)
 
     def active_ids(self) -> tuple[int, ...]:

@@ -10,9 +10,10 @@ from sqlalchemy import select
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import ROOT
 from fpg_lab.database.models import P01CandidateTrial, P01FloorPlanRun
+from fpg_lab.database.serialization import row_document
 from fpg_lab.flows.p01 import ACTIVE_STATUSES
 from fpg_lab.inputs import FloorPlanRequest
-from fpg_lab.runtime import FLOW_SERVICES, LabRuntime, row_document
+from fpg_lab.runtime import FLOW_SERVICES, LabRuntime
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
 from fpg_lab.ui.components import (
     action_button,

@@ -4,8 +4,7 @@ import json
 from pathlib import Path
 
 from fpg_lab.core.settings import ROOT
-from fpg_lab.integrations.fpg_core.p01b_input import validate_export
-
+from fpg_lab.integrations.fpg_core.hint_map import validate_export
 
 HINT_MAPS_PATH = ROOT / "experiments" / "e02a" / "hint_maps.json"
 

@@ -3,7 +3,7 @@
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.flows.p01 import score_candidate
 from fpg_lab.integrations.fpg_core.adapter import FpgCoreCandidateRejected
-from fpg_lab.integrations.fpg_core.p01b_input import validate_export
+from fpg_lab.integrations.fpg_core.hint_map import validate_export
 
 
 def search_hint_map(adapter, request, configuration, count, threshold, state, cancel):

@@ -23,7 +23,7 @@ _preset_lock = (
 
 
 def save_preset(session, name, data, suggested=None):
-    from fpg_lab.integrations.fpg_core.p01b_input import validate_export
+    from fpg_lab.integrations.fpg_core.hint_map import validate_export
 
     validate_export(data)
     with _preset_lock:
@@ -47,7 +47,7 @@ class P01BService(P01Service):
         super().__init__(session, flow, codec)
 
     def create_experiment(self, payload: P01BInput) -> P01Experiment:
-        from fpg_lab.integrations.fpg_core.p01b_input import validate_export
+        from fpg_lab.integrations.fpg_core.hint_map import validate_export
 
         preset = self.session.get(P01BPreset, payload.preset_id) if payload.preset_id else None
         if preset is None and payload.preset_data is None:

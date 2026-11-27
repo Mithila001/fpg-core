@@ -9,9 +9,9 @@ from sqlalchemy import select
 
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models import E02BRun, E02BSavedPlan
+from fpg_lab.database.serialization import row_document
 from fpg_lab.flows.e02b import delete_layout, save_layout, start
 from fpg_lab.integrations.fpg_core.e02b_input import decode_plan
-from fpg_lab.runtime import row_document
 from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.ui.components import (
     action_button,

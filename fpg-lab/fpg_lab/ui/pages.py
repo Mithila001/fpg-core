@@ -7,8 +7,9 @@ from typing import Any
 from nicegui import run, ui
 
 from fpg_lab.core.settings import ROOT
+from fpg_lab.database.serialization import row_document
 from fpg_lab.inputs import FloorPlanTemplateCreate, SystemConfigurationCreate
-from fpg_lab.runtime import LabRuntime, row_document
+from fpg_lab.runtime import LabRuntime
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
 from fpg_lab.ui.components import (
     action_button,

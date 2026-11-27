@@ -128,3 +128,33 @@ python -m scripts.lab_db --database-url sqlite:///./data/fpg_lab.db profiles val
 Phase 2 can use an isolated revision-1 fixture. Keep evolution in maintenance,
 reuse the profile service for submission routes and preserve snapshot provenance
 as lifecycle code changes. Update this handoff with verified changes.
+
+## Phase 2 ? in progress
+
+Phase 2 is not complete. Shared `error_payload` and `result_document` moved to
+`fpg_lab.core.results`; timestamps reuse `database.models.common.utc_now`.
+Mapped row materialization moved to `database.serialization.row_document`,
+and hint-map validation to `integrations.fpg_core.hint_map.validate_export`;
+P01 trial export remains in `p01b_input`. `workers.executor.BackgroundExecutor`
+replaces `workers.p01_jobs.P01JobManager` without changing its queue semantics.
+The P01 headless result collection now caps each collection at 100 and reports
+total counts; use maintenance record inspection for further rows.
+
+Focused verification used the Lab virtual environment and a unique workspace
+`--basetemp`: E02A selected-profile and independent-failure tests, E02B storage
+and diagnostics, P01B export and refinement-failure tests, submission failure,
+queued termination, shutdown and immediate completion in `test_lab.py`, and
+`tests/test_quick_hint.py` (17 passed). `python -m scripts.verify_fpg_core`,
+changed UI and runner imports, `python tools/check_docs.py`, and the public API
+manifest check passed. The first pytest attempt could not access the system temp
+directory; the workspace-local rerun passed.
+
+Still required before Phase 3: trace and catalogue every active experiment;
+finish the neutral executor and shared portable-plan ownership as appropriate;
+review and remove obsolete preview, export, lifecycle and floor-plan-run paths
+after tracing readers and writers; evaluate genuinely common computation stages;
+prepare the seven-experiment real smoke catalogue and missing bounded fixtures;
+update experiment and skill guidance; run the remaining requested focused checks
+and record exact smoke commands and deadlines. No all-experiment smoke, full
+suite, browser regression or broad audit was run. Do not treat this record as
+a completed Phase 2 or start Phase 3 on its basis.

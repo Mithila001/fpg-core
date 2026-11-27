@@ -152,7 +152,7 @@ def test_preset_input_requires_exactly_one():
 
 def test_preset_saving_and_inline_input(monkeypatch):
     monkeypatch.setattr(
-        "fpg_lab.integrations.fpg_core.p01b_input.validate_export", lambda data: None
+        "fpg_lab.integrations.fpg_core.hint_map.validate_export", lambda data: None
     )
     engine = create_engine("sqlite://")
     P01BPreset.__table__.create(engine)

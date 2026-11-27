@@ -5,10 +5,10 @@ from nicegui import app, run, ui
 from sqlalchemy import select
 
 from fpg_lab.database.models.e02 import E02Run
+from fpg_lab.database.serialization import row_document
 from fpg_lab.flows.e02a import prepare, retry, start
 from fpg_lab.integrations.fpg_core.e02a_input import load_hint_maps
 from fpg_lab.integrations.fpg_core.e02b_input import export_stage
-from fpg_lab.runtime import row_document
 from fpg_lab.ui.components import (
     action_button,
     db_call,

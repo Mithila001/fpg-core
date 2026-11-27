@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from fpg_lab.core.settings import ROOT
-from fpg_lab.runtime import FLOW_SERVICES, LabRuntime, row_document
+from fpg_lab.database.serialization import row_document
+from fpg_lab.runtime import FLOW_SERVICES, LabRuntime
 from fpg_lab.services.p01_common import TERMINAL_STATUSES
 
 
@@ -52,15 +53,23 @@ def sample_hints() -> dict[str, Any]:
 
 def collect(runtime: LabRuntime, flow: str, experiment_id: int) -> dict[str, Any]:
     with runtime.database.session_factory() as session:
-        from sqlalchemy import select
+        from sqlalchemy import func, select
 
         from fpg_lab.database.models import P01BIteration
 
         service = FLOW_SERVICES[flow](session)
         experiment = service.get_experiment(experiment_id)
-        trials, _ = service.list_trials(experiment_id=experiment_id, limit=100000, offset=0)
-        runs, _ = service.list_floor_plan_runs(experiment_id=experiment_id, limit=100000, offset=0)
+        trials, trial_count = service.list_trials(experiment_id=experiment_id, limit=100, offset=0)
+        runs, run_count = service.list_floor_plan_runs(experiment_id=experiment_id, limit=100, offset=0)
         return {
+            "collection_limit": 100,
+            "trial_count": trial_count,
+            "floor_plan_run_count": run_count,
+            "iteration_count": session.scalar(
+                select(func.count()).select_from(P01BIteration).where(
+                    P01BIteration.experiment_id == experiment_id
+                )
+            ) if flow in ("p01b", "p01c") else 0,
             "experiment": row_document(experiment),
             "trials": [row_document(t) for t, _ in trials],
             "floor_plan_runs": [row_document(r) for r in runs],
@@ -70,6 +79,7 @@ def collect(runtime: LabRuntime, flow: str, experiment_id: int) -> dict[str, Any
                     select(P01BIteration)
                     .where(P01BIteration.experiment_id == experiment_id)
                     .order_by(P01BIteration.number)
+                    .limit(100)
                 )
             ]
             if flow in ("p01b", "p01c")

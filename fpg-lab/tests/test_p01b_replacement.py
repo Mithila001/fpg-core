@@ -13,7 +13,8 @@ from test_lab import (
 
 from fpg_lab.database.models import P01BIteration, P01BPreset
 from fpg_lab.inputs import SystemConfigurationCreate
-from fpg_lab.integrations.fpg_core.p01b_input import export_trial, validate_export
+from fpg_lab.integrations.fpg_core.hint_map import validate_export
+from fpg_lab.integrations.fpg_core.p01b_input import export_trial
 from fpg_lab.services.common import SystemConfigurationService
 
 

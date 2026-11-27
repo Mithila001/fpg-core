@@ -10,9 +10,11 @@ from fpg_core.floor_plan_solver import (
     generate_floor_plan,
 )
 
+from fpg_lab.core.results import error_payload, result_document
 from fpg_lab.database.models import P01BIteration
-from fpg_lab.flows.p01 import PipelineTerminated, error_payload, result_document, utc_now
-from fpg_lab.integrations.fpg_core.p01b_input import validate_export
+from fpg_lab.database.models.common import utc_now
+from fpg_lab.flows.p01 import PipelineTerminated
+from fpg_lab.integrations.fpg_core.hint_map import validate_export
 
 
 def effective_profiles(config, settings):

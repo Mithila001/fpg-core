@@ -9,13 +9,18 @@ from nicegui import run, ui
 from sqlalchemy import select
 
 from fpg_lab.database.models import FloorPlanTemplate, P01BIteration, P01BPreset
-from fpg_lab.integrations.fpg_core.p01b_input import validate_export
-from fpg_lab.runtime import row_document
+from fpg_lab.database.serialization import row_document
+from fpg_lab.integrations.fpg_core.hint_map import validate_export
 from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01b import P01BService, next_preset_name, save_preset
 from fpg_lab.services.p01c import P01CService
 from fpg_lab.ui.components import (
-    action_button, db_call, format_experiment_code, json_panel, notify_error, shell,
+    action_button,
+    db_call,
+    format_experiment_code,
+    json_panel,
+    notify_error,
+    shell,
 )
 from fpg_lab.ui.result_layout import ResultWorkspace
 from fpg_lab.visualization import figures

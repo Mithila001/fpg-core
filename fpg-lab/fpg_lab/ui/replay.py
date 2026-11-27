@@ -8,8 +8,9 @@ from typing import Any
 
 from nicegui import events, ui
 
+from fpg_lab.database.serialization import row_document
 from fpg_lab.integrations.fpg_core.p01b_input import export_trial
-from fpg_lab.runtime import LabRuntime, row_document
+from fpg_lab.runtime import LabRuntime
 from fpg_lab.services.p01a import P01AService
 from fpg_lab.ui.components import action_button, db_call, json_panel
 from fpg_lab.visualization import circulation, figures, replay

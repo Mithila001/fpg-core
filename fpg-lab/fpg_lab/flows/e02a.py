@@ -10,11 +10,11 @@ from fpg_core.floor_plan_solver import (
     generate_floor_plan,
 )
 
+from fpg_lab.core.results import error_payload, result_document
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.database.models.e02 import E02Run
-from fpg_lab.flows.p01 import error_payload, result_document
 from fpg_lab.integrations.fpg_core.e02a_input import load_hint_maps, select_hint_maps
-from fpg_lab.integrations.fpg_core.p01b_input import validate_export
+from fpg_lab.integrations.fpg_core.hint_map import validate_export
 from fpg_lab.services.common import SystemConfigurationService
 
 

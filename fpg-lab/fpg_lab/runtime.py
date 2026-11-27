@@ -8,18 +8,19 @@ from copy import deepcopy
 from threading import Event, Lock
 from typing import Any
 
-from sqlalchemy import inspect, select, update
+from sqlalchemy import select, update
 
 from fpg_lab.core.exceptions import AppError, InvalidInputError
+from fpg_lab.core.results import error_payload
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import get_settings
 from fpg_lab.database.maintenance import execution_lock, require_current
 from fpg_lab.database.models import E02BRun, E02Run, P01Experiment
+from fpg_lab.database.models.common import utc_now
 from fpg_lab.database.session import Database
 from fpg_lab.flows.p01 import (
     ACTIVE_STATUSES,
     P01FlowRunner,
-    error_payload,
     recover_interrupted_experiments,
 )
 from fpg_lab.inputs import FloorPlanRequest, ManualHints, P01AInput, P01BInput, P01CInput
@@ -29,18 +30,10 @@ from fpg_lab.services.common import SystemConfigurationService
 from fpg_lab.services.p01a import P01AService
 from fpg_lab.services.p01b import P01BService
 from fpg_lab.services.p01c import P01CService
-from fpg_lab.workers.p01_jobs import P01JobManager
+from fpg_lab.workers.executor import BackgroundExecutor
 
 FLOW_INPUTS = {"p01a": P01AInput, "p01b": P01BInput, "p01c": P01CInput}
 FLOW_SERVICES: dict[str, Any] = {"p01a": P01AService, "p01b": P01BService, "p01c": P01CService}
-
-
-def row_document(row: Any) -> dict[str, Any]:
-    """Materialize mapped columns while the caller still owns the session."""
-    return {
-        column.key: to_jsonable(getattr(row, column.key))
-        for column in inspect(row).mapper.column_attrs
-    }
 
 
 class LabRuntime:
@@ -57,7 +50,7 @@ class LabRuntime:
         self.codec = codec or CoreConfigCodec()
         self.adapter_factory = adapter_factory
         self.runner = P01FlowRunner(self.database, self.codec, adapter_factory)
-        self.jobs = P01JobManager(
+        self.jobs = BackgroundExecutor(
             self.runner, max_workers=max_workers or settings.max_background_workers
         )
         self._execution = ExitStack()
@@ -156,8 +149,6 @@ class LabRuntime:
                 experiment.error_data = error_payload(
                     exc, stage="job_submission", code="job_submission_failed"
                 )
-                from fpg_lab.services.p01_common import utc_now
-
                 experiment.finished_at = utc_now()
                 session.commit()
                 raise AppError(
