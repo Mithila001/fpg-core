@@ -1723,12 +1723,16 @@
       "name": "initial_generation",
       "processors": [
         {
-          "required": false,
-          "validate_after": false,
-          "processor_id": "veranda_adjustment",
-          "config": {
-            "transformation_version": "veranda_adjustment:v1"
-          }
+          "required": true,
+          "validate_after": true,
+          "processor_id": "remove_placeholder_rooms",
+          "config": {}
+        },
+        {
+          "required": true,
+          "validate_after": true,
+          "processor_id": "grid_snap",
+          "config": {"grid_size": null}
         },
         {
           "required": false,
@@ -1736,60 +1740,33 @@
           "processor_id": "wall_extension",
           "config": {
             "rules": [
-              {
-                "room_type": "veranda",
-                "min_wall_length": 10.0,
-                "max_wall_length": 50.0,
-                "max_rooms": 3,
-                "max_selections": 1,
-                "expansion_percentage": 0.8,
-                "max_distance": 40.0
-              },
-              {
-                "room_type": "living_room",
-                "min_wall_length": 10.0,
-                "max_wall_length": 40.0,
-                "max_rooms": 1,
-                "max_selections": 2,
-                "expansion_percentage": 0.8,
-                "max_distance": 20.0
-              },
-              {
-                "room_type": "kitchen",
-                "min_wall_length": 10.0,
-                "max_wall_length": 40.0,
-                "max_rooms": 1,
-                "max_selections": 1,
-                "expansion_percentage": 0.8,
-                "max_distance": 10.0
-              },
-              {
-                "room_type": "hallway",
-                "min_wall_length": 5.0,
-                "max_wall_length": 50.0,
-                "max_rooms": 3,
-                "max_selections": 3,
-                "expansion_percentage": 0.8,
-                "max_distance": 2.0
-              },
-              {
-                "room_type": "bedroom",
-                "min_wall_length": 10.0,
-                "max_wall_length": 40.0,
-                "max_rooms": 3,
-                "max_selections": 1,
-                "expansion_percentage": 0.8,
-                "max_distance": 10.0
-              }
+              {"room_type": "veranda", "max_distance": 40.0},
+              {"room_type": "living_room", "max_distance": 20.0},
+              {"room_type": "kitchen", "max_distance": 10.0},
+              {"room_type": "hallway", "max_distance": 2.0},
+              {"room_type": "bedroom", "max_distance": 10.0}
             ],
-            "transformation_version": "wall_extension:v1"
+            "exterior_steps": [
+              {"direction": "left", "minimum_depth": 10, "minimum_segment_length": 10, "preferred_max_steps": 2},
+              {"direction": "right", "minimum_depth": 10, "minimum_segment_length": 10, "preferred_max_steps": 2},
+              {"direction": "back", "minimum_depth": 8, "minimum_segment_length": 8, "preferred_max_steps": 3},
+              {"direction": "front", "minimum_depth": 5, "minimum_segment_length": 5, "preferred_max_steps": 4}
+            ],
+            "max_recess_ratio": 1.0,
+            "max_recess_levels": 1,
+            "min_pocket_area": 1.0,
+            "min_contact_length": 5.0,
+            "min_residual_edge": 5.0,
+            "min_extension_width": 5.0,
+            "min_extension_depth": 5.0,
+            "hallway_min_extension_width": 2.0,
+            "hallway_min_extension_depth": 1.0,
+            "max_area_excess": 0.05,
+            "max_width_excess": 0.05,
+            "max_iterations": 20,
+            "max_candidate_evaluations": 1000,
+            "transformation_version": "wall_extension:v2"
           }
-        },
-        {
-          "required": true,
-          "validate_after": true,
-          "processor_id": "remove_placeholder_rooms",
-          "config": {}
         },
         {
           "required": false,
@@ -1797,14 +1774,6 @@
           "processor_id": "hallway_merge",
           "config": {
             "minimum_shared_wall": 10.0
-          }
-        },
-        {
-          "required": true,
-          "validate_after": true,
-          "processor_id": "grid_snap",
-          "config": {
-            "grid_size": null
           }
         },
         {

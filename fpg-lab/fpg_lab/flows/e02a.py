@@ -166,7 +166,7 @@ def execute(runtime, run_id):
                         raise RuntimeError(f"{execution.result.status.value}: {execution.result.message}")
                     plan = execution.result.floor_plan
                 stage = "post_processing"
-                execution = record("Post-process", adapter.post_process_floor_plan, spec, plan, debug=True)
+                execution = record("Post-process", adapter.post_process_floor_plan, spec, plan, solver_config=refine if snapshot["refinement_rounds"] else attempt_config, debug=True)
                 if getattr(execution.result.status, "value", execution.result.status) != "success":
                     raise RuntimeError(str(execution.result.failure))
                 plan = execution.result.floor_plan

@@ -14,31 +14,48 @@ class NumericPolicy:
 
 
 @dataclass(frozen=True)
-class VerandaAdjustmentConfig:
-    transformation_version: str = "veranda_adjustment:v1"
+class WallExtensionRule:
+    room_type: RoomType
+    max_distance: float
 
 
 @dataclass(frozen=True)
-class WallExtensionRule:
-    room_type: RoomType
-    min_wall_length: float
-    max_wall_length: float
-    max_rooms: int
-    max_selections: int
-    expansion_percentage: float
-    max_distance: float
+class ExteriorStepPolicy:
+    direction: str
+    minimum_depth: float
+    minimum_segment_length: float
+    preferred_max_steps: int
 
 
 @dataclass(frozen=True)
 class WallExtensionConfig:
     rules: tuple[WallExtensionRule, ...] = (
-        WallExtensionRule(RoomType.VERANDA, 10, 50, 3, 1, 0.80, 40),
-        WallExtensionRule(RoomType.LIVING_ROOM, 10, 40, 1, 2, 0.80, 20),
-        WallExtensionRule(RoomType.KITCHEN, 10, 40, 1, 1, 0.80, 10),
-        WallExtensionRule(RoomType.HALLWAY, 5, 50, 3, 3, 0.80, 2),
-        WallExtensionRule(RoomType.BEDROOM, 10, 40, 3, 1, 0.80, 10),
+        WallExtensionRule(RoomType.VERANDA, 40),
+        WallExtensionRule(RoomType.LIVING_ROOM, 20),
+        WallExtensionRule(RoomType.KITCHEN, 10),
+        WallExtensionRule(RoomType.HALLWAY, 2),
+        WallExtensionRule(RoomType.BEDROOM, 10),
     )
-    transformation_version: str = "wall_extension:v1"
+    exterior_steps: tuple[ExteriorStepPolicy, ...] = (
+        ExteriorStepPolicy("left", 10, 10, 2),
+        ExteriorStepPolicy("right", 10, 10, 2),
+        ExteriorStepPolicy("back", 8, 8, 3),
+        ExteriorStepPolicy("front", 5, 5, 4),
+    )
+    max_recess_ratio: float = 1.0
+    max_recess_levels: int = 1
+    min_pocket_area: float = 1.0
+    min_contact_length: float = 5.0
+    min_residual_edge: float = 5.0
+    min_extension_width: float = 5.0
+    min_extension_depth: float = 5.0
+    hallway_min_extension_width: float = 2.0
+    hallway_min_extension_depth: float = 1.0
+    max_area_excess: float = 0.05
+    max_width_excess: float = 0.05
+    max_iterations: int = 20
+    max_candidate_evaluations: int = 1000
+    transformation_version: str = "wall_extension:v2"
 
 
 @dataclass(frozen=True)

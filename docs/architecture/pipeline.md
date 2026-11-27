@@ -35,6 +35,7 @@ Scoring uses [geometry analysis](../feature_documentations/geometry_analysis.md)
 - Search returns its selected **raw** hint map. Selected-candidate circulation and scoring run again to recover the cleaned map/diagnostics. Use `generation_spec_for_candidate()` on that cleaned map before the solver: the preprocessing template contains every *potential* hallway, not only those actually used.
 - The solver cannot delete supplied rooms. Hallway-count reduction occurs before solving; compatible hallway geometries can be merged later during post-processing.
 - Post-processing is intentionally before opening generation: moving geometry after placing openings would invalidate door/window positions.
+- Pass the final successful solve's solver configuration as `PostProcessingRequest.solver_config`; repair skips without it and uses it for hard-constraint protection.
 - Final floor-plan scoring is independent of candidate scoring. Final validation and delivery remain consumer responsibilities.
 
 ## Boundaries and scope

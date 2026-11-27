@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import copy
+import math
+from dataclasses import replace
 from time import perf_counter
 
-from ..domain import ExecutionMode, FloorPlan
+from ..domain import ExecutionMode, FloorPlan, RoomType
 from .config import GridSnapConfig, HallwayMergeConfig, WallExtensionConfig
 from .contracts import (
     PipelineStatus,
@@ -56,26 +58,82 @@ def _validate_processor_config(config: object) -> None:
     if (
         isinstance(config, GridSnapConfig)
         and config.grid_size is not None
-        and config.grid_size <= 0
+        and (not math.isfinite(config.grid_size) or config.grid_size <= 0)
     ):
         raise ConfigurationError("grid size must be positive")
-    if isinstance(config, HallwayMergeConfig) and config.minimum_shared_wall < 0:
+    if isinstance(config, HallwayMergeConfig) and (
+        not math.isfinite(config.minimum_shared_wall) or config.minimum_shared_wall < 0
+    ):
         raise ConfigurationError("minimum shared-wall length cannot be negative")
     if isinstance(config, WallExtensionConfig):
         room_types = [rule.room_type for rule in config.rules]
+        if any(not isinstance(room_type, RoomType) for room_type in room_types):
+            raise ConfigurationError(
+                "wall-extension room types must be RoomType members"
+            )
         if len(room_types) != len(set(room_types)):
             raise ConfigurationError("wall-extension room types must be unique")
-        for rule in config.rules:
+        if any(
+            not math.isfinite(rule.max_distance) or rule.max_distance <= 0
+            for rule in config.rules
+        ):
+            raise ConfigurationError(
+                "wall-extension distances must be finite and positive"
+            )
+        directions = [policy.direction for policy in config.exterior_steps]
+        if len(set(directions)) != 4 or set(directions) != {
+            "front",
+            "back",
+            "left",
+            "right",
+        }:
+            raise ConfigurationError(
+                "exterior step policies must cover each direction once"
+            )
+        for policy in config.exterior_steps:
             if (
-                rule.min_wall_length <= 0
-                or rule.max_wall_length <= 0
-                or rule.min_wall_length > rule.max_wall_length
-                or rule.max_rooms < 1
-                or rule.max_selections < 1
-                or rule.expansion_percentage <= 0
-                or rule.max_distance <= 0
+                not math.isfinite(policy.minimum_depth)
+                or policy.minimum_depth < 0
+                or not math.isfinite(policy.minimum_segment_length)
+                or policy.minimum_segment_length < 0
+                or type(policy.preferred_max_steps) is not int
+                or policy.preferred_max_steps < 0
             ):
-                raise ConfigurationError("wall-extension rules contain invalid values")
+                raise ConfigurationError("invalid exterior step policy")
+        positive = (
+            config.max_recess_ratio,
+            config.min_contact_length,
+            config.min_residual_edge,
+            config.min_extension_width,
+            config.min_extension_depth,
+            config.hallway_min_extension_width,
+            config.hallway_min_extension_depth,
+        )
+        nonnegative = (
+            config.min_pocket_area,
+            config.max_area_excess,
+            config.max_width_excess,
+        )
+        if (
+            any(not math.isfinite(value) or value <= 0 for value in positive)
+            or any(not math.isfinite(value) or value < 0 for value in nonnegative)
+            or any(
+                type(value) is not int or value < 1
+                for value in (
+                    config.max_recess_levels,
+                    config.max_iterations,
+                    config.max_candidate_evaluations,
+                )
+            )
+        ):
+            raise ConfigurationError("invalid wall-extension settings")
+        if (
+            not isinstance(config.transformation_version, str)
+            or not config.transformation_version.strip()
+        ):
+            raise ConfigurationError(
+                "wall-extension transformation version cannot be empty"
+            )
 
 
 def run_pipeline(
@@ -108,6 +166,7 @@ def run_pipeline(
         floor_boundary=plan.boundary,
         numeric=request.config.numeric,
         profile_name=request.config.name,
+        solver_config=request.solver_config,
     )
     unsuccessful: set[str] = set()
 
@@ -166,6 +225,14 @@ def run_pipeline(
                     tolerance=context.numeric.tolerance,
                     require_no_placeholders=use.processor_id
                     == "remove_placeholder_rooms",
+                )
+            if (
+                isinstance(use.config, GridSnapConfig)
+                and use.config.grid_size is not None
+            ):
+                context = replace(
+                    context,
+                    numeric=replace(context.numeric, grid_size=use.config.grid_size),
                 )
             if collect_details:
                 assert started is not None

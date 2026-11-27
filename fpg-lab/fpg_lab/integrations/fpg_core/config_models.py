@@ -30,7 +30,6 @@ DestinationSelectionValue = Literal["all_matching", "lowest_cost_match"]
 TrafficClassValue = Literal["public", "private"]
 
 
-
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -346,21 +345,43 @@ class NumericPolicyDocument(StrictModel):
 
 class WallExtensionRuleDocument(StrictModel):
     room_type: RoomTypeValue
-    min_wall_length: float = Field(gt=0, allow_inf_nan=False)
-    max_wall_length: float = Field(gt=0, allow_inf_nan=False)
-    max_rooms: int = Field(gt=0)
-    max_selections: int = Field(gt=0)
-    expansion_percentage: float = Field(gt=0, allow_inf_nan=False)
     max_distance: float = Field(gt=0, allow_inf_nan=False)
 
 
-class VerandaAdjustmentSettingsDocument(StrictModel):
-    transformation_version: str = Field(min_length=1)
+class ExteriorStepPolicyDocument(StrictModel):
+    direction: Literal["front", "back", "left", "right"]
+    minimum_depth: float = Field(ge=0, allow_inf_nan=False)
+    minimum_segment_length: float = Field(ge=0, allow_inf_nan=False)
+    preferred_max_steps: int = Field(ge=0)
 
 
 class WallExtensionSettingsDocument(StrictModel):
     rules: list[WallExtensionRuleDocument]
+    exterior_steps: list[ExteriorStepPolicyDocument]
+    max_recess_ratio: float = Field(gt=0, allow_inf_nan=False)
+    max_recess_levels: int = Field(gt=0)
+    min_pocket_area: float = Field(ge=0, allow_inf_nan=False)
+    min_contact_length: float = Field(gt=0, allow_inf_nan=False)
+    min_residual_edge: float = Field(gt=0, allow_inf_nan=False)
+    min_extension_width: float = Field(gt=0, allow_inf_nan=False)
+    min_extension_depth: float = Field(gt=0, allow_inf_nan=False)
+    hallway_min_extension_width: float = Field(gt=0, allow_inf_nan=False)
+    hallway_min_extension_depth: float = Field(gt=0, allow_inf_nan=False)
+    max_area_excess: float = Field(ge=0, allow_inf_nan=False)
+    max_width_excess: float = Field(ge=0, allow_inf_nan=False)
+    max_iterations: int = Field(gt=0)
+    max_candidate_evaluations: int = Field(gt=0)
     transformation_version: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_policies(self) -> WallExtensionSettingsDocument:
+        directions = [item.direction for item in self.exterior_steps]
+        if len(directions) != 4 or set(directions) != {"front", "back", "left", "right"}:
+            raise ValueError("exterior_steps must contain each direction exactly once")
+        room_types = [item.room_type for item in self.rules]
+        if len(room_types) != len(set(room_types)):
+            raise ValueError("wall-extension room types must be unique")
+        return self
 
 
 class EmptySettingsDocument(StrictModel):
@@ -378,11 +399,6 @@ class GridSnapSettingsDocument(StrictModel):
 class ProcessorBaseDocument(StrictModel):
     required: bool = False
     validate_after: bool = False
-
-
-class VerandaProcessorDocument(ProcessorBaseDocument):
-    processor_id: Literal["veranda_adjustment"]
-    config: VerandaAdjustmentSettingsDocument
 
 
 class WallExtensionProcessorDocument(ProcessorBaseDocument):
@@ -411,8 +427,7 @@ class RectilinearProcessorDocument(ProcessorBaseDocument):
 
 
 ProcessorDocument = Annotated[
-    VerandaProcessorDocument
-    | WallExtensionProcessorDocument
+    WallExtensionProcessorDocument
     | PlaceholderProcessorDocument
     | HallwayMergeProcessorDocument
     | GridSnapProcessorDocument

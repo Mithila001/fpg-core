@@ -390,7 +390,7 @@ class FpgCoreAdapter:
             mode=self.execution_mode(debug=debug),
         )
 
-    def post_process_floor_plan(self, specification: Any, floor_plan: Any, *, debug: bool) -> Any:
+    def post_process_floor_plan(self, specification: Any, floor_plan: Any, *, solver_config: Any, debug: bool) -> Any:
         from copy import deepcopy
 
         from fpg_core.floor_plan_post_processing import (
@@ -403,6 +403,7 @@ class FpgCoreAdapter:
                 floor_plan=deepcopy(floor_plan),
                 config=self._required("post_processing"),
                 specification=specification,
+                solver_config=solver_config,
             ),
             mode=self.execution_mode(debug=debug),
         )

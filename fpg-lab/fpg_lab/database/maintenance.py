@@ -26,8 +26,8 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 3
-# Revisions 2 and 3 share the same DDL; revision 3 updates scoring profiles.
+REVISION = 4
+# Revision 4 migrates saved post-processing profiles; the DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 CURRENT_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
 RUN_TABLES = {
@@ -291,10 +291,41 @@ def _reseed_relationship_evaluator(data, baseline):
     if keys & obsolete:
         scoring["evaluators"] = [rule for rule in rules if rule["key"] not in obsolete]
         if "room_relationship_quality" not in keys and "kitchen_dining_proximity" in keys:
-            scoring["evaluators"].append(deepcopy(next(
-                rule for rule in baseline["evaluators"]
-                if rule["key"] == "room_relationship_quality"
-            )))
+            scoring["evaluators"].append(
+                deepcopy(
+                    next(
+                        rule
+                        for rule in baseline["evaluators"]
+                        if rule["key"] == "room_relationship_quality"
+                    )
+                )
+            )
+    return data
+
+
+def _upgrade_post_processing(data, baseline):
+    processing = data.get("post_processing")
+    if processing is None:
+        return data
+    processors = processing["processors"]
+    defaults = next(
+        item for item in baseline["processors"] if item["processor_id"] == "wall_extension"
+    )
+    for item in processors:
+        if item["processor_id"] != "wall_extension" or "exterior_steps" in item["config"]:
+            continue
+        previous = item["config"]
+        replacement = deepcopy(defaults["config"])
+        replacement["rules"] = [
+            {"room_type": rule["room_type"], "max_distance": rule["max_distance"]}
+            for rule in previous["rules"]
+        ]
+        item["config"] = replacement
+    processors = [item for item in processors if item["processor_id"] != "veranda_adjustment"]
+    order = {item["processor_id"]: index for index, item in enumerate(baseline["processors"])}
+    processing["processors"] = sorted(
+        processors, key=lambda item: order.get(item["processor_id"], len(order))
+    )
     return data
 
 
@@ -323,10 +354,14 @@ def _migration(connection, session, report, *, dry_run):
                 baseline
                 if primary
                 else codec.validate_payload(
-                    _reseed_relationship_evaluator(
-                        _upgrade_profile(row.configuration_data, baseline.payload)
-                        if revision == 0 else deepcopy(row.configuration_data),
-                        baseline.payload["floor_plan_scoring"],
+                    _upgrade_post_processing(
+                        _reseed_relationship_evaluator(
+                            _upgrade_profile(row.configuration_data, baseline.payload)
+                            if revision == 0
+                            else deepcopy(row.configuration_data),
+                            baseline.payload["floor_plan_scoring"],
+                        ),
+                        baseline.payload["post_processing"],
                     )
                 )
             )
@@ -337,7 +372,7 @@ def _migration(connection, session, report, *, dry_run):
                     {
                         "id": row.id,
                         "name": row.name,
-                        "action": "promote E02A baseline" if primary else "upgrade scoring profile",
+                        "action": "promote E02A baseline" if primary else "upgrade saved profile",
                         "old_hash": row.config_hash,
                         "new_hash": validated.config_hash,
                     }
@@ -346,10 +381,7 @@ def _migration(connection, session, report, *, dry_run):
             report["conflicts"].append({"id": row.id, "name": row.name, "error": str(exc)})
     if not any(row.name == PRIMARY_PROFILE for row in rows):
         report["profiles"].append({"name": PRIMARY_PROFILE, "action": "create E02A baseline"})
-    report["action"] = (
-        "initialize schema" if compatibility == "empty"
-        else "upgrade scoring profiles"
-    )
+    report["action"] = "initialize schema" if compatibility == "empty" else "upgrade saved profiles"
     if compatibility == "upgrade_required" and revision < 2:
         report["removed_floor_plan_runs"] = connection.exec_driver_sql(
             "SELECT count(*) FROM fpg_p01_floor_plan_run"

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from shapely.geometry import Polygon as ShapelyPolygon
 
 from ..domain import FloorPlan, RoomId, RoomRole
@@ -11,9 +13,9 @@ from .geometry import normalize_polygon, to_shapely
 def validate_config(config: FloorPlanPostProcessingConfig) -> None:
     if not config.name.strip():
         raise ConfigurationError("configuration name cannot be empty")
-    if config.numeric.tolerance <= 0:
+    if not math.isfinite(config.numeric.tolerance) or config.numeric.tolerance <= 0:
         raise ConfigurationError("geometry tolerance must be positive")
-    if config.numeric.grid_size <= 0:
+    if not math.isfinite(config.numeric.grid_size) or config.numeric.grid_size <= 0:
         raise ConfigurationError("grid size must be positive")
     ids = [use.processor_id for use in config.processors]
     if len(ids) != len(set(ids)):

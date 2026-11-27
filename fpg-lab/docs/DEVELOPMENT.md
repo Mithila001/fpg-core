@@ -81,3 +81,14 @@ The dry run reports profiles and hashes that would change. If a custom profile
 would leave an enabled group without an evaluator, the dry run reports a conflict
 and the migration stops without writing. Update the profile so its enabled
 groups have current evaluators before applying the migration.
+
+## Revision 4 post-processing profile migration
+
+Stop Lab and headless execution, then use `python -m scripts.lab_db migrate
+--dry-run --json` followed by `python -m scripts.lab_db migrate --json`. The dry
+run reports proposed profile changes and conflicts. Revision 4 replaces obsolete
+wall-extension selections with the new defaults while preserving configured room
+types and maximum distances, removes placeholder-based veranda adjustment, and
+orders cleanup and repair stages. Review the new architectural thresholds before
+using the upgraded profile. Profile IDs and historical run snapshots are retained;
+snapshots are not rewritten. No database reset is required.

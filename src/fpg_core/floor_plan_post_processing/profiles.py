@@ -7,7 +7,6 @@ from .config import (
     PlaceholderRemovalConfig,
     ProcessorUse,
     RectilinearSimplificationConfig,
-    VerandaAdjustmentConfig,
     WallExtensionConfig,
 )
 from .processors import (
@@ -15,7 +14,6 @@ from .processors import (
     HallwayMergeProcessor,
     RectilinearSimplificationProcessor,
     RemovePlaceholderRoomsProcessor,
-    VerandaAdjustmentProcessor,
     WallExtensionProcessor,
 )
 from .registry import ProcessorRegistry
@@ -25,16 +23,15 @@ from .registry import ProcessorRegistry
 INITIAL_GENERATION_PROFILE = FloorPlanPostProcessingConfig(
     name="initial_generation",
     processors=(
-        ProcessorUse("veranda_adjustment", VerandaAdjustmentConfig()),
-        ProcessorUse("wall_extension", WallExtensionConfig()),
         ProcessorUse(
             "remove_placeholder_rooms",
             PlaceholderRemovalConfig(),
             required=True,
             validate_after=True,
         ),
-        ProcessorUse("hallway_merge", HallwayMergeConfig()),
         ProcessorUse("grid_snap", GridSnapConfig(), required=True, validate_after=True),
+        ProcessorUse("wall_extension", WallExtensionConfig()),
+        ProcessorUse("hallway_merge", HallwayMergeConfig()),
         ProcessorUse("rectilinear_simplification", RectilinearSimplificationConfig()),
     ),
 )
@@ -43,7 +40,6 @@ INITIAL_GENERATION_PROFILE = FloorPlanPostProcessingConfig(
 def create_default_registry() -> ProcessorRegistry:
     return ProcessorRegistry(
         (
-            VerandaAdjustmentProcessor(),
             WallExtensionProcessor(),
             RemovePlaceholderRoomsProcessor(),
             HallwayMergeProcessor(),

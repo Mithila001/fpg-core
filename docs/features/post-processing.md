@@ -6,14 +6,18 @@
 
 `INITIAL_GENERATION_PROFILE` runs processors in this order:
 
-1. `veranda_adjustment`
-2. `wall_extension`
-3. `remove_placeholder_rooms` (required, validate after)
+1. `remove_placeholder_rooms` (required, validate after)
+2. `grid_snap` (required, validate after)
+3. `wall_extension`
 4. `hallway_merge`
-5. `grid_snap` (required, validate after)
-6. `rectilinear_simplification`
+5. `rectilinear_simplification`
 
 The order matters; do not reorder processors based only on names. Each `ProcessorUse` specifies its typed config, `required` status, and `validate_after`. The profile also owns numeric tolerance/grid policy and whether existing openings are rejected. Geometry-changing profiles normally reject input plans with openings, so use post-processing **before** opening generation.
+
+Wall extension identifies unacceptable footprint conditions first, generates bounded
+rectangular additions and accepts only measured improvements with hard protections.
+The solver configuration and original room specifications are required. Unknown
+hard constraints cause conservative rejection. See the [consumer contract](../feature_documentations/floor_plan_post_processing.md).
 
 ## Mutation, rollback, and identity
 

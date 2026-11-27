@@ -4,6 +4,7 @@ from time import perf_counter
 
 from ..domain import ExecutionMetadata, ExecutionMode, FeatureExecution
 from .config import (
+    ExteriorStepPolicy,
     FloorPlanPostProcessingConfig,
     GridSnapConfig,
     HallwayMergeConfig,
@@ -12,7 +13,6 @@ from .config import (
     PostProcessingProfile,
     ProcessorUse,
     RectilinearSimplificationConfig,
-    VerandaAdjustmentConfig,
     WallExtensionConfig,
     WallExtensionRule,
 )
@@ -28,6 +28,7 @@ from .contracts import (
     ProcessorExecution,
     ProcessorOutcome,
     ProcessorStatus,
+    RepairDiagnostic,
 )
 from .exceptions import (
     ConfigurationError,
@@ -41,6 +42,7 @@ from .profiles import INITIAL_GENERATION_PROFILE, create_default_registry
 from .registry import ProcessorRegistry
 
 __all__ = [
+    "ExteriorStepPolicy",
     "ConfigurationError",
     "FloorPlanPostProcessingConfig",
     "FloorPlanProcessor",
@@ -64,10 +66,10 @@ __all__ = [
     "ProcessorRegistry",
     "ProcessorStatus",
     "ProcessorUse",
+    "RepairDiagnostic",
     "RectilinearSimplificationConfig",
     "RollbackError",
     "ValidationError",
-    "VerandaAdjustmentConfig",
     "WallExtensionConfig",
     "WallExtensionRule",
     "create_default_registry",

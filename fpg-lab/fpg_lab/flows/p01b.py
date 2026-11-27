@@ -107,7 +107,11 @@ def run_p01b(runner, session, experiment):
                 runner._check_termination(experiment.id)
                 stage = "post_processing"
                 stage_started = perf_counter()
-                execution = adapter.post_process_floor_plan(spec, plan, debug=True)
+                execution = adapter.post_process_floor_plan(
+                    spec, plan,
+                    solver_config=refinement_config if settings["refinement_rounds"] else initial_config,
+                    debug=True,
+                )
                 stages.append(
                     {
                         "name": "Post-process",

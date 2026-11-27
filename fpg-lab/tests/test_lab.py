@@ -132,7 +132,7 @@ class RecordingAdapter(FpgCoreAdapter):
         self.calls.append(profile)
         return Execution(Solve(PLAN))
 
-    def post_process_floor_plan(self, specification: Any, floor_plan: Any, *, debug: bool) -> Any:
+    def post_process_floor_plan(self, specification: Any, floor_plan: Any, *, solver_config: Any, debug: bool) -> Any:
         self.calls.append("post")
         return Execution(Post(PLAN))
 

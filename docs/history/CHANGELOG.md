@@ -6,6 +6,14 @@
 
 ## Unreleased
 
+- Breaking: wall extension now requires the final solver configuration and room
+  specification for opportunistic repair; its old selection fields have been
+  replaced. The default processor order changed and veranda adjustment is removed
+  from the default registry. Migrate Lab profiles with revision 4 maintenance;
+  downstream consumers including `fpg-server` must update their wall-extension
+  configuration mapping and pass the actual final solver configuration. Historical
+  run snapshots retain their original format.
+
 - Breaking. Room Relationship Quality replaces the shared-wall adjacency gate
   and the former kitchen/dining evaluator. Replace obsolete scoring rules with
   `room_relationship_quality` and use the [Lab profile migration](../../fpg-lab/docs/DEVELOPMENT.md#revision-3-scoring-profile-migration)

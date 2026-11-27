@@ -53,9 +53,10 @@ FLOW_REQUIRED_SECTIONS = {
     "e03a": (),
     "e03a_refresh": ("preprocessing", "floor_plan_solver"),
 }
-COMPLETE_SECTIONS = ("buildable_space", *dict.fromkeys(
-    section for sections in FLOW_REQUIRED_SECTIONS.values() for section in sections
-))
+COMPLETE_SECTIONS = (
+    "buildable_space",
+    *dict.fromkeys(section for sections in FLOW_REQUIRED_SECTIONS.values() for section in sections),
+)
 
 
 class CoreConfigCodec:
@@ -97,11 +98,14 @@ class CoreConfigCodec:
         try:
             document_data = payload
             if not full:
-                document_data = {key: payload[key] for key in (
-                    "schema_version", "project_units_per_meter", *required
-                )}
+                document_data = {
+                    key: payload[key]
+                    for key in ("schema_version", "project_units_per_meter", *required)
+                }
                 experiment_key = {
-                    "p01b": "p01b_refinement", "p01c": "p01b_refinement", "e03a": "e03a"
+                    "p01b": "p01b_refinement",
+                    "p01c": "p01b_refinement",
+                    "e03a": "e03a",
                 }.get(flow)
                 if experiment_key:
                     settings = payload.get("experiments") or {}
@@ -139,7 +143,9 @@ class CoreConfigCodec:
         except CoreConfigurationError:
             raise
         except Exception as exc:
-            raise CoreConfigurationError(f"fpg-core rejected the mapped configuration: {exc}") from exc
+            raise CoreConfigurationError(
+                f"fpg-core rejected the mapped configuration: {exc}"
+            ) from exc
         normalized = document.model_dump(mode="json")
         if not full:
             normalized = {key: normalized[key] for key in document_data}
@@ -468,7 +474,9 @@ class CoreConfigCodec:
             if key is not None and (key == "room_types" or key.endswith("_room_types")):
                 if not isinstance(value, (list, tuple)):
                     raise CoreConfigurationError(f"{path} must be a room-type list")
-                return tuple(room_type(item, f"{path}[{index}]") for index, item in enumerate(value))
+                return tuple(
+                    room_type(item, f"{path}[{index}]") for index, item in enumerate(value)
+                )
             if key in {"room_type", "compared_type", "reference_type"}:
                 return room_type(value, path)
             if key in {"overrides", "ratios_by_room_type"}:
@@ -491,7 +499,8 @@ class CoreConfigCodec:
             config = FloorPlanSolverConfig(
                 name=item.name,
                 hard_constraints=tuple(
-                    HardConstraintUse(x.key, settings(x.settings, x.key)) for x in item.hard_constraints
+                    HardConstraintUse(x.key, settings(x.settings, x.key))
+                    for x in item.hard_constraints
                 ),
                 soft_constraints=tuple(
                     SoftConstraintUse(x.key, x.weight, settings(x.settings, x.key))
@@ -522,6 +531,7 @@ class CoreConfigCodec:
             return None
         from fpg_core.domain import RoomType
         from fpg_core.floor_plan_post_processing import (
+            ExteriorStepPolicy,
             FloorPlanPostProcessingConfig,
             GridSnapConfig,
             HallwayMergeConfig,
@@ -529,27 +539,23 @@ class CoreConfigCodec:
             PlaceholderRemovalConfig,
             ProcessorUse,
             RectilinearSimplificationConfig,
-            VerandaAdjustmentConfig,
             WallExtensionConfig,
             WallExtensionRule,
         )
 
         constructors = {
-            "veranda_adjustment": lambda c: VerandaAdjustmentConfig(**c.model_dump()),
             "wall_extension": lambda c: WallExtensionConfig(
                 rules=tuple(
                     WallExtensionRule(
                         room_type=RoomType(x.room_type),
-                        min_wall_length=x.min_wall_length,
-                        max_wall_length=x.max_wall_length,
-                        max_rooms=x.max_rooms,
-                        max_selections=x.max_selections,
-                        expansion_percentage=x.expansion_percentage,
                         max_distance=x.max_distance,
                     )
                     for x in c.rules
                 ),
-                transformation_version=c.transformation_version,
+                exterior_steps=tuple(
+                    ExteriorStepPolicy(**x.model_dump()) for x in c.exterior_steps
+                ),
+                **c.model_dump(exclude={"rules", "exterior_steps"}),
             ),
             "remove_placeholder_rooms": lambda c: PlaceholderRemovalConfig(),
             "hallway_merge": lambda c: HallwayMergeConfig(**c.model_dump()),

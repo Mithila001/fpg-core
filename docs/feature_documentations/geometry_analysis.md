@@ -11,6 +11,9 @@ Import the following from `fpg_core.geometry_analysis`:
 - `shared_boundary(first, second)` returns the intersection of the two boundaries; its `.length` distinguishes wall contact from zero-length corner contact. It also measures contact between a region and a room. `boundary_distance(first, second)` measures the distance between their boundaries.
 - `is_rectilinear(points, tolerance)` checks successive coordinate pairs, including the closing edge.
 - `detect_voids(footprint)` returns a tuple of Shapely polygons for interior rings, with area available as `.area`; it applies no scoring threshold.
+- `exterior_profile(footprint, direction)` measures the exact outward silhouette of a rectilinear footprint for `front` (negative y), `back` (positive y), `left` (negative x), or `right` (positive x). It returns an `ExteriorProfile` with `segments` and transitions in `steps`; empty intervals are not bridged. Segment coordinates are projected onto x for front/back and y for left/right. A step contains its location, depth, geometry and neighboring segments. The caller decides whether a step is undesirable.
+- `directional_exposure(room, others, direction)` measures the room's outward-visible silhouette, subtracting projected obstructions even at a distance. `others` maps room ID strings to polygons and must exclude the room itself. Its `DirectionalExposure` reports total and longest continuous exposed lengths, exposed and obstructed line segments, blocking IDs, and full exposure. Continuous segments must occupy the same physical straight wall, even when separate walls project to adjacent intervals. The input polygons must be non-overlapping and rectilinear; the routine does not validate them.
+- `measure_room_shape(polygon)` returns `RoomShapeMeasurements`: bounding width and height, boundary edge lengths, horizontal and vertical cross-section lengths at each vertex interval, and the concave-corner count. It assumes a simple rectilinear room polygon without holes. These are measurements, not suitability decisions.
 - `detect_recesses(footprint, tolerance, *, include_section_entrances=False)` returns a tuple of `Recess` objects. It uses the existing orthogonal directional sweep, treating interior rings as voids. Set `include_section_entrances=True` to compute section entrances independently of scoring mode.
 - `polygons(geometry)` and `lines(geometry)` recursively extract polygon and line components.
 
@@ -30,17 +33,25 @@ voids = detect_voids(footprint)
 
 ## Public export inventory
 
-### `fpg_core.geometry_analysis` exports (11)
+### `fpg_core.geometry_analysis` exports (19)
 
 | Export | Contract |
 | --- | --- |
+| `DirectionalExposure` | `exposed_length`, `longest_exposed_segment`, `exposed`, `obstructed`, `obstructing_room_ids`, `full_exposure` |
+| `ExteriorProfile` | `direction`, `segments`, `steps` |
+| `ExteriorWallSegment` | `start`, `end`, `position`, `geometry`, `length` |
+| `ExteriorWallStep` | `location`, `depth`, `geometry`, `before`, `after` |
+| `exterior_profile` | `footprint`, `direction` |
 | `Recess` | `polygon`, `entrance`, `direction`, `depth`, `sections`, `branch_count` |
+| `RoomShapeMeasurements` | `width`, `height`, `edge_lengths`, `horizontal_widths`, `vertical_widths`, `concave_corners` |
 | `Section` | `polygon`, `width`, `depth`, `level`, `parents`, `direction`, `entrance` |
 | `boundary_distance` | `first`, `second` |
 | `detect_recesses` | `footprint`, `tolerance`, `include_section_entrances` |
 | `detect_voids` | `footprint` |
+| `directional_exposure` | `room`, `others`, `direction` |
 | `is_rectilinear` | `points`, `tolerance` |
 | `lines` | `geometry` |
+| `measure_room_shape` | `polygon` |
 | `occupied_footprint` | `polygons` |
 | `polygons` | `geometry` |
 | `room_polygon` | `points` |

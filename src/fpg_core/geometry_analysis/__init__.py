@@ -1,13 +1,21 @@
 """Shared physical geometry measurements, independent of feature policy."""
 
 from .api import (
+    DirectionalExposure,
+    ExteriorProfile,
+    ExteriorWallSegment,
+    ExteriorWallStep,
     Recess,
+    RoomShapeMeasurements,
     Section,
     boundary_distance,
     detect_recesses,
     detect_voids,
+    directional_exposure,
+    exterior_profile,
     is_rectilinear,
     lines,
+    measure_room_shape,
     occupied_footprint,
     polygons,
     room_polygon,
@@ -15,7 +23,23 @@ from .api import (
 )
 
 __all__ = [
-    "Recess", "Section", "boundary_distance", "detect_recesses", "detect_voids",
-    "is_rectilinear", "lines", "occupied_footprint", "polygons", "room_polygon",
+    "DirectionalExposure",
+    "RoomShapeMeasurements",
+    "directional_exposure",
+    "measure_room_shape",
+    "ExteriorProfile",
+    "ExteriorWallSegment",
+    "ExteriorWallStep",
+    "exterior_profile",
+    "Recess",
+    "Section",
+    "boundary_distance",
+    "detect_recesses",
+    "detect_voids",
+    "is_rectilinear",
+    "lines",
+    "occupied_footprint",
+    "polygons",
+    "room_polygon",
     "shared_boundary",
 ]

@@ -14,6 +14,7 @@ from ..domain import (
     Polygon,
     RoomId,
 )
+from ..floor_plan_solver import FloorPlanSolverConfig
 from .config import FloorPlanPostProcessingConfig, NumericPolicy
 
 
@@ -37,6 +38,18 @@ class ProcessorOutcome:
     affected_room_ids: tuple[RoomId, ...] = ()
     identity_redirects: Mapping[RoomId, RoomId] = field(default_factory=dict)
     metrics: Mapping[str, int | float | str | bool] = field(default_factory=dict)
+    diagnostics: tuple[RepairDiagnostic, ...] = ()
+
+
+@dataclass(frozen=True)
+class RepairDiagnostic:
+    kind: str
+    room_id: RoomId | None = None
+    bounds: tuple[float, float, float, float] | None = None
+    detail: str = ""
+    geometry: tuple[tuple[float, float], ...] = ()
+    associated_room_ids: tuple[RoomId, ...] = ()
+    shared_walls: tuple[tuple[RoomId, tuple[tuple[float, float], ...]], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -67,6 +80,7 @@ class PostProcessingRequest:
     floor_plan: FloorPlan
     config: FloorPlanPostProcessingConfig
     specification: FloorPlanGenerationSpec | None = None
+    solver_config: FloorPlanSolverConfig | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +90,7 @@ class PostProcessingContext:
     floor_boundary: Polygon
     numeric: NumericPolicy
     profile_name: str
+    solver_config: FloorPlanSolverConfig | None = None
 
 
 @dataclass(frozen=True)

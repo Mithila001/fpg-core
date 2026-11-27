@@ -4,7 +4,10 @@ from fpg_core.geometry_analysis import (
     boundary_distance,
     detect_recesses,
     detect_voids,
+    directional_exposure,
+    exterior_profile,
     is_rectilinear,
+    measure_room_shape,
     occupied_footprint,
     room_polygon,
     shared_boundary,
@@ -46,3 +49,24 @@ def test_recess_detection_can_include_section_entrances() -> None:
     assert plain[0].depth == detailed[0].depth == 6
     assert detailed[0].sections
     assert all(section.entrance is not None for section in detailed[0].sections)
+
+
+def test_exterior_profile_exposure_and_shape_measurements() -> None:
+    footprint = Polygon(((0, 0), (10, 0), (10, 10), (6, 10), (6, 7), (0, 7)))
+    profile = exterior_profile(footprint, "back")
+    assert [(segment.start, segment.end, segment.position) for segment in profile.segments] == [
+        (0, 6, 7), (6, 10, 10)
+    ]
+    assert [step.depth for step in profile.steps] == [3]
+
+    room = box(0, 0, 10, 10)
+    blocked = directional_exposure(room, {"blocker": box(0, 12, 10, 14)}, "back")
+    clear = directional_exposure(room, {}, "back")
+    assert blocked.full_exposure is False
+    assert blocked.exposed_length == 0
+    assert blocked.obstructing_room_ids == ("blocker",)
+    assert clear.full_exposure is True
+    assert clear.longest_exposed_segment == 10
+
+    shape = measure_room_shape(footprint)
+    assert (shape.width, shape.height, shape.concave_corners) == (10, 10, 1)

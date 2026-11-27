@@ -338,7 +338,7 @@ def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
     assert [item["id"] for item in planned["profiles"]] == [profile_id]
     assert db.status(database)["revision"] == 2
     assert db.migrate(database)["applied"]
-    assert db.status(database)["revision"] == 3
+    assert db.status(database)["revision"] == 4
     assert not db.migrate(database)["applied"]
     with database.session_factory() as session:
         updated = session.get(SystemConfiguration, profile_id)

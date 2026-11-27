@@ -4,7 +4,8 @@ from ...domain import Point, Polygon
 from ..config import GridSnapConfig
 from ..contracts import FloorPlanProcessor, ProcessorOutcome, ProcessorStatus
 from ..exceptions import ProcessorError
-from ..geometry import normalize_polygon
+from ..geometry import normalize_polygon, to_shapely
+from ..protection import candidate_protection
 from ..validation import validate_floor_plan
 
 
@@ -37,6 +38,11 @@ class GridSnapProcessor(FloorPlanProcessor):
                 tolerance,
             )
 
+        before = {
+            room.id: to_shapely(room.boundary)
+            for room in floor_plan.rooms
+            if room.role.value == "standard"
+        }
         changed = []
         snapped_floor = snap(floor_plan.boundary)
         floor_changed = snapped_floor != floor_plan.boundary
@@ -48,6 +54,33 @@ class GridSnapProcessor(FloorPlanProcessor):
                 room.boundary = boundary
                 changed.append(room.id)
         validate_floor_plan(floor_plan, tolerance=tolerance)
+        if floor_changed:
+            raise ProcessorError(
+                "grid snapping cannot safely change the floor boundary"
+            )
+        after = {
+            room.id: to_shapely(room.boundary)
+            for room in floor_plan.rooms
+            if room.id in before
+        }
+        for room_id in changed:
+            if room_id not in before:
+                continue
+            if not after[room_id].buffer(tolerance).covers(before[room_id]):
+                raise ProcessorError("grid snapping would remove room area")
+            reason = candidate_protection(
+                floor_plan,
+                context,
+                before,
+                after,
+                room_id,
+                area_excess=0,
+                width_excess=0,
+            )
+            if reason:
+                raise ProcessorError(
+                    f"grid snapping cannot preserve constraints: {reason}"
+                )
         if not changed and not floor_changed:
             return ProcessorOutcome(
                 ProcessorStatus.NO_CHANGE, "geometry was already grid-aligned"

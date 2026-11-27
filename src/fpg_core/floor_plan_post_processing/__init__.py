@@ -1,6 +1,7 @@
 from .api import (
     INITIAL_GENERATION_PROFILE,
     ConfigurationError,
+    ExteriorStepPolicy,
     FloorPlanPostProcessingConfig,
     FloorPlanProcessor,
     GridSnapConfig,
@@ -23,9 +24,9 @@ from .api import (
     ProcessorStatus,
     ProcessorUse,
     RectilinearSimplificationConfig,
+    RepairDiagnostic,
     RollbackError,
     ValidationError,
-    VerandaAdjustmentConfig,
     WallExtensionConfig,
     WallExtensionRule,
     create_default_registry,
@@ -33,6 +34,7 @@ from .api import (
 )
 
 __all__ = [
+    "ExteriorStepPolicy",
     "ConfigurationError",
     "FloorPlanPostProcessingConfig",
     "FloorPlanProcessor",
@@ -56,10 +58,10 @@ __all__ = [
     "ProcessorRegistry",
     "ProcessorStatus",
     "ProcessorUse",
+    "RepairDiagnostic",
     "RectilinearSimplificationConfig",
     "RollbackError",
     "ValidationError",
-    "VerandaAdjustmentConfig",
     "WallExtensionConfig",
     "WallExtensionRule",
     "create_default_registry",
