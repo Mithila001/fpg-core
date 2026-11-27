@@ -92,3 +92,25 @@ types and maximum distances, removes placeholder-based veranda adjustment, and
 orders cleanup and repair stages. Review the new architectural thresholds before
 using the upgraded profile. Profile IDs and historical run snapshots are retained;
 snapshots are not rewritten. No database reset is required.
+
+## Revision 5 front wall setback profile migration
+
+Revision 5 keeps the existing database schema and adds the new
+`front_wall_setback` hard constraint to the saved initial, refinement A,
+refinement B, and optional P01B refinement profiles that do not already
+contain it. Existing custom setback settings, profile IDs and historical
+run snapshots are preserved. The baseline uses garage 10, veranda 5, and
+living room 10 (only when no veranda exists) in project units.
+
+Stop Lab and headless execution, back up the selected database, and run from
+`fpg-lab/` with the Lab interpreter:
+
+```bash
+python -m scripts.lab_db migrate --dry-run --json
+python -m scripts.lab_db migrate --json
+python -m scripts.lab_db profiles validate --all --json
+```
+
+Review the dry run before applying it. No reset is necessary. To opt out of
+a room policy, remove its rule from the saved solver profile after migration.
+See the [Core contract](../../docs/feature_documentations/floor_plan_solver.md#front-wall-setback).

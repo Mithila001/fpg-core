@@ -72,7 +72,9 @@ Shape and hard-constraint checks are conservative: unsupported hard constraints,
 changed hallway geometry under hallway limits, changed bathroom/hallway contact,
 and altered attached-bathroom pair qualifications cause rejection. Fully shared
 walls use directional visible-wall segments and a combined uncovered-length
-allowance. Aspect ratio uses the room bounding dimensions. Exposure uses outward
+allowance. Front wall setback uses the minimum Y of all standard room geometries
+and rechecks every applicable room against the new reference edge. Aspect ratio
+uses the room bounding dimensions. Exposure uses outward
 silhouettes, with distant rooms blocking their projections; disconnected physical
 walls do not form one continuous segment. The implementation can therefore leave
 repairable layouts unchanged. Candidate widths use wall and target vertices and a

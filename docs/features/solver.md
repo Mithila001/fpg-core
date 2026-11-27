@@ -17,6 +17,7 @@ Every room supplied in `FloorPlanGenerationSpec.rooms` must be placed. The solve
 | `minimum_coverage` | Required total covered fraction of floor |
 | `hallway_connectivity`, `hallway_dimensions`, `hallway_parallel_overlap`, `hallway_shared_wall` | Hallway anchors, corridor width, and hallway-to-hallway wall overlap cap |
 | `exterior_wall_exposure`, `living_room_front` | Configured exterior exposure and conditional living-room front exposure |
+| `front_wall_setback` | Relative maximum distance from the foremost room edge, independent of boundary exposure |
 
 `room_size_hierarchy` is registered for custom configurations but not enabled by the defaults. Hard constraints determine feasibility and may not be relaxed to improve the objective.
 
@@ -48,6 +49,20 @@ living-room/veranda rule. Run `tests/floor_plan_solver/test_exposure.py`, the
 room-facing tests, the Lab E02A tests, and the Lab Core verifier after changes.
 
 Built-in profiles: `INITIAL_GENERATION_PROFILE` (candidate hints), `REFINEMENT_A_PROFILE` and `REFINEMENT_B_PROFILE` (existing floor-plan seed, with tighter stabilization). Construct tuned versions using `build_default_profiles(DefaultProfileSettings(...))`; default time limits are 5 seconds initial, 2 seconds per refinement. Maintain bounded solves and configurable seeds.
+
+## Front wall setback design rationale
+
+Unobstructed front exposure alone can permit a garage or veranda far behind
+the frontmost room. A separate general hard constraint computes the minimum
+Y across all mandatory room variables once using `AddMinEquality` and
+limits selected room front edges relative to that reference. Translating an
+otherwise identical room arrangement does not affect this rule. Conditional
+room-type policies follow the existing fully-shared-wall rule pattern.
+Tighter limits may reduce feasible arrangements and increase solve difficulty;
+the limits are calibration values, not construction requirements. See the
+[solver contract](../feature_documentations/floor_plan_solver.md#front-wall-setback).
+Post-processing must recheck all applicable rooms because advancing an
+unselected room can move the common reference edge.
 
 ## Fully shared wall design rationale
 

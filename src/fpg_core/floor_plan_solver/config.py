@@ -8,6 +8,10 @@ from types import MappingProxyType
 from typing import Any
 
 from .exceptions import InvalidProfileError
+from .front_wall_setback_config import (
+    FRONT_WALL_SETBACK_KEY,
+    validate_front_wall_setback_settings,
+)
 from .exposure_config import validate_exposure_settings
 from .shared_wall_config import (
     FULLY_SHARED_WALL_KEY,
@@ -35,6 +39,8 @@ class HardConstraintUse:
             raise InvalidProfileError("Hard constraint key cannot be empty")
         if self.key == FULLY_SHARED_WALL_KEY:
             validate_fully_shared_wall_settings(self.settings)
+        if self.key == FRONT_WALL_SETBACK_KEY:
+            validate_front_wall_setback_settings(self.settings)
         object.__setattr__(
             self,
             "settings",

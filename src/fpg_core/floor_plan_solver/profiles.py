@@ -174,6 +174,20 @@ def _default_hard_constraints(
             },
         ),
         HardConstraintUse(
+            "front_wall_setback",
+            {
+                "rules": [
+                    {"room_types": [RoomType.GARAGE], "maximum_setback": 10},
+                    {"room_types": [RoomType.VERANDA], "maximum_setback": 5},
+                    {
+                        "room_types": [RoomType.LIVING_ROOM],
+                        "maximum_setback": 10,
+                        "when": {"room_type": RoomType.VERANDA, "exists": False},
+                    },
+                ]
+            },
+        ),
+        HardConstraintUse(
             "living_room_front",
             {
                 "rules": [

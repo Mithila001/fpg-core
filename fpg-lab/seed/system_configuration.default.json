@@ -941,6 +941,35 @@
             }
           },
           {
+            "key": "front_wall_setback",
+            "settings": {
+              "rules": [
+                {
+                  "room_types": [
+                    "garage"
+                  ],
+                  "maximum_setback": 10
+                },
+                {
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "maximum_setback": 5
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "maximum_setback": 10,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": false
+                  }
+                }
+              ]
+            }
+          },
+          {
             "key": "living_room_front",
             "settings": {
               "rules": [
@@ -1264,6 +1293,35 @@
                   "requirement": {
                     "side": "front",
                     "coverage": "full_wall"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "key": "front_wall_setback",
+            "settings": {
+              "rules": [
+                {
+                  "room_types": [
+                    "garage"
+                  ],
+                  "maximum_setback": 10
+                },
+                {
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "maximum_setback": 5
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "maximum_setback": 10,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": false
                   }
                 }
               ]
@@ -1601,6 +1659,35 @@
                   "requirement": {
                     "side": "front",
                     "coverage": "full_wall"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "key": "front_wall_setback",
+            "settings": {
+              "rules": [
+                {
+                  "room_types": [
+                    "garage"
+                  ],
+                  "maximum_setback": 10
+                },
+                {
+                  "room_types": [
+                    "veranda"
+                  ],
+                  "maximum_setback": 5
+                },
+                {
+                  "room_types": [
+                    "living_room"
+                  ],
+                  "maximum_setback": 10,
+                  "when": {
+                    "room_type": "veranda",
+                    "exists": false
                   }
                 }
               ]

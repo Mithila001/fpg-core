@@ -6,6 +6,17 @@ from typing import Any
 from ..model import ModelContext, RoomVariables
 
 
+def frontmost_wall_y(context: ModelContext) -> Any:
+    """Return the minimum front-edge Y across the mandatory supplied rooms."""
+    front = context.model.NewIntVar(
+        0, context.problem.floor.length, context.new_name("floor_plan_front_y")
+    )
+    context.model.AddMinEquality(
+        front, [room.y for room in context.room_variables.values()]
+    )
+    return front
+
+
 def adjacency_literal(
     context: ModelContext,
     first: RoomVariables,

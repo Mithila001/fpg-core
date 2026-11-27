@@ -26,8 +26,8 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 4
-# Revision 4 migrates saved post-processing profiles; the DDL is unchanged.
+REVISION = 5
+# Revision 5 adds the front wall setback policy to saved solver profiles; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 CURRENT_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
 RUN_TABLES = {
@@ -329,6 +329,32 @@ def _upgrade_post_processing(data, baseline):
     return data
 
 
+def _upgrade_front_wall_setback(data, baseline):
+    stages = data.get("floor_plan_solver") or {}
+    base_stages = baseline["floor_plan_solver"]
+    for name in ("initial", "refinement_a", "refinement_b", "p01b_refinement"):
+        stage = (
+            (data.get("experiments") or {}).get(name)
+            if name == "p01b_refinement"
+            else stages.get(name)
+        )
+        if stage is None:
+            continue
+        rules = stage["hard_constraints"]
+        if not any(rule["key"] == "front_wall_setback" for rule in rules):
+            source = base_stages["refinement_a" if name == "p01b_refinement" else name]
+            rules.append(
+                deepcopy(
+                    next(
+                        rule
+                        for rule in source["hard_constraints"]
+                        if rule["key"] == "front_wall_setback"
+                    )
+                )
+            )
+    return data
+
+
 def _migration(connection, session, report, *, dry_run):
     revision, compatibility = _state(connection)
     report.update(from_revision=revision, compatibility=compatibility)
@@ -350,21 +376,22 @@ def _migration(connection, session, report, *, dry_run):
             if row.schema_version != "6" or row.configuration_data.get("schema_version") != 6:
                 raise ValueError("schema_version: only reviewed version 6 profiles can be upgraded")
             primary = revision == 0 and row.name == PRIMARY_PROFILE
-            validated = (
-                baseline
-                if primary
-                else codec.validate_payload(
-                    _upgrade_post_processing(
-                        _reseed_relationship_evaluator(
-                            _upgrade_profile(row.configuration_data, baseline.payload)
-                            if revision == 0
-                            else deepcopy(row.configuration_data),
-                            baseline.payload["floor_plan_scoring"],
-                        ),
-                        baseline.payload["post_processing"],
+            if primary:
+                validated = baseline
+            else:
+                data = deepcopy(row.configuration_data)
+                if revision == 0:
+                    data = _upgrade_profile(data, baseline.payload)
+                if revision < 3:
+                    data = _reseed_relationship_evaluator(
+                        data, baseline.payload["floor_plan_scoring"]
                     )
-                )
-            )
+                if revision < 4:
+                    data = _upgrade_post_processing(
+                        data, baseline.payload["post_processing"]
+                    )
+                data = _upgrade_front_wall_setback(data, baseline.payload)
+                validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):
                 proposals.append((row, values))

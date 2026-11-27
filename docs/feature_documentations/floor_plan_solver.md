@@ -148,6 +148,7 @@ The shipped default profiles enable:
 | `hallway_shared_wall` | hallway pairs may touch/connect, but their collinear shared-wall overlap may not exceed `maximum_shared_wall=12.0` project units; corner-only contact has zero shared-wall length |
 | `exterior_wall_exposure` | Back exposure for at least one hallway or kitchen, full front and side exposure for garages, and full front exposure for verandas |
 | `living_room_front` | Full front exposure for living rooms when no veranda is supplied |
+| `front_wall_setback` | Maximum setback from the frontmost room wall: garage 10, veranda 5, living room 10 project units when no veranda is supplied |
 
 
 The generic `boundary_placement` rule remains available for explicit boundary placement. `front_anchor` is no longer registered. Exterior exposure means an unobstructed perpendicular path to the generation boundary; contact with that boundary is not required. Only rooms obstruct these paths. The hard back rule and soft kitchen rule require one continuous exposed segment of at least 10 project units in the default profiles. Veranda and living-room rules require the entire front wall; the living-room rule applies only when there is no veranda. Garage exposure is limited to the projections of its own walls, so the old adjacent-front-corner restriction no longer applies. Openings and post-processing use separate behavior and may not preserve these solver-stage exposure results.
@@ -205,6 +206,53 @@ sides may share freely, and total sharing on the other sides is capped by the
 extra length. Only regular bathrooms are affected. Existing saved Lab profiles
 must add this hard-constraint entry to enable it. Existing experiment snapshots
 are preserved.
+
+### Front wall setback
+
+`front_wall_setback` is a general hard constraint enabled in the built-in
+initial and refinement profiles. It measures from the minimum front-edge Y
+of **all** supplied rooms, not from the generation boundary. Each matching
+room must satisfy `room.y - min(all_room_y) <= maximum_setback`.
+Exposure is still a separate requirement.
+
+Configure it through `HardConstraintUse("front_wall_setback", settings)`.
+The settings contain only a nonempty `rules` list:
+
+| Field | Accepted values |
+| --- | --- |
+| `room_types` | Nonempty list or tuple of `RoomType` members (strings in Lab JSON). |
+| `maximum_setback` | Required finite non-negative number of project units; zero aligns the wall with the frontmost wall. Booleans are invalid. |
+| `when` | Optional mapping with exactly `room_type` and Boolean `exists`, testing whether that type occurs in the supplied rooms. |
+
+All applicable rules are enforced for every matching room; no matching rooms
+means no restriction. The maximum is rounded down to the solver coordinate
+grid. Invalid settings raise `InvalidProfileError`. The built-in starter
+values are 10 for garages, 5 for verandas, and 10 for living rooms when
+verandas are absent (1 m, 0.5 m and 1 m at 10 units per metre).
+
+```python
+from fpg_core.domain import RoomType
+from fpg_core.floor_plan_solver import HardConstraintUse
+
+front_setback = HardConstraintUse("front_wall_setback", {
+    "rules": [
+        {"room_types": [RoomType.GARAGE], "maximum_setback": 10},
+        {"room_types": [RoomType.VERANDA], "maximum_setback": 5},
+        {
+            "room_types": [RoomType.LIVING_ROOM],
+            "maximum_setback": 10,
+            "when": {"room_type": RoomType.VERANDA, "exists": False},
+        },
+    ],
+})
+```
+
+Use `config.with_hard_constraints(front_setback)` to replace the policy,
+omit the living-room rule to disable its setback, or use
+`config.without_constraints("front_wall_setback")` to disable the entire rule.
+Smaller allowances reduce layout diversity and may make specifications
+infeasible. The geometry-repair protection checks all affected rooms against
+the changed front edge when this constraint is supplied to post-processing.
 
 ### Fully shared walls
 

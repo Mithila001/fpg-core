@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 from itertools import combinations
 
 from ..domain import RoomRole, RoomType, RoomWidthAxis
@@ -126,6 +127,24 @@ def candidate_protection(
                     match["policy"] == "at_least" and qualified < match["count"]
                 ):
                     return f"exposure rule {rule['id']}"
+        elif key == "front_wall_setback":
+            # Expanding even an untargeted room can advance the reference edge.
+            front = min(after[item.id].bounds[1] for item in rooms)
+            for rule in settings["rules"]:
+                when = rule.get("when")
+                if when is not None and (
+                    (when["room_type"] in types) != when["exists"]
+                ):
+                    continue
+                allowance = Fraction(
+                    Fraction(str(rule["maximum_setback"])) * scale // 1, scale
+                )
+                for item in rooms:
+                    if (
+                        item.room_type in rule["room_types"]
+                        and after[item.id].bounds[1] - front - tolerance > allowance
+                    ):
+                        return "front wall setback"
         elif key == "fully_shared_wall":
             for item in rooms:
                 for rule in settings["rules"]:

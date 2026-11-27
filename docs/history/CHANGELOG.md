@@ -6,6 +6,12 @@
 
 ## Unreleased
 
+- Added the general `front_wall_setback` hard constraint to built-in solver
+  profiles and the Lab baseline, with conditional room-type rules and
+  geometry-repair protection. Revision 5 adds missing rules to saved Lab
+  profiles without changing the database schema or historical snapshots.
+  The tighter default placement requirements can affect feasibility.
+
 - Breaking: wall extension now requires the final solver configuration and room
   specification for opportunistic repair; its old selection fields have been
   replaced. The default processor order changed and veranda adjustment is removed
