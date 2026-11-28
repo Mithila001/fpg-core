@@ -26,7 +26,7 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 10
+REVISION = 11
 # Revision 6 enables living room and bedroom quality scoring; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 PREVIOUS_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
@@ -95,8 +95,8 @@ def _state(connection):
         return revision, "newer"
     if not schema and revision == 0:
         return revision, "empty"
-    expected = CURRENT_SCHEMA_HASH if revision >= 7 else PREVIOUS_SCHEMA_HASH if revision >= 2 else REVIEWED_SCHEMA_HASH
-    if not _matches_schema(schema, expected):
+    recognized = any(_matches_schema(schema, expected) for expected in (CURRENT_SCHEMA_HASH, PREVIOUS_SCHEMA_HASH if revision >= 2 else REVIEWED_SCHEMA_HASH))
+    if not recognized:
         return revision, "unknown"
     return revision, "current" if revision == REVISION else "upgrade_required"
 
@@ -455,8 +455,10 @@ def _migration(connection, session, report, *, dry_run):
     proposals = []
     for row in rows:
         try:
-            if row.schema_version != "6" or row.configuration_data.get("schema_version") != 6:
-                raise ValueError("schema_version: only reviewed version 6 profiles can be upgraded")
+            expected_version = 7 if revision >= 10 else 6
+            profile_version = row.configuration_data.get("schema_version")
+            if row.schema_version != str(profile_version) or profile_version not in (expected_version, 8):
+                raise ValueError(f"schema_version: expected version {expected_version} for database revision {revision}")
             primary = revision == 0 and row.name == PRIMARY_PROFILE
             if primary:
                 validated = baseline
@@ -492,6 +494,15 @@ def _migration(connection, session, report, *, dry_run):
                     scoring.pop("raise_on_evaluator_error", None)
                     scoring.pop("not_applicable_quality_contributes", None)
                     data["schema_version"] = 7
+                if revision < 11:
+                    for rule in data["candidate_circulation"]["route_rules"]:
+                        if rule["id"] == 5:
+                            if rule == next((item for item in baseline.payload["candidate_circulation"]["route_rules"] if item["id"] == 5), None):
+                                continue
+                            if (rule["source_room_type"], rule["destination_room_type"], rule["destination_selection"]) != ("bedroom", "attached_bathroom", "lowest_cost_match"):
+                                raise ValueError("route rule 5 is customized; update it manually before migration")
+                            rule.update(name="Attached bathroom to assigned bedroom", source_room_type="attached_bathroom", destination_room_type="bedroom", destination_selection="assigned_relation", allow_global_transit=False, allowed_transit_room_types=[], required_transit_room_types=[], distance_policy={"preferred_max_grid_steps": 2, "over_limit_score_multiplier": 0.25})
+                    data["schema_version"] = 8
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):

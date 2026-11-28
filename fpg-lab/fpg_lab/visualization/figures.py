@@ -192,7 +192,8 @@ def add_inward_recesses(result: go.Figure, details: Mapping[str, Any]) -> None:
 
 def score_history(trials: Sequence[Mapping[str, Any]], *, trial_no: int | None = None) -> go.Figure:
     result = figure("Candidate score progression")
-    scored = [trial for trial in trials if trial.get("final_score") is not None]
+    scored = [trial for trial in trials if trial.get("final_score") is not None and trial.get("status", "completed") == "completed" and not (trial.get("error_data") or {}).get("rejected")]
+    rejected = [trial for trial in trials if trial.get("status") == "rejected" or (trial.get("error_data") or {}).get("rejected")]
     result.add_trace(
         go.Scatter(
             x=[t["trial_no"] for t in scored],
@@ -202,13 +203,15 @@ def score_history(trials: Sequence[Mapping[str, Any]], *, trial_no: int | None =
             line=dict(color=PALETTE[0]),
         )
     )
+    if rejected:
+        result.add_trace(go.Scatter(x=[t["trial_no"] for t in rejected], y=[0 for t in rejected], mode="markers", name="Rejected", marker=dict(symbol="x", color="#fb7185")))
     result.update_xaxes(title="Trial")
     result.update_yaxes(title="Score", range=[0, 100])
     best = None
     best_scores = []
     for trial in trials:
         score = trial.get("final_score")
-        if score is not None:
+        if score is not None and trial.get("status", "completed") == "completed" and not (trial.get("error_data") or {}).get("rejected"):
             best = score if best is None else max(best, score)
         best_scores.append(best)
     result.add_trace(
@@ -229,7 +232,7 @@ def score_distribution(trials: Sequence[Mapping[str, Any]]) -> go.Figure:
     result = figure("Candidate score distribution")
     result.add_trace(
         go.Histogram(
-            x=[t["final_score"] for t in trials if t.get("final_score") is not None],
+            x=[t["final_score"] for t in trials if t.get("final_score") is not None and t.get("status", "completed") == "completed" and not (t.get("error_data") or {}).get("rejected")],
             marker_color=PALETTE[0],
         )
     )

@@ -117,6 +117,8 @@ class CandidateSearchSession:
         self,
         suggestion: CandidateSuggestion,
         score: float,
+        *,
+        usable: bool = True,
     ) -> CandidateTrialResult:
         """Record the score for the currently pending candidate trial."""
 
@@ -129,7 +131,10 @@ class CandidateSearchSession:
         if suggestion != pending_suggestion:
             raise ValueError("The supplied suggestion is not the pending trial.")
 
+        if not isinstance(usable, bool):
+            raise TypeError("usable must be a bool.")
         numeric_score = _validate_evaluator_score(score)
+        pending_trial.set_user_attr("usable", usable)
         self._study.tell(pending_trial, numeric_score)
         self._completed_trials += 1
         self._pending_trial = None
@@ -140,6 +145,7 @@ class CandidateSearchSession:
             candidate=suggestion.candidate,
             score=numeric_score,
             completed_trials=self._completed_trials,
+            usable=usable,
         )
 
     def fail_pending_trial(self) -> None:
@@ -172,7 +178,10 @@ class CandidateSearchSession:
             raise CandidateSearchStateError(
                 "Candidate search session has no completed trials."
             )
-        best_trial = self._study.best_trial
+        usable_trials = [trial for trial in self._study.trials if trial.state == optuna.trial.TrialState.COMPLETE and trial.value is not None and trial.user_attrs.get("usable", True)]
+        if not usable_trials:
+            raise CandidateSearchStateError("Candidate search session has no usable candidates.")
+        best_trial = max(usable_trials, key=lambda trial: trial.value)
         if best_trial.value is None:
             raise CandidateSearchStateError(
                 "The best Optuna trial does not contain a score."

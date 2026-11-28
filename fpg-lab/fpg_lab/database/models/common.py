@@ -58,7 +58,7 @@ class SystemConfiguration(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     configuration_data: Mapped[dict] = mapped_column(JSONDocument, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
-    schema_version: Mapped[str] = mapped_column(String(32), nullable=False, default="7")
+    schema_version: Mapped[str] = mapped_column(String(32), nullable=False, default="8")
     fpg_core_version: Mapped[str] = mapped_column(String(64), nullable=False)
     config_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
 

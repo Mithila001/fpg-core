@@ -1,9 +1,9 @@
 {
   "name": "research-default",
-  "description": "Lab schema 7 research starter profile for local fpg-core. Setbacks and room references are example policy, not regulatory guidance.",
-  "schema_version": "7",
+  "description": "Lab schema 8 research starter profile for local fpg-core. Setbacks and room references are example policy, not regulatory guidance.",
+  "schema_version": "8",
   "configuration_data": {
-    "schema_version": 7,
+    "schema_version": 8,
     "project_units_per_meter": 10,
     "buildable_space": {
       "active_profile": {
@@ -359,14 +359,16 @@
         },
         {
           "id": 5,
-          "name": "Bedrooms to attached bathrooms",
-          "source_room_type": "bedroom",
-          "destination_room_type": "attached_bathroom",
-          "destination_selection": "lowest_cost_match",
+          "name": "Attached bathroom to assigned bedroom",
+          "source_room_type": "attached_bathroom",
+          "destination_room_type": "bedroom",
+          "destination_selection": "assigned_relation",
           "traffic_class": "private",
           "allowed_transit_room_types": [],
           "required_transit_room_types": [],
-          "importance_weight": 1.5
+          "importance_weight": 1.5,
+          "allow_global_transit": false,
+          "distance_policy": {"preferred_max_grid_steps": 2, "over_limit_score_multiplier": 0.25}
         },
         {
           "id": 6,

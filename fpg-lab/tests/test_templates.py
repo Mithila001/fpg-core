@@ -48,7 +48,7 @@ def test_research_templates_preprocess_and_seed_idempotently(tmp_path: Path) -> 
                 room_types = {point.room_type for point in candidate.points}
                 assert rules
                 assert all(rule.source_room_type in room_types and rule.destination_room_type in room_types for rule in rules)
-                circulation = adapter.run_circulation(candidate, debug=True)
+                circulation = adapter.run_circulation(candidate, prepared=prepared, debug=True)
                 assert circulation.details.passes[-1].paths
             assert not seed(runtime.database)["templates"]
             assert {row.name: row.id for row in service.list(limit=10, offset=0)[0]} == ids
@@ -59,4 +59,4 @@ def test_headless_manual_hints_use_the_default_grid() -> None:
     adapter = FpgCoreAdapter(CoreConfigCodec().default_configuration().config)
     prepared = adapter.preprocess(sample_request(), debug=False).result
     candidate = adapter.build_manual_candidate(prepared, sample_hints())
-    assert adapter.run_circulation(candidate, debug=True).details.passes[-1].paths
+    assert adapter.run_circulation(candidate, prepared=prepared, debug=True).details.passes[-1].paths

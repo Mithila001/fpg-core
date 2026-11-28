@@ -71,6 +71,11 @@ minimum_score=None, settings={})` selects a registered evaluator.
   cost divided by movement, perimeter and turn costs; traffic conflict cost is excluded.
   Separation weights each retained hallway's mixing ratio `2 * min(public, private) /
   (public + private)` by its total traffic. A hallway-free factor is not applicable.
+  After combining applicable factors, the evaluator multiplies the complete score
+  once by the lowest multiplier among routes exceeding their distance policies; no
+  violation means a multiplier of 1. DEBUG details expose the base score,
+  multiplier and violating route identities and step counts. Policies are soft and
+  do not reject candidates.
 - `functional_group_purity` defaults to one bedrooms group, direct penalty 1.0,
   regional penalty 0.5, and connection tolerance 0.5 grid steps. Each group with at
   least two non-hallway points uses deterministic MST connections and a convex hull

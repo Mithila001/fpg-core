@@ -182,3 +182,14 @@ Stop Lab and back up the database. Run `python -m scripts.lab_db migrate --dry-r
 profiles to schema 7, removes candidate relationship quality and the old error and
 N/A flags, adds circulation quality and functional group purity, and sets candidate
 weights to 1.0. Other settings and historical experiment snapshots are preserved.
+
+## Revision 11 candidate circulation migration
+
+Stop Lab and headless execution, back up the database, and run `python -m
+scripts.lab_db migrate --dry-run --json` before applying `migrate --json` and
+`profiles validate --all --json`. Revision 11 upgrades profiles to schema 8 and
+changes rule 5 to the prepared attached-bathroom assignment with a two-step,
+0.25 distance policy. Other rules, route costs, unrelated settings and historical
+experiment snapshots are retained. A customized rule 5 that is not the reviewed
+old bedroom-to-bathroom rule causes a migration conflict for manual review. No
+database reset is required.

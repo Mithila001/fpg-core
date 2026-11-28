@@ -27,7 +27,7 @@ def test_single_and_multiple_room_selection() -> None:
 
 def test_frames_and_scores() -> None:
     trials = [
-        dict(trial_no=i + 1, final_score=score)
+        dict(trial_no=i + 1, final_score=score, status="completed")
         for i, score in enumerate([None, 0, 20, 20, None, 10, 30])
     ]
     frames = replay.frames(list(reversed(trials)))
@@ -180,7 +180,7 @@ def test_dynamic_evaluator_progression() -> None:
     zones = charts["zones"]
     assert list(zones.data[0].y) == [80, None, 30, None]
     assert list(zones.data[1].y) == [80, 80, 80, 80]
-    assert zones.data[0].customdata[0] == ["completed", 20]
+    assert zones.data[0].customdata[0][:2] == ["completed", 20]
     assert zones.data[0].connectgaps is False
     assert list(charts["new_evaluator"].data[1].y) == [None, 10, 10, 10]
     assert list(zones.layout.yaxis.range) == [0, 100]

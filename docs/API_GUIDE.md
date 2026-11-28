@@ -309,12 +309,14 @@ legacy/derived grid description; use `ResolvedCandidateGrid` for exact execution
 Shared circulation contracts are
 `CirculationRouteRule(id, name, source_room_type, destination_room_type,
 destination_selection, traffic_class, allowed_transit_room_types,
-importance_weight, required_transit_room_types=())`,
+importance_weight, required_transit_room_types=(), allow_global_transit=True,
+distance_policy=None)`, `RouteDistancePolicy(preferred_max_grid_steps,
+over_limit_score_multiplier)`,
 `GridRoutingCostProfile(empty_node_cost, traversable_hint_node_cost, turn_cost,
 perimeter_bias_max_cost)`, and `HallwayClassification(room_id, hint_index,
 traffic_class)`. Required transit is an any-of intermediate-room-type requirement and
 the configured required types are traversable for that route. Destination selection
-values are `all_matching` and `lowest_cost_match`; traffic classes are `public` and
+values are `all_matching`, `lowest_cost_match`, and `assigned_relation`; traffic classes are `public` and
 `private`; hallway classifications add `mixed`, `unclassified`, and `unused`.
 
 ### Generation specification contracts
@@ -523,7 +525,7 @@ the previously documented version:
 | `canonical_aspect_ratio` | function | `canonical_aspect_ratio(value: 'float', rules: 'tuple[AspectRatioRule, ...]', *, tolerance: 'float' = 1e-06) -> 'float \| None'` | Documented in the corresponding feature/shared section. |
 
 
-### `fpg_core.domain` exports (58)
+### `fpg_core.domain` exports (59)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
@@ -538,10 +540,11 @@ the previously documented version:
 | `CandidateSearchSpace` | dataclass/contract | `(origin_x: 'Coordinate', origin_y: 'Coordinate', width: 'int', length: 'int', grid_spacing: 'int') -> None` | Centered, divisible Candidate Search rectangle in floor coordinates. |
 | `CirculationGrid` | dataclass/contract | `(width: 'float', length: 'float', scale: 'float', origin_x: 'float' = 0.0, origin_y: 'float' = 0.0) -> None` | Axis-aligned routing grid expressed in project units. |
 | `CirculationGridNode` | dataclass/contract | `(x_index: 'int', y_index: 'int', x: 'float', y: 'float') -> None` | One grid node used by an orthogonal circulation path. |
-| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float', required_transit_room_types: 'tuple[RoomType, ...]' = ()) -> None` | Shared typed request for room-type circulation routing, including optional required intermediate room types. |
+| `CirculationRouteRule` | dataclass/contract | `(id, name, source_room_type, destination_room_type, destination_selection, traffic_class, allowed_transit_room_types, importance_weight, required_transit_room_types=(), allow_global_transit=True, distance_policy=None)` | Shared routing rule including transit control and optional distance policy. |
 | `CirculationTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
 | `ConstraintStrength` | enum | `HARD='hard'; SOFT='soft'` | Documented in the corresponding feature/shared section. |
-| `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'` | Determines which matching destinations a route rule selects. |
+| `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'; ASSIGNED_RELATION='assigned_relation'` | Determines which matching destinations a route rule selects. |
+| `RouteDistancePolicy` | dataclass/contract | `RouteDistancePolicy(preferred_max_grid_steps, over_limit_score_multiplier)` | Optional soft route-length penalty. |
 | `EdgeClassification` | dataclass/contract | `(edge_index: 'int', side: 'LandSide') -> None` | EdgeClassification(edge_index: 'int', side: 'LandSide') |
 | `EdgeSetback` | dataclass/contract | `(edge_index: 'int', side: 'LandSide', base_setback: 'int', road_adjustment: 'int', final_setback: 'int', road_type: 'RoadType \| None' = None) -> None` | EdgeSetback(edge_index: 'int', side: 'LandSide', base_setback: 'int', road_adjustment: 'int', final_setback: 'int', road_type: 'RoadType \| None' = None) |
 | `ExecutionMetadata` | dataclass/contract | `(mode: 'ExecutionMode', duration_seconds: 'float') -> None` | Small execution-wide metadata shared by all feature operations. |
@@ -555,7 +558,7 @@ the previously documented version:
 | `FloorWidthAlignment` | enum | `PARALLEL_TO_ENTRY_ROAD='parallel_to_entry_road'; PERPENDICULAR_TO_ENTRY_ROAD='perpendicular_to_entry_road'` | Documented in the corresponding feature/shared section. |
 | `GridRoutingCostProfile` | dataclass/contract | `(empty_node_cost: 'float', traversable_hint_node_cost: 'float', turn_cost: 'float', perimeter_bias_max_cost: 'float') -> None` | Costs shared by orthogonal grid-routing features. |
 | `FinalCirculation` | dataclass/contract | `(routes, hallways)` | Immutable final routes and retained hallway traffic. |
-| `CirculationPathDetails` | dataclass/contract | See [circulation feature](feature_documentations/candidate_circulation.md). | Route endpoints, path, traffic, weight and costs. |
+| `CirculationPathDetails` | dataclass/contract | `(rule_id, rule_name, traffic_class, destination_selection, allowed_transit_room_types, required_transit_room_types, required_transit_point_keys, importance_weight, source_point_key, source_room_id, source_room_type, destination_point_key, destination_room_id, destination_room_type, nodes, step_count, manhattan_step_count, detour_step_count, turn_count, manhattan_reference_cost, costs, path_efficiency_score, distance_policy=None)` | Route endpoints, path, traffic, weight and costs. |
 | `RetainedHallwayTraffic` | dataclass/contract | `(point_key, room_id, hint_index, x, y, public_route_count, private_route_count, public_importance_weight, private_importance_weight, traffic_class)` | Traffic for a retained hallway. |
 | `HallwayClassification` | dataclass/contract | `(room_id: 'RoomId', hint_index: 'int', traffic_class: 'HallwayTrafficClass') -> None` | Production-safe traffic classification for one hallway hint point. |
 | `HallwayRoomCountRange` | dataclass/contract | `(maximum: 'int', minimum: 'int' = 1) -> None` | Allowed number of distinct hallway rooms in one candidate trial. |

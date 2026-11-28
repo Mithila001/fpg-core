@@ -24,6 +24,7 @@ class RecordedSearchResult:
     points: tuple[Any, ...]
     score: float
     completed_trials: int
+    usable: bool = True
 
 
 @dataclass(slots=True)
@@ -66,14 +67,15 @@ class IncrementalCandidateSearch:
             core_trial_no=int(core_trial_no) if core_trial_no is not None else None,
         )
 
-    def record_score(self, trial: SearchTrial, score: float) -> SearchTrial:
-        self._session.record_score(trial.suggestion, score)
+    def record_score(self, trial: SearchTrial, score: float, *, usable: bool = True) -> SearchTrial:
+        self._session.record_score(trial.suggestion, score, usable=usable)
         self._recorded += 1
         trial.result = RecordedSearchResult(
             trial_number=trial.core_trial_no,
             points=trial.points,
             score=float(score),
             completed_trials=self._recorded,
+            usable=usable,
         )
         self._has_pending = False
         return trial
@@ -205,11 +207,12 @@ class FpgCoreAdapter:
         self,
         candidate: Any,
         *,
+        prepared: Any,
         debug: bool,
     ) -> Any:
         from fpg_core.candidate_circulation import (
-            CandidateCirculationError,
             CandidateCirculationInput,
+            CirculationPathNotFoundError,
             refine_candidate_circulation,
         )
 
@@ -218,10 +221,11 @@ class FpgCoreAdapter:
                 CandidateCirculationInput(
                     candidate=candidate,
                     config=self._circulation_config(candidate),
+                    room_relations=prepared.generation_spec.room_relations,
                 ),
                 mode=self.execution_mode(debug=debug),
             )
-        except CandidateCirculationError as exc:
+        except CirculationPathNotFoundError as exc:
             raise FpgCoreCandidateRejected(
                 str(exc),
                 cause_type=type(exc).__name__,
@@ -401,11 +405,13 @@ class FpgCoreAdapter:
         )
 
     def _circulation_config(self, candidate: Any) -> Any:
+        from fpg_core.domain import DestinationSelection
+
         config = self._required("candidate_circulation")
         available = {point.room_type for point in candidate.points}
         rules = tuple(
             rule for rule in config.route_rules
-            if rule.source_room_type in available and rule.destination_room_type in available
+            if rule.source_room_type in available and (rule.destination_room_type in available or rule.destination_selection is DestinationSelection.ASSIGNED_RELATION)
         )
         if not rules:
             raise FpgCoreAdapterError("No circulation route rules match the candidate rooms")

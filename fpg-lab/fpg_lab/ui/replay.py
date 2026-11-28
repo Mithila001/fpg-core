@@ -280,6 +280,11 @@ async def candidate_replay(
                                 f"Turns {path['turn_count']} · Reference cost "
                                 f"{path['manhattan_reference_cost']:.2f}"
                             ).classes("text-sm")
+                            policy = path.get("distance_policy")
+                            if policy:
+                                violated = path["step_count"] > policy["preferred_max_grid_steps"]
+                                applied = policy["over_limit_score_multiplier"] if violated else 1.0
+                                ui.label(f"Assigned rooms: {path['source_room_id']} → {path['destination_room_id']} · Limit {policy['preferred_max_grid_steps']} steps · {'Exceeded' if violated else 'Within limit'} · Multiplier {applied:g}").classes("text-sm")
                             ui.label(
                                 " · ".join(
                                     f"{name.replace('_', ' ')} {value:.2f}"
@@ -291,6 +296,8 @@ async def candidate_replay(
                 if quality:
                     detail = quality.get("details") or {}
                     ui.label(f"Circulation quality: {display(quality.get('raw_score'))} / 100").classes("text-sm")
+                    if "base_score" in detail:
+                        ui.label(f"Before distance penalty: {display(detail['base_score'])} / 100 · Distance multiplier: {display(detail['distance_multiplier'])}").classes("text-sm")
                     ui.label(f"Efficiency: {display(detail.get('efficiency_score'))} ? Separation: {display(detail.get('separation_score'))}").classes("text-sm")
                     for hallway in detail.get("hallways", []):
                         ui.label(f"{hallway['point_key']}: public {hallway['public_weight']:.2f}, private {hallway['private_weight']:.2f}, mixing {hallway['mixing_ratio']:.2f}, penalty {hallway['penalty']:.2f}").classes("text-sm")
@@ -307,7 +314,7 @@ async def candidate_replay(
                 ui.label(
                     str(frame["error_data"].get("message", "Trial failed or was rejected"))
                 ).classes("text-amber-300")
-                json_panel("Trial error", frame["error_data"])
+                json_panel("Candidate rejection" if frame["error_data"].get("rejected") else "Trial error", frame["error_data"])
             if frame.get("candidate_scoring_data"):
                 for evaluation in frame["candidate_scoring_data"].get("evaluator_results", []):
                     ui.label(

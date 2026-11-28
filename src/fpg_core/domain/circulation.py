@@ -45,6 +45,7 @@ class DestinationSelection(StrEnum):
 
     ALL_MATCHING = "all_matching"
     LOWEST_COST_MATCH = "lowest_cost_match"
+    ASSIGNED_RELATION = "assigned_relation"
 
 
 class CirculationTrafficClass(StrEnum):
@@ -134,6 +135,20 @@ class GridRoutingCostProfile:
 
 
 @dataclass(frozen=True, slots=True)
+class RouteDistancePolicy:
+    preferred_max_grid_steps: int
+    over_limit_score_multiplier: float
+
+    def __post_init__(self) -> None:
+        if isinstance(self.preferred_max_grid_steps, bool) or not isinstance(self.preferred_max_grid_steps, int) or self.preferred_max_grid_steps < 0:
+            raise ValueError("preferred_max_grid_steps must be a non-negative integer.")
+        multiplier = _finite_number("over_limit_score_multiplier", self.over_limit_score_multiplier)
+        if not 0 <= multiplier <= 1:
+            raise ValueError("over_limit_score_multiplier must be between 0 and 1.")
+        object.__setattr__(self, "over_limit_score_multiplier", multiplier)
+
+
+@dataclass(frozen=True, slots=True)
 class CirculationRouteRule:
     """Shared typed request for room-type circulation routing."""
 
@@ -146,6 +161,8 @@ class CirculationRouteRule:
     allowed_transit_room_types: tuple[RoomType, ...]
     importance_weight: float
     required_transit_room_types: tuple[RoomType, ...] = ()
+    allow_global_transit: bool = True
+    distance_policy: RouteDistancePolicy | None = None
 
     def __post_init__(self) -> None:
         if isinstance(self.id, bool) or not isinstance(self.id, int):
@@ -175,6 +192,10 @@ class CirculationRouteRule:
             raise TypeError(
                 "traffic_class must be a CirculationTrafficClass member."
             )
+        if not isinstance(self.allow_global_transit, bool):
+            raise TypeError("allow_global_transit must be a bool.")
+        if self.distance_policy is not None and not isinstance(self.distance_policy, RouteDistancePolicy):
+            raise TypeError("distance_policy must be a RouteDistancePolicy.")
 
         allowed_types = tuple(self.allowed_transit_room_types)
         if any(not isinstance(room_type, RoomType) for room_type in allowed_types):
@@ -289,6 +310,11 @@ class CirculationPathDetails:
     manhattan_reference_cost: float
     costs: RouteCostBreakdown
     path_efficiency_score: float
+    distance_policy: RouteDistancePolicy | None = None
+
+    @property
+    def distance_violation(self) -> bool:
+        return self.distance_policy is not None and self.step_count > self.distance_policy.preferred_max_grid_steps
 
 
 @dataclass(frozen=True, slots=True)

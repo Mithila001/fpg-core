@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..domain import CandidatePoint, RoomType
+from ..domain import CandidatePoint, DestinationSelection, RoomType
 from .config import CandidateCirculationConfig
 from .contracts import CandidateCirculationInput
 from .exceptions import CandidateCirculationInputError, GridAlignmentError
@@ -62,6 +62,11 @@ def validate_circulation_input(
                 "candidate grid."
             ) from exc
 
+        if grid.is_edge_node(x_index, y_index):
+            raise CandidateCirculationInputError(
+                f"Candidate point '{point.point_key}' must be on an interior grid node."
+            )
+
         point_key = candidate_point_key(point)
         if point_key in point_keys:
             raise CandidateCirculationInputError(
@@ -86,6 +91,27 @@ def validate_circulation_input(
         indexed_points.append(indexed)
 
     _validate_route_matches(circulation_input.config, tuple(indexed_points))
+    for rule in circulation_input.config.route_rules:
+        if rule.destination_selection is not DestinationSelection.ASSIGNED_RELATION:
+            continue
+        sources = [p for p in indexed_points if p.point.room_type is rule.source_room_type]
+        if not sources:
+            continue
+        if circulation_input.room_relations is None:
+            raise CandidateCirculationInputError(f"Route rule {rule.id} requires room relations.")
+        destinations = [p for p in indexed_points if p.point.room_type is rule.destination_room_type]
+        source_ids = [p.point.room_id for p in sources]
+        destination_ids = [p.point.room_id for p in destinations]
+        if len(set(source_ids)) != len(source_ids) or len(set(destination_ids)) != len(destination_ids):
+            raise CandidateCirculationInputError("Assigned relation endpoints must have unique room identities.")
+        assigned = []
+        for source in sources:
+            matches = [target for relation in circulation_input.room_relations if relation.source_room_id == source.point.room_id for target in relation.target_room_ids if target in destination_ids]
+            if len(matches) != 1:
+                raise CandidateCirculationInputError(f"Route rule {rule.id} requires exactly one assigned destination for '{source.point.room_id}'.")
+            assigned.append(matches[0])
+        if len(set(assigned)) != len(assigned):
+            raise CandidateCirculationInputError(f"Route rule {rule.id} assigns a destination more than once.")
     return ValidatedCirculationInput(
         source=circulation_input,
         x_node_count=grid.x_node_count,
@@ -109,6 +135,8 @@ def _validate_route_matches(
         if point.point.room_type is not None
     }
     for rule in config.route_rules:
+        if rule.destination_selection is DestinationSelection.ASSIGNED_RELATION and rule.source_room_type not in present_types:
+            continue
         if rule.source_room_type not in present_types:
             raise CandidateCirculationInputError(
                 f"Route rule {rule.id} ('{rule.name}') has no matching source "

@@ -23,9 +23,9 @@ def search_hint_map(adapter, request, configuration, count, threshold, state, ca
                 return
             trial = search.ask()
             try:
-                circulation = adapter.run_circulation(trial.candidate, debug=False)
+                circulation = adapter.run_circulation(trial.candidate, prepared=prepared, debug=False)
             except FpgCoreCandidateRejected:
-                search.record_score(trial, 0.0)
+                search.record_score(trial, 0.0, usable=False)
                 state["completed"] += 1
                 continue
             except Exception:
@@ -46,7 +46,7 @@ def search_hint_map(adapter, request, configuration, count, threshold, state, ca
                 return
             search.record_score(trial, score)
             state["completed"] += 1
-            if best is None or score > best:
+            if score is not None and (best is None or score > best):
                 candidate = circulation.result.candidate
                 document = {
                     "version": 1,

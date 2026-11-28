@@ -25,7 +25,7 @@ All are exported from `fpg_core.candidate_search`. The session exposes
 `has_remaining_trials: bool`, `has_pending_trial: bool`, `remaining_trials: int`,
 `completed_trials: int`, `optuna_trial_count: int`, `grid`, and `search_input`
 properties, plus `ask_next_trial() -> CandidateSuggestion`,
-`record_score(suggestion: CandidateSuggestion, score: float) -> CandidateTrialResult`,
+`record_score(suggestion: CandidateSuggestion, score: float, *, usable: bool = True) -> CandidateTrialResult`,
 `run_next_trial() -> CandidateTrialResult`, `fail_pending_trial() -> None`,
 `best_result() -> CandidateSearchResult`, and
 `debug_details() -> CandidateSearchDetails` for incremental evaluation.
@@ -62,6 +62,10 @@ The production result has `candidate`, finite `score`, `completed_trials`, plus
 convenience `points`, `grid`, and `hallway_room_count`. DEBUG details add the grid,
 Optuna trial count, and completed count. Incremental calls return
 `CandidateSuggestion` and `CandidateTrialResult` with trial number/candidate/score.
+Pass `usable=False` when recording an expected rejected observation: its score
+still trains Optuna and consumes the budget, while `CandidateTrialResult.usable`
+is false and `best_result()` excludes it. An all-unusable search raises
+`CandidateSearchStateError`; a usable zero-score result remains eligible.
 
 ## Errors / failure conditions
 
@@ -121,7 +125,7 @@ Candidate Search has no structured warning collection. In `DEBUG`, `CandidateSea
 | `CandidateSearchStateError` | exception | `constructor has no separately inspectable signature` | Raised when session methods are called in an invalid order or state. |
 | `CandidateSearchTarget` | dataclass/contract | `(room_id: 'RoomId', room_type: 'RoomType \| None' = None) -> None` | Identifies one concrete room that may receive one candidate point. |
 | `CandidateSuggestion` | dataclass/contract | `(trial_number: 'int', candidate: 'CandidateMap') -> None` | One valid, non-overlapping candidate produced by an Optuna trial. |
-| `CandidateTrialResult` | dataclass/contract | `(trial_number: 'int', candidate: 'CandidateMap', score: 'float', completed_trials: 'int') -> None` | Candidate and score produced by one completed search trial. |
+| `CandidateTrialResult` | dataclass/contract | `(trial_number, candidate, score, completed_trials, usable=True)` | Candidate and score produced by one completed search trial. |
 | `HallwayRoomCountRange` | dataclass/contract | `(maximum: 'int', minimum: 'int' = 1) -> None` | Allowed number of distinct hallway rooms in one candidate trial. |
 | `ResolvedCandidateGrid` | dataclass/contract | `(x_positions: 'tuple[Coordinate, ...]', y_positions: 'tuple[Coordinate, ...]') -> None` | Exact uniform candidate-location and orthogonal-routing grid. |
 | `build_candidate_grid` | function | `build_candidate_grid(*, grid: 'ResolvedCandidateGrid', max_grid_node_count: 'int') -> 'ResolvedCandidateGrid'` | Validate and return the exact grid prepared by preprocessing. |

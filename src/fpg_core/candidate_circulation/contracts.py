@@ -8,6 +8,7 @@ from ..domain import (
     FinalCirculation,
     HallwayClassification,
     ResolvedCandidateGrid,
+    RoomRelationSpec,
 )
 from .config import CandidateCirculationConfig
 from .domain import (
@@ -24,12 +25,18 @@ class CandidateCirculationInput:
 
     candidate: CandidateMap
     config: CandidateCirculationConfig
+    room_relations: tuple[RoomRelationSpec, ...] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.candidate, CandidateMap):
             raise TypeError("candidate must be a CandidateMap instance.")
         if not isinstance(self.config, CandidateCirculationConfig):
             raise TypeError("config must be a CandidateCirculationConfig instance.")
+        if self.room_relations is not None:
+            relations = tuple(self.room_relations)
+            if any(not isinstance(relation, RoomRelationSpec) for relation in relations):
+                raise TypeError("room_relations must contain RoomRelationSpec values.")
+            object.__setattr__(self, "room_relations", relations)
 
     @property
     def points(self) -> tuple[CandidatePoint, ...]:

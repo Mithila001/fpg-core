@@ -18,7 +18,8 @@ def frames(trials: Sequence[dict[str, Any]], *, improvements: bool = False) -> l
     best = previous = None
     for trial in sorted(trials, key=lambda t: t["trial_no"]):
         score = trial.get("final_score")
-        improved = score is not None and (best is None or score > best)
+        usable = trial.get("status") == "completed" and not (trial.get("error_data") or {}).get("rejected")
+        improved = usable and score is not None and (best is None or score > best)
         if improved:
             best = score
         frame = dict(
@@ -29,7 +30,7 @@ def frames(trials: Sequence[dict[str, Any]], *, improvements: bool = False) -> l
         )
         if not improvements or improved:
             result.append(frame)
-        if score is not None:
+        if usable and score is not None:
             previous = score
     return result
 

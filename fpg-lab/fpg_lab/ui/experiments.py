@@ -384,7 +384,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 with trial_area:
                     if not item["persist_trial_data"]:
                         ui.label(
-                            "Debug data was disabled; no saved candidate trials are available."
+                            "Debug data was disabled; only rejected and failed trials are saved."
                         ).classes("text-amber-300")
                     table(
                         trials,
@@ -525,7 +525,7 @@ def _run_data(session: Any, flow: str, experiment_id: int, page: int) -> Any:
     scores = [
         dict(row)
         for row in session.execute(
-            select(P01CandidateTrial.trial_no, P01CandidateTrial.final_score)
+            select(P01CandidateTrial.trial_no, P01CandidateTrial.final_score, P01CandidateTrial.status, P01CandidateTrial.error_data)
             .where(P01CandidateTrial.experiment_id == experiment_id)
             .order_by(P01CandidateTrial.trial_no)
         ).mappings()

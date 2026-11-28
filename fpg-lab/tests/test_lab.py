@@ -103,7 +103,7 @@ class RecordingAdapter(FpgCoreAdapter):
         super().__init__(configuration)
         self.calls: list[str] = []
 
-    def run_circulation(self, candidate: Any, *, debug: bool) -> Any:
+    def run_circulation(self, candidate: Any, *, prepared: Any = None, debug: bool) -> Any:
         self.calls.append("circulation")
         if self.entered is not None:
             self.entered.set()

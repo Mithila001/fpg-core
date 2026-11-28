@@ -43,7 +43,7 @@
     },
     "fpg_core.candidate_circulation": {
       "source": "src/fpg_core/candidate_circulation/__init__.py",
-      "export_count": 26,
+      "export_count": 27,
       "exports": [
         "CandidateCirculationConfig",
         "CandidateCirculationDetails",
@@ -67,6 +67,7 @@
         "HallwayTrafficDetails",
         "RemovedHallwayPointDetails",
         "RouteCostBreakdown",
+        "RouteDistancePolicy",
         "RoutingCostProfile",
         "RoutingPassDetails",
         "TrafficClass",
@@ -147,7 +148,7 @@
     },
     "fpg_core.domain": {
       "source": "src/fpg_core/domain/__init__.py",
-      "export_count": 61,
+      "export_count": 62,
       "exports": [
         "BuildableLand",
         "BuildableSpaceErrorCode",
@@ -164,6 +165,7 @@
         "CirculationGrid",
         "CirculationGridNode",
         "CirculationRouteRule",
+        "RouteDistancePolicy",
         "CirculationTrafficClass",
         "ConstraintStrength",
         "DestinationSelection",

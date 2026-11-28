@@ -26,7 +26,7 @@ CardinalSideValue = Literal["south", "east", "north", "west"]
 RoadTypeValue = Literal["main_road", "private_road"]
 MatchPolicyValue = Literal["and", "or"]
 ConstraintStrengthValue = Literal["hard", "soft"]
-DestinationSelectionValue = Literal["all_matching", "lowest_cost_match"]
+DestinationSelectionValue = Literal["all_matching", "lowest_cost_match", "assigned_relation"]
 TrafficClassValue = Literal["public", "private"]
 
 
@@ -174,6 +174,11 @@ class RoutingCostDocument(StrictModel):
     traffic_conflict_cost: float = Field(gt=0, allow_inf_nan=False)
 
 
+class RouteDistancePolicyDocument(StrictModel):
+    preferred_max_grid_steps: int = Field(ge=0, strict=True)
+    over_limit_score_multiplier: float = Field(ge=0, le=1, allow_inf_nan=False)
+
+
 class RouteRuleDocument(StrictModel):
     id: int = Field(ge=0)
     name: str = Field(min_length=1, max_length=200)
@@ -184,6 +189,8 @@ class RouteRuleDocument(StrictModel):
     allowed_transit_room_types: list[RoomTypeValue] = Field(default_factory=list)
     required_transit_room_types: list[RoomTypeValue] = Field(default_factory=list)
     importance_weight: float = Field(gt=0, allow_inf_nan=False)
+    allow_global_transit: bool = True
+    distance_policy: RouteDistancePolicyDocument | None = None
 
 
 class CandidateCirculationDocument(StrictModel):
@@ -657,7 +664,7 @@ class ExperimentsDocument(StrictModel):
 
 
 class SystemConfigurationDocument(StrictModel):
-    schema_version: Literal[7] = 7
+    schema_version: Literal[8] = 8
     project_units_per_meter: int = Field(gt=0)
     buildable_space: BuildableSpaceDocument | None = None
     preprocessing: PreprocessingDocument | None = None

@@ -33,8 +33,8 @@ class Search:
         self.remaining -= 1
         return SimpleNamespace(candidate=self.pending)
 
-    def record_score(self, trial, score):
-        self.recorded.append(score)
+    def record_score(self, trial, score, *, usable=True):
+        self.recorded.append((score, usable))
 
     def fail_pending(self):
         pass
@@ -50,7 +50,7 @@ class Adapter:
     def create_candidate_search(self, prepared, *, trial_count):
         return self.search
 
-    def run_circulation(self, candidate, *, debug):
+    def run_circulation(self, candidate, *, prepared=None, debug):
         if candidate is None:
             raise FpgCoreCandidateRejected("rejected", cause_type="test")
         return SimpleNamespace(result=SimpleNamespace(candidate=candidate))

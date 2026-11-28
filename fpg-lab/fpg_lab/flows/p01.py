@@ -168,22 +168,16 @@ class P01FlowRunner:
                     return
                 try:
                     circulation = adapter.run_circulation(
-                        trial.candidate, debug=experiment.persist_trial_data
+                        trial.candidate, prepared=prepared, debug=experiment.persist_trial_data
                     )
                 except FpgCoreCandidateRejected as exc:
-                    search.record_score(trial, 0.0)
+                    search.record_score(trial, 0.0, usable=False)
                     candidate_data = search_trial_document(trial)
-                    self._record_completed_trial(
-                        session,
-                        experiment,
-                        trial.trial_no,
-                        started,
-                        0.0,
-                        candidate_data,
-                        None,
-                        None,
-                        error_payload(exc, stage="candidate_circulation", rejected=True),
-                    )
+                    experiment.completed_trial_count += 1
+                    self._store_trial(session, experiment, trial.trial_no, "rejected", started,
+                        candidate_data=candidate_data if experiment.persist_trial_data else None, final_score=0.0,
+                        error=error_payload(exc, stage="candidate_circulation", rejected=True))
+                    session.commit()
                     continue
                 circulation_data = result_document(circulation)
                 if self._termination_requested(experiment.id):
@@ -243,9 +237,9 @@ class P01FlowRunner:
                     trial.trial_no if trial else experiment.completed_trial_count,
                     "failed",
                     started,
-                    candidate_data=candidate_data,
-                    circulation_data=circulation_data,
-                    scoring_data=scoring_data,
+                    candidate_data=candidate_data if experiment.persist_trial_data else None,
+                    circulation_data=circulation_data if experiment.persist_trial_data else None,
+                    scoring_data=scoring_data if experiment.persist_trial_data else None,
                     error=error_payload(exc, stage="candidate_trial"),
                 )
                 session.commit()
@@ -257,7 +251,7 @@ class P01FlowRunner:
                 session,
                 experiment,
                 error_payload(
-                    RuntimeError("No candidate trial produced a score."),
+                    RuntimeError("No usable candidate was found."),
                     stage="experiment",
                     code="no_recorded_scores",
                 ),
@@ -322,7 +316,7 @@ class P01FlowRunner:
         final_score: float | None = None,
         error: dict[str, Any] | None = None,
     ) -> P01CandidateTrial | None:
-        if not experiment.persist_trial_data and experiment.flow_type == "p01a":
+        if not experiment.persist_trial_data and experiment.flow_type == "p01a" and status not in ("rejected", "failed"):
             return None
         row = P01CandidateTrial(
             experiment_id=experiment.id,

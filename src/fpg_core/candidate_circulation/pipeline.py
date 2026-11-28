@@ -287,6 +287,7 @@ def _path_details(
             total_cost=route.total_cost,
         ),
         path_efficiency_score=route.path_efficiency_score,
+        distance_policy=route.rule.distance_policy,
     )
 
 

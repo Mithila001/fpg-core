@@ -40,3 +40,6 @@ Candidate search returns a `CandidateMap` plus score/trial metadata inside its `
 
 `FinalCirculation` in the shared domain carries the final routes and retained hallway
 traffic from Candidate Circulation to Candidate Scoring in production and debug modes.
+Assigned routes consume prepared room relations; route distance policies travel with
+the resolved paths, leaving scoring independent of pathfinding. An unusable search
+observation can train Optuna without becoming a usable best result.

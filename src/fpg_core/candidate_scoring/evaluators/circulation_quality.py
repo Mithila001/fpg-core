@@ -54,6 +54,9 @@ class CirculationQualityEvaluator(CandidateEvaluator):
         applicable = [(score, weight) for score, weight in parts if score is not None and weight > 0]
         if not applicable:
             return EvaluatorResult(self.key, EvaluationStatus.NOT_APPLICABLE, None)
-        score = clamp_score(sum(value * weight for value, weight in applicable) / sum(weight for _, weight in applicable))
-        details = {"efficiency_score": efficiency, "separation_score": separation, "hallways": traffic, "penalty_multiplier": multiplier} if context.mode is ExecutionMode.DEBUG else None
+        base_score = clamp_score(sum(value * weight for value, weight in applicable) / sum(weight for _, weight in applicable))
+        violations = [route for route in circulation.routes if route.distance_violation]
+        distance_multiplier = min((route.distance_policy.over_limit_score_multiplier for route in violations), default=1.0)
+        score = clamp_score(base_score * distance_multiplier)
+        details = {"efficiency_score": efficiency, "separation_score": separation, "hallways": traffic, "penalty_multiplier": multiplier, "base_score": base_score, "distance_multiplier": distance_multiplier, "distance_violations": [{"rule_id": route.rule_id, "source_room_id": route.source_room_id, "destination_room_id": route.destination_room_id, "step_count": route.step_count, "preferred_max_grid_steps": route.distance_policy.preferred_max_grid_steps, "multiplier": route.distance_policy.over_limit_score_multiplier} for route in violations]} if context.mode is ExecutionMode.DEBUG else None
         return EvaluatorResult(self.key, EvaluationStatus.COMPLETED, score, details=details)

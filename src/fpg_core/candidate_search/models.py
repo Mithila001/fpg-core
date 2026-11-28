@@ -160,6 +160,7 @@ class CandidateTrialResult:
     candidate: CandidateMap
     score: float
     completed_trials: int
+    usable: bool = True
 
     def __post_init__(self) -> None:
         _validate_non_negative_integer("trial_number", self.trial_number)
@@ -167,6 +168,8 @@ class CandidateTrialResult:
             raise TypeError("candidate must be a CandidateMap instance.")
         object.__setattr__(self, "score", _validated_finite_number("score", self.score))
         _validate_positive_integer("completed_trials", self.completed_trials)
+        if not isinstance(self.usable, bool):
+            raise TypeError("usable must be a bool.")
 
     @property
     def points(self) -> tuple[CandidatePoint, ...]:

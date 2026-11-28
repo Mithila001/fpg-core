@@ -168,7 +168,7 @@ def _validated_without_keys(
         ),
     )
     return validate_circulation_input(
-        CandidateCirculationInput(candidate=candidate, config=validated.source.config)
+        CandidateCirculationInput(candidate=candidate, config=validated.source.config, room_relations=validated.source.room_relations)
     )
 
 
@@ -250,7 +250,7 @@ def _compare_route_quality(
 def _route_coverage_key(route: ResolvedRoute) -> tuple[int, str, str | None]:
     destination_key = (
         route.destination.point_key
-        if route.rule.destination_selection is DestinationSelection.ALL_MATCHING
+        if route.rule.destination_selection in (DestinationSelection.ALL_MATCHING, DestinationSelection.ASSIGNED_RELATION)
         else None
     )
     return route.rule.id, route.source.point_key, destination_key

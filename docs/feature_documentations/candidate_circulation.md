@@ -33,6 +33,7 @@ enums, hallway cleanup configuration and DEBUG contracts, compatibility aliases
 CandidateCirculationInput(
     candidate: CandidateMap,
     config: CandidateCirculationConfig,
+    room_relations: tuple[RoomRelationSpec, ...] | None = None,
 )
 ```
 
@@ -40,6 +41,17 @@ CandidateCirculationInput(
 to that grid, and located on valid interior nodes. The feature supports at most
 250,000 grid nodes. Route source and destination room types referenced by configured
 rules must exist in the candidate.
+
+For `ASSIGNED_RELATION`, provide the prepared specification's `room_relations`.
+Each source room must have exactly one target of the configured destination type,
+and no target may be assigned twice. Missing or ambiguous assignments raise
+`CandidateCirculationInputError`; a valid but blocked assignment raises
+`CirculationPathNotFoundError`. A rule with no source rooms produces no routes.
+
+All routing passes, including hallway consolidation reruns, use interior grid nodes
+only. An edge hint is invalid input; if interior obstacles block a required route,
+the feature raises `CirculationPathNotFoundError`. The perimeter bias still applies
+to allowed interior nodes.
 
 ## Configuration
 
@@ -62,6 +74,13 @@ CirculationRouteRule(
     allowed_transit_room_types: tuple[RoomType, ...],
     importance_weight: float,
     required_transit_room_types: tuple[RoomType, ...] = (),
+    allow_global_transit: bool = True,
+    distance_policy: RouteDistancePolicy | None = None,
+)
+
+RouteDistancePolicy(
+    preferred_max_grid_steps: int,
+    over_limit_score_multiplier: float,
 )
 
 HallwayConsolidationConfig(
@@ -93,7 +112,13 @@ Validation and meaning:
   destination type.
 - `DestinationSelection.ALL_MATCHING` resolves one route from each source to every
   matching destination. `LOWEST_COST_MATCH` selects one lowest-cost reachable
-  destination per source.
+  destination per source. `ASSIGNED_RELATION` selects the unique assigned room.
+- `allow_global_transit=False` ignores global transit types for the rule, while
+  empty nodes, the destination, and explicitly allowed or required types remain
+  traversable. The default is `True`.
+- An optional distance policy requires a non-negative integer step threshold and a
+  finite multiplier from 0 to 1. It is carried into final routes for scoring; it
+  does not affect route feasibility.
 - `CirculationTrafficClass` values are `PUBLIC='public'` and `PRIVATE='private'`.
 - `always_traversable_room_types` must contain unique `RoomType` members.
 - `max_routing_passes` defaults to `3` and must be between `2` and `10` inclusive.
@@ -179,6 +204,8 @@ CandidateCirculationResult(
 `result.candidate` preserves the original `ResolvedCandidateGrid` and removes hallway
 points classified as unused or safely consolidated. `hallway_classifications`
 contains classifications for original hallway hints, including those removed during cleanup. `final_circulation.hallways` contains retained hallway traffic only.
+Each final route includes its distance policy, actual `step_count`, and the
+`distance_violation` property (true only above the inclusive threshold).
 
 In `ExecutionMode.PRODUCTION`, `execution.details is None`.
 
@@ -284,21 +311,21 @@ Candidate Circulation has no separate warning collection. In `DEBUG`, `Candidate
 
 ## Public Export Inventory
 
-### `fpg_core.candidate_circulation` exports (26)
+### `fpg_core.candidate_circulation` exports (27)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
 | `CandidateCirculationConfig` | dataclass/contract | `(costs: 'RoutingCostProfile', route_rules: 'tuple[CirculationRouteRule, ...]', always_traversable_room_types: 'tuple[RoomType, ...]', max_routing_passes: 'int' = 3, hallway_consolidation: 'HallwayConsolidationConfig' = <factory>) -> None` | Reusable routing policy; request-specific grid comes from `CandidateMap`. |
 | `CandidateCirculationDetails` | dataclass/contract | `(circulation_efficiency_score: 'float', routing_pass_count: 'int', grid_node_count: 'int', passes: 'tuple[RoutingPassDetails, ...]', final_hallway_traffic: 'tuple[HallwayTrafficDetails, ...]', removed_hallway_points: 'tuple[RemovedHallwayPointDetails, ...]', hallway_consolidation_attempts: 'tuple[HallwayConsolidationAttemptDetails, ...]') -> None` | DEBUG-only route efficiency, hallway traffic, removals, and route-verified consolidation attempts. |
 | `CandidateCirculationError` | exception | `constructor has no separately inspectable signature` | Base exception for candidate circulation failures. |
-| `CandidateCirculationInput` | dataclass/contract | `(candidate: 'CandidateMap', config: 'CandidateCirculationConfig') -> None` | Candidate map and reusable circulation policy. |
+| `CandidateCirculationInput` | dataclass/contract | `(candidate, config, room_relations=None)` | Candidate map, circulation policy and optional prepared relations. |
 | `CandidateCirculationInputError` | exception | `constructor has no separately inspectable signature` | Raised when the circulation input or configuration is invalid. |
 | `CandidateCirculationResult` | dataclass/contract | `(candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = (), final_circulation: 'FinalCirculation | None' = None) -> None` | Production result with cleaned candidate and retained hallway traffic tags. |
-| `CirculationPathDetails` | dataclass/contract | `(rule_id: 'int', rule_name: 'str', traffic_class: 'CirculationTrafficClass', destination_selection: 'DestinationSelection', allowed_transit_room_types: 'tuple[RoomType, ...]', required_transit_room_types: 'tuple[RoomType, ...]', required_transit_point_keys: 'tuple[str, ...]', importance_weight: 'float', source_point_key: 'str', source_room_id: 'str', source_room_type: 'RoomType', destination_point_key: 'str', destination_room_id: 'str', destination_room_type: 'RoomType', nodes: 'tuple[CirculationGridNode, ...]', step_count: 'int', manhattan_step_count: 'int', detour_step_count: 'int', turn_count: 'int', manhattan_reference_cost: 'float', costs: 'RouteCostBreakdown', path_efficiency_score: 'float') -> None` | DEBUG data for one expanded and resolved route, including required-transit evidence. |
+| `CirculationPathDetails` | dataclass/contract | `(rule_id, rule_name, traffic_class, destination_selection, allowed_transit_room_types, required_transit_room_types, required_transit_point_keys, importance_weight, source_point_key, source_room_id, source_room_type, destination_point_key, destination_room_id, destination_room_type, nodes, step_count, manhattan_step_count, detour_step_count, turn_count, manhattan_reference_cost, costs, path_efficiency_score, distance_policy=None)` | Production and DEBUG resolved route, costs and optional distance policy. |
 | `CirculationTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
 | `CirculationPathNotFoundError` | exception | `constructor has no separately inspectable signature` | Raised when a configured route cannot be resolved on the grid. |
-| `CirculationRouteRule` | dataclass/contract | `(id: 'int', name: 'str', source_room_type: 'RoomType', destination_room_type: 'RoomType', destination_selection: 'DestinationSelection', traffic_class: 'CirculationTrafficClass', allowed_transit_room_types: 'tuple[RoomType, ...]', importance_weight: 'float', required_transit_room_types: 'tuple[RoomType, ...]' = ()) -> None` | Shared typed request for room-type circulation routing; required types constrain the intermediate path. |
-| `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'` | Determines which matching destinations a route rule selects. |
+| `CirculationRouteRule` | dataclass/contract | `(id, name, source_room_type, destination_room_type, destination_selection, traffic_class, allowed_transit_room_types, importance_weight, required_transit_room_types=(), allow_global_transit=True, distance_policy=None)` | Shared typed routing rule. |
+| `DestinationSelection` | enum | `ALL_MATCHING='all_matching'; LOWEST_COST_MATCH='lowest_cost_match'; ASSIGNED_RELATION='assigned_relation'` | Determines which matching destinations a route rule selects. |
 | `GridAlignmentError` | exception | `constructor has no separately inspectable signature` | Raised when a hint point does not align with the configured grid. |
 | `GridNode` | dataclass/contract | `(x_index: 'int', y_index: 'int', x: 'float', y: 'float') -> None` | One grid node used by an orthogonal circulation path. |
 | `HallwayClassification` | dataclass/contract | `(room_id: 'RoomId', hint_index: 'int', traffic_class: 'HallwayTrafficClass') -> None` | Production-safe traffic classification for one retained hallway hint point. |
@@ -310,6 +337,7 @@ Candidate Circulation has no separate warning collection. In `DEBUG`, `Candidate
 | `HallwayTrafficDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', public_route_count: 'int', private_route_count: 'int', public_importance_weight: 'float', private_importance_weight: 'float', traffic_class: 'HallwayTrafficClass', removed: 'bool', removal_reason: 'HallwayRemovalReason | None') -> None` | Traffic totals, final role, and optional removal reason for one hallway hint. |
 | `RemovedHallwayPointDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', reason: 'HallwayRemovalReason') -> None` | Identity, position, and removal reason for one removed hallway hint. |
 | `RouteCostBreakdown` | dataclass/contract | `(movement_cost: 'float', perimeter_bias_cost: 'float', turn_cost: 'float', traffic_conflict_cost: 'float', total_cost: 'float') -> None` | Cost components accumulated by one resolved circulation route. |
+| `RouteDistancePolicy` | dataclass/contract | `RouteDistancePolicy(preferred_max_grid_steps, over_limit_score_multiplier)` | Optional soft route-length penalty. |
 | `RoutingCostProfile` | dataclass/contract | `(empty_node_cost: 'float', traversable_hint_node_cost: 'float', turn_cost: 'float', perimeter_bias_max_cost: 'float', traffic_conflict_cost: 'float') -> None` | Routing costs including the multi-pass hallway conflict penalty. |
 | `RoutingPassDetails` | dataclass/contract | `(pass_number: 'int', classifications_changed_from_previous: 'bool', paths: 'tuple[CirculationPathDetails, ...]', hallway_traffic: 'tuple[HallwayTrafficDetails, ...]') -> None` | DEBUG snapshot of one routing and hallway-classification pass. |
 | `TrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Backward-compatible feature-boundary alias of `CirculationTrafficClass`. |

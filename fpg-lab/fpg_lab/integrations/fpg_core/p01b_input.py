@@ -4,6 +4,8 @@ from fpg_lab.integrations.fpg_core.hint_map import validate_export
 
 
 def export_trial(experiment: dict, trial: dict) -> dict:
+    if trial.get("status") != "completed" or (trial.get("error_data") or {}).get("rejected"):
+        raise ValueError("Only usable completed trials can be exported")
     circulation = trial.get("circulation_data") or {}
     candidate = (circulation.get("result") or {}).get("candidate")
     specification = circulation.get("lab_generation_specification")

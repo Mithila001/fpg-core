@@ -135,7 +135,11 @@ def _resolve_all_rules(
 
         for source in sources:
             candidates: list[ResolvedRoute] = []
-            for destination in destinations:
+            selected_destinations = destinations
+            if rule.destination_selection is DestinationSelection.ASSIGNED_RELATION:
+                assigned = {target for relation in validated.source.room_relations or () if relation.source_room_id == source.point.room_id for target in relation.target_room_ids}
+                selected_destinations = [point for point in destinations if point.point.room_id in assigned]
+            for destination in selected_destinations:
                 route = _route_between(
                     validated=validated,
                     rule=rule,
@@ -349,6 +353,7 @@ def _inside_grid(validated: ValidatedCirculationInput, node: _Node) -> bool:
     return (
         0 <= node[0] < validated.x_node_count
         and 0 <= node[1] < validated.y_node_count
+        and not validated.source.grid.is_edge_node(*node)
     )
 
 
@@ -368,7 +373,7 @@ def _can_enter(
     if room_type is None:
         return False
     return (
-        room_type in validated.source.config.always_traversable_room_types
+        (rule.allow_global_transit and room_type in validated.source.config.always_traversable_room_types)
         or room_type in rule.allowed_transit_room_types
         or room_type in rule.required_transit_room_types
     )

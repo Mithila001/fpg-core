@@ -1,6 +1,11 @@
 """Public API for candidate circulation refinement."""
 
-from ..domain import DestinationSelection, HallwayClassification, RouteCostBreakdown
+from ..domain import (
+    DestinationSelection,
+    HallwayClassification,
+    RouteCostBreakdown,
+    RouteDistancePolicy,
+)
 from .config import (
     CandidateCirculationConfig,
     CirculationRouteRule,
@@ -46,6 +51,7 @@ __all__ = [
     "HallwayTrafficDetails",
     "RemovedHallwayPointDetails",
     "RouteCostBreakdown",
+    "RouteDistancePolicy",
     "RoutingCostProfile",
     "RoutingPassDetails",
     "TrafficClass",

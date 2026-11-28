@@ -6,6 +6,17 @@
 
 ## Unreleased
 
+- Breaking: assigned-relation circulation rules require prepared room relations;
+  the Lab adapter now requires `prepared` when running circulation. Lab profiles
+  require revision 11/schema 8 migration. Candidate Search observations can be
+  marked unusable, and unusable observations cannot become best results.
+- Added per-rule global transit control and an optional route-step distance policy
+  applied once to circulation quality. Lab's attached-bathroom starter rule uses
+  the prepared one-to-one pairing and a strong experimental two-step penalty.
+- Breaking: Candidate Circulation rejects hint points on the outer grid boundary and
+  routes exclusively through interior nodes. Consumers supplying manual hints must
+  move them to interior nodes; previously reachable routes may now be blocked.
+
 - Breaking: candidate scoring replaces relationship quality with circulation quality
   and functional group purity, uses equal weights, and excludes not-applicable
   evaluators. Pass the final circulation result into scoring. Migrate Lab profiles
