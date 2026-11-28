@@ -74,8 +74,11 @@ full configured door width. Interior doors use the policy below.
 
 ```python
 InteriorDoorPolicy(
-    door_width=10.0, preferred_clearance=5.0, minimum_clearance=0.0,
-    minimum_shared_wall=10.0, placement_preference="wall_end",
+    door_width=10.0,
+    preferred_clearance=5.0,
+    minimum_clearance=0.0,
+    minimum_shared_wall=10.0,
+    placement_preference="wall_end",
 )
 InteriorDoorConfig(
     default=InteriorDoorPolicy(),
@@ -372,12 +375,15 @@ from fpg_core.floor_plan_openings import (
 opening_source = FloorPlan(
     boundary=rectangle(0, 0, 60, 20),
     rooms=[
-        FloorPlanRoom(RoomId("living"), RoomType.LIVING_ROOM, "Living",
-                      rectangle(20, 0, 40, 20)),
-        FloorPlanRoom(RoomId("bedroom"), RoomType.BEDROOM, "Bedroom",
-                      rectangle(0, 0, 20, 20)),
-        FloorPlanRoom(RoomId("kitchen"), RoomType.KITCHEN, "Kitchen",
-                      rectangle(40, 0, 60, 20)),
+        FloorPlanRoom(
+            RoomId("living"), RoomType.LIVING_ROOM, "Living", rectangle(20, 0, 40, 20)
+        ),
+        FloorPlanRoom(
+            RoomId("bedroom"), RoomType.BEDROOM, "Bedroom", rectangle(0, 0, 20, 20)
+        ),
+        FloorPlanRoom(
+            RoomId("kitchen"), RoomType.KITCHEN, "Kitchen", rectangle(40, 0, 60, 20)
+        ),
     ],
 )
 execution = generate_openings(

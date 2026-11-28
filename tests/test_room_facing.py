@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Any
 
 from ortools.sat.python import cp_model
 
@@ -14,7 +15,7 @@ from fpg_core.floor_plan_solver.preparation import CoordinateScale
 
 
 def solve(kind, other_box, veranda=False, second=None):
-    model = cp_model.CpModel()
+    model: Any = cp_model.CpModel()
 
     def room(name, typ, box):
         x, y, width, length = box

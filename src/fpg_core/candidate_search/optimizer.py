@@ -178,10 +178,21 @@ class CandidateSearchSession:
             raise CandidateSearchStateError(
                 "Candidate search session has no completed trials."
             )
-        usable_trials = [trial for trial in self._study.trials if trial.state == optuna.trial.TrialState.COMPLETE and trial.value is not None and trial.user_attrs.get("usable", True)]
+        usable_trials = [
+            trial
+            for trial in self._study.trials
+            if trial.state == optuna.trial.TrialState.COMPLETE
+            and trial.value is not None
+            and trial.user_attrs.get("usable", True)
+        ]
         if not usable_trials:
-            raise CandidateSearchStateError("Candidate search session has no usable candidates.")
-        best_trial = max(usable_trials, key=lambda trial: trial.value)
+            raise CandidateSearchStateError(
+                "Candidate search session has no usable candidates."
+            )
+        best_trial = max(
+            usable_trials,
+            key=lambda trial: trial.value if trial.value is not None else float("-inf"),
+        )
         if best_trial.value is None:
             raise CandidateSearchStateError(
                 "The best Optuna trial does not contain a score."

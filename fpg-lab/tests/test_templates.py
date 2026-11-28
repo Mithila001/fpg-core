@@ -17,11 +17,37 @@ from scripts.run_experiment import sample_hints, sample_request
 def test_research_templates_preprocess_and_seed_idempotently(tmp_path: Path) -> None:
     common = {"living_room": 1, "kitchen": 1, "bathroom": 1}
     expected = {
-        "example": ("Full Template (Default)", (240, 180), {**common, "bedroom": 3, "attached_bathroom": 1, "dining_room": 1, "veranda": 1, "garage": 1}),
+        "example": (
+            "Full Template (Default)",
+            (240, 180),
+            {
+                **common,
+                "bedroom": 3,
+                "attached_bathroom": 1,
+                "dining_room": 1,
+                "veranda": 1,
+                "garage": 1,
+            },
+        ),
         "minimal": ("Minimal", (180, 135), {**common, "bedroom": 1, "veranda": 1}),
         "super_minimal": ("Super Minimal", (160, 120), {**common, "bedroom": 1}),
-        "average": ("Average", (220, 165), {**common, "bedroom": 2, "dining_room": 1, "veranda": 1, "garage": 1}),
-        "big_plan": ("Big Plan", (280, 210), {**common, "bedroom": 4, "attached_bathroom": 2, "dining_room": 1, "veranda": 1, "garage": 1}),
+        "average": (
+            "Average",
+            (220, 165),
+            {**common, "bedroom": 2, "dining_room": 1, "veranda": 1, "garage": 1},
+        ),
+        "big_plan": (
+            "Big Plan",
+            (280, 210),
+            {
+                **common,
+                "bedroom": 4,
+                "attached_bathroom": 2,
+                "dining_room": 1,
+                "veranda": 1,
+                "garage": 1,
+            },
+        ),
     }
     codec = CoreConfigCodec()
     adapter = FpgCoreAdapter(codec.decode_for_flow(codec.default_configuration().payload, "p01a"))
@@ -32,7 +58,9 @@ def test_research_templates_preprocess_and_seed_idempotently(tmp_path: Path) -> 
             service = FloorPlanTemplateService(session)
             ids = {row.name: row.id for row in service.list(limit=10, offset=0)[0]}
             for path in paths:
-                template = FloorPlanTemplateCreate.model_validate_json(path.read_text(encoding="utf-8"))
+                template = FloorPlanTemplateCreate.model_validate_json(
+                    path.read_text(encoding="utf-8")
+                )
                 name, limits, counts = expected[path.stem.split(".")[1]]
                 request = template.template_data
                 assert template.name == name
@@ -42,12 +70,17 @@ def test_research_templates_preprocess_and_seed_idempotently(tmp_path: Path) -> 
                 prepared = adapter.preprocess(request.model_dump(mode="json"), debug=True).result
                 assert prepared.generation_spec.floor.width <= request.floor_limits.max_width
                 assert prepared.generation_spec.floor.length <= request.floor_limits.max_length
-                assert {room.id for room in request.rooms} <= {room.id for room in prepared.generation_spec.rooms}
+                assert {room.id for room in request.rooms} <= {
+                    room.id for room in prepared.generation_spec.rooms
+                }
                 candidate = adapter.create_candidate_search(prepared, trial_count=1).ask().candidate
                 rules = adapter._circulation_config(candidate).route_rules
                 room_types = {point.room_type for point in candidate.points}
                 assert rules
-                assert all(rule.source_room_type in room_types and rule.destination_room_type in room_types for rule in rules)
+                assert all(
+                    rule.source_room_type in room_types and rule.destination_room_type in room_types
+                    for rule in rules
+                )
                 circulation = adapter.run_circulation(candidate, prepared=prepared, debug=True)
                 assert circulation.details.passes[-1].paths
             assert not seed(runtime.database)["templates"]
@@ -59,4 +92,6 @@ def test_headless_manual_hints_use_the_default_grid() -> None:
     adapter = FpgCoreAdapter(CoreConfigCodec().default_configuration().config)
     prepared = adapter.preprocess(sample_request(), debug=False).result
     candidate = adapter.build_manual_candidate(prepared, sample_hints())
-    assert adapter.run_circulation(candidate, prepared=prepared, debug=True).details.passes[-1].paths
+    assert (
+        adapter.run_circulation(candidate, prepared=prepared, debug=True).details.passes[-1].paths
+    )

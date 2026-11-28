@@ -48,8 +48,8 @@ def test_candidate_flow_public_contracts_connect() -> None:
             targets=build_candidate_search_targets(prepared.generation_spec),
             grid=prepared.candidate_grid,
             hallway_room_count_range=prepared.hallway_room_count_range,
-            evaluator=lambda candidate: -sum(
-                float(point.x) + float(point.y) for point in candidate.points
+            evaluator=lambda candidate: (
+                -sum(float(point.x) + float(point.y) for point in candidate.points)
             ),
             config=search_config,
         ),

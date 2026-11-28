@@ -49,9 +49,7 @@ class LabRuntime:
         self.codec = codec or CoreConfigCodec()
         self.adapter_factory = adapter_factory
         self.runner = P01FlowRunner(self.database, self.codec, adapter_factory)
-        self.jobs = BackgroundExecutor(
-            max_workers=max_workers or settings.max_background_workers
-        )
+        self.jobs = BackgroundExecutor(max_workers=max_workers or settings.max_background_workers)
         self._execution = ExitStack()
         self._started = False
         self._closed = False
@@ -123,13 +121,33 @@ class LabRuntime:
             require_current(self.database)
             with self.database.session_factory() as session:
                 recover_interrupted_experiments(session)
-                session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="interrupted"))
-                session.execute(update(E02BRun).where(E02BRun.status.in_(ACTIVE_STATUSES)).values(
-                    status="interrupted", error={"stage": "startup", "message": "Previous Lab process stopped before completion."},
-                ))
-                session.execute(update(E02CRun).where(E02CRun.status.in_(ACTIVE_STATUSES)).values(
-                    status="interrupted", error={"stage": "startup", "message": "Previous Lab process stopped before completion."},
-                ))
+                session.execute(
+                    update(E02Run)
+                    .where(E02Run.status.in_(ACTIVE_STATUSES))
+                    .values(status="interrupted")
+                )
+                session.execute(
+                    update(E02BRun)
+                    .where(E02BRun.status.in_(ACTIVE_STATUSES))
+                    .values(
+                        status="interrupted",
+                        error={
+                            "stage": "startup",
+                            "message": "Previous Lab process stopped before completion.",
+                        },
+                    )
+                )
+                session.execute(
+                    update(E02CRun)
+                    .where(E02CRun.status.in_(ACTIVE_STATUSES))
+                    .values(
+                        status="interrupted",
+                        error={
+                            "stage": "startup",
+                            "message": "Previous Lab process stopped before completion.",
+                        },
+                    )
+                )
                 session.commit()
             self._execution = execution.pop_all()
         self._started = True
@@ -170,7 +188,11 @@ class LabRuntime:
         try:
             if self._started:
                 with self.database.session_factory() as session:
-                    session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="termination_requested"))
+                    session.execute(
+                        update(E02Run)
+                        .where(E02Run.status.in_(ACTIVE_STATUSES))
+                        .values(status="termination_requested")
+                    )
                     session.commit()
                     for experiment in session.scalars(
                         select(P01Experiment).where(P01Experiment.status.in_(ACTIVE_STATUSES))

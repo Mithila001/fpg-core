@@ -28,10 +28,9 @@ def selected_profile(session, *, override=False):
 
         source["experiments"]["p01b_refinement"] = deepcopy(stage)
         source["experiments"]["p01b_refinement"]["solver"]["max_time_seconds"] = 18
-    return service.create(SystemConfigurationCreate(
-        name="selected P01 solver", configuration_data=source
-    ))
-
+    return service.create(
+        SystemConfigurationCreate(name="selected P01 solver", configuration_data=source)
+    )
 
 
 def test_export_and_independent_iterations(tmp_path, monkeypatch):
@@ -79,7 +78,12 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
         assert experiment["status"] == "completed"
         assert experiment["system_configuration_id"] == profile_id
         assert experiment["system_configuration_hash"] == profile_hash
-        assert experiment["hint_points"]["effective_solver"]["refinement"]["solver"]["max_time_seconds"] == 17
+        assert (
+            experiment["hint_points"]["effective_solver"]["refinement"]["solver"][
+                "max_time_seconds"
+            ]
+            == 17
+        )
         with runtime.database.session_factory() as session:
             session.delete(session.get(P01BPreset, preset_id))
             session.commit()
@@ -101,7 +105,9 @@ def test_export_and_independent_iterations(tmp_path, monkeypatch):
         assert len(calls) == 2 and all(not call.candidate_hints for call in calls)
         assert calls[0].config == calls[1].config
         assert calls[0].config.solver.random_seed == 19
-        assert experiment["hint_points"]["effective_solver"]["initial"]["solver"]["random_seed"] == 19
+        assert (
+            experiment["hint_points"]["effective_solver"]["initial"]["solver"]["random_seed"] == 19
+        )
 
 
 def test_failed_refinement_keeps_initial_and_continues(tmp_path, monkeypatch):
@@ -215,8 +221,12 @@ def test_p01c_scores_the_opening_plan_and_keeps_it_on_score_failure(tmp_path, mo
             assert floor_plan["openings"] == [{"id": "door"}]
             raise RuntimeError("scoring unavailable")
 
-    monkeypatch.setattr("fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN)))
-    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'p01c.db'}", adapter_factory=OpeningsAdapter) as runtime:
+    monkeypatch.setattr(
+        "fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN))
+    )
+    with initialized_runtime(
+        database_url=f"sqlite:///{tmp_path / 'p01c.db'}", adapter_factory=OpeningsAdapter
+    ) as runtime:
         create_profile(runtime)
         source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
         document = export_trial(source["experiment"], source["trials"][0])
@@ -227,18 +237,33 @@ def test_p01c_scores_the_opening_plan_and_keeps_it_on_score_failure(tmp_path, mo
             session.add(preset)
             session.commit()
             preset_id = preset.id
-        experiment_id = runtime.start_experiment("p01c", {
-            "preset_id": preset_id, "initial_time_limit": 1,
-            "system_configuration_id": profile_id,
-        })
+        experiment_id = runtime.start_experiment(
+            "p01c",
+            {
+                "preset_id": preset_id,
+                "initial_time_limit": 1,
+                "system_configuration_id": profile_id,
+            },
+        )
         result = wait(runtime, "p01c", experiment_id)
         experiment = result["experiment"]
         assert experiment["failed_trial_count"] == 1
         assert experiment["system_configuration_id"] == profile_id
-        assert experiment["hint_points"]["effective_solver"]["refinement"]["solver"]["max_time_seconds"] == 18
+        assert (
+            experiment["hint_points"]["effective_solver"]["refinement"]["solver"][
+                "max_time_seconds"
+            ]
+            == 18
+        )
         with runtime.database.session_factory() as session:
-            row = session.scalar(select(P01BIteration).where(P01BIteration.experiment_id == experiment_id))
-            assert [stage["name"] for stage in row.stages] == ["Initial", "Post-process", "Openings"]
+            row = session.scalar(
+                select(P01BIteration).where(P01BIteration.experiment_id == experiment_id)
+            )
+            assert [stage["name"] for stage in row.stages] == [
+                "Initial",
+                "Post-process",
+                "Openings",
+            ]
             assert row.stages[-1]["data"]["result"]["floor_plan"]["openings"] == [{"id": "door"}]
             assert row.error["stage"] == "scoring"
 
@@ -299,8 +324,11 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
             assert migrated.configuration_data["openings"]["dimensions"]["door_width"] == 8
             scoring = migrated.configuration_data["candidate_scoring"]
             assert {item["key"] for item in scoring["evaluator_rules"]} == {
-                "zone_suitability", "exterior_clearance", "circulation_quality",
-                "spatial_distribution", "functional_group_purity",
+                "zone_suitability",
+                "exterior_clearance",
+                "circulation_quality",
+                "spatial_distribution",
+                "functional_group_purity",
             }
             assert all(item["weight"] == 1.0 for item in scoring["evaluator_rules"])
             assert "p01c" not in migrated.configuration_data["experiments"]
@@ -327,8 +355,12 @@ def test_p01c_opening_failure_stops_iteration(tmp_path, monkeypatch):
         def score_completed_floor_plan(self, floor_plan, specification, *, debug):
             raise AssertionError("scoring must not run after opening failure")
 
-    monkeypatch.setattr("fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN)))
-    with initialized_runtime(database_url=f"sqlite:///{tmp_path / 'openings.db'}", adapter_factory=FailedOpenings) as runtime:
+    monkeypatch.setattr(
+        "fpg_lab.flows.p01b.generate_floor_plan", lambda request, *, mode: Execution(Solve(PLAN))
+    )
+    with initialized_runtime(
+        database_url=f"sqlite:///{tmp_path / 'openings.db'}", adapter_factory=FailedOpenings
+    ) as runtime:
         create_profile(runtime)
         source = wait(runtime, "p01a", runtime.start_experiment("p01a", payload("p01a")))
         document = export_trial(source["experiment"], source["trials"][0])
@@ -337,10 +369,14 @@ def test_p01c_opening_failure_stops_iteration(tmp_path, monkeypatch):
             session.add(preset)
             session.commit()
             preset_id = preset.id
-        experiment_id = runtime.start_experiment("p01c", {"preset_id": preset_id, "initial_time_limit": 1})
+        experiment_id = runtime.start_experiment(
+            "p01c", {"preset_id": preset_id, "initial_time_limit": 1}
+        )
         wait(runtime, "p01c", experiment_id)
         with runtime.database.session_factory() as session:
-            row = session.scalar(select(P01BIteration).where(P01BIteration.experiment_id == experiment_id))
+            row = session.scalar(
+                select(P01BIteration).where(P01BIteration.experiment_id == experiment_id)
+            )
             assert row.status == "failed"
             assert row.error["stage"] == "openings"
             assert row.stages[-1]["name"] == "Openings"

@@ -104,14 +104,13 @@ class EnclosedVoidsEvaluator(FloorPlanEvaluator):
                     voids=tuple(
                         EnclosedVoidVisualization(
                             points=tuple(
-                                (float(x), float(y))
-                                for x, y in void.exterior.coords
+                                (float(x), float(y)) for x, y in void.exterior.coords
                             ),
                             area=float(void.area),
                             affects_score=float(void.area) > config.area_tolerance,
                         )
                         for void in void_polygons
-                    )
+                    ),
                 )
                 if context.mode is ExecutionMode.DEBUG
                 else None

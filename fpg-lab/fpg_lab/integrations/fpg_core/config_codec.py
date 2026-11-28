@@ -340,8 +340,8 @@ class CoreConfigCodec:
             CirculationRouteRule,
             CirculationTrafficClass,
             DestinationSelection,
-            RouteDistancePolicy,
             RoomType,
+            RouteDistancePolicy,
         )
 
         return tuple(
@@ -358,7 +358,9 @@ class CoreConfigCodec:
                 ),
                 importance_weight=x.importance_weight,
                 allow_global_transit=x.allow_global_transit,
-                distance_policy=RouteDistancePolicy(**x.distance_policy.model_dump()) if x.distance_policy else None,
+                distance_policy=RouteDistancePolicy(**x.distance_policy.model_dump())
+                if x.distance_policy
+                else None,
             )
             for x in rules
         )
@@ -593,7 +595,10 @@ class CoreConfigCodec:
             dimensions=DimensionConfig(**source.dimensions.model_dump()),
             interior_doors=InteriorDoorConfig(
                 default=InteriorDoorPolicy(**source.interior_doors.default.model_dump()),
-                overrides=tuple((RoomType(item.room_type), InteriorDoorPolicy(**item.policy.model_dump())) for item in source.interior_doors.overrides),
+                overrides=tuple(
+                    (RoomType(item.room_type), InteriorDoorPolicy(**item.policy.model_dump()))
+                    for item in source.interior_doors.overrides
+                ),
             ),
             policy=FeaturePolicy(
                 allowed_room_pairs=tuple(
@@ -604,8 +609,13 @@ class CoreConfigCodec:
                 ),
                 secondary_room_priority=tuple(RoomType(v) for v in policy.secondary_room_priority),
                 window_room_types=tuple(RoomType(v) for v in policy.window_room_types),
-                window_policies=tuple((RoomType(v.room_type), WindowPolicy(**v.policy.model_dump())) for v in policy.window_policies),
-                normal_connection_caps=tuple((RoomType(v.room_type), v.maximum) for v in policy.normal_connection_caps),
+                window_policies=tuple(
+                    (RoomType(v.room_type), WindowPolicy(**v.policy.model_dump()))
+                    for v in policy.window_policies
+                ),
+                normal_connection_caps=tuple(
+                    (RoomType(v.room_type), v.maximum) for v in policy.normal_connection_caps
+                ),
                 prevent_duplicate_connections=policy.prevent_duplicate_connections,
                 main_side_priority=tuple(policy.main_side_priority),
                 secondary_side_priority=tuple(policy.secondary_side_priority),

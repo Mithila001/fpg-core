@@ -27,15 +27,11 @@ class HallwayConsolidationConfig:
         try:
             separation = float(self.minimum_separation_grid_steps)
         except (TypeError, ValueError) as exc:
-            raise TypeError(
-                "minimum_separation_grid_steps must be numeric."
-            ) from exc
+            raise TypeError("minimum_separation_grid_steps must be numeric.") from exc
         if not math.isfinite(separation):
             raise ValueError("minimum_separation_grid_steps must be finite.")
         if separation <= 0:
-            raise ValueError(
-                "minimum_separation_grid_steps must be greater than zero."
-            )
+            raise ValueError("minimum_separation_grid_steps must be greater than zero.")
         if separation > 10.0:
             raise ValueError(
                 "minimum_separation_grid_steps cannot exceed 10 grid steps."
@@ -125,9 +121,7 @@ class CandidateCirculationConfig:
         if self.max_routing_passes < 2:
             raise ValueError("max_routing_passes must be at least 2.")
         if self.max_routing_passes > _MAX_ROUTING_PASSES:
-            raise ValueError(
-                f"max_routing_passes cannot exceed {_MAX_ROUTING_PASSES}."
-            )
+            raise ValueError(f"max_routing_passes cannot exceed {_MAX_ROUTING_PASSES}.")
 
         if not isinstance(self.hallway_consolidation, HallwayConsolidationConfig):
             raise TypeError(

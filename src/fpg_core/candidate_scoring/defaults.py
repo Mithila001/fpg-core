@@ -78,8 +78,18 @@ def create_default_config(
                     )
                 },
             ),
-            EvaluatorRule(key=CIRCULATION_QUALITY_KEY, category=EvaluatorCategory.QUALITY, weight=1.0, order=30),
-            EvaluatorRule(key=FUNCTIONAL_GROUP_PURITY_KEY, category=EvaluatorCategory.QUALITY, weight=1.0, order=50),
+            EvaluatorRule(
+                key=CIRCULATION_QUALITY_KEY,
+                category=EvaluatorCategory.QUALITY,
+                weight=1.0,
+                order=30,
+            ),
+            EvaluatorRule(
+                key=FUNCTIONAL_GROUP_PURITY_KEY,
+                category=EvaluatorCategory.QUALITY,
+                weight=1.0,
+                order=50,
+            ),
             EvaluatorRule(
                 key=SPATIAL_DISTRIBUTION_KEY,
                 category=EvaluatorCategory.QUALITY,

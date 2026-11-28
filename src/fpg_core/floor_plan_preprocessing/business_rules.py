@@ -52,15 +52,12 @@ def apply_business_rules(
     defaults = list(request.applied_defaults)
     bedrooms = [r for r in request.rooms if r.room_type is RoomType.BEDROOM]
     attached_bathrooms = [
-        room
-        for room in request.rooms
-        if room.room_type is RoomType.ATTACHED_BATHROOM
+        room for room in request.rooms if room.room_type is RoomType.ATTACHED_BATHROOM
     ]
 
     if (
         len(attached_bathrooms) > len(bedrooms)
-        and policy.excess_attached_bathrooms
-        is ExcessAttachedBathroomPolicy.REJECT
+        and policy.excess_attached_bathrooms is ExcessAttachedBathroomPolicy.REJECT
     ):
         raise BusinessRuleError(
             f"Requested {len(attached_bathrooms)} attached bathroom(s), "

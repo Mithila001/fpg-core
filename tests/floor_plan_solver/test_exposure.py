@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from ortools.sat.python import cp_model
@@ -9,7 +10,7 @@ from fpg_core.floor_plan_solver.constraints.exposure import exposure_literal
 @pytest.mark.parametrize("side", ["front", "back", "left", "right"])
 @pytest.mark.parametrize("minimum,expected", [(None, False), (3, True), (4, False)])
 def test_continuous_exposure_is_exact(side, minimum, expected):
-    model = cp_model.CpModel()
+    model: Any = cp_model.CpModel()
     counter = iter(range(1000))
 
     def room(name, box):
@@ -25,7 +26,7 @@ def test_continuous_exposure_is_exact(side, minimum, expected):
             y_end=y + length,
         )
 
-    target = room("target", (5, 5, 10, 10))
+    target: Any = room("target", (5, 5, 10, 10))
     boxes = {
         "front": (8, 0, 4, 2),
         "back": (8, 18, 4, 2),
@@ -33,7 +34,7 @@ def test_continuous_exposure_is_exact(side, minimum, expected):
         "right": (18, 8, 2, 4),
     }
     blocker = room("blocker", boxes[side])
-    context = SimpleNamespace(
+    context: Any = SimpleNamespace(
         model=model,
         room_variables={"target": target, "blocker": blocker},
         exposure_cache={},
@@ -52,7 +53,7 @@ def _rule_context(boxes):
     from fpg_core.domain import RoomType
     from fpg_core.floor_plan_solver.preparation import CoordinateScale
 
-    model = cp_model.CpModel()
+    model: Any = cp_model.CpModel()
     counter = iter(range(100000))
     rooms = {}
     for name, kind, (x, y, width, length) in boxes:
@@ -66,21 +67,27 @@ def _rule_context(boxes):
             x_end=x + width,
             y_end=y + length,
         )
-    return SimpleNamespace(
-        model=model,
-        room_variables=rooms,
-        exposure_cache={},
-        exposure_blocker_cache={},
-        problem=SimpleNamespace(
-            scale=CoordinateScale(1), floor=SimpleNamespace(width=50, length=50)
+    return cast(
+        Any,
+        SimpleNamespace(
+            model=model,
+            room_variables=rooms,
+            exposure_cache={},
+            exposure_blocker_cache={},
+            problem=SimpleNamespace(
+                scale=CoordinateScale(1), floor=SimpleNamespace(width=50, length=50)
+            ),
+            new_name=lambda *args: str(next(counter)),
         ),
-        new_name=lambda *args: str(next(counter)),
     )
 
 
 def test_composition_counts_and_soft_penalty():
     from fpg_core.domain import RoomType
-    from fpg_core.floor_plan_solver.constraints.exposure_rules import SoftExteriorWallExposure, apply_rules
+    from fpg_core.floor_plan_solver.constraints.exposure_rules import (
+        SoftExteriorWallExposure,
+        apply_rules,
+    )
 
     boxes = [
         ("a", "bedroom", (0, 10, 5, 5)),
@@ -137,7 +144,7 @@ def test_configuration_validation_before_model_build(change):
             "minimum_length": 10,
         },
     }
-    settings = {"rules": [rule]}
+    settings: dict[str, Any] = {"rules": [rule]}
     if change == "side":
         rule["requirement"]["side"] = "north"
     if change == "coverage":
@@ -196,14 +203,14 @@ def test_boundary_wall_and_cache():
 
 
 def test_variable_positions_and_shared_wall_blocking():
-    model = cp_model.CpModel()
+    model: Any = cp_model.CpModel()
     counter = iter(range(10000))
     present = model.NewBoolVar("target_present")
     model.Add(present == 1)
     blocker_present = model.NewBoolVar("blocker_present")
     model.Add(blocker_present == 1)
     x = model.NewIntVar(0, 10, "target_x")
-    target = SimpleNamespace(
+    target: Any = SimpleNamespace(
         room=SimpleNamespace(id_key="target"),
         present=present,
         x=x,
@@ -219,7 +226,7 @@ def test_variable_positions_and_shared_wall_blocking():
         y=5,
         y_end=10,
     )
-    context = SimpleNamespace(
+    context: Any = SimpleNamespace(
         model=model,
         room_variables={"target": target, "blocker": blocker},
         exposure_cache={},
@@ -236,7 +243,10 @@ def test_variable_positions_and_shared_wall_blocking():
 
 def test_absence_and_scaled_length():
     from fpg_core.domain import RoomType
-    from fpg_core.floor_plan_solver.constraints.exposure_rules import SoftExteriorWallExposure, apply_rules
+    from fpg_core.floor_plan_solver.constraints.exposure_rules import (
+        SoftExteriorWallExposure,
+        apply_rules,
+    )
     from fpg_core.floor_plan_solver.preparation import CoordinateScale
 
     context = _rule_context([("living", "living_room", (0, 0, 10, 10))])
@@ -251,10 +261,7 @@ def test_absence_and_scaled_length():
             "minimum_length": 1.01,
         },
     }
-    assert (
-        SoftExteriorWallExposure().build_penalty(context, {"rules": [rule]})
-        == 0
-    )
+    assert SoftExteriorWallExposure().build_penalty(context, {"rules": [rule]}) == 0
     apply_rules(context, {"rules": [rule]}, "exterior_wall_exposure")
     assert cp_model.CpSolver().Solve(context.model) == cp_model.INFEASIBLE
 
@@ -307,26 +314,40 @@ def test_legacy_exposure_settings_and_keys_are_rejected():
 
 def test_soft_neighbour_relationships_count_once():
     from fpg_core.floor_plan_solver import SoftConstraintUse
-    from fpg_core.floor_plan_solver.constraints.s_room_relations import SoftRoomRelationsConstraint
+    from fpg_core.floor_plan_solver.constraints.s_room_relations import (
+        SoftRoomRelationsConstraint,
+    )
 
-    context = _rule_context([
-        ("source", "living_room", (0, 0, 10, 10)),
-        ("touching", "bedroom", (10, 0, 10, 10)),
-        ("far_a", "bedroom", (30, 0, 10, 10)),
-        ("far_b", "bedroom", (30, 20, 10, 10)),
-    ])
+    context = _rule_context(
+        [
+            ("source", "living_room", (0, 0, 10, 10)),
+            ("touching", "bedroom", (10, 0, 10, 10)),
+            ("far_a", "bedroom", (30, 0, 10, 10)),
+            ("far_b", "bedroom", (30, 20, 10, 10)),
+        ]
+    )
     context.adjacency_cache = {}
     context.variables_for = context.room_variables.__getitem__
     context.problem.relations = [
-        SimpleNamespace(strength="soft", source_id_key="source",
-                        target_id_keys=("far_a", "far_b"), match_policy="and"),
-        SimpleNamespace(strength="soft", source_id_key="source",
-                        target_id_keys=("far_a", "touching"), match_policy="or"),
+        SimpleNamespace(
+            strength="soft",
+            source_id_key="source",
+            target_id_keys=("far_a", "far_b"),
+            match_policy="and",
+        ),
+        SimpleNamespace(
+            strength="soft",
+            source_id_key="source",
+            target_id_keys=("far_a", "touching"),
+            match_policy="or",
+        ),
     ]
     weight = SoftConstraintUse("room_relations", 2.42).weight
     assert weight == 2.5
     assert SoftConstraintUse("room_relations", 0).weight == 0
-    penalty = SoftRoomRelationsConstraint().build_penalty(context, {"minimum_overlap": 10})
+    penalty = SoftRoomRelationsConstraint().build_penalty(
+        context, {"minimum_overlap": 10}
+    )
     context.model.Minimize(penalty)
     solver = cp_model.CpSolver()
     assert solver.Solve(context.model) == cp_model.OPTIMAL

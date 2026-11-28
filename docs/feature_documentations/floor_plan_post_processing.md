@@ -111,17 +111,21 @@ Severe rollback failure also returns failure. A non-`ExecutionMode` mode raises
 
 ```python
 from fpg_core.floor_plan_post_processing import (
-    INITIAL_GENERATION_PROFILE, PipelineStatus, PostProcessingRequest,
+    INITIAL_GENERATION_PROFILE,
+    PipelineStatus,
+    PostProcessingRequest,
     post_process_floor_plan,
 )
 from fpg_core.floor_plan_solver import INITIAL_GENERATION_PROFILE as SOLVER_PROFILE
 
-execution = post_process_floor_plan(PostProcessingRequest(
-    floor_plan=example_floor_plan,
-    config=INITIAL_GENERATION_PROFILE,
-    specification=example_specification,
-    solver_config=SOLVER_PROFILE,
-))
+execution = post_process_floor_plan(
+    PostProcessingRequest(
+        floor_plan=example_floor_plan,
+        config=INITIAL_GENERATION_PROFILE,
+        specification=example_specification,
+        solver_config=SOLVER_PROFILE,
+    )
+)
 if execution.result.status is not PipelineStatus.SUCCESS:
     raise RuntimeError(execution.result.failure)
 processed_plan = execution.result.floor_plan

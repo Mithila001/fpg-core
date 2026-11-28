@@ -25,7 +25,16 @@ from fpg_core.floor_plan_solver import (
 )
 
 
-@pytest.mark.parametrize("side_count, second_x, second_y, solved", [(0, 50, 10, False), (1, 50, 10, True), (1, 10, 30, False), (2, 10, 30, True), (4, 10, 30, True)])
+@pytest.mark.parametrize(
+    "side_count, second_x, second_y, solved",
+    [
+        (0, 50, 10, False),
+        (1, 50, 10, True),
+        (1, 10, 30, False),
+        (2, 10, 30, True),
+        (4, 10, 30, True),
+    ],
+)
 def test_bathroom_shared_side_budget(side_count, second_x, second_y, solved) -> None:
     bathroom = RoomSpec(
         id=RoomId("bathroom"),
@@ -57,7 +66,11 @@ def test_bathroom_shared_side_budget(side_count, second_x, second_y, solved) -> 
     )
     config = FloorPlanSolverConfig(
         name="bathroom_hallway_regression",
-        hard_constraints=(HardConstraintUse("bathroom_hallway_shared_wall", {"maximum_shared_sides": side_count}),),
+        hard_constraints=(
+            HardConstraintUse(
+                "bathroom_hallway_shared_wall", {"maximum_shared_sides": side_count}
+            ),
+        ),
         soft_constraints=(),
         preparation=PreparationConfig(coordinate_scale=1),
         seed=SeedPolicy(
@@ -73,8 +86,6 @@ def test_bathroom_shared_side_budget(side_count, second_x, second_y, solved) -> 
         RoomPlacementHint(hallway_2.id, second_x, second_y, 12, 10),
     )
 
-    execution = generate_floor_plan(
-        FloorPlanSolveRequest(specification, config, hints)
-    )
+    execution = generate_floor_plan(FloorPlanSolveRequest(specification, config, hints))
 
     assert execution.result.solved is solved

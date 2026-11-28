@@ -48,9 +48,13 @@ def assert_layout(neighbors, rules, expected=True, scale=1):
     hints = []
     for index, (room_type, x, y, width, length) in enumerate((BEDROOM, *neighbors)):
         room_id = RoomId(f"room_{index}")
-        rooms.append(RoomSpec(room_id, room_type, room_id, RoomSizeSpec(1, 80, 1, 6400)))
+        rooms.append(
+            RoomSpec(room_id, room_type, room_id, RoomSizeSpec(1, 80, 1, 6400))
+        )
         hints.append(RoomPlacementHint(room_id, x, y, width, length))
-    spec = FloorPlanGenerationSpec(floor=FloorSpec(80, 80), rooms=tuple(rooms), room_relations=())
+    spec = FloorPlanGenerationSpec(
+        floor=FloorSpec(80, 80), rooms=tuple(rooms), room_relations=()
+    )
     config = FloorPlanSolverConfig(
         name=KEY,
         hard_constraints=(HardConstraintUse(KEY, {"rules": rules}),),
@@ -69,15 +73,23 @@ def assert_layout(neighbors, rules, expected=True, scale=1):
     )
     assert execution.details is not None
     assert KEY in execution.details.applied_hard_constraints
-    assert execution.result.status is (SolverStatus.OPTIMAL if expected else SolverStatus.INFEASIBLE)
+    assert execution.result.status is (
+        SolverStatus.OPTIMAL if expected else SolverStatus.INFEASIBLE
+    )
 
 
 @pytest.mark.parametrize(
     "neighbors, expected",
     [
         ((FRONT,), True),
-        (((RoomType.KITCHEN, 20, 10, 7, 10), (RoomType.BATHROOM, 27, 10, 13, 10)), True),
-        (((RoomType.KITCHEN, 20, 10, 7, 10), (RoomType.BATHROOM, 28, 10, 12, 10)), False),
+        (
+            ((RoomType.KITCHEN, 20, 10, 7, 10), (RoomType.BATHROOM, 27, 10, 13, 10)),
+            True,
+        ),
+        (
+            ((RoomType.KITCHEN, 20, 10, 7, 10), (RoomType.BATHROOM, 28, 10, 12, 10)),
+            False,
+        ),
         (((RoomType.KITCHEN, 10, 10, 20, 10),), False),
         (((RoomType.KITCHEN, 10, 10, 10, 10),), False),
         (((RoomType.KITCHEN, 20, 9, 20, 10),), False),
@@ -106,7 +118,14 @@ def test_opposite_sides_and_extra_coverage():
 
 @pytest.mark.parametrize(
     "front_gap,right_gap,expected",
-    [(0, 0, True), (10, 0, True), (3, 6, True), (4, 6, True), (6, 6, False), (10, 10, False)],
+    [
+        (0, 0, True),
+        (10, 0, True),
+        (3, 6, True),
+        (4, 6, True),
+        (6, 6, False),
+        (10, 10, False),
+    ],
 )
 def test_combined_tolerance(front_gap, right_gap, expected):
     neighbors = (
@@ -123,10 +142,17 @@ def test_multiple_gaps_and_missing_contact():
     assert_layout((FRONT,), [rule(2, uncovered_length_tolerance=1000)], False)
 
 
-@pytest.mark.parametrize("tolerance,expected", [(0.19999999999, False), (0.2, True), (0.29, True)])
+@pytest.mark.parametrize(
+    "tolerance,expected", [(0.19999999999, False), (0.2, True), (0.29, True)]
+)
 def test_tolerance_uses_coordinate_scale_and_rounds_down(tolerance, expected):
-    neighbors = ((RoomType.HALLWAY, 20, 10, 19.9, 10), (RoomType.KITCHEN, 40, 20, 10, 19.9))
-    assert_layout(neighbors, [rule(2, uncovered_length_tolerance=tolerance)], expected, scale=10)
+    neighbors = (
+        (RoomType.HALLWAY, 20, 10, 19.9, 10),
+        (RoomType.KITCHEN, 40, 20, 10, 19.9),
+    )
+    assert_layout(
+        neighbors, [rule(2, uncovered_length_tolerance=tolerance)], expected, scale=10
+    )
 
 
 @pytest.mark.parametrize("exists", [False, True])
@@ -144,7 +170,9 @@ def test_rules_apply_to_every_matching_room():
     assert_layout((FRONT, second, other_neighbor), [rule()])
 
 
-@pytest.mark.parametrize("settings", [{}, {"rules": []}, {"rules": {}}, {"rules": [rule()], "extra": 1}])
+@pytest.mark.parametrize(
+    "settings", [{}, {"rules": []}, {"rules": {}}, {"rules": [rule()], "extra": 1}]
+)
 def test_invalid_settings(settings):
     with pytest.raises(InvalidProfileError, match=KEY):
         HardConstraintUse(KEY, settings)
@@ -153,15 +181,22 @@ def test_invalid_settings(settings):
 @pytest.mark.parametrize(
     "overrides",
     [
-        {"room_types": []}, {"room_types": "bedroom"}, {"room_types": ["bedroom"]},
+        {"room_types": []},
+        {"room_types": "bedroom"},
+        {"room_types": ["bedroom"]},
         {"room_types": {RoomType.BEDROOM: None}},
-        {"minimum_shared_sides": -1}, {"minimum_shared_sides": 5},
-        {"minimum_shared_sides": 1.0}, {"minimum_shared_sides": True},
+        {"minimum_shared_sides": -1},
+        {"minimum_shared_sides": 5},
+        {"minimum_shared_sides": 1.0},
+        {"minimum_shared_sides": True},
         {"arrangement": "opposite"},
-        {"uncovered_length_tolerance": -1}, {"uncovered_length_tolerance": "1"},
-        {"uncovered_length_tolerance": False}, {"uncovered_length_tolerance": float("nan")},
+        {"uncovered_length_tolerance": -1},
+        {"uncovered_length_tolerance": "1"},
+        {"uncovered_length_tolerance": False},
+        {"uncovered_length_tolerance": float("nan")},
         {"uncovered_length_tolerance": float("inf")},
-        {"when": None}, {"when": {"room_type": RoomType.GARAGE}},
+        {"when": None},
+        {"when": {"room_type": RoomType.GARAGE}},
         {"when": {"room_type": "invalid", "exists": False}},
         {"when": {"room_type": RoomType.GARAGE, "exists": 1}},
         {"when": {"room_type": RoomType.GARAGE, "exists": True, "extra": 1}},

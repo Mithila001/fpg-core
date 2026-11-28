@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ..model import ModelContext
-from .base import ConstraintSettings, PENALTY_MAX, ceil_ratio
+from .base import PENALTY_MAX, ConstraintSettings, ceil_ratio
 
 
 class DeadSpaceConstraint:
@@ -43,19 +43,13 @@ class DeadSpaceConstraint:
             context.model.Add(left == floor.width).OnlyEnforceIf(
                 variables.present.Not()
             )
-            context.model.Add(right == variables.x_end).OnlyEnforceIf(
-                variables.present
-            )
+            context.model.Add(right == variables.x_end).OnlyEnforceIf(variables.present)
             context.model.Add(right == 0).OnlyEnforceIf(variables.present.Not())
-            context.model.Add(front == variables.y).OnlyEnforceIf(
-                variables.present
-            )
+            context.model.Add(front == variables.y).OnlyEnforceIf(variables.present)
             context.model.Add(front == floor.length).OnlyEnforceIf(
                 variables.present.Not()
             )
-            context.model.Add(back == variables.y_end).OnlyEnforceIf(
-                variables.present
-            )
+            context.model.Add(back == variables.y_end).OnlyEnforceIf(variables.present)
             context.model.Add(back == 0).OnlyEnforceIf(variables.present.Not())
 
             left_candidates.append(left)
@@ -80,9 +74,7 @@ class DeadSpaceConstraint:
         context.model.AddMinEquality(front_edge, front_candidates)
         context.model.AddMaxEquality(back_edge, back_candidates)
 
-        width = context.model.NewIntVar(
-            0, floor.width, context.new_name("bbox_width")
-        )
+        width = context.model.NewIntVar(0, floor.width, context.new_name("bbox_width"))
         length = context.model.NewIntVar(
             0, floor.length, context.new_name("bbox_length")
         )
@@ -103,7 +95,14 @@ class DeadSpaceConstraint:
             0, floor.area, context.new_name("dead_space")
         )
         context.model.Add(dead_space == bbox_area - room_area_sum)
-        denominator = context.model.NewIntVar(1, floor.area, context.new_name("gap_denominator"))
+        denominator = context.model.NewIntVar(
+            1, floor.area, context.new_name("gap_denominator")
+        )
         context.model.AddMaxEquality(denominator, [1, bbox_area])
-        return ceil_ratio(context, PENALTY_MAX * dead_space, denominator, PENALTY_MAX,
-                          denominator_max=floor.area)
+        return ceil_ratio(
+            context,
+            PENALTY_MAX * dead_space,
+            denominator,
+            PENALTY_MAX,
+            denominator_max=floor.area,
+        )

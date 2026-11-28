@@ -1,4 +1,5 @@
 """Validate and normalize portable floor plans for session-local traffic."""
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -16,7 +17,12 @@ def import_traffic_plan(document: Any) -> dict:
     if not isinstance(document, dict) or document.get("version") != 1:
         raise ValueError("Unsupported floor-plan document version")
     units = document.get("project_units_per_meter")
-    if isinstance(units, bool) or not isinstance(units, (int, float)) or not isfinite(units) or units <= 0:
+    if (
+        isinstance(units, bool)
+        or not isinstance(units, (int, float))
+        or not isfinite(units)
+        or units <= 0
+    ):
         raise ValueError("project_units_per_meter must be positive and finite")
     plan = to_jsonable(TypeAdapter(FloorPlan).validate_python(deepcopy(document.get("floor_plan"))))
     scale = 10 / units

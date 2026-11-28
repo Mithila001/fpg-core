@@ -22,12 +22,8 @@ class RoadAlignedTransform:
 
     def to_world_point(self, point: Point) -> Point:
         return Point(
-            self.origin.x
-            + point.x * self.x_axis[0]
-            + point.y * self.y_axis[0],
-            self.origin.y
-            + point.x * self.x_axis[1]
-            + point.y * self.y_axis[1],
+            self.origin.x + point.x * self.x_axis[0] + point.y * self.y_axis[0],
+            self.origin.y + point.x * self.x_axis[1] + point.y * self.y_axis[1],
         )
 
     def to_local_polygon(self, polygon: Polygon) -> Polygon:

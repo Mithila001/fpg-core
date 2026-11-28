@@ -271,25 +271,35 @@ def test_revision1_removes_obsolete_runs_atomically(tmp_path):
     with database.session_factory() as session:
         profile = SystemConfigurationService(session).get_active()
         for flow, hints in (("p01c", None), ("p01b", {"preset": {"version": 1}})):
-            session.add(P01Experiment(
-                flow_type=flow, status="completed", floor_plan_request={}, hint_points=hints,
-                system_configuration_id=profile.id, system_configuration_snapshot={},
-                system_configuration_hash=profile.config_hash, fpg_core_version=profile.fpg_core_version,
-            ))
+            session.add(
+                P01Experiment(
+                    flow_type=flow,
+                    status="completed",
+                    floor_plan_request={},
+                    hint_points=hints,
+                    system_configuration_id=profile.id,
+                    system_configuration_snapshot={},
+                    system_configuration_hash=profile.config_hash,
+                    fpg_core_version=profile.fpg_core_version,
+                )
+            )
         session.commit()
         rows = list(session.scalars(select(P01Experiment).order_by(P01Experiment.id)))
         legacy_id, current_id, profile_id = rows[0].id, rows[1].id, profile.id
     with database.engine.begin() as connection:
         connection.exec_driver_sql(
             "INSERT INTO fpg_p01_floor_plan_run (experiment_id, status, duration_ms, created_at) "
-            "VALUES (?, 'completed', 0, CURRENT_TIMESTAMP)", (legacy_id,)
+            "VALUES (?, 'completed', 0, CURRENT_TIMESTAMP)",
+            (legacy_id,),
         )
     planned = db.migrate(database, dry_run=True)
     assert planned["removed_floor_plan_runs"] == planned["removed_legacy_experiments"] == 1
     assert db.status(database)["revision"] == 1
+
     def fail_revision(_conn, _cursor, statement, *_):
         if statement.startswith("PRAGMA user_version ="):
             raise RuntimeError("revision failure")
+
     event.listen(database.engine, "before_cursor_execute", fail_revision)
     with pytest.raises(RuntimeError, match="revision failure"):
         db.migrate(database)
@@ -301,7 +311,12 @@ def test_revision1_removes_obsolete_runs_atomically(tmp_path):
         assert session.get(P01Experiment, current_id) is not None
         assert session.get(SystemConfiguration, profile_id) is not None
     with database.engine.connect() as connection:
-        assert connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE name = 'fpg_p01_floor_plan_run'").first() is None
+        assert (
+            connection.exec_driver_sql(
+                "SELECT name FROM sqlite_master WHERE name = 'fpg_p01_floor_plan_run'"
+            ).first()
+            is None
+        )
     database.dispose()
 
 
@@ -318,19 +333,32 @@ def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
         scoring["evaluators"] = [
             rule for rule in scoring["evaluators"] if rule["key"] != "room_relationship_quality"
         ]
-        scoring["evaluators"].extend([
-            {
-                "key": "required_adjacency", "group_key": "critical", "enabled": True,
-                "order": 20, "weight": 1, "minimum_score": 100,
-                "settings": {"minimum_shared_boundary": 10, "tolerance": 1e-6},
-            },
-            {
-                "key": "kitchen_dining_proximity", "group_key": "functional", "enabled": True,
-                "order": 20, "weight": 1, "minimum_score": None,
-                "settings": {"minimum_shared_boundary": 10, "maximum_distance": 2000,
-                             "tolerance": 1e-6},
-            },
-        ])
+        scoring["evaluators"].extend(
+            [
+                {
+                    "key": "required_adjacency",
+                    "group_key": "critical",
+                    "enabled": True,
+                    "order": 20,
+                    "weight": 1,
+                    "minimum_score": 100,
+                    "settings": {"minimum_shared_boundary": 10, "tolerance": 1e-6},
+                },
+                {
+                    "key": "kitchen_dining_proximity",
+                    "group_key": "functional",
+                    "enabled": True,
+                    "order": 20,
+                    "weight": 1,
+                    "minimum_score": None,
+                    "settings": {
+                        "minimum_shared_boundary": 10,
+                        "maximum_distance": 2000,
+                        "tolerance": 1e-6,
+                    },
+                },
+            ]
+        )
         profile.configuration_data = old
         profile.config_hash = old_hash = codec.hash_payload(old)
         session.commit()
@@ -351,13 +379,22 @@ def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
         scoring = validated.payload["floor_plan_scoring"]
         assert scoring["groups"][1]["weight"] == 3
         assert {rule["key"] for rule in scoring["evaluators"]} == {
-            "geometry_integrity", "enclosed_voids", "inward_recess",
-            "room_size_consistency", "room_relationship_quality",
-            "living_room_balance", "bedroom_quality",
+            "geometry_integrity",
+            "enclosed_voids",
+            "inward_recess",
+            "room_size_consistency",
+            "room_relationship_quality",
+            "living_room_balance",
+            "bedroom_quality",
         }
-        relationship = next(rule for rule in scoring["evaluators"] if rule["key"] == "room_relationship_quality")
-        default_relationship = next(rule for rule in codec.default_configuration().payload["floor_plan_scoring"]["evaluators"]
-                                    if rule["key"] == "room_relationship_quality")
+        relationship = next(
+            rule for rule in scoring["evaluators"] if rule["key"] == "room_relationship_quality"
+        )
+        default_relationship = next(
+            rule
+            for rule in codec.default_configuration().payload["floor_plan_scoring"]["evaluators"]
+            if rule["key"] == "room_relationship_quality"
+        )
         assert relationship["settings"] == default_relationship["settings"]
     database.dispose()
 
@@ -376,10 +413,17 @@ def test_revision5_preserves_profiles_and_snapshots(tmp_path):
         for name in ("initial", "refinement_a", "refinement_b"):
             rules = original["floor_plan_solver"][name]["hard_constraints"]
             rules[:] = [rule for rule in rules if rule["key"] != "front_wall_setback"]
-        custom_rule = next(rule for rule in custom_data["floor_plan_solver"]["initial"]["hard_constraints"] if rule["key"] == "front_wall_setback")
+        custom_rule = next(
+            rule
+            for rule in custom_data["floor_plan_solver"]["initial"]["hard_constraints"]
+            if rule["key"] == "front_wall_setback"
+        )
         custom_rule["settings"]["rules"][0]["maximum_setback"] = 7
         profile.configuration_data, custom.configuration_data = original, custom_data
-        profile.config_hash, custom.config_hash = codec.hash_payload(original), codec.hash_payload(custom_data)
+        profile.config_hash, custom.config_hash = (
+            codec.hash_payload(original),
+            codec.hash_payload(custom_data),
+        )
         snapshot = {"historical": {"configuration": original}}
         run = E02Run(status="completed", snapshot=snapshot, cases=[])
         session.add(run)
@@ -393,10 +437,14 @@ def test_revision5_preserves_profiles_and_snapshots(tmp_path):
         assert session.get(E02Run, run_id).snapshot == snapshot
         updated, retained = (session.get(SystemConfiguration, i) for i in ids)
         for name in ("initial", "refinement_a", "refinement_b"):
-            assert any(r["key"] == "front_wall_setback" for r in updated.configuration_data["floor_plan_solver"][name]["hard_constraints"])
+            assert any(
+                r["key"] == "front_wall_setback"
+                for r in updated.configuration_data["floor_plan_solver"][name]["hard_constraints"]
+            )
         assert retained.configuration_data == custom_data
     assert not db.migrate(database)["applied"]
     database.dispose()
+
 
 def test_revision6_enables_room_quality_in_all_profiles(tmp_path):
     database = Database(f"sqlite:///{tmp_path / 'revision6.db'}")
@@ -411,8 +459,7 @@ def test_revision6_enables_room_quality_in_all_profiles(tmp_path):
         ids = primary.id, custom.id
         original = deepcopy(primary.configuration_data)
         original["floor_plan_scoring"]["evaluators"] = [
-            rule for rule in original["floor_plan_scoring"]["evaluators"]
-            if rule["key"] not in keys
+            rule for rule in original["floor_plan_scoring"]["evaluators"] if rule["key"] not in keys
         ]
         custom_data = deepcopy(custom.configuration_data)
         for rule in custom_data["floor_plan_scoring"]["evaluators"]:
@@ -425,7 +472,10 @@ def test_revision6_enables_room_quality_in_all_profiles(tmp_path):
         hard = custom_data["floor_plan_solver"]["initial"]["hard_constraints"]
         hard[:] = [rule for rule in hard if rule["key"] != "front_wall_setback"]
         primary.configuration_data, custom.configuration_data = original, custom_data
-        primary.config_hash, custom.config_hash = codec.hash_payload(original), codec.hash_payload(custom_data)
+        primary.config_hash, custom.config_hash = (
+            codec.hash_payload(original),
+            codec.hash_payload(custom_data),
+        )
         snapshot = {"configuration": original}
         run = E02Run(status="completed", snapshot=snapshot, cases=[])
         session.add(run)
@@ -443,15 +493,23 @@ def test_revision6_enables_room_quality_in_all_profiles(tmp_path):
         assert session.get(E02Run, run_id).snapshot == snapshot
         for profile_id in ids:
             profile = session.get(SystemConfiguration, profile_id)
-            rules = {rule["key"]: rule for rule in codec.validate_payload(
-                profile.configuration_data
-            ).payload["floor_plan_scoring"]["evaluators"]}
-            assert all(rules[key]["enabled"] and rules[key]["group_key"] == "functional" for key in keys)
+            rules = {
+                rule["key"]: rule
+                for rule in codec.validate_payload(profile.configuration_data).payload[
+                    "floor_plan_scoring"
+                ]["evaluators"]
+            }
+            assert all(
+                rules[key]["enabled"] and rules[key]["group_key"] == "functional" for key in keys
+            )
             if profile_id == ids[1]:
                 assert profile.is_active
                 assert all(rules[key]["weight"] == 0.5 for key in keys)
                 assert rules["living_room_balance"]["settings"]["maximum_excess_ratio"] == 1.5
-                assert profile.configuration_data["floor_plan_solver"] == custom_data["floor_plan_solver"]
+                assert (
+                    profile.configuration_data["floor_plan_solver"]
+                    == custom_data["floor_plan_solver"]
+                )
     assert not db.migrate(database)["applied"]
     database.dispose()
 
@@ -490,8 +548,18 @@ def test_revision7_adds_e02c_and_migrates_only_zero_clearance(tmp_path):
     assert db.migrate(database)["applied"]
     assert not db.migrate(database)["applied"]
     with database.session_factory() as session:
-        assert session.get(SystemConfiguration, profile_ids[0]).configuration_data["openings"]["geometry"]["corner_clearance"] == 5
-        assert session.get(SystemConfiguration, profile_ids[1]).configuration_data["openings"]["geometry"]["corner_clearance"] == 2.5
+        assert (
+            session.get(SystemConfiguration, profile_ids[0]).configuration_data["openings"][
+                "geometry"
+            ]["corner_clearance"]
+            == 5
+        )
+        assert (
+            session.get(SystemConfiguration, profile_ids[1]).configuration_data["openings"][
+                "geometry"
+            ]["corner_clearance"]
+            == 2.5
+        )
         assert session.get(E02BSavedPlan, saved_id).name == "retained"
         assert session.get(E02BRun, history_id).snapshot == {"historical": True}
         assert session.get(E02CRun, 1) is None

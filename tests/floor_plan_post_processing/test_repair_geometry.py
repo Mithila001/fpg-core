@@ -17,7 +17,9 @@ def test_problem_detection_finds_pockets_recesses_and_exterior_steps() -> None:
     _, _, steps = _problems(stepped, WallExtensionConfig(), 1e-6)
     assert steps
 
-    recessed = Polygon(((0, 0), (20, 0), (20, 20), (14, 20), (14, 8), (6, 8), (6, 20), (0, 20)))
+    recessed = Polygon(
+        ((0, 0), (20, 0), (20, 20), (14, 20), (14, 8), (6, 8), (6, 20), (0, 20))
+    )
     _, recesses, _ = _problems(recessed, WallExtensionConfig(), 1e-6)
     assert recesses
 

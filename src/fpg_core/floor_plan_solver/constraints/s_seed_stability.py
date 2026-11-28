@@ -5,7 +5,7 @@ from math import isfinite
 
 from ..exceptions import InvalidProfileError
 from ..model import ModelContext
-from .base import ConstraintSettings, PENALTY_MAX, average_penalties, ceil_ratio
+from .base import PENALTY_MAX, ConstraintSettings, average_penalties, ceil_ratio
 
 
 class SeedStabilityConstraint:
@@ -25,10 +25,14 @@ class SeedStabilityConstraint:
         multipliers = []
         for name in ("position_multiplier", "size_multiplier"):
             value = settings.get(name, 1)
-            if type(value) not in (int, float) or value < 0 or (
-                isinstance(value, float) and not isfinite(value)
+            if (
+                type(value) not in (int, float)
+                or value < 0
+                or (isinstance(value, float) and not isfinite(value))
             ):
-                raise InvalidProfileError(f"{self.key}.{name} must be finite and non-negative")
+                raise InvalidProfileError(
+                    f"{self.key}.{name} must be finite and non-negative"
+                )
             multipliers.append(Fraction(str(value)))
 
         position_share, size_share = multipliers
@@ -37,9 +41,14 @@ class SeedStabilityConstraint:
             ratio = position_share / size_share
             position_multiplier, size_multiplier = ratio.numerator, ratio.denominator
             if position_multiplier + size_multiplier > 2**40:
-                raise InvalidProfileError(f"{self.key} multiplier ratio is too precise for the solver")
+                raise InvalidProfileError(
+                    f"{self.key} multiplier ratio is too precise for the solver"
+                )
         else:
-            position_multiplier, size_multiplier = int(bool(position_share)), int(bool(size_share))
+            position_multiplier, size_multiplier = (
+                int(bool(position_share)),
+                int(bool(size_share)),
+            )
 
         if position_multiplier == 0 and size_multiplier == 0:
             return 0
@@ -62,8 +71,12 @@ class SeedStabilityConstraint:
 
             components = []
             if position_multiplier:
-                position = ceil_ratio(context, PENALTY_MAX * (x_delta * floor.length + y_delta * floor.width),
-                                      2 * floor.width * floor.length, PENALTY_MAX)
+                position = ceil_ratio(
+                    context,
+                    PENALTY_MAX * (x_delta * floor.length + y_delta * floor.width),
+                    2 * floor.width * floor.length,
+                    PENALTY_MAX,
+                )
                 components.append((position, position_multiplier))
             if size_multiplier:
                 sizes = []
@@ -72,11 +85,22 @@ class SeedStabilityConstraint:
                     (variables.length, room_seed.length, floor.length),
                 ):
                     if seed_value is not None:
-                        delta = context.model.NewIntVar(0, span, context.new_name("seed_size_delta"))
+                        delta = context.model.NewIntVar(
+                            0, span, context.new_name("seed_size_delta")
+                        )
                         context.model.AddAbsEquality(delta, value - seed_value)
-                        sizes.append((ceil_ratio(context, PENALTY_MAX * delta, span, PENALTY_MAX), 1))
+                        sizes.append(
+                            (
+                                ceil_ratio(
+                                    context, PENALTY_MAX * delta, span, PENALTY_MAX
+                                ),
+                                1,
+                            )
+                        )
                 if sizes:
-                    components.append((average_penalties(context, sizes), size_multiplier))
+                    components.append(
+                        (average_penalties(context, sizes), size_multiplier)
+                    )
             if components:
                 penalties.append((average_penalties(context, components), 1))
         return average_penalties(context, penalties)

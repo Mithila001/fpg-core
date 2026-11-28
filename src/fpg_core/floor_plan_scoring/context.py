@@ -127,9 +127,7 @@ class ScoringContextFactory:
         )
 
         missing_rooms = [
-            spec.room_id
-            for spec in room_specs
-            if spec.room_id not in rooms_by_id
+            spec.room_id for spec in room_specs if spec.room_id not in rooms_by_id
         ]
         if missing_rooms:
             raise ScoringInputError(
@@ -243,10 +241,7 @@ def _normalize_specs(raw_specs: Any) -> tuple[NormalizedRoomSpec, ...]:
                 f"{label}.size.max_area",
             ),
         )
-        if (
-            size.min_width > size.max_width
-            or size.min_area > size.max_area
-        ):
+        if size.min_width > size.max_width or size.min_area > size.max_area:
             raise ScoringInputError(
                 f"{label}.size has a minimum greater than its maximum."
             )

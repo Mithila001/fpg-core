@@ -30,10 +30,14 @@ def validate_fully_shared_wall_settings(settings: Mapping[str, Any]) -> None:
             or not room_types
             or any(not isinstance(room_type, RoomType) for room_type in room_types)
         ):
-            raise InvalidProfileError(f"{path}.room_types must be a nonempty sequence of RoomType members")
+            raise InvalidProfileError(
+                f"{path}.room_types must be a nonempty sequence of RoomType members"
+            )
         count = rule["minimum_shared_sides"]
         if type(count) is not int or not 0 <= count <= 4:
-            raise InvalidProfileError(f"{path}.minimum_shared_sides must be an integer from 0 to 4")
+            raise InvalidProfileError(
+                f"{path}.minimum_shared_sides must be an integer from 0 to 4"
+            )
         if rule["arrangement"] not in ("adjacent", "any"):
             raise InvalidProfileError(f"{path}.arrangement must be adjacent or any")
         tolerance = rule.get("uncovered_length_tolerance", 0)
@@ -42,12 +46,18 @@ def validate_fully_shared_wall_settings(settings: Mapping[str, Any]) -> None:
             or tolerance < 0
             or (type(tolerance) is float and not math.isfinite(tolerance))
         ):
-            raise InvalidProfileError(f"{path}.uncovered_length_tolerance must be finite and non-negative")
+            raise InvalidProfileError(
+                f"{path}.uncovered_length_tolerance must be finite and non-negative"
+            )
         if "when" in rule:
             when = rule["when"]
             if not isinstance(when, Mapping) or set(when) != {"room_type", "exists"}:
-                raise InvalidProfileError(f"{path}.when must contain only room_type and exists")
+                raise InvalidProfileError(
+                    f"{path}.when must contain only room_type and exists"
+                )
             if not isinstance(when["room_type"], RoomType):
-                raise InvalidProfileError(f"{path}.when.room_type must be a RoomType member")
+                raise InvalidProfileError(
+                    f"{path}.when.room_type must be a RoomType member"
+                )
             if type(when["exists"]) is not bool:
                 raise InvalidProfileError(f"{path}.when.exists must be Boolean")

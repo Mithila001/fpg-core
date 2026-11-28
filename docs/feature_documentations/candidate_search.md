@@ -79,21 +79,27 @@ exceptions propagate.
 
 ```python
 from fpg_core.candidate_search import (
-    CandidateSearchConfig, CandidateSearchInput,
-    build_candidate_search_targets, search_candidates,
+    CandidateSearchConfig,
+    CandidateSearchInput,
+    build_candidate_search_targets,
+    search_candidates,
 )
 
-execution = search_candidates(CandidateSearchInput(
-    targets=build_candidate_search_targets(example_specification),
-    grid=example_grid,
-    hallway_room_count_range=example_hallway_range,
-    config=CandidateSearchConfig(
-        max_grid_node_count=250_000,
-        trial_count=100,
-        random_seed=42,
-    ),
-    evaluator=lambda candidate: -sum(point.x + point.y for point in candidate.points),
-))
+execution = search_candidates(
+    CandidateSearchInput(
+        targets=build_candidate_search_targets(example_specification),
+        grid=example_grid,
+        hallway_room_count_range=example_hallway_range,
+        config=CandidateSearchConfig(
+            max_grid_node_count=250_000,
+            trial_count=100,
+            random_seed=42,
+        ),
+        evaluator=lambda candidate: (
+            -sum(point.x + point.y for point in candidate.points)
+        ),
+    )
+)
 best_candidate = execution.result.candidate
 ```
 

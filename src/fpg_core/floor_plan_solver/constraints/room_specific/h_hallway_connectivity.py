@@ -34,12 +34,8 @@ class HallwayConnectivityConstraint:
         )
 
         all_rooms = tuple(context.room_variables.values())
-        hallways = [
-            room for room in all_rooms if room.room.room_type in hallway_types
-        ]
-        anchors = [
-            room for room in all_rooms if room.room.room_type in anchor_types
-        ]
+        hallways = [room for room in all_rooms if room.room.room_type in hallway_types]
+        anchors = [room for room in all_rooms if room.room.room_type in anchor_types]
         destinations = [
             room
             for room in all_rooms
@@ -59,15 +55,11 @@ class HallwayConnectivityConstraint:
             ]
 
             if anchor_options:
-                context.model.AddBoolOr(
-                    anchor_options + [hallway.present.Not()]
-                )
+                context.model.AddBoolOr(anchor_options + [hallway.present.Not()])
             else:
                 context.model.Add(hallway.present == 0)
 
             if destination_options:
-                context.model.AddBoolOr(
-                    destination_options + [hallway.present.Not()]
-                )
+                context.model.AddBoolOr(destination_options + [hallway.present.Not()])
             else:
                 context.model.Add(hallway.present == 0)

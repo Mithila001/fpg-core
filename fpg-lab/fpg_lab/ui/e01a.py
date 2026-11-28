@@ -1,4 +1,5 @@
 """E01A floor traffic setup and temporary, per-tab run results."""
+
 from __future__ import annotations
 
 import json
@@ -18,15 +19,25 @@ from fpg_lab.visualization import figures
 DISPLAY_CODE = format_experiment_code("e01a")
 
 
-def traffic_figure(plan: dict, result: dict | None, mode: str, selected: set[int] | None = None) -> go.Figure:
+def traffic_figure(
+    plan: dict, result: dict | None, mode: str, selected: set[int] | None = None
+) -> go.Figure:
     chart = figures.floor_plan(plan, title="Floor traffic")
     chart.update_layout(uirevision=plan["name"], showlegend=False)
     if result and mode == "Heatmap":
         heat = result["heatmap"]
-        chart.add_trace(go.Heatmap(x=heat["x"], y=heat["y"], z=heat["z"], zmin=0,
-                                  colorscale="YlOrRd", opacity=0.75,
-                                  colorbar={"title": "Trip coverage"},
-                                  hovertemplate="Traffic: %{z:.2f}<extra></extra>"))
+        chart.add_trace(
+            go.Heatmap(
+                x=heat["x"],
+                y=heat["y"],
+                z=heat["z"],
+                zmin=0,
+                colorscale="YlOrRd",
+                opacity=0.75,
+                colorbar={"title": "Trip coverage"},
+                hovertemplate="Traffic: %{z:.2f}<extra></extra>",
+            )
+        )
     if result and mode == "Paths":
         for i, route in enumerate(result["routes"]):
             if selected is not None and i not in selected:
@@ -35,33 +46,70 @@ def traffic_figure(plan: dict, result: dict | None, mode: str, selected: set[int
             polygon = route["footprint"]
             x, y = polygon.exterior.xy
             shade = figures.PALETTE[i % len(figures.PALETTE)]
-            chart.add_trace(go.Scatter(x=list(x), y=list(y), mode="lines", fill="toself",
-                                       name=label, line={"color": shade, "width": 1},
-                                       opacity=0.45, hoverinfo="name"))
+            chart.add_trace(
+                go.Scatter(
+                    x=list(x),
+                    y=list(y),
+                    mode="lines",
+                    fill="toself",
+                    name=label,
+                    line={"color": shade, "width": 1},
+                    opacity=0.45,
+                    hoverinfo="name",
+                )
+            )
             points = route["points"]
-            chart.add_trace(go.Scatter(x=[p[0] for p in points], y=[p[1] for p in points],
-                                       mode="lines", line={"color": shade, "width": 2},
-                                       showlegend=False, hoverinfo="skip"))
-            chart.add_trace(go.Scatter(x=[points[0][0], points[-1][0]],
-                                       y=[points[0][1], points[-1][1]], mode="markers",
-                                       marker={"color": shade, "size": 9,
-                                               "symbol": ["circle", "diamond"]},
-                                       name=label, showlegend=False,
-                                       text=["Start", "Destination"], hoverinfo="text+name"))
+            chart.add_trace(
+                go.Scatter(
+                    x=[p[0] for p in points],
+                    y=[p[1] for p in points],
+                    mode="lines",
+                    line={"color": shade, "width": 2},
+                    showlegend=False,
+                    hoverinfo="skip",
+                )
+            )
+            chart.add_trace(
+                go.Scatter(
+                    x=[points[0][0], points[-1][0]],
+                    y=[points[0][1], points[-1][1]],
+                    mode="markers",
+                    marker={"color": shade, "size": 9, "symbol": ["circle", "diamond"]},
+                    name=label,
+                    showlegend=False,
+                    text=["Start", "Destination"],
+                    hoverinfo="text+name",
+                )
+            )
     if result and mode != "Floor plan":
         # Redraw walls and openings above the overlay; room fills remain beneath it.
         for room in plan["rooms"]:
             points = room["boundary"]["points"]
             closed = [*points, points[0]]
-            chart.add_trace(go.Scatter(x=[p["x"] for p in closed], y=[p["y"] for p in closed],
-                                       mode="lines", line={"color": "#d4d4d4", "width": 2},
-                                       hoverinfo="skip", showlegend=False))
+            chart.add_trace(
+                go.Scatter(
+                    x=[p["x"] for p in closed],
+                    y=[p["y"] for p in closed],
+                    mode="lines",
+                    line={"color": "#d4d4d4", "width": 2},
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
         for opening in plan["openings"]:
-            chart.add_trace(go.Scatter(x=[opening["start"]["x"], opening["end"]["x"]],
-                                       y=[opening["start"]["y"], opening["end"]["y"]],
-                                       mode="lines", line={"width": 6, "color":
-                                           "#75beff" if opening["opening_type"] == "window" else "#dcdcaa"},
-                                       hoverinfo="skip", showlegend=False))
+            chart.add_trace(
+                go.Scatter(
+                    x=[opening["start"]["x"], opening["end"]["x"]],
+                    y=[opening["start"]["y"], opening["end"]["y"]],
+                    mode="lines",
+                    line={
+                        "width": 6,
+                        "color": "#75beff" if opening["opening_type"] == "window" else "#dcdcaa",
+                    },
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
     return chart
 
 
@@ -72,9 +120,14 @@ async def main_page() -> None:
     with ui.element("div").classes("lab-setup-grid"):
         with ui.column().classes("lab-setup-sidebar order-2"):
             ui.label("Floor plan").classes("font-semibold text-sm")
-            picker = ui.radio(
-                {key: plan["name"] for key, plan in fixtures.items()}, value="compact",
-            ).props("dense").classes("w-full max-h-48 overflow-auto")
+            picker = (
+                ui.radio(
+                    {key: plan["name"] for key, plan in fixtures.items()},
+                    value="compact",
+                )
+                .props("dense")
+                .classes("w-full max-h-48 overflow-auto")
+            )
             with ui.expansion("Paste a floor plan").classes("w-full"):
                 pasted = ui.textarea("Copied floor-plan JSON").classes("w-full")
                 action_button("Load pasted plan", on_click=lambda: load_pasted()).props("outline")
@@ -113,7 +166,9 @@ async def main_page() -> None:
             # A new run replaces any pending tab-local handoff; no database/history.
             run_id = uuid4().hex
             app.storage.tab["e01a_result"] = {
-                "run_id": run_id, "plan": plan, "result": result,
+                "run_id": run_id,
+                "plan": plan,
+                "result": result,
             }
             ui.navigate.to(f"/experiments/e01a/runs/{run_id}")
         except Exception as exc:
@@ -144,7 +199,8 @@ async def result_page(run_id: str) -> None:
     selected: set[int] = set(range(len(result["routes"])))
     labels = {room["id"]: room["name"] for room in plan["rooms"]}
     workspace = ResultWorkspace(
-        f"{DISPLAY_CODE} · Floor traffic result", back_link="/experiments/e01a",
+        f"{DISPLAY_CODE} · Floor traffic result",
+        back_link="/experiments/e01a",
         views=("Canvas", "Room statistics"),
     )
     with workspace.main("Canvas"):
@@ -156,28 +212,41 @@ async def result_page(run_id: str) -> None:
         ui.table(
             columns=[
                 {"name": key, "label": title, "field": key, "align": "left", "sortable": True}
-                for key, title in (("room", "Room"), ("mean", "Mean"),
-                                   ("peak", "Peak"), ("untouched", "Untouched"))
+                for key, title in (
+                    ("room", "Room"),
+                    ("mean", "Mean"),
+                    ("peak", "Peak"),
+                    ("untouched", "Untouched"),
+                )
             ],
             rows=[
-                {"room": labels[row["id"]], "mean": f"{row['mean']:.2f}",
-                 "peak": f"{row['peak']:.2f}",
-                 "untouched": f"{row['untouched_percent']:.1f}%"}
+                {
+                    "room": labels[row["id"]],
+                    "mean": f"{row['mean']:.2f}",
+                    "peak": f"{row['peak']:.2f}",
+                    "untouched": f"{row['untouched_percent']:.1f}%",
+                }
                 for row in result["rooms"]
             ],
             row_key="room",
         ).classes("w-full")
     with workspace.controls:
         ui.label("Canvas mode").classes("font-semibold text-sm")
-        mode = ui.toggle(["Floor plan", "Paths", "Heatmap"], value="Paths").props(
-            "dense no-caps"
-        ).classes("w-full")
+        mode = (
+            ui.toggle(["Floor plan", "Paths", "Heatmap"], value="Paths")
+            .props("dense no-caps")
+            .classes("w-full")
+        )
         with ui.row().classes("w-full gap-1"):
             action_button("Select all paths", on_click=lambda: select_paths(True)).props(
                 "dense outline"
             )
-            action_button("Clear paths", role="subtle", on_click=lambda: select_paths(False)).props("dense flat")
-        ui.label(f"10 project units / metre - {2 * RADIUS:g}-unit walking width").classes("lab-muted text-xs")
+            action_button("Clear paths", role="subtle", on_click=lambda: select_paths(False)).props(
+                "dense flat"
+            )
+        ui.label(f"10 project units / metre - {2 * RADIUS:g}-unit walking width").classes(
+            "lab-muted text-xs"
+        )
         ui.link("New simulation", "/experiments/e01a").classes("text-sm")
     with workspace.context("Canvas"):
         ui.label(f"{len(result['routes'])} routes · {len(result['failures'])} unreachable").classes(
@@ -186,17 +255,18 @@ async def result_page(run_id: str) -> None:
         routes_panel = ui.column().classes("w-full gap-1")
         failures_panel = ui.column().classes("w-full gap-1")
         if result["missing_room_types"]:
-            ui.label("Missing trip room types: " + ", ".join(
-                name.replace("_", " ") for name in result["missing_room_types"]
-            )).classes("text-sm text-amber-300")
-    with workspace.context("Room statistics"):
-        ui.label("Coverage uses all preset trips, regardless of the displayed path filters.").classes(
-            "text-sm lab-muted"
-        )
-        for room in result["rooms"]:
             ui.label(
-                f"{labels[room['id']]}: {room['untouched_percent']:.1f}% untouched"
-            ).classes("text-sm")
+                "Missing trip room types: "
+                + ", ".join(name.replace("_", " ") for name in result["missing_room_types"])
+            ).classes("text-sm text-amber-300")
+    with workspace.context("Room statistics"):
+        ui.label(
+            "Coverage uses all preset trips, regardless of the displayed path filters."
+        ).classes("text-sm lab-muted")
+        for room in result["rooms"]:
+            ui.label(f"{labels[room['id']]}: {room['untouched_percent']:.1f}% untouched").classes(
+                "text-sm"
+            )
 
     def redraw() -> None:
         chart.figure = traffic_figure(plan, result, mode.value, selected)
@@ -223,9 +293,7 @@ async def result_page(run_id: str) -> None:
                 )
                 ui.checkbox(name, value=i in selected).props("dense").classes(
                     "w-full"
-                ).on_value_change(
-                    lambda event, index=i: path_changed(index, event.value)
-                )
+                ).on_value_change(lambda event, index=i: path_changed(index, event.value))
 
     def select_paths(choose_all: bool) -> None:
         selected.clear()

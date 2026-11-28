@@ -43,10 +43,15 @@ class BuildableLandConfig:
             raise ValueError("maximum_absolute_coordinate must be greater than zero.")
 
         profile = self.setback_profile
-        if profile.calculation_mode is not SetbackCalculationMode.BASE_PLUS_ROAD_ADJUSTMENT:
+        if (
+            profile.calculation_mode
+            is not SetbackCalculationMode.BASE_PLUS_ROAD_ADJUSTMENT
+        ):
             raise ValueError("Unsupported setback calculation mode.")
 
-        missing_sides = tuple(side for side in LandSide if side not in profile.base_setbacks)
+        missing_sides = tuple(
+            side for side in LandSide if side not in profile.base_setbacks
+        )
         if missing_sides:
             names = ", ".join(side.value for side in missing_sides)
             raise ValueError(f"setback_profile.base_setbacks is missing: {names}.")

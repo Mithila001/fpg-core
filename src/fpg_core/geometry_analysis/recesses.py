@@ -51,7 +51,12 @@ def lines(geometry: BaseGeometry) -> tuple[LineString, ...]:
     )
 
 
-def detect_recesses(footprint: BaseGeometry, tolerance: float, *, include_section_entrances: bool = False) -> tuple[Recess, ...]:
+def detect_recesses(
+    footprint: BaseGeometry,
+    tolerance: float,
+    *,
+    include_section_entrances: bool = False,
+) -> tuple[Recess, ...]:
     # Interior rings belong to the enclosed-void evaluator.
     solid = unary_union(
         [Polygon(poly.exterior) for poly in polygons(footprint)]
@@ -90,7 +95,9 @@ def _add_cross_sections(region: Recess, arm: Recess, tolerance: float) -> None:
         if section.polygon.intersection(arm.entrance).length > tolerance
     )
     level = max((region.sections[index].level for index in parents), default=1)
-    overall = Section(arm.polygon, arm.entrance.length, arm.depth, 1, (), arm.direction, arm.entrance)
+    overall = Section(
+        arm.polygon, arm.entrance.length, arm.depth, 1, (), arm.direction, arm.entrance
+    )
     indices: dict[int, int] = {}
     for index, section in enumerate((overall, *arm.sections), start=-1):
         inherited = (
@@ -134,7 +141,9 @@ def _swap_axes(geometry: BaseGeometry) -> BaseGeometry:
     return affine_transform(geometry, (0, 1, 1, 0, 0, 0))
 
 
-def _sweep(solid: BaseGeometry, swap: bool, tolerance: float, debug: bool) -> list[Recess]:
+def _sweep(
+    solid: BaseGeometry, swap: bool, tolerance: float, debug: bool
+) -> list[Recess]:
     left, bottom, right, top = solid.bounds
     empty = box(left, bottom, right, top).difference(solid)
     coordinates = sorted(
@@ -276,8 +285,11 @@ def _sweep(solid: BaseGeometry, swap: bool, tolerance: float, debug: bool) -> li
                 parents.append(prior)
                 section_entrance = None
                 if debug:
-                    section_entrance = (unary_union([cell.intersection(cells[i]) for i in previous])
-                                        if previous else entrance)
+                    section_entrance = (
+                        unary_union([cell.intersection(cells[i]) for i in previous])
+                        if previous
+                        else entrance
+                    )
                 section_entrances.append(section_entrance)
                 levels.append(
                     max(
@@ -313,7 +325,9 @@ def _sweep(solid: BaseGeometry, swap: bool, tolerance: float, debug: bool) -> li
                     level,
                     parent,
                     (direction, 0) if swap else (0, direction),
-                    _swap_axes(section_entrance) if swap and section_entrance is not None else section_entrance,
+                    _swap_axes(section_entrance)
+                    if swap and section_entrance is not None
+                    else section_entrance,
                 )
             )
         if swap:

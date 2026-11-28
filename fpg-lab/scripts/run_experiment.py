@@ -64,10 +64,12 @@ def collect(runtime: LabRuntime, flow: str, experiment_id: int) -> dict[str, Any
             "collection_limit": 100,
             "trial_count": trial_count,
             "iteration_count": session.scalar(
-                select(func.count()).select_from(P01BIteration).where(
-                    P01BIteration.experiment_id == experiment_id
-                )
-            ) if flow in ("p01b", "p01c") else 0,
+                select(func.count())
+                .select_from(P01BIteration)
+                .where(P01BIteration.experiment_id == experiment_id)
+            )
+            if flow in ("p01b", "p01c")
+            else 0,
             "experiment": row_document(experiment),
             "trials": [row_document(t) for t in trials],
             "iterations": [

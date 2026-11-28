@@ -57,12 +57,9 @@ def _validate_attached_bathroom_count(
     if policy.excess_attached_bathrooms is not ExcessAttachedBathroomPolicy.REJECT:
         return
 
-    bedroom_count = sum(
-        room.room_type is RoomType.BEDROOM for room in request.rooms
-    )
+    bedroom_count = sum(room.room_type is RoomType.BEDROOM for room in request.rooms)
     attached_bathroom_count = sum(
-        room.room_type is RoomType.ATTACHED_BATHROOM
-        for room in request.rooms
+        room.room_type is RoomType.ATTACHED_BATHROOM for room in request.rooms
     )
 
     if attached_bathroom_count > bedroom_count:
@@ -171,7 +168,9 @@ def validate_policy(policy: PreprocessingPolicy) -> None:
     )
     _finite_number(policy.hallway_min_width, "hallway_min_width", positive=True)
     if policy.hallway_min_width < 10:
-        raise InputValidationError("hallway_min_width must be at least 10 project units")
+        raise InputValidationError(
+            "hallway_min_width must be at least 10 project units"
+        )
 
     spacing = _positive_integer(
         policy.candidate_search_grid_spacing,
@@ -188,7 +187,10 @@ def validate_policy(policy: PreprocessingPolicy) -> None:
     )
     if policy.max_aspect_residual_units < 0:
         raise InputValidationError("max_aspect_residual_units cannot be negative")
-    if not isinstance(policy.default_room_size, str) or not policy.default_room_size.strip():
+    if (
+        not isinstance(policy.default_room_size, str)
+        or not policy.default_room_size.strip()
+    ):
         raise InputValidationError("default_room_size cannot be empty")
 
 
@@ -235,13 +237,9 @@ def validate_reference_data(reference_data: PreparedReferenceData) -> None:
                 f"Room-size reference {key[0].value}/{key[1]} must be positive and finite"
             )
         if item.min_width > item.max_width:
-            raise ReferenceDataError(
-                f"Invalid width range for {key[0].value}/{key[1]}"
-            )
+            raise ReferenceDataError(f"Invalid width range for {key[0].value}/{key[1]}")
         if item.min_area > item.max_area:
-            raise ReferenceDataError(
-                f"Invalid area range for {key[0].value}/{key[1]}"
-            )
+            raise ReferenceDataError(f"Invalid area range for {key[0].value}/{key[1]}")
         if item.max_area < item.min_width * item.min_width:
             raise ReferenceDataError(
                 f"Maximum area is below minimum width for {key[0].value}/{key[1]}"
@@ -262,7 +260,9 @@ def validate_context(context: PreprocessingContext) -> None:
         raise ContextValidationError("Prepared context contains no rooms")
     floor_area = context.floor.width * context.floor.length
     if context.minimum_required_area > floor_area:
-        raise ContextValidationError("Selected floor does not meet minimum required area")
+        raise ContextValidationError(
+            "Selected floor does not meet minimum required area"
+        )
     if floor_area > context.maximum_target_area + 1e-9:
         raise ContextValidationError("Selected floor exceeds maximum target area")
 
@@ -309,9 +309,7 @@ def validate_context(context: PreprocessingContext) -> None:
             "prepared room identities"
         )
 
-    hallway_count = sum(
-        room.room_type is RoomType.HALLWAY for room in context.rooms
-    )
+    hallway_count = sum(room.room_type is RoomType.HALLWAY for room in context.rooms)
     if hallway_count != context.hallway_room_count_range.maximum:
         raise ContextValidationError(
             "Prepared hallway room identities do not match the hallway range maximum"
@@ -328,9 +326,10 @@ def validate_output(
 
     if specification.floor.width <= 0 or specification.floor.length <= 0:
         raise OutputValidationError("Final floor dimensions must be positive")
-    if not float(specification.floor.width).is_integer() or not float(
-        specification.floor.length
-    ).is_integer():
+    if (
+        not float(specification.floor.width).is_integer()
+        or not float(specification.floor.length).is_integer()
+    ):
         raise OutputValidationError(
             "Final floor dimensions must use whole project units"
         )
@@ -359,10 +358,7 @@ def validate_output(
         raise OutputValidationError(
             "Output hallway room-count range does not match preprocessing config"
         )
-    if (
-        prepared.candidate_grid.grid_spacing
-        != policy.candidate_search_grid_spacing
-    ):
+    if prepared.candidate_grid.grid_spacing != policy.candidate_search_grid_spacing:
         raise OutputValidationError(
             "Output Candidate Search spacing does not match preprocessing config"
         )

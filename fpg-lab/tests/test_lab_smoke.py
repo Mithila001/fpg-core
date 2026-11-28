@@ -44,12 +44,14 @@ def wait_for(runtime, model, run_id, timeout=60):
             row = session.get(model, run_id)
             if row.status not in ("queued", "running", "termination_requested"):
                 return row
-        time.sleep(.05)
+        time.sleep(0.05)
     raise AssertionError(f"{model.__name__} exceeded {timeout} seconds")
 
 
 def test_real_e02a_solver_case(tmp_path, monkeypatch):
-    document = json.loads((Path(__file__).parent / "fixtures/small_hint_map.json").read_text(encoding="utf-8"))
+    document = json.loads(
+        (Path(__file__).parent / "fixtures/small_hint_map.json").read_text(encoding="utf-8")
+    )
     monkeypatch.setattr(e02a, "load_hint_maps", lambda: {"small": document})
     with runtime_for(tmp_path / "e02a.db", small=True) as runtime:
         run_id = e02a.start(runtime, "small", 0, None, 2, 42)
@@ -66,14 +68,26 @@ def test_real_p01_generation(tmp_path, flow):
     from fpg_lab.database.models import P01Experiment
 
     with runtime_for(tmp_path / f"{flow}.db", small=True) as runtime:
-        run_id = runtime.start_experiment(flow, {
-            "preset_data": json.loads((Path(__file__).parent / "fixtures/small_hint_map.json").read_text(encoding="utf-8")), "iterations": 1,
-            "refinement_rounds": 1, "initial_time_limit": 2, "random_seed": 42,
-        })
+        run_id = runtime.start_experiment(
+            flow,
+            {
+                "preset_data": json.loads(
+                    (Path(__file__).parent / "fixtures/small_hint_map.json").read_text(
+                        encoding="utf-8"
+                    )
+                ),
+                "iterations": 1,
+                "refinement_rounds": 1,
+                "initial_time_limit": 2,
+                "random_seed": 42,
+            },
+        )
         row = wait_for(runtime, P01Experiment, run_id)
         assert row.status == "completed", row.error_data
         with runtime.database.session_factory() as session:
-            iteration = session.scalar(select(P01BIteration).where(P01BIteration.experiment_id == run_id))
+            iteration = session.scalar(
+                select(P01BIteration).where(P01BIteration.experiment_id == run_id)
+            )
             assert iteration.status == "completed", iteration.error
             assert iteration.stages[0]["data"]["result"]["floor_plan"]
             assert any(stage["name"] == "Refinement 1" for stage in iteration.stages)
@@ -87,7 +101,9 @@ def test_real_p01a_candidate(tmp_path):
     from scripts.run_experiment import collect
 
     with runtime_for(tmp_path / "p01a.db") as runtime:
-        run_id = runtime.start_experiment("p01a", {"floor_plan_request": sample_request(), "trial_count": 1})
+        run_id = runtime.start_experiment(
+            "p01a", {"floor_plan_request": sample_request(), "trial_count": 1}
+        )
         row = wait_for(runtime, P01Experiment, run_id)
         assert row.status == "completed", row.error_data
         trace = collect(runtime, "p01a", run_id)

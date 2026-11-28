@@ -8,7 +8,9 @@ def test_shared_execution_contract_is_stable() -> None:
     assert ExecutionMode.DEBUG.value == "debug"
 
     metadata = ExecutionMetadata(mode=ExecutionMode.DEBUG, duration_seconds=0.0)
-    execution = FeatureExecution(result="ok", details={"trace": True}, metadata=metadata)
+    execution = FeatureExecution(
+        result="ok", details={"trace": True}, metadata=metadata
+    )
 
     assert execution.result == "ok"
     assert execution.details == {"trace": True}

@@ -51,12 +51,22 @@ def test_refresh_and_explicit_save(tmp_path):
         expected = profile.config_hash
         scoring = profile.configuration_data["floor_plan_scoring"]
         scoring["groups"][1]["weight"] = 3
-        updated = service.save_section(profile.id, "floor_plan_scoring", scoring, expected_hash=expected)
+        updated = service.save_section(
+            profile.id, "floor_plan_scoring", scoring, expected_hash=expected
+        )
         with pytest.raises(ConflictError, match="saved profile changed"):
-            service.save_section(profile.id, "experiments.e03a", imported.model_dump(mode="json"),
-                                 expected_hash=expected)
-        saved = service.save_section(profile.id, "experiments.e03a", imported.model_dump(mode="json"),
-                                     expected_hash=updated.config_hash)
+            service.save_section(
+                profile.id,
+                "experiments.e03a",
+                imported.model_dump(mode="json"),
+                expected_hash=expected,
+            )
+        saved = service.save_section(
+            profile.id,
+            "experiments.e03a",
+            imported.model_dump(mode="json"),
+            expected_hash=updated.config_hash,
+        )
         assert saved.configuration_data["floor_plan_scoring"]["groups"][1]["weight"] == 3
         assert service.for_flow(saved.id, "e03a")[1].config.document.experiments.e03a == imported
 

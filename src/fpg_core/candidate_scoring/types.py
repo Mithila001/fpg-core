@@ -89,7 +89,6 @@ class ZoneSuitabilityDetails:
     rules: tuple[ZoneSuitabilityRuleDetails, ...]
     points: tuple[ZoneSuitabilityPointDetails, ...]
 
-
     @property
     def grid_size(self) -> int:
         """Deprecated read-only alias for zone_count_per_axis."""
@@ -122,7 +121,6 @@ class SpatialDistributionDetails:
     ideal_point_distance: float
     theoretical_coverage_gap: float
     gap_zero_score_ratio: float
-
 
     @property
     def grid_size(self) -> int:
@@ -265,19 +263,16 @@ class CandidateScoringInput:
             raise TypeError("specification must be a FloorPlanGenerationSpec instance.")
         if not isinstance(self.candidate, CandidateMap):
             raise TypeError("candidate must be a CandidateMap instance.")
-        if self.final_circulation is not None and not isinstance(self.final_circulation, FinalCirculation):
+        if self.final_circulation is not None and not isinstance(
+            self.final_circulation, FinalCirculation
+        ):
             raise TypeError("final_circulation must be a FinalCirculation instance.")
         classifications = tuple(self.hallway_classifications)
-        if any(
-            not isinstance(item, HallwayClassification)
-            for item in classifications
-        ):
+        if any(not isinstance(item, HallwayClassification) for item in classifications):
             raise TypeError(
                 "Every hallway classification must be a HallwayClassification."
             )
-        identities = [
-            (item.room_id, item.hint_index) for item in classifications
-        ]
+        identities = [(item.room_id, item.hint_index) for item in classifications]
         if len(identities) != len(set(identities)):
             raise ValueError("Hallway classifications must have unique identities.")
         object.__setattr__(self, "hallway_classifications", classifications)

@@ -32,7 +32,9 @@ class FrontWallSetbackConstraint:
         for rule in active_rules:
             # A maximum must round down, never expand the allowed setback.
             allowance = min(
-                Fraction(str(rule["maximum_setback"])) * context.problem.scale.factor // 1,
+                Fraction(str(rule["maximum_setback"]))
+                * context.problem.scale.factor
+                // 1,
                 context.problem.floor.length,
             )
             for room in rooms:

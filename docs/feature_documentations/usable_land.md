@@ -70,11 +70,14 @@ to define `buildable_land` and `normalized_land` for the same road-aligned parce
 from fpg_core.domain import ExecutionMode
 from fpg_core.usable_land import UsableLandConfig, UsableLandInput, find_usable_land
 
-execution = find_usable_land(UsableLandInput(
-    buildable_land=buildable_land,
-    land=normalized_land,
-    config=UsableLandConfig(30, 40, 1, 1000),
-), mode=ExecutionMode.DEBUG)
+execution = find_usable_land(
+    UsableLandInput(
+        buildable_land=buildable_land,
+        land=normalized_land,
+        config=UsableLandConfig(30, 40, 1, 1000),
+    ),
+    mode=ExecutionMode.DEBUG,
+)
 usable = execution.result
 ```
 

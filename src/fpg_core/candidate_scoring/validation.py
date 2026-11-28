@@ -97,8 +97,7 @@ def validate_evaluator_result(
 ) -> None:
     if str(result.evaluator_key) != expected_key:
         raise EvaluatorContractError(
-            f"Evaluator '{expected_key}' returned result for "
-            f"'{result.evaluator_key}'."
+            f"Evaluator '{expected_key}' returned result for '{result.evaluator_key}'."
         )
 
     if mode is ExecutionMode.PRODUCTION:

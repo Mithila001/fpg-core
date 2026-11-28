@@ -36,9 +36,7 @@ def build_candidate_search_targets(
     """Create one concrete Candidate Search target for every prepared room."""
 
     if not isinstance(specification, FloorPlanGenerationSpec):
-        raise TypeError(
-            "specification must be a FloorPlanGenerationSpec instance."
-        )
+        raise TypeError("specification must be a FloorPlanGenerationSpec instance.")
     return tuple(
         CandidateSearchTarget(
             room_id=room.id,

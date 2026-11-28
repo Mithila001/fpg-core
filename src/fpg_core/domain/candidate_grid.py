@@ -147,12 +147,9 @@ def _uniform_axis_spacing(
     )
     spacing = gaps[0]
     if any(
-        not math.isclose(gap, spacing, rel_tol=0.0, abs_tol=1e-9)
-        for gap in gaps[1:]
+        not math.isclose(gap, spacing, rel_tol=0.0, abs_tol=1e-9) for gap in gaps[1:]
     ):
-        raise ValueError(
-            f"{axis_name}_positions must use one uniform grid spacing."
-        )
+        raise ValueError(f"{axis_name}_positions must use one uniform grid spacing.")
     return _coordinate(f"{axis_name}_spacing", spacing)
 
 

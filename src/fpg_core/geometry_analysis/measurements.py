@@ -42,7 +42,10 @@ def detect_voids(footprint: BaseGeometry) -> tuple[Polygon, ...]:
         polygons = tuple(footprint.geoms)
     else:
         polygons = tuple(
-            geometry for geometry in getattr(footprint, "geoms", ())
+            geometry
+            for geometry in getattr(footprint, "geoms", ())
             if isinstance(geometry, Polygon)
         )
-    return tuple(Polygon(interior) for polygon in polygons for interior in polygon.interiors)
+    return tuple(
+        Polygon(interior) for polygon in polygons for interior in polygon.interiors
+    )

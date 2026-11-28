@@ -198,13 +198,21 @@ def observations(key, evaluation, plan):
                     room_ids.extend((source, target))
             else:
                 room_ids = measured["room_ids"]
-                details["Participants"] = ", ".join(names.get(room_id, room_id) for room_id in room_ids)
-                details["Farthest pair"] = " ↔ ".join(names.get(room_id, room_id) for room_id in measured["pair"])
+                details["Participants"] = ", ".join(
+                    names.get(room_id, room_id) for room_id in room_ids
+                )
+                details["Farthest pair"] = " ↔ ".join(
+                    names.get(room_id, room_id) for room_id in measured["pair"]
+                )
                 details["Maximum centroid distance"] = length(measured["distance"])
-            result.append(Observation(
-                f"{rule['rule_id']} · {number(score)}", details, PASS if score == 100 else WARN,
-                room_ids=tuple(dict.fromkeys(room_ids)),
-            ))
+            result.append(
+                Observation(
+                    f"{rule['rule_id']} · {number(score)}",
+                    details,
+                    PASS if score == 100 else WARN,
+                    room_ids=tuple(dict.fromkeys(room_ids)),
+                )
+            )
         return result
     return []
 

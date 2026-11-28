@@ -26,9 +26,7 @@ class FloorPlanScoringInput:
         if not isinstance(self.floor_plan, FloorPlan):
             raise TypeError("floor_plan must be a FloorPlan instance.")
         if not isinstance(self.specification, FloorPlanGenerationSpec):
-            raise TypeError(
-                "specification must be a FloorPlanGenerationSpec instance."
-            )
+            raise TypeError("specification must be a FloorPlanGenerationSpec instance.")
         if not isinstance(self.config, FloorPlanScoringConfig):
             raise TypeError("config must be a FloorPlanScoringConfig instance.")
 

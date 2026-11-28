@@ -83,10 +83,9 @@ def normalize_land_request(
     for index, current in enumerate(points):
         following = points[(index + 1) % len(points)]
         after = points[(index + 2) % len(points)]
-        cross = (
-            (following.x - current.x) * (after.y - following.y)
-            - (following.y - current.y) * (after.x - following.x)
-        )
+        cross = (following.x - current.x) * (after.y - following.y) - (
+            following.y - current.y
+        ) * (after.x - following.x)
         if abs(cross) <= tolerance:
             raise BuildableLandError(
                 BuildableSpaceErrorCode.INVALID_LAND_BOUNDARY,

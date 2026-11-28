@@ -36,7 +36,9 @@ def validate_export(data: dict) -> FloorPlanGenerationSpec:
             raise ValueError(f"Invalid size requirements for {room.id}")
     for room in spec.rooms:
         if room.room_type.value == "hallway" and min(room.size.min_width, room.size.max_width) < 10:
-            raise ValueError("Hint map has a hallway narrower than 10 units; regenerate the P01A preset")
+            raise ValueError(
+                "Hint map has a hallway narrower than 10 units; regenerate the P01A preset"
+            )
     for relation in spec.room_relations:
         if (
             relation.source_room_id not in ids
@@ -61,8 +63,6 @@ def validate_export(data: dict) -> FloorPlanGenerationSpec:
         if point.get("room_type") != rooms[str(point["room_id"])].room_type.value:
             raise ValueError("Hint room type does not match its specification")
     return spec
-
-
 
 
 def candidate_hints(document):

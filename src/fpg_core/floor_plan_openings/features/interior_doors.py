@@ -33,10 +33,15 @@ class InteriorDoorFeature:
                 continue
             left = prepared.rooms_by_id[wall.room_ids[0]]
             right = prepared.rooms_by_id[wall.room_ids[1]]
-            if RoomType.ATTACHED_BATHROOM in (left.room_type, right.room_type) and {left.room_type, right.room_type} != {RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM}:
+            if RoomType.ATTACHED_BATHROOM in (left.room_type, right.room_type) and {
+                left.room_type,
+                right.room_type,
+            } != {RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM}:
                 continue
             policy = config.interior_doors.resolve((left.room_type, right.room_type))
-            if wall.length >= round(policy.minimum_shared_wall * prepared.scale) and self._allowed(left.room_type, right.room_type, config):
+            if wall.length >= round(
+                policy.minimum_shared_wall * prepared.scale
+            ) and self._allowed(left.room_type, right.room_type, config):
                 candidates.append((wall, left, right))
 
         connection_types: dict[RoomId, set[RoomType]] = {}
@@ -67,7 +72,9 @@ class InteriorDoorFeature:
             purpose = OpeningPurpose.ROOM_CONNECTION
             category = "other_interior"
             tier = "other_interior"
-            if has_veranda and pair == frozenset((RoomType.LIVING_ROOM, RoomType.VERANDA)):
+            if has_veranda and pair == frozenset(
+                (RoomType.LIVING_ROOM, RoomType.VERANDA)
+            ):
                 purpose = OpeningPurpose.MAIN_ENTRANCE
                 category = "main_entrance"
                 tier = "main_entrance"
@@ -96,12 +103,16 @@ class InteriorDoorFeature:
             width = round(policy.door_width * prepared.scale)
             clearance = round(policy.minimum_clearance * prepared.scale)
             options = (
-                PlacementOption(
-                    id=f"interior:{index}:{wall.id}",
-                    wall_id=wall.id,
-                    width=width,
-                ),
-            ) if wall.length >= width + 2 * clearance else ()
+                (
+                    PlacementOption(
+                        id=f"interior:{index}:{wall.id}",
+                        wall_id=wall.id,
+                        width=width,
+                    ),
+                )
+                if wall.length >= width + 2 * clearance
+                else ()
+            )
             demands.append(
                 OpeningDemand(
                     id=f"interior:{index}:{wall.id}",
@@ -119,5 +130,9 @@ class InteriorDoorFeature:
         grouped: dict[tuple[RoomId, ...], OpeningDemand] = {}
         for demand in demands:
             previous = grouped.get(demand.room_ids)
-            grouped[demand.room_ids] = replace(previous, options=previous.options + demand.options) if previous else demand
+            grouped[demand.room_ids] = (
+                replace(previous, options=previous.options + demand.options)
+                if previous
+                else demand
+            )
         return tuple(grouped.values())

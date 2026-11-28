@@ -71,7 +71,10 @@ class CandidateScoreManager:
             if current_failure is not None and critical_failure is None:
                 critical_failure = current_failure
 
-            if current_failure is not None and self._config.fail_fast_on_critical_failure:
+            if (
+                current_failure is not None
+                and self._config.fail_fast_on_critical_failure
+            ):
                 break
 
         if critical_failure is not None:
@@ -140,14 +143,11 @@ class CandidateScoreManager:
 
         passed_threshold: bool | None = None
         if rule.category is EvaluatorCategory.CRITICAL:
-            passed_threshold = (
-                result.status is EvaluationStatus.NOT_APPLICABLE
-                or (
-                    result.status is EvaluationStatus.COMPLETED
-                    and result.score is not None
-                    and rule.minimum_score is not None
-                    and result.score >= rule.minimum_score
-                )
+            passed_threshold = result.status is EvaluationStatus.NOT_APPLICABLE or (
+                result.status is EvaluationStatus.COMPLETED
+                and result.score is not None
+                and rule.minimum_score is not None
+                and result.score >= rule.minimum_score
             )
 
         return EvaluatorExecutionResult(

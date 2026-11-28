@@ -119,7 +119,9 @@ returned in PRODUCTION are invalid. Individual evaluators may be `NOT_APPLICABLE
 
 ```python
 from fpg_core.candidate_scoring import (
-    CandidateScoringInput, create_default_config, create_default_registry,
+    CandidateScoringInput,
+    create_default_config,
+    create_default_registry,
     evaluate_candidate,
 )
 

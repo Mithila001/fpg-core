@@ -46,7 +46,9 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
         coverage_weight = setting_float(settings, "coverage_weight", 0.60)
         total_weight = nnd_weight + coverage_weight
         if total_weight <= 0:
-            raise ValueError("nnd_weight and coverage_weight must have a positive total.")
+            raise ValueError(
+                "nnd_weight and coverage_weight must have a positive total."
+            )
         nnd_weight /= total_weight
         coverage_weight /= total_weight
 
@@ -148,9 +150,7 @@ class SpatialDistributionEvaluator(CandidateEvaluator):
                 sample_count_per_axis=sample_count_per_axis,
                 nearest_distances=nearest_distances,
                 ideal_point_distance=nnd_metrics["ideal_point_distance"],
-                theoretical_coverage_gap=coverage_metrics[
-                    "theoretical_coverage_gap"
-                ],
+                theoretical_coverage_gap=coverage_metrics["theoretical_coverage_gap"],
                 gap_zero_score_ratio=gap_zero_score_ratio,
             )
         else:
@@ -240,9 +240,7 @@ def _coverage_score(
         column: list[float] | None = [] if collect_nearest_distances else None
         for y_index in range(sample_count_per_axis):
             y = floor_length * y_index / (sample_count_per_axis - 1)
-            nearest = min(
-                math.hypot(x - point.x, y - point.y) for point in points
-            )
+            nearest = min(math.hypot(x - point.x, y - point.y) for point in points)
             distances.append(nearest)
             if column is not None:
                 column.append(nearest)

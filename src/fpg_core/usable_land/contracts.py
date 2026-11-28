@@ -40,7 +40,9 @@ class UsableLandDetails:
             or not isinstance(self.evaluated_rectangle_pairs, int)
             or self.evaluated_rectangle_pairs < 0
         ):
-            raise ValueError("evaluated_rectangle_pairs must be a non-negative integer.")
+            raise ValueError(
+                "evaluated_rectangle_pairs must be a non-negative integer."
+            )
 
 
 __all__ = ["UsableLandDetails", "UsableLandInput"]

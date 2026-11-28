@@ -133,9 +133,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
             )
             clear_rooms = tuple(room for room in room_assessments if room.qualifies)
             selected_rooms = clear_rooms[: rule.required_clear_room_count]
-            selected_room_ids = {
-                room.source_room_id for room in selected_rooms
-            }
+            selected_room_ids = {room.source_room_id for room in selected_rooms}
 
             rule_score = clamp_score(
                 100.0
@@ -145,9 +143,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
             scores.append(rule_score)
 
             if len(clear_rooms) < rule.required_clear_room_count:
-                eligible_ids = tuple(
-                    room.source_room_id for room in room_assessments
-                )
+                eligible_ids = tuple(room.source_room_id for room in room_assessments)
                 findings.append(
                     ScoreFinding(
                         code="EXTERIOR_CLEARANCE_REQUIREMENT_UNMET",
@@ -177,8 +173,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
                             room_name=room.room_name,
                             room_type=room.room_type,
                             point_ids=tuple(
-                                assessment.point.room_id
-                                for assessment in room.points
+                                assessment.point.room_id for assessment in room.points
                             ),
                             clear_point_ids=tuple(
                                 assessment.point.room_id
@@ -202,8 +197,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
                                 direction=rule.direction,
                                 bounds=assessment.bounds,
                                 blocker_point_ids=tuple(
-                                    blocker.room_id
-                                    for blocker in assessment.blockers
+                                    blocker.room_id for blocker in assessment.blockers
                                 ),
                                 blocker_room_ids=_unique_source_room_ids(
                                     assessment.blockers
@@ -233,9 +227,7 @@ class ExteriorClearanceEvaluator(CandidateEvaluator):
                 metrics[f"rule.{rule_index}.eligible_room_count"] = float(
                     len(room_assessments)
                 )
-                metrics[f"rule.{rule_index}.clear_room_count"] = float(
-                    len(clear_rooms)
-                )
+                metrics[f"rule.{rule_index}.clear_room_count"] = float(len(clear_rooms))
 
         details = (
             ExteriorClearanceDetails(

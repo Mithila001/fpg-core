@@ -174,9 +174,16 @@ class P01FlowRunner:
                     search.record_score(trial, 0.0, usable=False)
                     candidate_data = search_trial_document(trial)
                     experiment.completed_trial_count += 1
-                    self._store_trial(session, experiment, trial.trial_no, "rejected", started,
-                        candidate_data=candidate_data if experiment.persist_trial_data else None, final_score=0.0,
-                        error=error_payload(exc, stage="candidate_circulation", rejected=True))
+                    self._store_trial(
+                        session,
+                        experiment,
+                        trial.trial_no,
+                        "rejected",
+                        started,
+                        candidate_data=candidate_data if experiment.persist_trial_data else None,
+                        final_score=0.0,
+                        error=error_payload(exc, stage="candidate_circulation", rejected=True),
+                    )
                     session.commit()
                     continue
                 circulation_data = result_document(circulation)
@@ -316,7 +323,11 @@ class P01FlowRunner:
         final_score: float | None = None,
         error: dict[str, Any] | None = None,
     ) -> P01CandidateTrial | None:
-        if not experiment.persist_trial_data and experiment.flow_type == "p01a" and status not in ("rejected", "failed"):
+        if (
+            not experiment.persist_trial_data
+            and experiment.flow_type == "p01a"
+            and status not in ("rejected", "failed")
+        ):
             return None
         row = P01CandidateTrial(
             experiment_id=experiment.id,

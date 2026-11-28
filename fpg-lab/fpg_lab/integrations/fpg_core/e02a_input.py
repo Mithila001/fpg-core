@@ -14,7 +14,9 @@ def load_hint_maps(path: Path = HINT_MAPS_PATH) -> dict:
         maps = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"Cannot load hint maps from {path}: {exc}") from exc
-    if not isinstance(maps, dict) or any(not isinstance(k, str) or not k.strip() or k == "__all__" for k in maps):
+    if not isinstance(maps, dict) or any(
+        not isinstance(k, str) or not k.strip() or k == "__all__" for k in maps
+    ):
         raise ValueError("Hint maps must be an object with nonempty names")
     return maps
 

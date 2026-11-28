@@ -70,31 +70,61 @@ class InteriorDoorPolicy:
     placement_preference: Literal["wall_end", "center"] = "wall_end"
 
     def __post_init__(self) -> None:
-        values = (self.door_width, self.preferred_clearance, self.minimum_clearance, self.minimum_shared_wall)
-        if not all(isfinite(value) for value in values) or self.door_width <= 0 or self.minimum_shared_wall <= 0:
-            raise OpeningConfigurationError("interior door dimensions must be finite and positive")
-        if self.minimum_clearance < 0 or self.preferred_clearance < self.minimum_clearance:
-            raise OpeningConfigurationError("preferred clearance must be at least the non-negative minimum")
+        values = (
+            self.door_width,
+            self.preferred_clearance,
+            self.minimum_clearance,
+            self.minimum_shared_wall,
+        )
+        if (
+            not all(isfinite(value) for value in values)
+            or self.door_width <= 0
+            or self.minimum_shared_wall <= 0
+        ):
+            raise OpeningConfigurationError(
+                "interior door dimensions must be finite and positive"
+            )
+        if (
+            self.minimum_clearance < 0
+            or self.preferred_clearance < self.minimum_clearance
+        ):
+            raise OpeningConfigurationError(
+                "preferred clearance must be at least the non-negative minimum"
+            )
         if self.placement_preference not in {"wall_end", "center"}:
-            raise OpeningConfigurationError("unknown interior door placement preference")
+            raise OpeningConfigurationError(
+                "unknown interior door placement preference"
+            )
 
 
 @dataclass(frozen=True, slots=True)
 class InteriorDoorConfig:
     default: InteriorDoorPolicy = field(default_factory=InteriorDoorPolicy)
-    overrides: tuple[tuple[RoomType, InteriorDoorPolicy], ...] = field(default_factory=lambda: (
-        (RoomType.BATHROOM, InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center")),
-        (RoomType.ATTACHED_BATHROOM, InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center")),
-    ))
+    overrides: tuple[tuple[RoomType, InteriorDoorPolicy], ...] = field(
+        default_factory=lambda: (
+            (RoomType.BATHROOM, InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center")),
+            (
+                RoomType.ATTACHED_BATHROOM,
+                InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center"),
+            ),
+        )
+    )
 
     def __post_init__(self) -> None:
         types = [room_type for room_type, _ in self.overrides]
-        if any(not isinstance(room_type, RoomType) for room_type in types) or len(types) != len(set(types)):
-            raise OpeningConfigurationError("interior door overrides must have unique room types")
+        if any(not isinstance(room_type, RoomType) for room_type in types) or len(
+            types
+        ) != len(set(types)):
+            raise OpeningConfigurationError(
+                "interior door overrides must have unique room types"
+            )
 
     def resolve(self, room_types: tuple[RoomType, ...]) -> InteriorDoorPolicy:
         # The first configured override wins, independent of wall direction.
-        return next((policy for room_type, policy in self.overrides if room_type in room_types), self.default)
+        return next(
+            (policy for room_type, policy in self.overrides if room_type in room_types),
+            self.default,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,9 +135,22 @@ class WindowPolicy:
     minimum_clearance: float = 0.0
 
     def __post_init__(self) -> None:
-        if not all(isfinite(v) for v in (self.width, self.preferred_clearance, self.minimum_clearance)) or self.width <= 0:
-            raise OpeningConfigurationError("window dimensions must be finite and width positive")
-        if type(self.target_count) is not int or self.target_count < 1 or self.minimum_clearance < 0 or self.preferred_clearance < self.minimum_clearance:
+        if (
+            not all(
+                isfinite(v)
+                for v in (self.width, self.preferred_clearance, self.minimum_clearance)
+            )
+            or self.width <= 0
+        ):
+            raise OpeningConfigurationError(
+                "window dimensions must be finite and width positive"
+            )
+        if (
+            type(self.target_count) is not int
+            or self.target_count < 1
+            or self.minimum_clearance < 0
+            or self.preferred_clearance < self.minimum_clearance
+        ):
             raise OpeningConfigurationError("invalid window count or clearances")
 
 
@@ -146,17 +189,21 @@ class FeaturePolicy:
         RoomType.BATHROOM,
         RoomType.ATTACHED_BATHROOM,
     )
-    window_policies: tuple[tuple[RoomType, WindowPolicy], ...] = field(default_factory=lambda: (
-        (RoomType.BEDROOM, WindowPolicy()),
-        (RoomType.LIVING_ROOM, WindowPolicy()),
-        (RoomType.KITCHEN, WindowPolicy()),
-        (RoomType.DINING_ROOM, WindowPolicy()),
-        (RoomType.BATHROOM, WindowPolicy(5.0, 1, 2.0, 0.0)),
-        (RoomType.ATTACHED_BATHROOM, WindowPolicy(5.0, 1, 2.0, 0.0)),
-    ))
+    window_policies: tuple[tuple[RoomType, WindowPolicy], ...] = field(
+        default_factory=lambda: (
+            (RoomType.BEDROOM, WindowPolicy()),
+            (RoomType.LIVING_ROOM, WindowPolicy()),
+            (RoomType.KITCHEN, WindowPolicy()),
+            (RoomType.DINING_ROOM, WindowPolicy()),
+            (RoomType.BATHROOM, WindowPolicy(5.0, 1, 2.0, 0.0)),
+            (RoomType.ATTACHED_BATHROOM, WindowPolicy(5.0, 1, 2.0, 0.0)),
+        )
+    )
     normal_connection_caps: tuple[tuple[RoomType, int], ...] = (
-        (RoomType.BEDROOM, 1), (RoomType.KITCHEN, 1),
-        (RoomType.BATHROOM, 1), (RoomType.ATTACHED_BATHROOM, 1),
+        (RoomType.BEDROOM, 1),
+        (RoomType.KITCHEN, 1),
+        (RoomType.BATHROOM, 1),
+        (RoomType.ATTACHED_BATHROOM, 1),
     )
     prevent_duplicate_connections: bool = True
     main_side_priority: tuple[str, ...] = ("south", "east", "north", "west")
@@ -191,25 +238,38 @@ class FeaturePolicy:
     )
 
     def __post_init__(self) -> None:
-        for name, entries in (("window policies", self.window_policies), ("normal connection caps", self.normal_connection_caps)):
+        for name, entries in (
+            ("window policies", self.window_policies),
+            ("normal connection caps", self.normal_connection_caps),
+        ):
             types = [room_type for room_type, _ in entries]
-            if any(not isinstance(room_type, RoomType) for room_type in types) or len(types) != len(set(types)):
+            if any(not isinstance(room_type, RoomType) for room_type in types) or len(
+                types
+            ) != len(set(types)):
                 raise OpeningConfigurationError(f"{name} must have unique room types")
         if any(cap < 1 for _, cap in self.normal_connection_caps):
             raise OpeningConfigurationError("normal connection caps must be positive")
-        if any(not isinstance(policy, WindowPolicy) for _, policy in self.window_policies):
-            raise OpeningConfigurationError("window policies must be WindowPolicy values")
+        if any(
+            not isinstance(policy, WindowPolicy) for _, policy in self.window_policies
+        ):
+            raise OpeningConfigurationError(
+                "window policies must be WindowPolicy values"
+            )
         normalized_pairs = [frozenset(pair) for pair in self.allowed_room_pairs]
         if len(normalized_pairs) != len(set(normalized_pairs)):
             raise OpeningConfigurationError("allowed room pairs must be unique")
 
         cap_types = [room_type for room_type, _ in self.room_door_caps]
         if len(cap_types) != len(set(cap_types)):
-            raise OpeningConfigurationError("room door caps must define each room type once")
+            raise OpeningConfigurationError(
+                "room door caps must define each room type once"
+            )
         if any(cap < 1 for _, cap in self.room_door_caps):
             raise OpeningConfigurationError("room door caps must be positive")
 
-        if len(self.required_access_room_types) != len(set(self.required_access_room_types)):
+        if len(self.required_access_room_types) != len(
+            set(self.required_access_room_types)
+        ):
             raise OpeningConfigurationError("required access room types must be unique")
 
         priority_types = [room_type for room_type, _ in self.door_placement_priority]
@@ -218,7 +278,9 @@ class FeaturePolicy:
                 "door placement priorities must define each room type once"
             )
         if any(priority < 0 for _, priority in self.door_placement_priority):
-            raise OpeningConfigurationError("door placement priorities cannot be negative")
+            raise OpeningConfigurationError(
+                "door placement priorities cannot be negative"
+            )
 
         valid_sides = {"south", "east", "north", "west"}
         for priority in (
@@ -298,7 +360,10 @@ class FloorPlanOpeningsConfig:
 
     def window_policy(self, room_type: RoomType) -> WindowPolicy:
         return dict(self.policy.window_policies).get(
-            room_type, WindowPolicy(self.dimensions.window_width, 1, self.geometry.corner_clearance, 0.0)
+            room_type,
+            WindowPolicy(
+                self.dimensions.window_width, 1, self.geometry.corner_clearance, 0.0
+            ),
         )
 
     def __post_init__(self) -> None:
@@ -316,9 +381,7 @@ class FloorPlanOpeningsConfig:
                 "unknown opening constraint IDs: "
                 + ", ".join(sorted(unknown_constraints))
             )
-        missing = STRUCTURAL_OPENING_CONSTRAINT_IDS.difference(
-            self.enabled_constraints
-        )
+        missing = STRUCTURAL_OPENING_CONSTRAINT_IDS.difference(self.enabled_constraints)
         if missing:
             raise OpeningConfigurationError(
                 "structural opening-model constraints cannot be disabled: "

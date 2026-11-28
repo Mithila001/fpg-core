@@ -78,14 +78,22 @@ def clip_half_plane(
 
     deduplicated: list[Point] = []
     for point in output:
-        if not deduplicated or math.hypot(
-            point.x - deduplicated[-1].x,
-            point.y - deduplicated[-1].y,
-        ) > tolerance:
+        if (
+            not deduplicated
+            or math.hypot(
+                point.x - deduplicated[-1].x,
+                point.y - deduplicated[-1].y,
+            )
+            > tolerance
+        ):
             deduplicated.append(point)
-    if len(deduplicated) > 1 and math.hypot(
-        deduplicated[0].x - deduplicated[-1].x,
-        deduplicated[0].y - deduplicated[-1].y,
-    ) <= tolerance:
+    if (
+        len(deduplicated) > 1
+        and math.hypot(
+            deduplicated[0].x - deduplicated[-1].x,
+            deduplicated[0].y - deduplicated[-1].y,
+        )
+        <= tolerance
+    ):
         deduplicated.pop()
     return tuple(deduplicated)

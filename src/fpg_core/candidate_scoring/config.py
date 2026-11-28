@@ -103,7 +103,9 @@ class ZoneSuitabilityConfig:
     )
 
     def __post_init__(self) -> None:
-        if isinstance(self.zone_count_per_axis, bool) or not isinstance(self.zone_count_per_axis, int):
+        if isinstance(self.zone_count_per_axis, bool) or not isinstance(
+            self.zone_count_per_axis, int
+        ):
             raise TypeError("zone_count_per_axis must be an integer.")
         if self.zone_count_per_axis <= 0:
             raise ValueError("zone_count_per_axis must be greater than zero.")
@@ -154,7 +156,10 @@ class ZoneSuitabilityConfig:
                     raise TypeError(
                         f"Zone cell for '{room_type.value}' must use integer coordinates."
                     )
-                if not 1 <= cell_x <= self.zone_count_per_axis or not 1 <= cell_y <= self.zone_count_per_axis:
+                if (
+                    not 1 <= cell_x <= self.zone_count_per_axis
+                    or not 1 <= cell_y <= self.zone_count_per_axis
+                ):
                     raise ValueError(
                         f"Zone cell {(cell_x, cell_y)} for '{room_type.value}' "
                         f"is outside the 1..{self.zone_count_per_axis} grid."
@@ -169,7 +174,6 @@ class ZoneSuitabilityConfig:
 
         object.__setattr__(self, "falloff_multiplier", falloff_multiplier)
         object.__setattr__(self, "valid_zones", MappingProxyType(normalized))
-
 
     @property
     def grid_size(self) -> int:

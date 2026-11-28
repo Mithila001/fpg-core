@@ -19,9 +19,11 @@ def test_fixtures_and_routes(results):
         result = results[key]
         assert len(rooms) == 9
         doors = [opening for opening in plan["openings"] if opening["opening_type"] == "door"]
-        assert all(LineString([(o["start"]["x"], o["start"]["y"]),
-                               (o["end"]["x"], o["end"]["y"]) ]).length == pytest.approx(10)
-                   for o in doors)
+        assert all(
+            LineString([(o["start"]["x"], o["start"]["y"]), (o["end"]["x"], o["end"]["y"])]).length
+            == pytest.approx(10)
+            for o in doors
+        )
         assert len([o for o in doors if o["purpose"] == "main_entrance"]) == 1
         # Bedrooms have corridor access; only attached bathrooms require crossing a bedroom.
         connections = [set(o["connected_room_ids"]) for o in doors]
@@ -47,11 +49,11 @@ def test_concave_room_uses_walkable_interior_point():
     plan = deepcopy(plans()["compact"])
     room = next(item for item in plan["rooms"] if item["id"] == "living")
     room["boundary"]["points"] = [
-        {"x": x, "y": y}
-        for x, y in ((0, 20), (60, 20), (60, 65), (50, 65), (50, 30), (0, 30))
+        {"x": x, "y": y} for x, y in ((0, 20), (60, 20), (60, 65), (50, 65), (50, 30), (0, 30))
     ]
     living_door = next(
-        opening for opening in plan["openings"]
+        opening
+        for opening in plan["openings"]
         if set(opening["connected_room_ids"]) == {"living", "hallway"}
     )
     living_door["start"]["x"], living_door["end"]["x"] = 50, 60
@@ -76,7 +78,11 @@ def test_closest_bathroom_and_determinism(results):
     plan = plans()["compact"]
     result = results["compact"]
     for source in ("bedroom_1", "bedroom_2"):
-        chosen = next(r for r in result["routes"] if r["source"] == source and r["destination"].startswith("bathroom"))
+        chosen = next(
+            r
+            for r in result["routes"]
+            if r["source"] == source and r["destination"].startswith("bathroom")
+        )
         candidates = simulate(plan, [(source, "bathroom_1"), (source, "bathroom_2")])["routes"]
         expected = min(candidates, key=lambda r: (r["length"], r["destination"]))
         assert chosen["destination"] == expected["destination"]
@@ -86,7 +92,9 @@ def test_closest_bathroom_and_determinism(results):
 def test_closed_and_narrow_doors_block_and_windows_never_open_walls():
     plan = deepcopy(plans()["compact"])
     # The only interior exit is too narrow for the 8-unit footprint.
-    door = next(o for o in plan["openings"] if set(o["connected_room_ids"]) == {"veranda", "living"})
+    door = next(
+        o for o in plan["openings"] if set(o["connected_room_ids"]) == {"veranda", "living"}
+    )
     midpoint = (door["start"]["x"] + door["end"]["x"]) / 2
     door["start"]["x"], door["end"]["x"] = midpoint - 3, midpoint + 3
     result = simulate(plan, [("veranda", "living")])
@@ -132,12 +140,16 @@ def test_import_scaled_plan_and_automatic_room_id_matching():
         for key in ("start", "end"):
             opening[key]["x"] *= 2
             opening[key]["y"] *= 2
-    imported = import_traffic_plan({"version": 1, "project_units_per_meter": 20, "floor_plan": scaled})
+    imported = import_traffic_plan(
+        {"version": 1, "project_units_per_meter": 20, "floor_plan": scaled}
+    )
     assert imported["rooms"][0]["boundary"] == original["rooms"][0]["boundary"]
     for room in imported["rooms"]:
         room["id"] = "generated_" + room["id"]
     for opening in imported["openings"]:
-        opening["connected_room_ids"] = ["generated_" + key for key in opening["connected_room_ids"]]
+        opening["connected_room_ids"] = [
+            "generated_" + key for key in opening["connected_room_ids"]
+        ]
     assert ("generated_veranda", "generated_living") in preset_trips(imported)
     assert len(simulate(imported)["routes"]) == 8
     with pytest.raises(ValueError):

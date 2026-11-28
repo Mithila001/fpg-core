@@ -35,13 +35,10 @@ def classify_edges(land: NormalizedLand) -> tuple[EdgeClassification, ...]:
         side = max(
             SIDE_ORDER,
             key=lambda candidate: (
-                normal[0] * targets[candidate][0]
-                + normal[1] * targets[candidate][1]
+                normal[0] * targets[candidate][0] + normal[1] * targets[candidate][1]
             ),
         )
         if edge.source_edge_index == entry.source_edge_index:
             side = LandSide.FRONT
-        result.append(
-            EdgeClassification(edge_index=edge.source_edge_index, side=side)
-        )
+        result.append(EdgeClassification(edge_index=edge.source_edge_index, side=side))
     return tuple(sorted(result, key=lambda item: item.edge_index))

@@ -109,7 +109,9 @@ class InwardRecessEvaluator(FloorPlanEvaluator):
                 else None,
             )
 
-        recesses = detect_recesses(union, config.tolerance, include_section_entrances=debug)
+        recesses = detect_recesses(
+            union, config.tolerance, include_section_entrances=debug
+        )
         findings: list[ScoreFinding] = []
         visuals: list[RecessVisualization] = []
         violating_count = 0
@@ -248,7 +250,7 @@ def _boundaries(
 
 
 def _coordinates(
-    coords: Iterable[tuple[float, float]],
+    coords: Iterable[tuple[float, ...]],
 ) -> tuple[tuple[float, float], ...]:
     return tuple((float(x), float(y)) for x, y in coords)
 
@@ -279,7 +281,9 @@ def _visual(
         direction,
         _boundaries(context, shape),
         codes,
-        tuple(_coordinates(part.coords) for part in lines(entrance)) if entrance is not None else (),
+        tuple(_coordinates(part.coords) for part in lines(entrance))
+        if entrance is not None
+        else (),
     )
 
 

@@ -168,7 +168,11 @@ def _validated_without_keys(
         ),
     )
     return validate_circulation_input(
-        CandidateCirculationInput(candidate=candidate, config=validated.source.config, room_relations=validated.source.room_relations)
+        CandidateCirculationInput(
+            candidate=candidate,
+            config=validated.source.config,
+            room_relations=validated.source.room_relations,
+        )
     )
 
 
@@ -221,8 +225,12 @@ def _compare_route_quality(
     trial_routes: tuple[ResolvedRoute, ...],
     allowed_cost_increase_ratio: float,
 ) -> _RouteQualityComparison:
-    baseline_costs = {_route_coverage_key(route): route.total_cost for route in baseline_routes}
-    trial_costs = {_route_coverage_key(route): route.total_cost for route in trial_routes}
+    baseline_costs = {
+        _route_coverage_key(route): route.total_cost for route in baseline_routes
+    }
+    trial_costs = {
+        _route_coverage_key(route): route.total_cost for route in trial_routes
+    }
 
     if baseline_costs.keys() != trial_costs.keys():
         return _RouteQualityComparison(
@@ -250,7 +258,8 @@ def _compare_route_quality(
 def _route_coverage_key(route: ResolvedRoute) -> tuple[int, str, str | None]:
     destination_key = (
         route.destination.point_key
-        if route.rule.destination_selection in (DestinationSelection.ALL_MATCHING, DestinationSelection.ASSIGNED_RELATION)
+        if route.rule.destination_selection
+        in (DestinationSelection.ALL_MATCHING, DestinationSelection.ASSIGNED_RELATION)
         else None
     )
     return route.rule.id, route.source.point_key, destination_key

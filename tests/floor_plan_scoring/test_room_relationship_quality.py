@@ -1,5 +1,6 @@
 from dataclasses import replace
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from shapely.geometry import box
@@ -42,7 +43,7 @@ def room(room_id, kind, x, y=0):
 
 def evaluate(rooms, proximity=(), clustering=(), mode=ExecutionMode.DEBUG):
     return RoomRelationshipQualityEvaluator().evaluate(
-        SimpleNamespace(rooms=rooms, mode=mode),
+        cast(Any, SimpleNamespace(rooms=rooms, mode=mode)),
         RoomRelationshipQualitySettings(proximity, clustering),
     )
 
@@ -67,7 +68,10 @@ def test_proximity_boundary_distance_and_normalization(x, y, distance, expected)
         (PROXIMITY,),
     )
     assert result.score == expected
-    assert result.visualization_payload["rules"][0]["pairs"][0]["distance"] == distance
+    assert (
+        cast(Any, result.visualization_payload)["rules"][0]["pairs"][0]["distance"]
+        == distance
+    )
 
 
 def test_each_source_uses_its_own_nearest_other_room():
@@ -81,7 +85,7 @@ def test_each_source_uses_its_own_nearest_other_room():
     assert result.score == 75
     assert [
         (pair["source_id"], pair["target_id"])
-        for pair in result.visualization_payload["rules"][0]["pairs"]
+        for pair in cast(Any, result.visualization_payload)["rules"][0]["pairs"]
     ] == [("k1", "d1"), ("k2", "d2")]
     same_type = replace(PROXIMITY, target_type=RoomType.KITCHEN)
     assert evaluate(rooms, (same_type,)).score == 0
@@ -108,7 +112,7 @@ def test_farthest_centroids_and_applicable_weighting():
     result = evaluate(rooms, (PROXIMITY, disabled), (CLUSTERING, missing))
     assert result.score == pytest.approx((100 + 50 * 0.5) / 1.5)
     assert result.metrics[0].value == 2
-    cluster = result.visualization_payload["rules"][1]
+    cluster = cast(Any, result.visualization_payload)["rules"][1]
     assert (cluster["pair"], cluster["distance"], cluster["score"]) == (
         ("b1", "b3"),
         75,

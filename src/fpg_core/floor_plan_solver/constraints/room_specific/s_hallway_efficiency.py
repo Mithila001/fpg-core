@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-
 from ....domain import RoomType
+from ...exceptions import InvalidProfileError
 from ...model import ModelContext
-from ..base import ConstraintSettings, PENALTY_MAX, average_penalties, ceil_ratio, require_room_types
+from ..base import (
+    PENALTY_MAX,
+    ConstraintSettings,
+    average_penalties,
+    ceil_ratio,
+    require_room_types,
+)
 from .h_hallway_shared_wall import _interval_overlap
 
 
@@ -47,7 +53,9 @@ class HallwayEfficiencyConstraint:
 
         if area_penalty_multiplier > 0:
             area = sum(hallway.area for hallway in hallways)
-            area_penalty = ceil_ratio(context, PENALTY_MAX * area, context.problem.floor.area, PENALTY_MAX)
+            area_penalty = ceil_ratio(
+                context, PENALTY_MAX * area, context.problem.floor.area, PENALTY_MAX
+            )
             penalties.append((area_penalty, area_penalty_multiplier))
 
         exposed_lengths = []
@@ -59,27 +67,70 @@ class HallwayEfficiencyConstraint:
             for other in context.room_variables.values():
                 if other is hallway:
                     continue
-                x_overlap = _interval_overlap(context, hallway.x, hallway.x_end, other.x, other.x_end, context.problem.floor.width, "wall_x_overlap", hallway, other)
-                y_overlap = _interval_overlap(context, hallway.y, hallway.y_end, other.y, other.y_end, context.problem.floor.length, "wall_y_overlap", hallway, other)
-                for first_face, second_face, overlap in ((hallway.x, other.x_end, y_overlap), (hallway.x_end, other.x, y_overlap), (hallway.y, other.y_end, x_overlap), (hallway.y_end, other.y, x_overlap)):
-                    touching = context.model.NewBoolVar(context.new_name("hallway_wall_touch"))
+                x_overlap = _interval_overlap(
+                    context,
+                    hallway.x,
+                    hallway.x_end,
+                    other.x,
+                    other.x_end,
+                    context.problem.floor.width,
+                    "wall_x_overlap",
+                    hallway,
+                    other,
+                )
+                y_overlap = _interval_overlap(
+                    context,
+                    hallway.y,
+                    hallway.y_end,
+                    other.y,
+                    other.y_end,
+                    context.problem.floor.length,
+                    "wall_y_overlap",
+                    hallway,
+                    other,
+                )
+                for first_face, second_face, overlap in (
+                    (hallway.x, other.x_end, y_overlap),
+                    (hallway.x_end, other.x, y_overlap),
+                    (hallway.y, other.y_end, x_overlap),
+                    (hallway.y_end, other.y, x_overlap),
+                ):
+                    touching = context.model.NewBoolVar(
+                        context.new_name("hallway_wall_touch")
+                    )
                     context.model.Add(first_face == second_face).OnlyEnforceIf(touching)
-                    context.model.Add(first_face != second_face).OnlyEnforceIf(touching.Not())
-                    amount = context.model.NewIntVar(0, max(context.problem.floor.width, context.problem.floor.length), context.new_name("shared_wall_length"))
+                    context.model.Add(first_face != second_face).OnlyEnforceIf(
+                        touching.Not()
+                    )
+                    amount = context.model.NewIntVar(
+                        0,
+                        max(context.problem.floor.width, context.problem.floor.length),
+                        context.new_name("shared_wall_length"),
+                    )
                     context.model.Add(amount == overlap).OnlyEnforceIf(touching)
                     context.model.Add(amount == 0).OnlyEnforceIf(touching.Not())
                     shared.append(amount)
-            exposed = context.model.NewIntVar(0, 2 * (context.problem.floor.width + context.problem.floor.length), context.new_name("hallway_exposed_wall"))
+            exposed = context.model.NewIntVar(
+                0,
+                2 * (context.problem.floor.width + context.problem.floor.length),
+                context.new_name("hallway_exposed_wall"),
+            )
             context.model.Add(exposed == perimeter - sum(shared))
             exposed_lengths.append(exposed)
 
         floor = context.problem.floor
         perimeter_limit = len(hallways) * 2 * (floor.width + floor.length)
-        perimeter_total = context.model.NewIntVar(1, perimeter_limit,
-                                                  context.new_name("hallway_perimeter_total"))
+        perimeter_total = context.model.NewIntVar(
+            1, perimeter_limit, context.new_name("hallway_perimeter_total")
+        )
         context.model.Add(perimeter_total == sum(perimeters))
-        wall_penalty = ceil_ratio(context, PENALTY_MAX * sum(exposed_lengths), perimeter_total, PENALTY_MAX,
-                                  denominator_max=perimeter_limit)
+        wall_penalty = ceil_ratio(
+            context,
+            PENALTY_MAX * sum(exposed_lengths),
+            perimeter_total,
+            PENALTY_MAX,
+            denominator_max=perimeter_limit,
+        )
         return average_penalties(context, [*penalties, (wall_penalty, 1)])
 
     @staticmethod

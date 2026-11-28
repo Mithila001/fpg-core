@@ -91,17 +91,30 @@ invalid output grid. A non-`ExecutionMode` mode raises `TypeError`.
 ```python
 from fpg_core.domain import ExecutionMode, RoomType
 from fpg_core.floor_plan_preprocessing import (
-    AspectRatioRule, FloorLimits, PreprocessingConfig, PreprocessingInput,
-    PreprocessingRequest, RequestedRoom, RoomCountRule, RoomSizeReference,
+    AspectRatioRule,
+    FloorLimits,
+    PreprocessingConfig,
+    PreprocessingInput,
+    PreprocessingRequest,
+    RequestedRoom,
+    RoomCountRule,
+    RoomSizeReference,
     prepare_generation_input,
 )
 
 preprocessing_config = PreprocessingConfig(
     room_count_rules=(RoomCountRule(RoomType.LIVING_ROOM, 1, 1),),
     supported_aspect_ratios=(AspectRatioRule("4:5", 0.8),),
-    room_sizes=(RoomSizeReference(
-        RoomType.LIVING_ROOM, "medium", 10, 30, 100, 500,
-    ),),
+    room_sizes=(
+        RoomSizeReference(
+            RoomType.LIVING_ROOM,
+            "medium",
+            10,
+            30,
+            100,
+            500,
+        ),
+    ),
     room_relations=(),
     mandatory_room_types=(RoomType.LIVING_ROOM,),
     floor_area_buffer=1,

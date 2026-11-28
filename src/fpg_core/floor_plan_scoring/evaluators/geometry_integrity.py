@@ -134,6 +134,7 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
 
         for index, room_a in enumerate(context.rooms):
             for room_b in context.rooms[index + 1 :]:
+                intersection = None
                 try:
                     intersection = room_a.polygon.intersection(room_b.polygon)
                     overlap_area = float(intersection.area)
@@ -141,7 +142,7 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
                     overlap_area = None
                 if overlap_area is None or overlap_area > config.tolerance:
                     overlap_count += 1
-                    if debug and overlap_area is not None:
+                    if debug and overlap_area is not None and intersection is not None:
                         overlaps[room_a.room_id, room_b.room_id] = intersection
                     overlap_metrics = (
                         (ScoreMetric("overlap_area", overlap_area, "square_units"),)
@@ -176,7 +177,9 @@ class GeometryIntegrityEvaluator(FloorPlanEvaluator):
                     _finding_geometry(context, finding, config.tolerance, overlaps)
                     for finding in findings
                 ],
-            } if debug else None,
+            }
+            if debug
+            else None,
         )
 
 
@@ -186,16 +189,20 @@ def _finding_geometry(context, finding, tolerance, overlaps) -> list[dict]:
     try:
         if finding.code.startswith("NON_RECTILINEAR"):
             points = rooms[0].points if rooms else context.floor_points
-            return [LineString((a, b)).__geo_interface__
-                    for a, b in zip(points, (*points[1:], points[0]), strict=True)
-                    if not is_rectilinear((a, b), tolerance)]
+            return [
+                LineString((a, b)).__geo_interface__
+                for a, b in zip(points, (*points[1:], points[0]), strict=True)
+                if not is_rectilinear((a, b), tolerance)
+            ]
         if finding.code == "ROOM_OVERLAP":
             overlap = overlaps.get(finding.subject_ids)
             return [overlap.__geo_interface__] if overlap is not None else []
         if finding.code == "ROOM_OUTSIDE_FLOOR_BOUNDARY":
             shape = shape.difference(context.floor_polygon)
         if finding.code == "FLOOR_BOUNDARY_OUTSIDE_SPECIFICATION":
-            shape = shape.difference(box(0, 0, context.floor_width, context.floor_length))
+            shape = shape.difference(
+                box(0, 0, context.floor_width, context.floor_length)
+            )
         return [shape.__geo_interface__] if not shape.is_empty else []
     except ShapelyError:
         return []

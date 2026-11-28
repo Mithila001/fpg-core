@@ -25,7 +25,6 @@ from fpg_core.domain import (
 from test_lab import RecordingAdapter, create_profile, initialized_runtime, payload, wait
 
 from fpg_lab.core.serialization import to_jsonable
-from fpg_lab.integrations.fpg_core.config_codec import CoreConfigCodec
 from fpg_lab.visualization import circulation
 
 
@@ -43,7 +42,8 @@ def test_diagnostic_retention_is_p01a_debug_only(tmp_path: Path, debug: bool, fl
         return adapter
 
     with initialized_runtime(
-        database_url=f"sqlite:///{tmp_path / 'diagnostics.db'}", adapter_factory=factory,
+        database_url=f"sqlite:///{tmp_path / 'diagnostics.db'}",
+        adapter_factory=factory,
     ) as runtime:
         create_profile(runtime)
         experiment_id = runtime.start_experiment(flow, payload(flow, debug=debug))
@@ -56,26 +56,34 @@ def test_diagnostic_retention_is_p01a_debug_only(tmp_path: Path, debug: bool, fl
 
 
 def test_cleaned_diagnostic_capture_and_saved_overlays(monkeypatch: pytest.MonkeyPatch) -> None:
-    codec = CoreConfigCodec()
     config = CandidateCirculationConfig(
         costs=RoutingCostProfile(2, 0.75, 0.35, 1.5, 8),
-        route_rules=(CirculationRouteRule(
-            id=1, name="living to kitchen", source_room_type=RoomType.LIVING_ROOM,
-            destination_room_type=RoomType.KITCHEN,
-            destination_selection=DestinationSelection.ALL_MATCHING,
-            traffic_class=CirculationTrafficClass.PUBLIC,
-            allowed_transit_room_types=(), importance_weight=1,
-        ),),
+        route_rules=(
+            CirculationRouteRule(
+                id=1,
+                name="living to kitchen",
+                source_room_type=RoomType.LIVING_ROOM,
+                destination_room_type=RoomType.KITCHEN,
+                destination_selection=DestinationSelection.ALL_MATCHING,
+                traffic_class=CirculationTrafficClass.PUBLIC,
+                allowed_transit_room_types=(),
+                importance_weight=1,
+            ),
+        ),
         always_traversable_room_types=(RoomType.HALLWAY,),
     )
     grid = ResolvedCandidateGrid(tuple(range(7)), tuple(range(7)))
-    candidate = CandidateMap(grid, (
-        CandidatePoint(RoomId("living"), 1, 1, RoomType.LIVING_ROOM),
-        CandidatePoint(RoomId("kitchen"), 5, 1, RoomType.KITCHEN),
-        CandidatePoint(RoomId("unused"), 5, 5, RoomType.HALLWAY),
-    ))
+    candidate = CandidateMap(
+        grid,
+        (
+            CandidatePoint(RoomId("living"), 1, 1, RoomType.LIVING_ROOM),
+            CandidatePoint(RoomId("kitchen"), 5, 1, RoomType.KITCHEN),
+            CandidatePoint(RoomId("unused"), 5, 5, RoomType.HALLWAY),
+        ),
+    )
     execution = refine_candidate_circulation(
-        CandidateCirculationInput(candidate, config), mode=ExecutionMode.DEBUG,
+        CandidateCirculationInput(candidate, config),
+        mode=ExecutionMode.DEBUG,
     )
     recorded = to_jsonable(execution)
     assert recorded["result"]["final_circulation"]["routes"]
@@ -106,19 +114,33 @@ def test_cleaned_diagnostic_capture_and_saved_overlays(monkeypatch: pytest.Monke
 
 def test_path_identity_survives_missing_trials_and_private_style() -> None:
     path = {
-        "rule_id": 2, "rule_name": "private route", "traffic_class": "private",
-        "source_point_key": "bed[1]", "destination_point_key": "bath[1]",
-        "source_room_id": "bed", "destination_room_id": "bath",
-        "manhattan_reference_cost": 3.0, "importance_weight": 1.0,
-        "step_count": 2, "turn_count": 1,
+        "rule_id": 2,
+        "rule_name": "private route",
+        "traffic_class": "private",
+        "source_point_key": "bed[1]",
+        "destination_point_key": "bath[1]",
+        "source_room_id": "bed",
+        "destination_room_id": "bath",
+        "manhattan_reference_cost": 3.0,
+        "importance_weight": 1.0,
+        "step_count": 2,
+        "turn_count": 1,
         "nodes": [{"x": 1, "y": 1}, {"x": 2, "y": 1}, {"x": 2, "y": 2}],
-        "costs": {"movement_cost": 3.0, "perimeter_bias_cost": 0.5,
-                  "turn_cost": 0.5, "traffic_conflict_cost": 0.0,
-                  "total_cost": 4.0},
+        "costs": {
+            "movement_cost": 3.0,
+            "perimeter_bias_cost": 0.5,
+            "turn_cost": 0.5,
+            "traffic_conflict_cost": 0.0,
+            "total_cost": 4.0,
+        },
     }
     selected = {circulation.path_key(path)}
-    present = {"circulation_data": {"result": {"final_circulation": {"routes": [path], "hallways": []}}}}
-    missing = {"circulation_data": {"result": {"final_circulation": {"routes": [], "hallways": []}}}}
+    present = {
+        "circulation_data": {"result": {"final_circulation": {"routes": [path], "hallways": []}}}
+    }
+    missing = {
+        "circulation_data": {"result": {"final_circulation": {"routes": [], "hallways": []}}}
+    }
     counts = []
     for frame in (present, missing, present):
         figure = go.Figure()

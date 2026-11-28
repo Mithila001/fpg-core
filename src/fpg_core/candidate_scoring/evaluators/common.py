@@ -131,7 +131,9 @@ def _extract_floor_size(specification: Any) -> tuple[float, float]:
     )
 
     if width is None or length is None:
-        raise ValueError("Could not determine floor width and length from specification.")
+        raise ValueError(
+            "Could not determine floor width and length from specification."
+        )
 
     floor_width = float(width)
     floor_length = float(length)
@@ -196,9 +198,7 @@ def _extract_candidate_points(
             metadata[0] if metadata else None,
         )
         if raw_type is None:
-            raise ValueError(
-                f"Candidate point '{source_room_id}' has no room type."
-            )
+            raise ValueError(f"Candidate point '{source_room_id}' has no room type.")
 
         room_type = require_room_type(
             raw_type,
@@ -232,9 +232,7 @@ def _extract_candidate_points(
     # Preserve existing IDs for every non-duplicated point. These IDs are also
     # reserved so generated hallway IDs cannot collide with an actual room ID.
     used_ids: set[str] = {
-        room_id
-        for room_id, indices in grouped_indices.items()
-        if len(indices) == 1
+        room_id for room_id, indices in grouped_indices.items() if len(indices) == 1
     }
 
     for source_room_id, indices in grouped_indices.items():

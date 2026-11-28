@@ -29,8 +29,11 @@ def effective_profiles(config, settings):
             apply_hints=enabled,
         ),
         solver=replace(
-            initial.solver, max_time_seconds=settings["initial_time_limit"],
-            random_seed=settings.get("random_seed") if settings.get("random_seed") is not None else initial.solver.random_seed,
+            initial.solver,
+            max_time_seconds=settings["initial_time_limit"],
+            random_seed=settings.get("random_seed")
+            if settings.get("random_seed") is not None
+            else initial.solver.random_seed,
         ),
     )
     return initial, refinement_profile(config)
@@ -42,7 +45,9 @@ def run_p01b(runner, session, experiment):
         preset = settings["preset"]
         spec = validate_export(preset)
         adapter = runner.adapter_factory(
-            runner.config_codec.decode_for_flow(experiment.system_configuration_snapshot, experiment.flow_type)
+            runner.config_codec.decode_for_flow(
+                experiment.system_configuration_snapshot, experiment.flow_type
+            )
         )
         initial_config, refinement_config = effective_profiles(adapter.core_config, settings)
         adapter.core_config = replace(
@@ -108,8 +113,11 @@ def run_p01b(runner, session, experiment):
                 stage = "post_processing"
                 stage_started = perf_counter()
                 execution = adapter.post_process_floor_plan(
-                    spec, plan,
-                    solver_config=refinement_config if settings["refinement_rounds"] else initial_config,
+                    spec,
+                    plan,
+                    solver_config=refinement_config
+                    if settings["refinement_rounds"]
+                    else initial_config,
                     debug=True,
                 )
                 stages.append(
@@ -129,19 +137,26 @@ def run_p01b(runner, session, experiment):
                     stage = "openings"
                     stage_started = perf_counter()
                     execution = adapter.generate_floor_plan_openings(plan, debug=True)
-                    stages.append({"name": "Openings", "data": result_document(execution),
-                                   "duration_ms": int((perf_counter() - stage_started) * 1000)})
+                    stages.append(
+                        {
+                            "name": "Openings",
+                            "data": result_document(execution),
+                            "duration_ms": int((perf_counter() - stage_started) * 1000),
+                        }
+                    )
                     row.stages = stages[:]
                     session.commit()
-                    if getattr(execution.result.status, "value", execution.result.status) not in ("optimal", "feasible") or execution.result.floor_plan is None:
+                    if (
+                        getattr(execution.result.status, "value", execution.result.status)
+                        not in ("optimal", "feasible")
+                        or execution.result.floor_plan is None
+                    ):
                         raise RuntimeError(str(execution.result.message))
                     plan = execution.result.floor_plan
                 runner._check_termination(experiment.id)
                 stage = "scoring"
                 row.scoring = result_document(
-                    adapter.score_completed_floor_plan(
-                        plan, spec, debug=True
-                    )
+                    adapter.score_completed_floor_plan(plan, spec, debug=True)
                 )
                 row.status = "completed"
                 experiment.successful_trial_count += 1
@@ -158,7 +173,8 @@ def run_p01b(runner, session, experiment):
                     != (
                         "Initial"
                         if stage == "initial"
-                        else "Openings" if stage == "openings"
+                        else "Openings"
+                        if stage == "openings"
                         else "Post-process"
                         if stage == "post_processing"
                         else stage.replace("refinement_", "Refinement ")
@@ -169,7 +185,8 @@ def run_p01b(runner, session, experiment):
                         {
                             "name": "Initial"
                             if stage == "initial"
-                            else "Openings" if stage == "openings"
+                            else "Openings"
+                            if stage == "openings"
                             else "Post-process"
                             if stage == "post_processing"
                             else stage.replace("refinement_", "Refinement "),

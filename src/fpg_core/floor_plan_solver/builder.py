@@ -19,8 +19,12 @@ def build_model(
     apply_seed_policy(context)
     for variables in context.room_variables.values():
         if variables.room.room_type == RoomType.HALLWAY:
-            context.model.Add(variables.width >= problem.scale.minimum_length(10)).OnlyEnforceIf(variables.present)
-            context.model.Add(variables.length >= problem.scale.minimum_length(10)).OnlyEnforceIf(variables.present)
+            context.model.Add(
+                variables.width >= problem.scale.minimum_length(10)
+            ).OnlyEnforceIf(variables.present)
+            context.model.Add(
+                variables.length >= problem.scale.minimum_length(10)
+            ).OnlyEnforceIf(variables.present)
 
     applied_hard: list[str] = []
     for hard_use in config.hard_constraints:
@@ -39,7 +43,9 @@ def build_model(
         if type(soft_constraint_penalty) is int and soft_constraint_penalty == 0:
             continue
         applied_soft.append(soft_use.key)
-        weighted_expressions.append(soft_constraint_penalty * round(soft_use.weight * 10))
+        weighted_expressions.append(
+            soft_constraint_penalty * round(soft_use.weight * 10)
+        )
 
     if weighted_expressions:
         context.model.Minimize(cp_model.LinearExpr.Sum(weighted_expressions))

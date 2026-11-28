@@ -1,4 +1,5 @@
 """Session-local floor traffic: clearance-aware routes and footprint coverage."""
+
 from __future__ import annotations
 
 import heapq
@@ -30,7 +31,12 @@ def geometry(plan: Mapping[str, Any]) -> tuple[dict[str, Polygon], Any, Any]:
     for room in plan["rooms"]:
         room_id = room["id"]
         polygon = Polygon(_coords(room["boundary"]))
-        if room_id in rooms or not polygon.is_valid or polygon.area <= 0 or not boundary.covers(polygon):
+        if (
+            room_id in rooms
+            or not polygon.is_valid
+            or polygon.area <= 0
+            or not boundary.covers(polygon)
+        ):
             raise ValueError(f"Invalid room geometry or duplicate ID: {room_id}")
         if any(polygon.intersection(other).area > 1e-8 for other in rooms.values()):
             raise ValueError(f"Overlapping room: {room_id}")
@@ -46,7 +52,12 @@ def geometry(plan: Mapping[str, Any]) -> tuple[dict[str, Polygon], Any, Any]:
         seen.add(opening["id"])
         line = _line(opening)
         ids = opening["connected_room_ids"]
-        if line.length <= 0 or not ids or len(ids) != len(set(ids)) or any(i not in rooms for i in ids):
+        if (
+            line.length <= 0
+            or not ids
+            or len(ids) != len(set(ids))
+            or any(i not in rooms for i in ids)
+        ):
             raise ValueError(f"Invalid opening: {opening['id']}")
         if any(not rooms[i].boundary.buffer(1e-7).covers(line) for i in ids):
             raise ValueError(f"Opening is not on its room walls: {opening['id']}")
@@ -109,7 +120,7 @@ def _shortest(vertices: list, graph: list, start: tuple, end: tuple) -> list[tup
 def _smooth(path: list[tuple], safe_area: Any) -> list[tuple]:
     result = [path[0]]
     for i in range(1, len(path) - 1):
-        a, b, c = path[i - 1:i + 2]
+        a, b, c = path[i - 1 : i + 2]
         trim = min(4.0, math.dist(a, b) / 3, math.dist(b, c) / 3)
         curve = None
         for _ in range(12):
@@ -117,8 +128,10 @@ def _smooth(path: list[tuple], safe_area: Any) -> list[tuple]:
                 break
             p = tuple(b[k] + (a[k] - b[k]) * trim / math.dist(a, b) for k in (0, 1))
             q = tuple(b[k] + (c[k] - b[k]) * trim / math.dist(b, c) for k in (0, 1))
-            points = [tuple((1-t)**2*p[k] + 2*(1-t)*t*b[k] + t*t*q[k] for k in (0, 1))
-                      for t in (j / 10 for j in range(11))]
+            points = [
+                tuple((1 - t) ** 2 * p[k] + 2 * (1 - t) * t * b[k] + t * t * q[k] for k in (0, 1))
+                for t in (j / 10 for j in range(11))
+            ]
             if safe_area.covers(LineString(points)):
                 curve = points
                 break
@@ -148,10 +161,17 @@ def preset_trips(plan: Mapping[str, Any]) -> list[tuple[str, str]]:
     for room in plan["rooms"]:
         by_type.setdefault(room["room_type"], []).append(room["id"])
     pairs: list[tuple[str, str]] = []
-    for source_type, destination_type in (("veranda", "living_room"), ("veranda", "kitchen"),
-                                          ("kitchen", "dining_room"), ("living_room", "dining_room")):
-        pairs.extend((source, dest) for source in by_type.get(source_type, [])
-                     for dest in by_type.get(destination_type, []))
+    for source_type, destination_type in (
+        ("veranda", "living_room"),
+        ("veranda", "kitchen"),
+        ("kitchen", "dining_room"),
+        ("living_room", "dining_room"),
+    ):
+        pairs.extend(
+            (source, dest)
+            for source in by_type.get(source_type, [])
+            for dest in by_type.get(destination_type, [])
+        )
     for bedroom in by_type.get("bedroom", []):
         pairs.append((bedroom, "@closest_bathroom"))
         pairs.extend((bedroom, kitchen) for kitchen in by_type.get("kitchen", []))
@@ -168,8 +188,9 @@ def simulate(plan: Mapping[str, Any], trips: Sequence[tuple[str, str]] | None = 
         if (point := _room_point(polygon, planning)) is not None
     }
     vertices, graph = _graph(planning, room_points)
-    bathroom_ids = sorted(r["id"] for r in plan["rooms"]
-                          if r["room_type"] in ("bathroom", "attached_bathroom"))
+    bathroom_ids = sorted(
+        r["id"] for r in plan["rooms"] if r["room_type"] in ("bathroom", "attached_bathroom")
+    )
     routes, failures = [], []
     for source, requested in trips if trips is not None else preset_trips(plan):
         destinations = bathroom_ids if requested == "@closest_bathroom" else [requested]
@@ -184,19 +205,40 @@ def simulate(plan: Mapping[str, Any], trips: Sequence[tuple[str, str]] | None = 
                 if safe.covers(line):
                     candidates.append((line.length, dest, points))
         if not candidates:
-            failures.append({"source": source, "destination": requested, "reason": f"No route with {2 * RADIUS:g}-unit clearance"})
+            failures.append(
+                {
+                    "source": source,
+                    "destination": requested,
+                    "reason": f"No route with {2 * RADIUS:g}-unit clearance",
+                }
+            )
             continue
         length, dest, points = min(candidates, key=lambda item: (item[0], item[1]))
-        routes.append({"source": source, "destination": dest, "length": length,
-                       "points": points, "footprint": LineString(points).buffer(RADIUS)})
+        routes.append(
+            {
+                "source": source,
+                "destination": dest,
+                "length": length,
+                "points": points,
+                "footprint": LineString(points).buffer(RADIUS),
+            }
+        )
     heatmap, summaries = _heatmap(rooms, floor, routes)
     present = {room["room_type"] for room in plan["rooms"]}
-    missing = [kind for kind in ("veranda", "living_room", "kitchen", "dining_room", "bedroom")
-               if kind not in present]
+    missing = [
+        kind
+        for kind in ("veranda", "living_room", "kitchen", "dining_room", "bedroom")
+        if kind not in present
+    ]
     if not present.intersection({"bathroom", "attached_bathroom"}):
         missing.append("bathroom")
-    return {"routes": routes, "failures": failures, "heatmap": heatmap, "rooms": summaries,
-            "missing_room_types": missing if trips is None else []}
+    return {
+        "routes": routes,
+        "failures": failures,
+        "heatmap": heatmap,
+        "rooms": summaries,
+        "missing_room_types": missing if trips is None else [],
+    }
 
 
 def _heatmap(rooms: dict[str, Polygon], floor: Any, routes: list[dict]) -> tuple[dict, list]:
@@ -214,12 +256,20 @@ def _heatmap(rooms: dict[str, Polygon], floor: Any, routes: list[dict]) -> tuple
             if inside.area < 1e-9:
                 row.append(None)
                 continue
-            value = sum(inside.intersection(p).area / inside.area for p in footprints if inside.intersects(p))
+            value = sum(
+                inside.intersection(p).area / inside.area
+                for p in footprints
+                if inside.intersects(p)
+            )
             row.append(value)
             for key, room in rooms.items():
                 part = cell.intersection(room)
                 if part.area:
-                    traffic = sum(part.intersection(p).area / part.area for p in footprints if part.intersects(p))
+                    traffic = sum(
+                        part.intersection(p).area / part.area
+                        for p in footprints
+                        if part.intersects(p)
+                    )
                     total = totals[key]
                     total[0] += traffic * part.area
                     total[1] = max(total[1], traffic)
@@ -227,6 +277,9 @@ def _heatmap(rooms: dict[str, Polygon], floor: Any, routes: list[dict]) -> tuple
                     covered = unary_union([p for p in footprints if part.intersects(p)])
                     total[3] += part.difference(covered).area
         z.append(row)
-    summaries = [{"id": key, "mean": v[0] / v[2], "peak": v[1],
-                  "untouched_percent": 100 * v[3] / v[2]} for key, v in totals.items() if v[2]]
+    summaries = [
+        {"id": key, "mean": v[0] / v[2], "peak": v[1], "untouched_percent": 100 * v[3] / v[2]}
+        for key, v in totals.items()
+        if v[2]
+    ]
     return {"x": xs, "y": ys, "z": z}, summaries

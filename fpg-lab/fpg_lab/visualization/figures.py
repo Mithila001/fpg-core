@@ -9,9 +9,15 @@ PALETTE = ("#4ec9b0", "#75beff", "#c586c0", "#dcdcaa", "#ce9178", "#9cdcfe")
 
 
 ROOM_COLORS = {
-    "bedroom": "#b99bed", "bathroom": "#64b5f6", "attached_bathroom": "#64d7cf",
-    "living_room": "#e9b96e", "kitchen": "#e68b7e", "dining_room": "#d99dc2",
-    "hallway": "#aeb9c4", "veranda": "#8dc99c", "garage": "#c6b98b",
+    "bedroom": "#b99bed",
+    "bathroom": "#64b5f6",
+    "attached_bathroom": "#64d7cf",
+    "living_room": "#e9b96e",
+    "kitchen": "#e68b7e",
+    "dining_room": "#d99dc2",
+    "hallway": "#aeb9c4",
+    "veranda": "#8dc99c",
+    "garage": "#c6b98b",
 }
 
 
@@ -80,7 +86,11 @@ def candidate_map(
                 name=key,
                 text=[key],
                 textposition="top center",
-                marker=dict(size=12, color=color(str(point.get("room_type", ""))), line=dict(color="#1e1e1e", width=1)),
+                marker=dict(
+                    size=12,
+                    color=color(str(point.get("room_type", ""))),
+                    line=dict(color="#1e1e1e", width=1),
+                ),
                 hovertemplate=f"{key}<br>X=%{{x}}<br>Y=%{{y}}<extra></extra>",
             )
         )
@@ -145,8 +155,11 @@ def floor_plan(plan: Mapping[str, Any] | None, *, title: str = "Floor plan") -> 
 
 def add_inward_recesses(result: go.Figure, details: Mapping[str, Any]) -> None:
     payload = next(
-        (item.get("visualization_payload") for item in details.get("evaluator_results", [])
-         if item["evaluator_key"] == "inward_recess"),
+        (
+            item.get("visualization_payload")
+            for item in details.get("evaluator_results", [])
+            if item["evaluator_key"] == "inward_recess"
+        ),
         None,
     )
     for index, recess in enumerate((payload or {}).get("recesses", [])):
@@ -183,17 +196,32 @@ def add_inward_recesses(result: go.Figure, details: Mapping[str, Any]) -> None:
             for polygon in section["polygons"]:
                 for ring in polygon:
                     result.add_scatter(
-                        x=[point[0] for point in ring], y=[point[1] for point in ring],
-                        mode="lines", line=dict(color="#f38ba8" if codes else "#dcdcaa", width=3),
-                        name=name, legendgroup=label, showlegend=False,
-                        hovertext=hover, hoverinfo="text+name",
+                        x=[point[0] for point in ring],
+                        y=[point[1] for point in ring],
+                        mode="lines",
+                        line=dict(color="#f38ba8" if codes else "#dcdcaa", width=3),
+                        name=name,
+                        legendgroup=label,
+                        showlegend=False,
+                        hovertext=hover,
+                        hoverinfo="text+name",
                     )
 
 
 def score_history(trials: Sequence[Mapping[str, Any]], *, trial_no: int | None = None) -> go.Figure:
     result = figure("Candidate score progression")
-    scored = [trial for trial in trials if trial.get("final_score") is not None and trial.get("status", "completed") == "completed" and not (trial.get("error_data") or {}).get("rejected")]
-    rejected = [trial for trial in trials if trial.get("status") == "rejected" or (trial.get("error_data") or {}).get("rejected")]
+    scored = [
+        trial
+        for trial in trials
+        if trial.get("final_score") is not None
+        and trial.get("status", "completed") == "completed"
+        and not (trial.get("error_data") or {}).get("rejected")
+    ]
+    rejected = [
+        trial
+        for trial in trials
+        if trial.get("status") == "rejected" or (trial.get("error_data") or {}).get("rejected")
+    ]
     result.add_trace(
         go.Scatter(
             x=[t["trial_no"] for t in scored],
@@ -204,14 +232,26 @@ def score_history(trials: Sequence[Mapping[str, Any]], *, trial_no: int | None =
         )
     )
     if rejected:
-        result.add_trace(go.Scatter(x=[t["trial_no"] for t in rejected], y=[0 for t in rejected], mode="markers", name="Rejected", marker=dict(symbol="x", color="#fb7185")))
+        result.add_trace(
+            go.Scatter(
+                x=[t["trial_no"] for t in rejected],
+                y=[0 for t in rejected],
+                mode="markers",
+                name="Rejected",
+                marker=dict(symbol="x", color="#fb7185"),
+            )
+        )
     result.update_xaxes(title="Trial")
     result.update_yaxes(title="Score", range=[0, 100])
     best = None
     best_scores = []
     for trial in trials:
         score = trial.get("final_score")
-        if score is not None and trial.get("status", "completed") == "completed" and not (trial.get("error_data") or {}).get("rejected"):
+        if (
+            score is not None
+            and trial.get("status", "completed") == "completed"
+            and not (trial.get("error_data") or {}).get("rejected")
+        ):
             best = score if best is None else max(best, score)
         best_scores.append(best)
     result.add_trace(
@@ -232,7 +272,13 @@ def score_distribution(trials: Sequence[Mapping[str, Any]]) -> go.Figure:
     result = figure("Candidate score distribution")
     result.add_trace(
         go.Histogram(
-            x=[t["final_score"] for t in trials if t.get("final_score") is not None and t.get("status", "completed") == "completed" and not (t.get("error_data") or {}).get("rejected")],
+            x=[
+                t["final_score"]
+                for t in trials
+                if t.get("final_score") is not None
+                and t.get("status", "completed") == "completed"
+                and not (t.get("error_data") or {}).get("rejected")
+            ],
             marker_color=PALETTE[0],
         )
     )
@@ -287,7 +333,14 @@ def evaluator_histories(trials: Sequence[Mapping[str, Any]]) -> dict[str, go.Fig
                 best = score if best is None else max(best, score)
             scores.append(score)
             maxima.append(best)
-            details.append([status, evaluation.get("contribution"), evaluation.get("configured_weight"), evaluation.get("normalized_weight")])
+            details.append(
+                [
+                    status,
+                    evaluation.get("contribution"),
+                    evaluation.get("configured_weight"),
+                    evaluation.get("normalized_weight"),
+                ]
+            )
         xs = [trial["trial_no"] for trial in ordered]
         result.add_trace(
             go.Scatter(

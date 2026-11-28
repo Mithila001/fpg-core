@@ -146,7 +146,6 @@ def _select_floor(
     return FloorSpec(width=width, length=length), minimum, maximum
 
 
-
 def _build_candidate_grid(
     floor: FloorSpec,
     policy: PreprocessingPolicy,
@@ -177,6 +176,7 @@ def _build_candidate_grid(
             "The selected floor cannot produce a valid centered Candidate Search "
             "space with the configured grid spacing."
         ) from exc
+
 
 def _add_hallways(
     request: RuledRequest,

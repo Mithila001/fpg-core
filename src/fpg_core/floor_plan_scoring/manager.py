@@ -114,9 +114,7 @@ class FloorPlanScoreManager:
                     )
                 )
             failure_metrics = (
-                ScoreMetric(
-                    "critical_group_score", critical_result.raw_score or 0.0
-                ),
+                ScoreMetric("critical_group_score", critical_result.raw_score or 0.0),
                 ScoreMetric(
                     "earned_critical_contribution", critical_result.contribution
                 ),
@@ -189,12 +187,16 @@ class FloorPlanScoreManager:
         return result, details
 
     def diagnose(
-        self, floor_plan: FloorPlan, specification: FloorPlanGenerationSpec,
+        self,
+        floor_plan: FloorPlan,
+        specification: FloorPlanGenerationSpec,
         skipped: set[EvaluatorKey],
     ) -> tuple[EvaluatorDiagnostic, ...]:
         if not skipped:
             return ()
-        context = self._context_factory.build(floor_plan, specification, mode=ExecutionMode.DEBUG)
+        context = self._context_factory.build(
+            floor_plan, specification, mode=ExecutionMode.DEBUG
+        )
         results = []
         for group in self._ordered_groups():
             for rule in self._ordered_rules(group):
@@ -202,19 +204,29 @@ class FloorPlanScoreManager:
                     continue
                 reason = _unavailable_inputs(rule, context)
                 if reason:
-                    results.append(EvaluatorDiagnostic(rule.key, "unavailable", error=reason))
+                    results.append(
+                        EvaluatorDiagnostic(rule.key, "unavailable", error=reason)
+                    )
                     continue
                 try:
                     evaluation = self._execute(rule, context)
                 except FloorPlanScoringError as exc:
-                    results.append(EvaluatorDiagnostic(rule.key, "failed", error=str(exc)))
+                    results.append(
+                        EvaluatorDiagnostic(rule.key, "failed", error=str(exc))
+                    )
                     continue
                 if evaluation.status is EvaluationStatus.COMPLETED:
-                    results.append(EvaluatorDiagnostic(rule.key, "completed", evaluation))
+                    results.append(
+                        EvaluatorDiagnostic(rule.key, "completed", evaluation)
+                    )
                 elif evaluation.status is EvaluationStatus.NOT_APPLICABLE:
-                    results.append(EvaluatorDiagnostic(rule.key, "not_applicable", evaluation))
+                    results.append(
+                        EvaluatorDiagnostic(rule.key, "not_applicable", evaluation)
+                    )
                 else:
-                    results.append(EvaluatorDiagnostic(rule.key, "unavailable", evaluation))
+                    results.append(
+                        EvaluatorDiagnostic(rule.key, "unavailable", evaluation)
+                    )
         return tuple(results)
 
     def _execute(
@@ -370,27 +382,41 @@ def _unavailable_inputs(rule: EvaluatorRule, context: ScoringContext) -> str | N
             if pair <= room_types:
                 relevant_types.update(pair)
         for consistency in rule.settings.consistency_rules:
-            if sum(room.room_type == consistency.room_type for room in context.rooms) >= 2:
+            if (
+                sum(room.room_type == consistency.room_type for room in context.rooms)
+                >= 2
+            ):
                 relevant_types.add(consistency.room_type)
     elif isinstance(rule.settings, RoomRelationshipQualitySettings):
         for proximity in rule.settings.proximity_rules:
             pair = {proximity.source_type, proximity.target_type}
-            if proximity.enabled and pair <= room_types and sum(
-                room.room_type in pair for room in context.rooms
-            ) >= 2:
+            if (
+                proximity.enabled
+                and pair <= room_types
+                and sum(room.room_type in pair for room in context.rooms) >= 2
+            ):
                 relevant_types.update(pair)
         for clustering in rule.settings.clustering_rules:
-            if clustering.enabled and set(clustering.room_types) <= room_types and sum(
-                room.room_type in clustering.room_types for room in context.rooms
-            ) >= 2:
+            if (
+                clustering.enabled
+                and set(clustering.room_types) <= room_types
+                and sum(
+                    room.room_type in clustering.room_types for room in context.rooms
+                )
+                >= 2
+            ):
                 relevant_types.update(clustering.room_types)
     elif rule.key == BEDROOM_QUALITY_KEY:
         relevant_types = {RoomType.BEDROOM}
     elif rule.key == LIVING_ROOM_BALANCE_KEY and RoomType.LIVING_ROOM in room_types:
         relevant_types = room_types
 
-    invalid_ids = [room.room_id for room in context.rooms if room.room_type in relevant_types
-                   and (not room.polygon.is_valid or room.area <= 0)]
+    invalid_ids = [
+        room.room_id
+        for room in context.rooms
+        if room.room_type in relevant_types
+        and (not room.polygon.is_valid or room.area <= 0)
+    ]
     if invalid_ids:
         return "Valid room geometry is required for " + ", ".join(invalid_ids) + "."
     return None

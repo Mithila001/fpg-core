@@ -40,7 +40,9 @@ def start(runtime, *, document=None, layout_id=None, configuration_id=None):
     if (document is None) == (layout_id is None):
         raise ValueError("Select one saved floor plan or import a temporary layout")
     with runtime.database.session_factory() as session:
-        profile, validated = SystemConfigurationService(session, runtime.codec).for_flow(configuration_id, "e02b")
+        profile, validated = SystemConfigurationService(session, runtime.codec).for_flow(
+            configuration_id, "e02b"
+        )
         layout_name = "Temporary import"
         if layout_id is not None:
             saved = session.get(E02BSavedPlan, layout_id)

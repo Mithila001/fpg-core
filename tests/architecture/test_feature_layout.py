@@ -9,7 +9,11 @@ REQUIRED_FEATURE_FILES = {"__init__.py", "api.py", "exceptions.py"}
 def test_feature_packages_have_consistent_public_boundary() -> None:
     missing: list[str] = []
     for path in sorted(PACKAGE_ROOT.iterdir()):
-        if not path.is_dir() or path.name == "domain" or not (path / "__init__.py").is_file():
+        if (
+            not path.is_dir()
+            or path.name == "domain"
+            or not (path / "__init__.py").is_file()
+        ):
             continue
         names = {item.name for item in path.iterdir() if item.is_file()}
         for required in sorted(REQUIRED_FEATURE_FILES - names):

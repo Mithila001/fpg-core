@@ -22,7 +22,12 @@ class ExteriorDoorFeature:
             room.room_type is RoomType.VERANDA for room in prepared.rooms_by_id.values()
         )
         if has_veranda:
-            minimum = round(config.interior_doors.resolve((RoomType.LIVING_ROOM, RoomType.VERANDA)).minimum_shared_wall * prepared.scale)
+            minimum = round(
+                config.interior_doors.resolve(
+                    (RoomType.LIVING_ROOM, RoomType.VERANDA)
+                ).minimum_shared_wall
+                * prepared.scale
+            )
             has_veranda_connection = any(
                 wall.kind is WallKind.SHARED
                 and wall.length >= minimum
@@ -47,7 +52,8 @@ class ExteriorDoorFeature:
                 )
         if not has_veranda and prepared.rooms_by_id:
             side_priority = {
-                side: index for index, side in enumerate(config.policy.main_side_priority)
+                side: index
+                for index, side in enumerate(config.policy.main_side_priority)
             }
             options: list[PlacementOption] = []
             for index, wall in enumerate(exterior):

@@ -70,7 +70,6 @@ def test_circulation_required_transit_is_decoded_without_changing_scoring() -> N
     )
 
 
-
 def test_settings_paths_do_not_depend_on_working_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

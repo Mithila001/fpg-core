@@ -74,16 +74,28 @@ failure. Road edge indexes must be in `0..vertex_count-1`.
 
 ```python
 from fpg_core.buildable_land import (
-    BuildableLandConfig, BuildableLandInput, calculate_buildable_land,
+    BuildableLandConfig,
+    BuildableLandInput,
+    calculate_buildable_land,
 )
 from fpg_core.domain import (
-    BuildableSpaceRequestData, ExecutionMode, LandSide, Point, Polygon, RoadAttachment,
-    RoadRole, RoadType, SetbackCalculationMode, SetbackProfile,
+    BuildableSpaceRequestData,
+    ExecutionMode,
+    LandSide,
+    Point,
+    Polygon,
+    RoadAttachment,
+    RoadRole,
+    RoadType,
+    SetbackCalculationMode,
+    SetbackProfile,
     ValidationLimits,
 )
 
 profile = SetbackProfile(
-    name="residential", status="active", description="Local residential rules",
+    name="residential",
+    status="active",
+    description="Local residential rules",
     calculation_mode=SetbackCalculationMode.BASE_PLUS_ROAD_ADJUSTMENT,
     base_setbacks={side: 5 for side in LandSide},
     road_adjustments={RoadType.MAIN_ROAD: {side: 0 for side in LandSide}},

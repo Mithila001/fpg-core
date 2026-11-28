@@ -23,13 +23,22 @@ from fpg_lab.ui.components import (
 from fpg_lab.ui.experiments import register_experiments
 
 EXPERIMENTS = {
-    "e03a": ("Room Size Configuration Analyzer", "Compare room sizes, ratio rules and sizing flexibility"),
+    "e03a": (
+        "Room Size Configuration Analyzer",
+        "Compare room sizes, ratio rules and sizing flexibility",
+    ),
     "e02a": (
         "Quick Solver Results Test",
         "File-backed hint maps → solve → refine → post-process → score",
     ),
-    "e02c": ("Floor Plan Opening Generation", "Generate and inspect doors and windows on a saved plan"),
-    "e02b": ("Final Floor Plan Evaluation Inspector", "Inspect official scoring and evaluator measurements"),
+    "e02c": (
+        "Floor Plan Opening Generation",
+        "Generate and inspect doors and windows on a saved plan",
+    ),
+    "e02b": (
+        "Final Floor Plan Evaluation Inspector",
+        "Inspect official scoring and evaluator measurements",
+    ),
     "e01a": ("Floor Traffic", "Preset floor plans → walking paths → traffic heatmap"),
     "p01a": ("Candidate search", "Preprocess → search → circulation → candidate score"),
     "p01b": (
@@ -195,8 +204,11 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
                 lambda session: row_document(
                     service(session).create(draft)
                     if record_id is None
-                    else service(session).save(record_id, draft, expected_hash=state["expected_hash"])
-                    if is_config else service(session).update(record_id, draft)
+                    else service(session).save(
+                        record_id, draft, expected_hash=state["expected_hash"]
+                    )
+                    if is_config
+                    else service(session).update(record_id, draft)
                 ),
             )
             state["id"] = saved["id"]
@@ -250,8 +262,14 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
                 action_button("Refresh", role="subtle", on_click=refresh).props("dense")
         with ui.column().classes("lab-panel border rounded p-3 gap-3 min-w-0"):
             with ui.row().classes("w-full items-center gap-2"):
-                name = ui.input("Name", on_change=mark_dirty).props("dense outlined").classes("flex-1")
-                description = ui.input("Description", on_change=mark_dirty).props("dense outlined").classes("flex-[2]")
+                name = (
+                    ui.input("Name", on_change=mark_dirty).props("dense outlined").classes("flex-1")
+                )
+                description = (
+                    ui.input("Description", on_change=mark_dirty)
+                    .props("dense outlined")
+                    .classes("flex-[2]")
+                )
             # Python validates configuration drafts against the authoritative codec.
             editor = ui.json_editor({"content": {"json": {}}}, on_change=mark_dirty).classes(
                 "nicegui-json-editor w-full min-h-96"
@@ -261,14 +279,19 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
                 action_button("Save", role="main", on_click=save).props("dense")
                 action_button("Validate", on_click=validate).props("dense outline")
                 action_button("Duplicate", role="subtle", on_click=duplicate).props("dense")
-                action_button("Reset", role="subtle", on_click=lambda: set_editor(editor, state["baseline"])).props("dense")
+                action_button(
+                    "Reset", role="subtle", on_click=lambda: set_editor(editor, state["baseline"])
+                ).props("dense")
                 if is_config:
                     action_button("Activate", on_click=activate).props("dense outline")
                 action_button("Delete", role="danger", on_click=delete).props("dense flat")
     await refresh()
     if state["records"]:
-        picker.value = next((row["id"] for row in state["records"].values()
-                             if row.get("is_active")), None) if is_config else next(iter(state["records"]))
+        picker.value = (
+            next((row["id"] for row in state["records"].values() if row.get("is_active")), None)
+            if is_config
+            else next(iter(state["records"]))
+        )
         load_record()
     else:
         await new_record()

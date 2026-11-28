@@ -5,12 +5,12 @@ from typing import Any
 from ortools.sat.python import cp_model
 
 from .config import FloorPlanSolverConfig
+from .constraints.base import OBJECTIVE_SCALE
 from .contracts import (
     FloorPlanSolveResult,
     SolverDiagnostics,
     SolverStatus,
 )
-from .constraints.base import OBJECTIVE_SCALE
 from .extractor import extract_floor_plan
 from .model import BuiltModel
 

@@ -142,25 +142,45 @@ this block first when running an example that names an `example_*` value.
 
 ```python
 from fpg_core.domain import (
-    CandidateMap, CandidatePoint, CirculationRouteRule,
-    CirculationTrafficClass, DestinationSelection, FloorPlan,
-    FloorPlanGenerationSpec, FloorPlanRoom, FloorSpec, HallwayRoomCountRange,
-    Point, Polygon, ResolvedCandidateGrid, RoomId, RoomSizeSpec, RoomSpec,
+    CandidateMap,
+    CandidatePoint,
+    CirculationRouteRule,
+    CirculationTrafficClass,
+    DestinationSelection,
+    FloorPlan,
+    FloorPlanGenerationSpec,
+    FloorPlanRoom,
+    FloorSpec,
+    HallwayRoomCountRange,
+    Point,
+    Polygon,
+    ResolvedCandidateGrid,
+    RoomId,
+    RoomSizeSpec,
+    RoomSpec,
     RoomType,
 )
+
 
 def rectangle(x1: float, y1: float, x2: float, y2: float) -> Polygon:
     return Polygon((Point(x1, y1), Point(x2, y1), Point(x2, y2), Point(x1, y2)))
 
+
 example_specification = FloorPlanGenerationSpec(
     floor=FloorSpec(width=40, length=20),
     rooms=(
-        RoomSpec(RoomId("living"), RoomType.LIVING_ROOM, "Living",
-                 RoomSizeSpec(5, 20, 40, 400)),
-        RoomSpec(RoomId("kitchen"), RoomType.KITCHEN, "Kitchen",
-                 RoomSizeSpec(5, 15, 40, 200)),
-        RoomSpec(RoomId("hallway"), RoomType.HALLWAY, "Hallway",
-                 RoomSizeSpec(5, 10, 20, 200)),
+        RoomSpec(
+            RoomId("living"),
+            RoomType.LIVING_ROOM,
+            "Living",
+            RoomSizeSpec(5, 20, 40, 400),
+        ),
+        RoomSpec(
+            RoomId("kitchen"), RoomType.KITCHEN, "Kitchen", RoomSizeSpec(5, 15, 40, 200)
+        ),
+        RoomSpec(
+            RoomId("hallway"), RoomType.HALLWAY, "Hallway", RoomSizeSpec(5, 10, 20, 200)
+        ),
     ),
     room_relations=(),
 )
@@ -180,12 +200,15 @@ example_candidate = CandidateMap(
 example_floor_plan = FloorPlan(
     boundary=rectangle(0, 0, 40, 20),
     rooms=[
-        FloorPlanRoom(RoomId("living"), RoomType.LIVING_ROOM, "Living",
-                      rectangle(0, 0, 20, 20)),
-        FloorPlanRoom(RoomId("kitchen"), RoomType.KITCHEN, "Kitchen",
-                      rectangle(20, 0, 30, 20)),
-        FloorPlanRoom(RoomId("hallway"), RoomType.HALLWAY, "Hallway",
-                      rectangle(30, 0, 40, 20)),
+        FloorPlanRoom(
+            RoomId("living"), RoomType.LIVING_ROOM, "Living", rectangle(0, 0, 20, 20)
+        ),
+        FloorPlanRoom(
+            RoomId("kitchen"), RoomType.KITCHEN, "Kitchen", rectangle(20, 0, 30, 20)
+        ),
+        FloorPlanRoom(
+            RoomId("hallway"), RoomType.HALLWAY, "Hallway", rectangle(30, 0, 40, 20)
+        ),
     ],
 )
 example_route_rule = CirculationRouteRule(

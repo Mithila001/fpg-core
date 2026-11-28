@@ -166,17 +166,32 @@ of front or back exposure, add this use to a configuration's hard constraints:
 from fpg_core.domain import RoomType
 from fpg_core.floor_plan_solver import HardConstraintUse
 
-bedroom_exposure = HardConstraintUse("exterior_wall_exposure", {
-    "rules": [{
-        "id": "two_bedrooms",
-        "room_types": [RoomType.BEDROOM],
-        "match": {"policy": "at_least", "count": 2},
-        "requirement": {"any": [
-            {"side": "front", "coverage": "minimum_continuous_length", "minimum_length": 10},
-            {"side": "back", "coverage": "minimum_continuous_length", "minimum_length": 10},
-        ]},
-    }],
-})
+bedroom_exposure = HardConstraintUse(
+    "exterior_wall_exposure",
+    {
+        "rules": [
+            {
+                "id": "two_bedrooms",
+                "room_types": [RoomType.BEDROOM],
+                "match": {"policy": "at_least", "count": 2},
+                "requirement": {
+                    "any": [
+                        {
+                            "side": "front",
+                            "coverage": "minimum_continuous_length",
+                            "minimum_length": 10,
+                        },
+                        {
+                            "side": "back",
+                            "coverage": "minimum_continuous_length",
+                            "minimum_length": 10,
+                        },
+                    ]
+                },
+            }
+        ],
+    },
+)
 ```
 
 Use `SoftConstraintUse` with the same settings and a positive weight for a
@@ -211,14 +226,24 @@ are invalid. Unknown fields and the former `rules` format are rejected.
 For example:
 
 ```python
-SoftConstraintUse("room_size_relations", weight=1.0, settings={
-    "precision": 1000,
-    "cross_type_rules": [{"compared_type": RoomType.KITCHEN,
-                          "reference_type": RoomType.LIVING_ROOM,
-                          "min_ratio": 0.4, "max_ratio": 0.8}],
-    "same_type_rules": [{"room_type": RoomType.BEDROOM,
-                         "maximum_spread_ratio": 0.25}],
-})
+SoftConstraintUse(
+    "room_size_relations",
+    weight=1.0,
+    settings={
+        "precision": 1000,
+        "cross_type_rules": [
+            {
+                "compared_type": RoomType.KITCHEN,
+                "reference_type": RoomType.LIVING_ROOM,
+                "min_ratio": 0.4,
+                "max_ratio": 0.8,
+            }
+        ],
+        "same_type_rules": [
+            {"room_type": RoomType.BEDROOM, "maximum_spread_ratio": 0.25}
+        ],
+    },
+)
 ```
 
 Each applicable cross-type rule covers every combination through extrema: the
@@ -277,17 +302,20 @@ verandas are absent (1 m, 0.5 m and 1 m at 10 units per metre).
 from fpg_core.domain import RoomType
 from fpg_core.floor_plan_solver import HardConstraintUse
 
-front_setback = HardConstraintUse("front_wall_setback", {
-    "rules": [
-        {"room_types": [RoomType.GARAGE], "maximum_setback": 10},
-        {"room_types": [RoomType.VERANDA], "maximum_setback": 5},
-        {
-            "room_types": [RoomType.LIVING_ROOM],
-            "maximum_setback": 10,
-            "when": {"room_type": RoomType.VERANDA, "exists": False},
-        },
-    ],
-})
+front_setback = HardConstraintUse(
+    "front_wall_setback",
+    {
+        "rules": [
+            {"room_types": [RoomType.GARAGE], "maximum_setback": 10},
+            {"room_types": [RoomType.VERANDA], "maximum_setback": 5},
+            {
+                "room_types": [RoomType.LIVING_ROOM],
+                "maximum_setback": 10,
+                "when": {"room_type": RoomType.VERANDA, "exists": False},
+            },
+        ],
+    },
+)
 ```
 
 Use `config.with_hard_constraints(front_setback)` to replace the policy,
@@ -332,14 +360,19 @@ sides can qualify even if their shared segments leave a gap at the common corner
 from fpg_core.domain import RoomType
 from fpg_core.floor_plan_solver import HardConstraintUse
 
-garage_wall_sharing = HardConstraintUse("fully_shared_wall", {
-    "rules": [{
-        "room_types": [RoomType.GARAGE],
-        "minimum_shared_sides": 2,
-        "arrangement": "adjacent",
-        "uncovered_length_tolerance": 10,
-    }],
-})
+garage_wall_sharing = HardConstraintUse(
+    "fully_shared_wall",
+    {
+        "rules": [
+            {
+                "room_types": [RoomType.GARAGE],
+                "minimum_shared_sides": 2,
+                "arrangement": "adjacent",
+                "uncovered_length_tolerance": 10,
+            }
+        ],
+    },
+)
 ```
 
 This policy encourages compactness and limits room placement, dimensions and

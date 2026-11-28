@@ -77,6 +77,7 @@ def register_experiments(runtime: LabRuntime) -> None:
             return
         if flow == "e02a":
             from fpg_lab.ui.e02a import main_page as e02a_page
+
             await e02a_page(runtime)
             return
         if flow == "e02c":
@@ -150,7 +151,9 @@ def register_experiments(runtime: LabRuntime) -> None:
                     label="Load a template",
                     on_change=apply_template,
                 ).classes("min-w-80")
-                trial_count = ui.number("Trials", value=100, min=1, max=100000, precision=0).classes("w-32")
+                trial_count = ui.number(
+                    "Trials", value=100, min=1, max=100000, precision=0
+                ).classes("w-32")
                 debug = ui.checkbox("Store debug data", value=True)
             if not configurations:
                 ui.label(
@@ -171,6 +174,7 @@ def register_experiments(runtime: LabRuntime) -> None:
                 },
                 schema=FloorPlanRequest.model_json_schema(),
             ).classes("nicegui-json-editor w-full min-h-72")
+
             async def start() -> None:
                 start_button.disable()
                 try:
@@ -191,7 +195,9 @@ def register_experiments(runtime: LabRuntime) -> None:
                     start_button.enable()
 
             with ui.row():
-                start_button = action_button(f"Start {format_experiment_code(flow)}", role="main", on_click=start)
+                start_button = action_button(
+                    f"Start {format_experiment_code(flow)}", role="main", on_click=start
+                )
 
         area = ui.column().classes("w-full")
         page = ui.number("History page", value=1, min=1, precision=0).classes("w-36")
@@ -249,6 +255,7 @@ def register_experiments(runtime: LabRuntime) -> None:
             return
         if flow == "e02a":
             from fpg_lab.ui.e02a import run_page as e02a_run_page
+
             await e02a_run_page(runtime, experiment_id)
             return
         if flow in ("p01b", "p01c"):
@@ -280,11 +287,15 @@ def register_experiments(runtime: LabRuntime) -> None:
             counters = ui.label().classes("text-sm")
             progress = ui.linear_progress(value=0).classes("w-full")
             with ui.row().classes("w-full gap-2 items-center"):
-                action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props("dense flat")
+                action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props(
+                    "dense flat"
+                )
                 terminate_button = action_button("Terminate", role="danger").props("dense outline")
-            trial_page = ui.number(
-                "Trial history page", value=1, min=1, precision=0
-            ).classes("w-full").props("dense")
+            trial_page = (
+                ui.number("Trial history page", value=1, min=1, precision=0)
+                .classes("w-full")
+                .props("dense")
+            )
             replay_controls = ui.column().classes("w-full gap-2")
         with workspace.context("Canvas"):
             replay_context = ui.column().classes("w-full gap-2")
@@ -293,9 +304,9 @@ def register_experiments(runtime: LabRuntime) -> None:
                 "text-sm lab-muted"
             )
         with workspace.context("Trials"):
-            ui.label("Choose a trial to seek its replay frame, or open the saved trial record.").classes(
-                "text-sm lab-muted"
-            )
+            ui.label(
+                "Choose a trial to seek its replay frame, or open the saved trial record."
+            ).classes("text-sm lab-muted")
         with workspace.context("Diagnostics"):
             ui.label("Saved request, preprocessing, configuration and errors.").classes(
                 "text-sm lab-muted"
@@ -351,7 +362,8 @@ def register_experiments(runtime: LabRuntime) -> None:
                     replay_area.clear()
                     charts_area.clear()
                     replay_seek = await candidate_replay(
-                        runtime, item,
+                        runtime,
+                        item,
                         canvas_area=replay_area,
                         controls_area=replay_controls,
                         context_area=replay_context,
@@ -398,12 +410,19 @@ def register_experiments(runtime: LabRuntime) -> None:
                         f"Stop reason: {item['stop_reason'] or '—'}"
                         f" · Core {item['fpg_core_version']}"
                     ).classes("text-sm lab-muted")
-                    json_panel("Request and configuration provenance", {
-                        key: item[key] for key in (
-                            "floor_plan_request", "system_configuration_snapshot",
-                            "system_configuration_hash", "fpg_core_version", "hint_points",
-                        )
-                    })
+                    json_panel(
+                        "Request and configuration provenance",
+                        {
+                            key: item[key]
+                            for key in (
+                                "floor_plan_request",
+                                "system_configuration_snapshot",
+                                "system_configuration_hash",
+                                "fpg_core_version",
+                                "hint_points",
+                            )
+                        },
+                    )
                     json_panel("Preprocessing", item["preprocessing_result"])
                     if item["error_data"]:
                         json_panel("Experiment error", item["error_data"])
@@ -424,6 +443,7 @@ def register_experiments(runtime: LabRuntime) -> None:
             shell("This experiment has no candidate trials")
             return
         try:
+
             def read(session: Any) -> Any:
                 trial = FLOW_SERVICES[flow](session).get_trial(trial_id)
                 if trial.experiment_id != experiment_id:
@@ -451,9 +471,9 @@ def register_experiments(runtime: LabRuntime) -> None:
                 back_link=f"/experiments/{flow}/runs/{experiment_id}",
                 back_label="Back to run",
                 views=("Canvas", "Scores", "Diagnostics"),
-                default="Canvas" if candidate else (
-                    "Scores" if item["candidate_scoring_data"] else "Diagnostics"
-                ),
+                default="Canvas"
+                if candidate
+                else ("Scores" if item["candidate_scoring_data"] else "Diagnostics"),
             )
             with workspace.main("Canvas"):
                 if candidate:
@@ -470,15 +490,17 @@ def register_experiments(runtime: LabRuntime) -> None:
             with workspace.main("Diagnostics"):
                 json_panel("Candidate, circulation, scoring and errors", item)
             with workspace.controls:
-                ui.label(
-                    f"Trial {item['trial_no']} · {item['status']}"
-                ).classes("font-semibold text-sm")
-                ui.label(f"Score: {item['final_score'] if item['final_score'] is not None else '—'}").classes(
-                    "text-sm"
+                ui.label(f"Trial {item['trial_no']} · {item['status']}").classes(
+                    "font-semibold text-sm"
                 )
+                ui.label(
+                    f"Score: {item['final_score'] if item['final_score'] is not None else '—'}"
+                ).classes("text-sm")
                 if exported is not None:
                     action_button(
-                        "Copy cleaned hint map", role="subtle", icon="content_copy",
+                        "Copy cleaned hint map",
+                        role="subtle",
+                        icon="content_copy",
                         on_click=lambda: ui.run_javascript(
                             f"navigator.clipboard.writeText({json.dumps(json.dumps(exported))})"
                         ),
@@ -492,9 +514,10 @@ def register_experiments(runtime: LabRuntime) -> None:
             with workspace.context("Diagnostics"):
                 ui.label("Full saved trial data and errors.").classes("text-sm lab-muted")
         except Exception as exc:
-            shell("Candidate trial unavailable", back_link=f"/experiments/{flow}/runs/{experiment_id}")
+            shell(
+                "Candidate trial unavailable", back_link=f"/experiments/{flow}/runs/{experiment_id}"
+            )
             ui.label(str(exc)).classes("text-rose-300")
-
 
 
 def _history(session: Any, flow: str, page: int) -> Any:
@@ -525,7 +548,12 @@ def _run_data(session: Any, flow: str, experiment_id: int, page: int) -> Any:
     scores = [
         dict(row)
         for row in session.execute(
-            select(P01CandidateTrial.trial_no, P01CandidateTrial.final_score, P01CandidateTrial.status, P01CandidateTrial.error_data)
+            select(
+                P01CandidateTrial.trial_no,
+                P01CandidateTrial.final_score,
+                P01CandidateTrial.status,
+                P01CandidateTrial.error_data,
+            )
             .where(P01CandidateTrial.experiment_id == experiment_id)
             .order_by(P01CandidateTrial.trial_no)
         ).mappings()

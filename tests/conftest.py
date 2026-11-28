@@ -69,7 +69,9 @@ def floor_plan() -> FloorPlan:
                 boundary=rectangle(0, 0, 20, 20),
             ),
             FloorPlanRoom(
-                id=RoomId("kitchen"), room_type=RoomType.KITCHEN, name="Kitchen",
+                id=RoomId("kitchen"),
+                room_type=RoomType.KITCHEN,
+                name="Kitchen",
                 boundary=rectangle(40, 0, 60, 20),
             ),
         ],

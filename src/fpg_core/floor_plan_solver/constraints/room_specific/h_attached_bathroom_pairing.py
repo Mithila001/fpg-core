@@ -62,9 +62,7 @@ def _exact_and_literal(
         context.model.AddImplication(result, condition)
 
     # If every condition is true, result must also be true.
-    context.model.AddBoolOr(
-        [condition.Not() for condition in conditions] + [result]
-    )
+    context.model.AddBoolOr([condition.Not() for condition in conditions] + [result])
     return result
 
 
@@ -230,9 +228,7 @@ class AttachedBathroomPairingConstraint:
         )
 
         try:
-            minimum_shared_wall_value = float(
-                settings.get("minimum_shared_wall", 10.0)
-            )
+            minimum_shared_wall_value = float(settings.get("minimum_shared_wall", 10.0))
         except (TypeError, ValueError) as exc:
             raise InvalidProfileError(
                 "attached_bathroom_pairing.minimum_shared_wall must be numeric"
@@ -254,9 +250,7 @@ class AttachedBathroomPairingConstraint:
 
         all_rooms = tuple(context.room_variables.values())
         attached_bathrooms = tuple(
-            room
-            for room in all_rooms
-            if room.room.room_type in attached_bathroom_types
+            room for room in all_rooms if room.room.room_type in attached_bathroom_types
         )
         bedrooms = tuple(
             room for room in all_rooms if room.room.room_type in bedroom_types
@@ -287,9 +281,7 @@ class AttachedBathroomPairingConstraint:
 
             # Every present attached bathroom must share a qualifying wall with
             # exactly one bedroom. An absent optional bathroom has no pairing.
-            context.model.Add(
-                sum(bathroom_pairings) == attached_bathroom.present
-            )
+            context.model.Add(sum(bathroom_pairings) == attached_bathroom.present)
 
         for bedroom in bedrooms:
             bedroom_pairings = pairings_by_bedroom[bedroom.room.id_key]
@@ -298,6 +290,4 @@ class AttachedBathroomPairingConstraint:
 
             # A present bedroom may serve no more than one attached bathroom.
             # An absent optional bedroom cannot serve any bathroom.
-            context.model.Add(
-                sum(bedroom_pairings) <= bedroom.present
-            )
+            context.model.Add(sum(bedroom_pairings) <= bedroom.present)

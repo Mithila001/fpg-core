@@ -34,7 +34,9 @@ def find_usable_land(
     started_at = perf_counter()
     try:
         transform = build_road_aligned_transform(usable_input.land)
-        local_buildable = transform.to_local_polygon(usable_input.buildable_land.boundary)
+        local_buildable = transform.to_local_polygon(
+            usable_input.buildable_land.boundary
+        )
         candidate, evaluated = find_best_local_rectangle(
             local_buildable,
             usable_input.config,

@@ -23,6 +23,5 @@ class MinimumCoverageConstraint:
 
         required_area = int(math.ceil(context.problem.floor.area * ratio))
         context.model.Add(
-            sum(room.area for room in context.room_variables.values())
-            >= required_area
+            sum(room.area for room in context.room_variables.values()) >= required_area
         )

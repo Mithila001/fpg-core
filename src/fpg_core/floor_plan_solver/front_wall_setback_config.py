@@ -21,7 +21,9 @@ def validate_front_wall_setback_settings(settings: Mapping[str, Any]) -> None:
     required = {"room_types", "maximum_setback"}
     for index, rule in enumerate(rules):
         path = f"{key}.rules[{index}]"
-        if not isinstance(rule, Mapping) or not required <= set(rule) <= required | {"when"}:
+        if not isinstance(rule, Mapping) or not required <= set(rule) <= required | {
+            "when"
+        }:
             raise InvalidProfileError(f"{path} has invalid fields")
         room_types = rule["room_types"]
         if (
@@ -44,8 +46,12 @@ def validate_front_wall_setback_settings(settings: Mapping[str, Any]) -> None:
         if "when" in rule:
             when = rule["when"]
             if not isinstance(when, Mapping) or set(when) != {"room_type", "exists"}:
-                raise InvalidProfileError(f"{path}.when must contain only room_type and exists")
+                raise InvalidProfileError(
+                    f"{path}.when must contain only room_type and exists"
+                )
             if not isinstance(when["room_type"], RoomType):
-                raise InvalidProfileError(f"{path}.when.room_type must be a RoomType member")
+                raise InvalidProfileError(
+                    f"{path}.when.room_type must be a RoomType member"
+                )
             if type(when["exists"]) is not bool:
                 raise InvalidProfileError(f"{path}.when.exists must be Boolean")

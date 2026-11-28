@@ -43,16 +43,26 @@ async def main_page(runtime):
         with ui.column().classes("lab-setup-sidebar"):
             profile = await profile_picker(runtime)
             profile.classes("w-full")
-            saved = ui.select({}, label="Saved floor plans", clearable=True).props("dense outlined").classes("w-full")
+            saved = (
+                ui.select({}, label="Saved floor plans", clearable=True)
+                .props("dense outlined")
+                .classes("w-full")
+            )
             regenerate = ui.checkbox("Replace existing openings", value=False)
             launch = action_button("Run", role="main").classes("w-full")
             launch.disable()
-            action_button("Import", icon="upload", on_click=lambda: import_dialog.open()).props("dense outline")
+            action_button("Import", icon="upload", on_click=lambda: import_dialog.open()).props(
+                "dense outline"
+            )
             remove = action_button("Delete", role="danger").props("dense flat")
             remove.disable()
             ui.separator()
-            action_button("Opening settings", role="subtle", on_click=lambda: config_dialog.open()).props("dense")
-            action_button("History", role="subtle", on_click=lambda: history_dialog.open()).props("dense")
+            action_button(
+                "Opening settings", role="subtle", on_click=lambda: config_dialog.open()
+            ).props("dense")
+            action_button("History", role="subtle", on_click=lambda: history_dialog.open()).props(
+                "dense"
+            )
 
     with ui.dialog() as import_dialog, ui.card().classes("w-[52rem] max-w-full gap-3"):
         ui.label("Import floor plan").classes("text-lg font-semibold")
@@ -64,7 +74,10 @@ async def main_page(runtime):
             save.disable()
             action_button("Close", role="subtle", on_click=import_dialog.close).props("dense")
 
-    with ui.dialog() as config_dialog, ui.card().classes("w-[60rem] max-w-full max-h-[85vh] overflow-auto"):
+    with (
+        ui.dialog() as config_dialog,
+        ui.card().classes("w-[60rem] max-w-full max-h-[85vh] overflow-auto"),
+    ):
         ui.label("Opening settings").classes("text-lg font-semibold")
         config_status = ui.label().classes("text-sm whitespace-pre-wrap")
         with ui.row().classes("gap-2"):
@@ -74,11 +87,17 @@ async def main_page(runtime):
             action_button("Close", role="subtle", on_click=config_dialog.close).props("dense")
         config_area = ui.column().classes("w-full gap-2")
 
-    with ui.dialog() as history_dialog, ui.card().classes("w-[32rem] max-w-full max-h-[80vh] overflow-auto"):
+    with (
+        ui.dialog() as history_dialog,
+        ui.card().classes("w-[32rem] max-w-full max-h-[80vh] overflow-auto"),
+    ):
         ui.label("Recent runs").classes("text-lg font-semibold")
-        history = await db_call(runtime, lambda session: session.execute(
-            select(E02CRun.id, E02CRun.status).order_by(E02CRun.id.desc()).limit(50)
-        ).all())
+        history = await db_call(
+            runtime,
+            lambda session: session.execute(
+                select(E02CRun.id, E02CRun.status).order_by(E02CRun.id.desc()).limit(50)
+            ).all(),
+        )
         if not history:
             ui.label("No saved runs yet.").classes("text-sm lab-muted")
         for run_id, status in history:
@@ -86,7 +105,12 @@ async def main_page(runtime):
         action_button("Close", role="subtle", on_click=history_dialog.close).props("dense")
 
     def show_document(document, layout_id, name_text):
-        plan_state.update(document=document, layout_id=layout_id, configuration_id=profile.value, regenerate=regenerate.value)
+        plan_state.update(
+            document=document,
+            layout_id=layout_id,
+            configuration_id=profile.value,
+            regenerate=regenerate.value,
+        )
         plan = document["floor_plan"] if document else None
         units = document["project_units_per_meter"] if document else None
         preview.figure = figures.floor_plan(
@@ -185,7 +209,14 @@ async def main_page(runtime):
         try:
             layout_id = plan_state["layout_id"]
             document = plan_state["document"] if layout_id is None else None
-            run_id = await run.io_bound(start, runtime, document=document, layout_id=layout_id, configuration_id=profile.value, regenerate=regenerate.value)
+            run_id = await run.io_bound(
+                start,
+                runtime,
+                document=document,
+                layout_id=layout_id,
+                configuration_id=profile.value,
+                regenerate=regenerate.value,
+            )
             ui.navigate.to(f"{PATH}/runs/{run_id}")
         except Exception as exc:
             launch.set_enabled(plan_state["document"] is not None)
@@ -215,16 +246,24 @@ async def _config_editor(runtime, profile, area, feedback, save, validate, disca
         area.clear()
         save.disable()
         try:
+
             def read(session):
-                record, validated = SystemConfigurationService(session, runtime.codec).for_flow(profile.value, "e02c")
+                record, validated = SystemConfigurationService(session, runtime.codec).for_flow(
+                    profile.value, "e02c"
+                )
                 return record.id, record.config_hash, validated.payload
+
             profile_id, expected, payload = await db_call(runtime, read)
             if current != load_number:
                 return
             loaded = (profile_id, expected, payload)
             with area:
-                ui.label("Configure window room types and policies, connection limits, door dimensions, clearances and solver settings. A secondary entrance is required.").classes("text-sm lab-muted")
-                editor = ui.json_editor({"content": {"json": payload["openings"]}, "mode": "tree"}).classes("w-full")
+                ui.label(
+                    "Configure window room types and policies, connection limits, door dimensions, clearances and solver settings. A secondary entrance is required."
+                ).classes("text-sm lab-muted")
+                editor = ui.json_editor(
+                    {"content": {"json": payload["openings"]}, "mode": "tree"}
+                ).classes("w-full")
             save.enable()
             feedback.set_text("Saved opening settings loaded.")
         except Exception as exc:
@@ -247,7 +286,14 @@ async def _config_editor(runtime, profile, area, feedback, save, validate, disca
         save.disable()
         try:
             value = await editor_value(editor)
-            new_hash = await db_call(runtime, lambda session: SystemConfigurationService(session, runtime.codec).save_section(saved[0], "openings", value, expected_hash=saved[1]).config_hash)
+            new_hash = await db_call(
+                runtime,
+                lambda session: (
+                    SystemConfigurationService(session, runtime.codec)
+                    .save_section(saved[0], "openings", value, expected_hash=saved[1])
+                    .config_hash
+                ),
+            )
             if loaded == saved:
                 loaded = (saved[0], new_hash, {**saved[2], "openings": value})
                 feedback.set_text("Opening settings saved.")
@@ -276,14 +322,21 @@ def opening_figure(plan, generated, original, show_doors, show_windows, show_ori
     chart = figures.floor_plan({**plan, "openings": []})
     chart.update_traces(showlegend=False)
     chart.update_layout(
-        title=None, uirevision="e02c-plan", margin=dict(l=10, r=10, t=10, b=10),
-        dragmode="pan", legend=dict(orientation="h", x=0, y=1, yanchor="top",
-                                    itemclick=False, itemdoubleclick=False),
+        title=None,
+        uirevision="e02c-plan",
+        margin=dict(l=10, r=10, t=10, b=10),
+        dragmode="pan",
+        legend=dict(
+            orientation="h", x=0, y=1, yanchor="top", itemclick=False, itemdoubleclick=False
+        ),
     )
     chart.update_xaxes(title=None, showgrid=False, showticklabels=False, ticks="")
     chart.update_yaxes(title=None, showgrid=False, showticklabels=False, ticks="")
-    points = [point for polygon in [plan.get("boundary"), *(r.get("boundary") for r in plan.get("rooms", []))]
-              for point in (polygon or {}).get("points", [])]
+    points = [
+        point
+        for polygon in [plan.get("boundary"), *(r.get("boundary") for r in plan.get("rooms", []))]
+        for point in (polygon or {}).get("points", [])
+    ]
     if points:
         xs, ys = [p["x"] for p in points], [p["y"] for p in points]
         padding = max(max(xs) - min(xs), max(ys) - min(ys)) * 0.03 or 1
@@ -293,16 +346,26 @@ def opening_figure(plan, generated, original, show_doors, show_windows, show_ori
     for source, openings in (("Generated", generated), ("Original", original)):
         for index, opening in enumerate(openings):
             kind = opening["opening_type"]
-            visible = (show_doors if kind == "door" else show_windows) and (source == "Generated" or show_original)
+            visible = (show_doors if kind == "door" else show_windows) and (
+                source == "Generated" or show_original
+            )
             start, end = opening["start"], opening["end"]
             focused = visible and selected == (source, index)
             chart.add_scatter(
-                x=[start["x"], end["x"]], y=[start["y"], end["y"]], mode="lines",
-                name=kind.title(), legendgroup=kind, showlegend=visible and kind not in seen,
+                x=[start["x"], end["x"]],
+                y=[start["y"], end["y"]],
+                mode="lines",
+                name=kind.title(),
+                legendgroup=kind,
+                showlegend=visible and kind not in seen,
                 visible=visible,
-                line=dict(color="#ffffff" if focused else ("#75beff" if kind == "window" else "#dcdcaa"),
-                          width=10 if focused else 6, dash="dash" if source == "Original" else "solid"),
-                hovertext=f"{source} {kind}", hoverinfo="text",
+                line=dict(
+                    color="#ffffff" if focused else ("#75beff" if kind == "window" else "#dcdcaa"),
+                    width=10 if focused else 6,
+                    dash="dash" if source == "Original" else "solid",
+                ),
+                hovertext=f"{source} {kind}",
+                hoverinfo="text",
             )
             if visible:
                 seen.add(kind)
@@ -321,18 +384,25 @@ async def run_page(runtime, run_id):
     context = workspace.context("Canvas")
 
     async def refresh():
-        record = await db_call(runtime, lambda session: row_document(row) if (row := session.get(E02CRun, run_id)) else None)
+        record = await db_call(
+            runtime,
+            lambda session: row_document(row) if (row := session.get(E02CRun, run_id)) else None,
+        )
         if record is None:
             status.set_text("Run not found")
             timer.deactivate()
             return
         snapshot = record["snapshot"]
         status.set_text(plots.label(record["status"]).capitalize())
-        provenance.set_text(f"{snapshot['layout_name']} ? Core {snapshot['core_version']} ? {snapshot['configuration_hash'][:12]}")
+        provenance.set_text(
+            f"{snapshot['layout_name']} ? Core {snapshot['core_version']} ? {snapshot['configuration_hash'][:12]}"
+        )
         original = snapshot["input"]
         plan = original["floor_plan"]
         if record["status"] in {"queued", "running"}:
-            chart.figure = opening_figure(plan, [], plan.get("openings", []), True, True, True, None)
+            chart.figure = opening_figure(
+                plan, [], plan.get("openings", []), True, True, True, None
+            )
             chart.update()
             timer.activate()
             return
@@ -340,43 +410,84 @@ async def run_page(runtime, run_id):
         if record["duration_seconds"] is not None:
             status.set_text(f"{status.text} ? {record['duration_seconds']:.3f} s")
         if record["error"]:
-            error.set_text(f"{plots.label(record['error']['stage'])} ? {record['error']['message']}")
+            error.set_text(
+                f"{plots.label(record['error']['stage'])} ? {record['error']['message']}"
+            )
         result = record["result"] or {}
         generated_plan = result.get("floor_plan") if record["status"] == "completed" else None
         generated = (generated_plan or {}).get("openings", [])
         original_openings = plan.get("openings", [])
         rooms = {room["id"]: room.get("name") or room["id"] for room in plan.get("rooms", [])}
-        choices = [(source, i, opening) for source, openings in (("Generated", generated), ("Original", original_openings))
-                   for i, opening in enumerate(openings)]
+        choices = [
+            (source, i, opening)
+            for source, openings in (("Generated", generated), ("Original", original_openings))
+            for i, opening in enumerate(openings)
+        ]
         with context:
-            ui.label(f"{sum(o['opening_type'] == 'door' for o in generated)} doors ? {sum(o['opening_type'] == 'window' for o in generated)} windows").classes("text-sm font-medium")
+            ui.label(
+                f"{sum(o['opening_type'] == 'door' for o in generated)} doors ? {sum(o['opening_type'] == 'window' for o in generated)} windows"
+            ).classes("text-sm font-medium")
             issues = (record["diagnostics"] or {}).get("issues", [])
-            visible_issues = [issue for issue in issues if issue.get("code") not in {"not_selected", "no_candidate"}]
-            warnings = [issue for issue in visible_issues if issue.get("code") in {"missing_window", "reduced_preferred_clearance", "undersized_exterior_door"}]
+            visible_issues = [
+                issue
+                for issue in issues
+                if issue.get("code") not in {"not_selected", "no_candidate"}
+            ]
+            warnings = [
+                issue
+                for issue in visible_issues
+                if issue.get("code")
+                in {"missing_window", "reduced_preferred_clearance", "undersized_exterior_door"}
+            ]
             failures = [issue for issue in visible_issues if issue not in warnings]
-            for title, group in (("Generation problems", failures), ("Optional opening warnings", warnings)):
+            for title, group in (
+                ("Generation problems", failures),
+                ("Optional opening warnings", warnings),
+            ):
                 if group:
                     ui.label(title).classes("font-semibold text-sm")
                 for issue in group:
-                    ui.label(issue.get("message", "Generation issue")).classes("text-sm whitespace-pre-wrap")
+                    ui.label(issue.get("message", "Generation issue")).classes(
+                        "text-sm whitespace-pre-wrap"
+                    )
             if not generated_plan and result.get("status") == "infeasible":
-                ui.label("The required entrances and room connections could not all be placed with these settings.").classes("text-sm")
+                ui.label(
+                    "The required entrances and room connections could not all be placed with these settings."
+                ).classes("text-sm")
             ui.label("Opening visibility").classes("font-semibold text-sm")
             doors = ui.checkbox("Doors", value=True).props("dense")
             windows = ui.checkbox("Windows", value=True).props("dense")
-            show_original = ui.checkbox("Original openings", value=not bool(generated_plan)).props("dense") if original_openings else None
+            show_original = (
+                ui.checkbox("Original openings", value=not bool(generated_plan)).props("dense")
+                if original_openings
+                else None
+            )
             ui.label("Inspect opening").classes("font-semibold text-sm")
-            picker = ui.select(
-                {f"{source}:{i}": f"{opening_label(opening, rooms)} ? {source} {opening['opening_type']}"
-                 for source, i, opening in choices}, label="Opening", clearable=True,
-            ).props("dense outlined").classes("w-full")
+            picker = (
+                ui.select(
+                    {
+                        f"{source}:{i}": f"{opening_label(opening, rooms)} ? {source} {opening['opening_type']}"
+                        for source, i, opening in choices
+                    },
+                    label="Opening",
+                    clearable=True,
+                )
+                .props("dense outlined")
+                .classes("w-full")
+            )
             details = ui.column().classes("w-full gap-1")
             if generated_plan:
                 document = {**original, "floor_plan": generated_plan}
+
                 def copy_plan():
-                    ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})")
+                    ui.run_javascript(
+                        f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})"
+                    )
                     ui.notify("Generated floor plan copied")
-                action_button("Copy generated plan", icon="content_copy", on_click=copy_plan).props("dense outline")
+
+                action_button("Copy generated plan", icon="content_copy", on_click=copy_plan).props(
+                    "dense outline"
+                )
             with ui.expansion("Diagnostics").props("dense").classes("w-full"):
                 json_panel("Generation result", result)
                 json_panel("Core diagnostics", record["diagnostics"])
@@ -385,10 +496,23 @@ async def run_page(runtime, run_id):
                     json_panel("Error details", record["error"])
 
         def redraw():
-            selected = next(((source, i, opening) for source, i, opening in choices if picker.value == f"{source}:{i}"), None)
-            chart.figure = opening_figure(plan, generated, original_openings, doors.value, windows.value,
-                                          show_original.value if show_original else False,
-                                          selected[:2] if selected else None)
+            selected = next(
+                (
+                    (source, i, opening)
+                    for source, i, opening in choices
+                    if picker.value == f"{source}:{i}"
+                ),
+                None,
+            )
+            chart.figure = opening_figure(
+                plan,
+                generated,
+                original_openings,
+                doors.value,
+                windows.value,
+                show_original.value if show_original else False,
+                selected[:2] if selected else None,
+            )
             chart.update()
             details.clear()
             if selected:
@@ -397,20 +521,32 @@ async def run_page(runtime, run_id):
                 width = hypot(end["x"] - start["x"], end["y"] - start["y"])
                 with details:
                     ui.label(opening_label(opening, rooms)).classes("text-sm font-medium")
-                    ui.label(f"{opening['opening_type'].title()} ? {width:.3g} project units").classes("text-sm")
+                    ui.label(
+                        f"{opening['opening_type'].title()} ? {width:.3g} project units"
+                    ).classes("text-sm")
                     json_panel("Technical details", opening)
+
         doors.on_value_change(redraw)
         windows.on_value_change(redraw)
         if show_original:
             show_original.on_value_change(redraw)
+
         def select_opening():
-            selected = next(((source, opening) for source, i, opening in choices if picker.value == f"{source}:{i}"), None)
+            selected = next(
+                (
+                    (source, opening)
+                    for source, i, opening in choices
+                    if picker.value == f"{source}:{i}"
+                ),
+                None,
+            )
             if selected:
                 source, opening = selected
                 (doors if opening["opening_type"] == "door" else windows).set_value(True)
                 if source == "Original" and show_original:
                     show_original.set_value(True)
             redraw()
+
         picker.on_value_change(select_opening)
         redraw()
 

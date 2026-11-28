@@ -31,9 +31,7 @@ class LivingRoomBalanceEvaluator(FloorPlanEvaluator):
     def evaluate(self, context: ScoringContext, settings: object) -> EvaluatorResult:
         config = typed_settings(settings, LivingRoomBalanceSettings, str(self.key))
         living_rooms = [
-            room
-            for room in context.rooms
-            if room.room_type is RoomType.LIVING_ROOM
+            room for room in context.rooms if room.room_type is RoomType.LIVING_ROOM
         ]
         if not living_rooms:
             return EvaluatorResult(self.key, EvaluationStatus.NOT_APPLICABLE, None)

@@ -38,8 +38,12 @@ class HallwayDimensionsConstraint:
 
         minimum_width = context.problem.scale.minimum_length(minimum_width)
         maximum_width = context.problem.scale.maximum_length(maximum_width)
-        horizontal_ratio = _ratio(settings.get("horizontal_span_ratio", 0.5), "horizontal_span_ratio")
-        vertical_ratio = _ratio(settings.get("vertical_span_ratio", 0.5), "vertical_span_ratio")
+        horizontal_ratio = _ratio(
+            settings.get("horizontal_span_ratio", 0.5), "horizontal_span_ratio"
+        )
+        vertical_ratio = _ratio(
+            settings.get("vertical_span_ratio", 0.5), "vertical_span_ratio"
+        )
         for variables in context.room_variables.values():
             if variables.room.room_type not in hallway_types:
                 continue
@@ -63,12 +67,12 @@ class HallwayDimensionsConstraint:
 
             # Horizontal hallway: length is the corridor width; room width may
             # extend as far as its prepared room-size bounds allow.
-            context.model.Add(
-                variables.length >= minimum_width
-            ).OnlyEnforceIf(horizontal)
-            context.model.Add(
-                variables.length <= maximum_width
-            ).OnlyEnforceIf(horizontal)
+            context.model.Add(variables.length >= minimum_width).OnlyEnforceIf(
+                horizontal
+            )
+            context.model.Add(variables.length <= maximum_width).OnlyEnforceIf(
+                horizontal
+            )
             horizontal_span = _room_span(context, hallway_types, horizontal=True)
             context.model.Add(
                 variables.width * horizontal_ratio.denominator
@@ -77,12 +81,8 @@ class HallwayDimensionsConstraint:
 
             # Vertical hallway: width is the corridor width; room length may
             # extend as far as its prepared room-size bounds allow.
-            context.model.Add(
-                variables.width >= minimum_width
-            ).OnlyEnforceIf(vertical)
-            context.model.Add(
-                variables.width <= maximum_width
-            ).OnlyEnforceIf(vertical)
+            context.model.Add(variables.width >= minimum_width).OnlyEnforceIf(vertical)
+            context.model.Add(variables.width <= maximum_width).OnlyEnforceIf(vertical)
             vertical_span = _room_span(context, hallway_types, horizontal=False)
             context.model.Add(
                 variables.length * vertical_ratio.denominator
@@ -91,7 +91,11 @@ class HallwayDimensionsConstraint:
 
 
 def _room_span(context, hallway_types, horizontal):
-    rooms = [r for r in context.room_variables.values() if r.room.room_type not in hallway_types]
+    rooms = [
+        r
+        for r in context.room_variables.values()
+        if r.room.room_type not in hallway_types
+    ]
     if not rooms:
         return 0
     starts = [r.x if horizontal else r.y for r in rooms]
@@ -110,7 +114,9 @@ def _ratio(value, name):
     try:
         ratio = Fraction(str(value))
     except (ValueError, ZeroDivisionError) as exc:
-        raise InvalidProfileError(f"hallway_dimensions.{name} must be between 0 and 1") from exc
+        raise InvalidProfileError(
+            f"hallway_dimensions.{name} must be between 0 and 1"
+        ) from exc
     if not math.isfinite(float(ratio)) or not 0 < ratio <= 1:
         raise InvalidProfileError(f"hallway_dimensions.{name} must be between 0 and 1")
     return ratio

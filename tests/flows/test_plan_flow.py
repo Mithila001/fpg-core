@@ -123,20 +123,30 @@ def test_default_objective_with_multiple_applicable_soft_constraints():
     rooms = tuple(
         RoomSpec(RoomId(kind.value), kind, kind.value, RoomSizeSpec(10, 25, 100, area))
         for kind, area in (
-            (RoomType.LIVING_ROOM, 480), (RoomType.KITCHEN, 350),
-            (RoomType.BEDROOM, 350), (RoomType.BATHROOM, 150),
+            (RoomType.LIVING_ROOM, 480),
+            (RoomType.KITCHEN, 350),
+            (RoomType.BEDROOM, 350),
+            (RoomType.BATHROOM, 150),
         )
     )
     profile = INITIAL_GENERATION_PROFILE
-    config = replace(profile, solver=replace(profile.solver, num_search_workers=1, random_seed=7))
+    config = replace(
+        profile, solver=replace(profile.solver, num_search_workers=1, random_seed=7)
+    )
     execution = generate_floor_plan(
-        FloorPlanSolveRequest(FloorPlanGenerationSpec(FloorSpec(40, 30), rooms, ()), config),
+        FloorPlanSolveRequest(
+            FloorPlanGenerationSpec(FloorSpec(40, 30), rooms, ()), config
+        ),
         mode=ExecutionMode.DEBUG,
     )
     assert execution.result.solved
     assert execution.details is not None
     assert execution.details.objective_value is not None
-    assert 0 < execution.details.objective_value <= 100 * len(execution.details.penalty_terms)
+    assert (
+        0
+        < execution.details.objective_value
+        <= 100 * len(execution.details.penalty_terms)
+    )
     assert "dead_space" in execution.details.penalty_terms
 
 
@@ -150,15 +160,20 @@ def test_refinement_accepts_fractional_seed_stability_multipliers():
         soft_constraints=(),
         solver=SolverConfig(max_time_seconds=2, num_search_workers=1, random_seed=1),
     )
-    seed = generate_floor_plan(FloorPlanSolveRequest(specification, config)).result.floor_plan
+    seed = generate_floor_plan(
+        FloorPlanSolveRequest(specification, config)
+    ).result.floor_plan
     assert seed is not None
     from dataclasses import replace
 
     refinement = replace(config, seed=SeedPolicy(source=SeedSource.EXISTING_FLOOR_PLAN))
-    refinement = refinement.with_soft_constraints(SoftConstraintUse(
-        "seed_stability", 1,
-        {"position_multiplier": 0.1, "size_multiplier": 0.1},
-    ))
+    refinement = refinement.with_soft_constraints(
+        SoftConstraintUse(
+            "seed_stability",
+            1,
+            {"position_multiplier": 0.1, "size_multiplier": 0.1},
+        )
+    )
     execution = generate_floor_plan(
         FloorPlanSolveRequest(specification, refinement, existing_floor_plan=seed),
         mode=ExecutionMode.DEBUG,

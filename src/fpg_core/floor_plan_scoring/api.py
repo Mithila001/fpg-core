@@ -121,9 +121,13 @@ def score_floor_plan(
     )
 
 
-def validate_scoring_input(floor_plan: FloorPlan, specification: FloorPlanGenerationSpec) -> None:
+def validate_scoring_input(
+    floor_plan: FloorPlan, specification: FloorPlanGenerationSpec
+) -> None:
     """Validate the scoring input contract without requiring passing geometry."""
-    ScoringContextFactory().build(floor_plan, specification, mode=ExecutionMode.PRODUCTION)
+    ScoringContextFactory().build(
+        floor_plan, specification, mode=ExecutionMode.PRODUCTION
+    )
 
 
 def validate_scoring_config(config: FloorPlanScoringConfig) -> None:
@@ -139,16 +143,23 @@ def diagnose_skipped_evaluators(
 ) -> tuple[EvaluatorDiagnostic, ...]:
     """Independently run gated evaluators from the matching official DEBUG execution."""
     if official.metadata.mode is not ExecutionMode.DEBUG or official.details is None:
-        raise ValueError("Diagnostics require the official DEBUG execution for this input.")
+        raise ValueError(
+            "Diagnostics require the official DEBUG execution for this input."
+        )
     if official.result.passed_critical:
         return ()
     skipped = {
-        item.evaluator_key for item in official.details.evaluator_results
+        item.evaluator_key
+        for item in official.details.evaluator_results
         if item.status is EvaluationStatus.SKIPPED
         and any(f.code == "SKIPPED_AFTER_CRITICAL_FAILURE" for f in item.findings)
     }
-    manager = FloorPlanScoreManager(registry or create_default_registry(), scoring_input.config)
-    return manager.diagnose(scoring_input.floor_plan, scoring_input.specification, skipped)
+    manager = FloorPlanScoreManager(
+        registry or create_default_registry(), scoring_input.config
+    )
+    return manager.diagnose(
+        scoring_input.floor_plan, scoring_input.specification, skipped
+    )
 
 
 __all__ = [

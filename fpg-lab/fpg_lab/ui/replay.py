@@ -43,9 +43,9 @@ async def candidate_replay(
             break
     if not any(t.get("candidate_search_data") for t in trials):
         with canvas_area:
-            ui.label("No saved candidate geometry. Rerun P-01-A with Store debug data enabled.").classes(
-                "text-amber-300"
-            )
+            ui.label(
+                "No saved candidate geometry. Rerun P-01-A with Store debug data enabled."
+            ).classes("text-amber-300")
         return None
     prepared = (item.get("preprocessing_result") or {}).get("result") or {}
     rooms = list((prepared.get("generation_spec") or {}).get("rooms", []))
@@ -85,23 +85,39 @@ async def candidate_replay(
             )
             copy_hint.tooltip("Copy selected trial's cleaned hint map")
         with ui.element("div").classes("w-full grid grid-cols-2 gap-2"):
-            speed = ui.select([1, 2, 5, 10], value=2, label="Frames / second").props(
-                "dense"
-            ).classes("min-w-0")
-            mode = ui.select(
-                ["All trials", "Improvements only"], value="All trials", label="Frames"
-            ).props("dense").classes("min-w-0")
+            speed = (
+                ui.select([1, 2, 5, 10], value=2, label="Frames / second")
+                .props("dense")
+                .classes("min-w-0")
+            )
+            mode = (
+                ui.select(["All trials", "Improvements only"], value="All trials", label="Frames")
+                .props("dense")
+                .classes("min-w-0")
+            )
             source = ui.switch("Cleaned hints", value=False).props("dense")
-            onion = ui.number(
-                "Previous frames", value=min(4, len(all_frames) - 1),
-                min=0, max=len(all_frames) - 1, precision=0, step=1,
-            ).props("dense").classes("min-w-0")
-        slider = ui.slider(min=0, max=max(1, len(sequence) - 1), step=1, value=0).props(
-            'label-always aria-label="Replay frame"'
-        ).classes("w-full")
+            onion = (
+                ui.number(
+                    "Previous frames",
+                    value=min(4, len(all_frames) - 1),
+                    min=0,
+                    max=len(all_frames) - 1,
+                    precision=0,
+                    step=1,
+                )
+                .props("dense")
+                .classes("min-w-0")
+            )
+        slider = (
+            ui.slider(min=0, max=max(1, len(sequence) - 1), step=1, value=0)
+            .props('label-always aria-label="Replay frame"')
+            .classes("w-full")
+        )
         summary = ui.label().classes("text-sm")
     with context_area:
-        view = ui.toggle(["Hints", "Heatmap", "Circulation", "Groups"], value="Hints").props("dense")
+        view = ui.toggle(["Hints", "Heatmap", "Circulation", "Groups"], value="Hints").props(
+            "dense"
+        )
         with ui.expansion(f"Rooms · {len(room_ids)} selected").classes("w-full") as rooms_panel:
             with ui.row().classes("w-full items-center gap-2"):
                 single = ui.switch("Select one", value=False).props("dense")
@@ -109,9 +125,11 @@ async def candidate_replay(
             checks = {}
             with ui.element("div").classes("w-full grid grid-cols-2 gap-x-2 gap-y-1"):
                 for key, style in styles.items():
-                    checks[key] = ui.checkbox(
-                        f"{style['label']} · {style['name']}", value=True
-                    ).props("dense").classes("min-w-0")
+                    checks[key] = (
+                        ui.checkbox(f"{style['label']} · {style['name']}", value=True)
+                        .props("dense")
+                        .classes("min-w-0")
+                    )
                     checks[key].tooltip(key)
         heatmap = action_button("Show placement heatmap", role="subtle").props("dense flat")
         before_cleanup = ui.switch("Before cleanup", value=False).props("dense")
@@ -184,7 +202,13 @@ async def candidate_replay(
         route_panel.set_visibility(is_circulation)
         source.set_visibility(not is_circulation)
         onion.set_enabled(not is_circulation and not heatmap_active)
-        cleaned = not before_cleanup.value if is_circulation else True if is_groups else bool(source.value)
+        cleaned = (
+            not before_cleanup.value
+            if is_circulation
+            else True
+            if is_groups
+            else bool(source.value)
+        )
         if is_circulation and not frame.get("circulation_data"):
             cleaned = False
         counts = None
@@ -227,10 +251,8 @@ async def candidate_replay(
                 )
                 if available is None:
                     ui.label(
-
-                            "No saved paths. Older runs can show Before cleanup; "
-                            "new runs record the final circulation routes."
-
+                        "No saved paths. Older runs can show Before cleanup; "
+                        "new runs record the final circulation routes."
                     ).classes("text-sm text-amber-300")
                 else:
                     visible_keys = {circulation.path_key(path) for path in available}
@@ -240,12 +262,12 @@ async def candidate_replay(
                             "text-xs lab-muted"
                         )
                     with ui.row():
-                        action_button("Select all", role="subtle", on_click=lambda: select_paths(True)).props(
-                            "dense flat"
-                        )
-                        action_button("Deselect all", role="subtle", on_click=lambda: select_paths(False)).props(
-                            "dense flat"
-                        )
+                        action_button(
+                            "Select all", role="subtle", on_click=lambda: select_paths(True)
+                        ).props("dense flat")
+                        action_button(
+                            "Deselect all", role="subtle", on_click=lambda: select_paths(False)
+                        ).props("dense flat")
                     if not available:
                         ui.label("No paths in this trial.").classes("text-sm lab-muted")
                     for path in available:
@@ -284,37 +306,68 @@ async def candidate_replay(
                             if policy:
                                 violated = path["step_count"] > policy["preferred_max_grid_steps"]
                                 applied = policy["over_limit_score_multiplier"] if violated else 1.0
-                                ui.label(f"Assigned rooms: {path['source_room_id']} → {path['destination_room_id']} · Limit {policy['preferred_max_grid_steps']} steps · {'Exceeded' if violated else 'Within limit'} · Multiplier {applied:g}").classes("text-sm")
+                                ui.label(
+                                    f"Assigned rooms: {path['source_room_id']} → {path['destination_room_id']} · Limit {policy['preferred_max_grid_steps']} steps · {'Exceeded' if violated else 'Within limit'} · Multiplier {applied:g}"
+                                ).classes("text-sm")
                             ui.label(
                                 " · ".join(
                                     f"{name.replace('_', ' ')} {value:.2f}"
                                     for name, value in costs.items()
                                 )
                             ).classes("text-sm")
-                scoring_result = (frame.get("candidate_scoring_data") or {})
-                quality = next((r for r in scoring_result.get("evaluator_results", []) if r.get("evaluator_key") == "circulation_quality"), None)
+                scoring_result = frame.get("candidate_scoring_data") or {}
+                quality = next(
+                    (
+                        r
+                        for r in scoring_result.get("evaluator_results", [])
+                        if r.get("evaluator_key") == "circulation_quality"
+                    ),
+                    None,
+                )
                 if quality:
                     detail = quality.get("details") or {}
-                    ui.label(f"Circulation quality: {display(quality.get('raw_score'))} / 100").classes("text-sm")
+                    ui.label(
+                        f"Circulation quality: {display(quality.get('raw_score'))} / 100"
+                    ).classes("text-sm")
                     if "base_score" in detail:
-                        ui.label(f"Before distance penalty: {display(detail['base_score'])} / 100 · Distance multiplier: {display(detail['distance_multiplier'])}").classes("text-sm")
-                    ui.label(f"Efficiency: {display(detail.get('efficiency_score'))} ? Separation: {display(detail.get('separation_score'))}").classes("text-sm")
+                        ui.label(
+                            f"Before distance penalty: {display(detail['base_score'])} / 100 · Distance multiplier: {display(detail['distance_multiplier'])}"
+                        ).classes("text-sm")
+                    ui.label(
+                        f"Efficiency: {display(detail.get('efficiency_score'))} ? Separation: {display(detail.get('separation_score'))}"
+                    ).classes("text-sm")
                     for hallway in detail.get("hallways", []):
-                        ui.label(f"{hallway['point_key']}: public {hallway['public_weight']:.2f}, private {hallway['private_weight']:.2f}, mixing {hallway['mixing_ratio']:.2f}, penalty {hallway['penalty']:.2f}").classes("text-sm")
+                        ui.label(
+                            f"{hallway['point_key']}: public {hallway['public_weight']:.2f}, private {hallway['private_weight']:.2f}, mixing {hallway['mixing_ratio']:.2f}, penalty {hallway['penalty']:.2f}"
+                        ).classes("text-sm")
                 else:
-                    ui.label("Circulation scoring diagnostics unavailable for this trial.").classes("text-sm lab-muted")
+                    ui.label("Circulation scoring diagnostics unavailable for this trial.").classes(
+                        "text-sm lab-muted"
+                    )
             if is_groups:
-                scoring_result = (frame.get("candidate_scoring_data") or {})
-                purity = next((r for r in scoring_result.get("evaluator_results", []) if r.get("evaluator_key") == "functional_group_purity"), None)
+                scoring_result = frame.get("candidate_scoring_data") or {}
+                purity = next(
+                    (
+                        r
+                        for r in scoring_result.get("evaluator_results", [])
+                        if r.get("evaluator_key") == "functional_group_purity"
+                    ),
+                    None,
+                )
                 for group in ((purity or {}).get("details") or {}).get("groups", []):
                     ui.label(f"{group['name']}: {group['score']:.2f} / 100").classes("text-sm")
                     for intrusion in group["intrusions"]:
-                        ui.label(f"{intrusion['room_id']}: {intrusion['kind']} intrusion, penalty {intrusion['penalty']:.2f}").classes("text-sm")
+                        ui.label(
+                            f"{intrusion['room_id']}: {intrusion['kind']} intrusion, penalty {intrusion['penalty']:.2f}"
+                        ).classes("text-sm")
             if frame.get("error_data"):
                 ui.label(
                     str(frame["error_data"].get("message", "Trial failed or was rejected"))
                 ).classes("text-amber-300")
-                json_panel("Candidate rejection" if frame["error_data"].get("rejected") else "Trial error", frame["error_data"])
+                json_panel(
+                    "Candidate rejection" if frame["error_data"].get("rejected") else "Trial error",
+                    frame["error_data"],
+                )
             if frame.get("candidate_scoring_data"):
                 for evaluation in frame["candidate_scoring_data"].get("evaluator_results", []):
                     ui.label(

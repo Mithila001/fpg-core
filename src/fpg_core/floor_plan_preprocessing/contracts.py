@@ -269,9 +269,7 @@ class PreparedGenerationInput:
 
         active_ids = required_non_hallway_ids | selected_hallway_ids
         rooms = tuple(
-            room
-            for room in self.generation_spec.rooms
-            if str(room.id) in active_ids
+            room for room in self.generation_spec.rooms if str(room.id) in active_ids
         )
         relations = _filter_relations(
             self.generation_spec.room_relations,
@@ -294,9 +292,7 @@ def _filter_relations(
         if str(relation.source_room_id) not in active_ids:
             continue
         targets = tuple(
-            target
-            for target in relation.target_room_ids
-            if str(target) in active_ids
+            target for target in relation.target_room_ids if str(target) in active_ids
         )
         if not targets:
             continue

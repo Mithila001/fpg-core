@@ -114,9 +114,7 @@ def active_linear_penalty(
     present: Any,
     name: str,
 ) -> Any:
-    penalty = context.model.NewIntVar(
-        0, max(0, upper_bound), context.new_name(name)
-    )
+    penalty = context.model.NewIntVar(0, max(0, upper_bound), context.new_name(name))
     context.model.Add(penalty == expression).OnlyEnforceIf(present)
     context.model.Add(penalty == 0).OnlyEnforceIf(present.Not())
     return penalty

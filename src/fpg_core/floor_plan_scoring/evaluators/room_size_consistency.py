@@ -134,12 +134,9 @@ class RoomSizeConsistencySettings:
         if any(not isinstance(rule, RoomSizeRelationRule) for rule in relation_rules):
             raise TypeError("Every relation rule must be a RoomSizeRelationRule.")
         if any(
-            not isinstance(rule, RoomTypeConsistencyRule)
-            for rule in consistency_rules
+            not isinstance(rule, RoomTypeConsistencyRule) for rule in consistency_rules
         ):
-            raise TypeError(
-                "Every consistency rule must be a RoomTypeConsistencyRule."
-            )
+            raise TypeError("Every consistency rule must be a RoomTypeConsistencyRule.")
         if not relation_rules and not consistency_rules:
             raise ScoringConfigurationError(
                 "Room-size consistency requires at least one configured rule."
@@ -217,18 +214,10 @@ class RoomSizeConsistencyEvaluator(FloorPlanEvaluator):
 
         total_weight = sum(item.weight for item in scored_rules)
         score = sum(item.score * item.weight for item in scored_rules) / total_weight
-        findings = tuple(
-            finding
-            for item in scored_rules
-            for finding in item.findings
-        )
+        findings = tuple(finding for item in scored_rules for finding in item.findings)
         metrics = (
             ScoreMetric("applicable_rule_count", float(len(scored_rules))),
-            *(
-                metric
-                for item in scored_rules
-                for metric in item.metrics
-            ),
+            *(metric for item in scored_rules for metric in item.metrics),
         )
         return EvaluatorResult(
             evaluator_key=self.key,
@@ -237,10 +226,18 @@ class RoomSizeConsistencyEvaluator(FloorPlanEvaluator):
             findings=findings,
             metrics=tuple(metrics),
             visualization_payload={
-                "rooms": [{"room_id": room.room_id, "area": room.area, "centroid": room.centroid}
-                          for room in context.rooms],
+                "rooms": [
+                    {
+                        "room_id": room.room_id,
+                        "area": room.area,
+                        "centroid": room.centroid,
+                    }
+                    for room in context.rooms
+                ],
                 "rules": [item.visual for item in scored_rules],
-            } if context.mode is ExecutionMode.DEBUG else None,
+            }
+            if context.mode is ExecutionMode.DEBUG
+            else None,
         )
 
 
@@ -373,14 +370,25 @@ def _score_relation(
         findings=tuple(findings),
         metrics=tuple(metrics),
         visual={
-            "kind": "relation", "rule": rule, "actual": actual_ratio,
-            "effective_min": effective_min, "effective_max": effective_max,
-            "feasible_min": feasible_min_ratio, "feasible_max": feasible_max_ratio,
-            "reference_area": reference_area, "compared_area": compared_area,
-            "room_ids": tuple(room.room_id for room in (*reference_rooms, *compared_rooms)),
-            "violation_delta": violation_delta, "full_penalty_delta": full_penalty_delta,
-            "score": score, "penalty": 100.0 - score,
-        } if context.mode is ExecutionMode.DEBUG else None,
+            "kind": "relation",
+            "rule": rule,
+            "actual": actual_ratio,
+            "effective_min": effective_min,
+            "effective_max": effective_max,
+            "feasible_min": feasible_min_ratio,
+            "feasible_max": feasible_max_ratio,
+            "reference_area": reference_area,
+            "compared_area": compared_area,
+            "room_ids": tuple(
+                room.room_id for room in (*reference_rooms, *compared_rooms)
+            ),
+            "violation_delta": violation_delta,
+            "full_penalty_delta": full_penalty_delta,
+            "score": score,
+            "penalty": 100.0 - score,
+        }
+        if context.mode is ExecutionMode.DEBUG
+        else None,
     )
 
 
@@ -493,12 +501,21 @@ def _score_same_type(
         findings=tuple(findings),
         metrics=metrics,
         visual={
-            "kind": "consistency", "rule": rule, "actual": actual_spread,
-            "effective_max": effective_maximum_spread, "feasible_min": feasible_minimum_spread,
-            "smallest_area": smallest_area, "largest_area": largest_area,
-            "room_ids": tuple(room.room_id for room in rooms), "violation_delta": violation_delta,
-            "full_penalty_delta": full_penalty_delta, "score": score, "penalty": 100.0 - score,
-        } if context.mode is ExecutionMode.DEBUG else None,
+            "kind": "consistency",
+            "rule": rule,
+            "actual": actual_spread,
+            "effective_max": effective_maximum_spread,
+            "feasible_min": feasible_minimum_spread,
+            "smallest_area": smallest_area,
+            "largest_area": largest_area,
+            "room_ids": tuple(room.room_id for room in rooms),
+            "violation_delta": violation_delta,
+            "full_penalty_delta": full_penalty_delta,
+            "score": score,
+            "penalty": 100.0 - score,
+        }
+        if context.mode is ExecutionMode.DEBUG
+        else None,
     )
 
 

@@ -23,7 +23,9 @@ def search_hint_map(adapter, request, configuration, count, threshold, state, ca
                 return
             trial = search.ask()
             try:
-                circulation = adapter.run_circulation(trial.candidate, prepared=prepared, debug=False)
+                circulation = adapter.run_circulation(
+                    trial.candidate, prepared=prepared, debug=False
+                )
             except FpgCoreCandidateRejected:
                 search.record_score(trial, 0.0, usable=False)
                 state["completed"] += 1
@@ -36,7 +38,9 @@ def search_hint_map(adapter, request, configuration, count, threshold, state, ca
                 state.update(status="cancelled", result=None)
                 return
             try:
-                _, score = score_candidate(adapter, prepared.generation_spec, circulation, debug=False)
+                _, score = score_candidate(
+                    adapter, prepared.generation_spec, circulation, debug=False
+                )
             except Exception:
                 search.fail_pending()
                 raise

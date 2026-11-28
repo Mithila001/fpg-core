@@ -1,4 +1,4 @@
-﻿"""Generate openings on a snapshot of a portable floor plan."""
+"""Generate openings on a snapshot of a portable floor plan."""
 
 from time import perf_counter
 
@@ -16,7 +16,9 @@ def start(runtime, *, document=None, layout_id=None, configuration_id=None, rege
     if (document is None) == (layout_id is None):
         raise ValueError("Select one saved floor plan or import a temporary layout")
     with runtime.database.session_factory() as session:
-        profile, validated = SystemConfigurationService(session, runtime.codec).for_flow(configuration_id, "e02c")
+        profile, validated = SystemConfigurationService(session, runtime.codec).for_flow(
+            configuration_id, "e02c"
+        )
         layout_name = "Temporary import"
         if layout_id is not None:
             saved = session.get(E02BSavedPlan, layout_id)
@@ -28,10 +30,15 @@ def start(runtime, *, document=None, layout_id=None, configuration_id=None, rege
             raise ValueError("Floor-plan and configuration units must match")
         if plan.openings and not regenerate:
             raise ValueError("Select regeneration to replace existing openings")
-        snapshot = {"input": to_jsonable(document), "layout_name": layout_name,
-                    "configuration": validated.payload, "configuration_id": profile.id,
-                    "configuration_hash": profile.config_hash, "core_version": runtime.codec.fpg_core_version,
-                    "regenerate": bool(regenerate)}
+        snapshot = {
+            "input": to_jsonable(document),
+            "layout_name": layout_name,
+            "configuration": validated.payload,
+            "configuration_id": profile.id,
+            "configuration_hash": profile.config_hash,
+            "core_version": runtime.codec.fpg_core_version,
+            "regenerate": bool(regenerate),
+        }
         row = E02CRun(status="queued", snapshot=snapshot)
         session.add(row)
         session.commit()

@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 from ..model import ModelContext, RoomVariables
-from .base import ConstraintSettings, PENALTY_MAX, average_penalties, ceil_ratio, nonnegative_multiplier, require_room_types
+from .base import (
+    PENALTY_MAX,
+    ConstraintSettings,
+    average_penalties,
+    ceil_ratio,
+    nonnegative_multiplier,
+    require_room_types,
+)
 from .geometry import active_linear_penalty
 
 
@@ -33,8 +40,12 @@ class FloorClusterPositionConstraint:
         context: ModelContext,
         settings: ConstraintSettings,
     ):
-        horizontal_multiplier = nonnegative_multiplier(settings, "horizontal_multiplier", self.key)
-        front_multiplier = nonnegative_multiplier(settings, "front_multiplier", self.key)
+        horizontal_multiplier = nonnegative_multiplier(
+            settings, "horizontal_multiplier", self.key
+        )
+        front_multiplier = nonnegative_multiplier(
+            settings, "front_multiplier", self.key
+        )
 
         excluded_room_types = require_room_types(
             settings.get("excluded_room_types", ()),
@@ -144,7 +155,15 @@ class FloorClusterPositionConstraint:
             )
 
             penalties.append(
-                (ceil_ratio(context, PENALTY_MAX * horizontal_penalty, floor.width, PENALTY_MAX), horizontal_multiplier)
+                (
+                    ceil_ratio(
+                        context,
+                        PENALTY_MAX * horizontal_penalty,
+                        floor.width,
+                        PENALTY_MAX,
+                    ),
+                    horizontal_multiplier,
+                )
             )
 
         if front_multiplier > 0:
@@ -159,7 +178,12 @@ class FloorClusterPositionConstraint:
             )
 
             penalties.append(
-                (ceil_ratio(context, PENALTY_MAX * front_penalty, floor.length, PENALTY_MAX), front_multiplier)
+                (
+                    ceil_ratio(
+                        context, PENALTY_MAX * front_penalty, floor.length, PENALTY_MAX
+                    ),
+                    front_multiplier,
+                )
             )
 
         return average_penalties(context, penalties)

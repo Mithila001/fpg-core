@@ -64,6 +64,7 @@ def build_land_request() -> BuildableSpaceRequestData:
         ),
     )
 
+
 def build_buildable_land_config() -> BuildableLandConfig:
     setback_profile = SetbackProfile(
         name="test_residential_v1",
@@ -90,6 +91,7 @@ def build_buildable_land_config() -> BuildableLandConfig:
         ),
     )
 
+
 def build_usable_land_config() -> UsableLandConfig:
     return UsableLandConfig(
         minimum_width=80,
@@ -97,6 +99,7 @@ def build_usable_land_config() -> UsableLandConfig:
         search_resolution=1,
         maximum_sweep_lines=5_000,
     )
+
 
 def build_preprocessing_config() -> PreprocessingConfig:
     room_count_rules = (
@@ -182,6 +185,7 @@ def build_preprocessing_config() -> PreprocessingConfig:
         max_aspect_residual_units=20.0,
     )
 
+
 def build_preprocessing_request(
     max_width: float,
     max_length: float,
@@ -238,6 +242,7 @@ def build_preprocessing_request(
         ),
     )
 
+
 def build_route_rules() -> tuple[CirculationRouteRule, ...]:
     return (
         CirculationRouteRule(
@@ -283,6 +288,7 @@ def build_route_rules() -> tuple[CirculationRouteRule, ...]:
         ),
     )
 
+
 def build_candidate_circulation_config() -> CandidateCirculationConfig:
     return CandidateCirculationConfig(
         costs=RoutingCostProfile(
@@ -302,8 +308,10 @@ def build_candidate_circulation_config() -> CandidateCirculationConfig:
         ),
     )
 
+
 def build_candidate_scoring_config() -> ScoringConfig:
     return create_default_candidate_scoring_config()
+
 
 def build_candidate_search_config() -> CandidateSearchConfig:
     return CandidateSearchConfig(

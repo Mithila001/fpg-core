@@ -5,6 +5,7 @@ import copy
 import pytest
 
 from fpg_core.domain import ExecutionMode, FloorPlan, FloorPlanGenerationSpec
+from fpg_core.floor_plan_scoring import EvaluatorKey
 from fpg_core.floor_plan_scoring.api import (
     FloorPlanScoringDetails,
     FloorPlanScoringInput,
@@ -42,9 +43,9 @@ def test_production_and_debug_execution(
     assert debug.result.passed_critical
     by_key = {item.evaluator_key: item for item in debug.details.evaluator_results}
     for key in ("living_room_balance", "bedroom_quality"):
-        assert by_key[key].status.value == "completed"
-        assert by_key[key].threshold is None
-        assert by_key[key].contribution > 0
+        assert by_key[EvaluatorKey(key)].status.value == "completed"
+        assert by_key[EvaluatorKey(key)].threshold is None
+        assert by_key[EvaluatorKey(key)].contribution > 0
 
 
 def test_critical_failure_short_circuits_later_groups(
@@ -69,7 +70,9 @@ def test_critical_failure_short_circuits_later_groups(
     assert not execution.result.passed_critical
     assert execution.result.critical_failure is not None
     assert execution.details is not None
-    assert any(item.status.value == "skipped" for item in execution.details.group_results)
+    assert any(
+        item.status.value == "skipped" for item in execution.details.group_results
+    )
 
 
 def test_invalid_mode_is_rejected(

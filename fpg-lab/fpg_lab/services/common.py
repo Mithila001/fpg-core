@@ -29,8 +29,12 @@ from fpg_lab.integrations.fpg_core.config_codec import (
 PRIMARY_PROFILE = "research-default"
 
 NAMESPACE_SEEDS = (
-    {"tag": "E01A", "name": "floor-traffic-experiment",
-     "description": "Preset floor-plan walking routes and traffic coverage.", "kind": "experiment"},
+    {
+        "tag": "E01A",
+        "name": "floor-traffic-experiment",
+        "description": "Preset floor-plan walking routes and traffic coverage.",
+        "kind": "experiment",
+    },
     {
         "tag": "COMM",
         "name": "common",
@@ -182,7 +186,8 @@ class SystemConfigurationService:
 
     def get_active(self) -> SystemConfiguration:
         record = self.session.scalar(
-            select(SystemConfiguration).where(SystemConfiguration.is_active.is_(True))
+            select(SystemConfiguration)
+            .where(SystemConfiguration.is_active.is_(True))
             .execution_options(populate_existing=True)
         )
         if record is None:
@@ -194,9 +199,11 @@ class SystemConfigurationService:
 
     def resolve(self, configuration_id: int | None = None) -> SystemConfiguration:
         record = self.get_active() if configuration_id is None else self.get(configuration_id)
-        if (record.schema_version != "8"
+        if (
+            record.schema_version != "8"
             or not isinstance(record.configuration_data, dict)
-            or record.config_hash != self.codec.hash_payload(record.configuration_data)):
+            or record.config_hash != self.codec.hash_payload(record.configuration_data)
+        ):
             raise InvalidInputError(
                 "invalid_profile_metadata",
                 f"Profile {record.id} has incompatible schema or hash metadata. Inspect it with lab_db.",
@@ -218,19 +225,30 @@ class SystemConfigurationService:
 
     def duplicate(self, configuration_id: int, name: str) -> SystemConfiguration:
         record = self.resolve(configuration_id)
-        return self.create(SystemConfigurationCreate(
-            name=name, description=record.description, configuration_data=record.configuration_data,
-        ))
+        return self.create(
+            SystemConfigurationCreate(
+                name=name,
+                description=record.description,
+                configuration_data=record.configuration_data,
+            )
+        )
 
     def save(
         self, configuration_id: int, payload: SystemConfigurationUpdate, *, expected_hash: str
     ) -> SystemConfiguration:
         record = self.get(configuration_id)
         if record.name == PRIMARY_PROFILE and payload.name != record.name:
-            raise ConflictError("primary_profile_name", f"Keep the primary profile name {PRIMARY_PROFILE!r}.")
+            raise ConflictError(
+                "primary_profile_name", f"Keep the primary profile name {PRIMARY_PROFILE!r}."
+            )
         self._ensure_name_available(payload.name, exclude_id=configuration_id)
-        return self._save_values(record, expected_hash, self._validate_edit(payload),
-                                 name=payload.name, description=payload.description)
+        return self._save_values(
+            record,
+            expected_hash,
+            self._validate_edit(payload),
+            name=payload.name,
+            description=payload.description,
+        )
 
     def save_section(self, configuration_id: int, section: str, value: dict, *, expected_hash: str):
         record = self.resolve(configuration_id)
@@ -249,8 +267,10 @@ class SystemConfigurationService:
         try:
             result = self.session.execute(
                 update(SystemConfiguration)
-                .where(SystemConfiguration.id == record.id,
-                       SystemConfiguration.config_hash == expected_hash)
+                .where(
+                    SystemConfiguration.id == record.id,
+                    SystemConfiguration.config_hash == expected_hash,
+                )
                 .values(**metadata, **self.configuration_values(validated))
             )
             if result.rowcount != 1:
@@ -258,7 +278,9 @@ class SystemConfigurationService:
             self._commit("system_configuration_conflict")
         except IntegrityError as exc:
             self.session.rollback()
-            raise ConflictError("system_configuration_conflict", "Profile save was rejected.") from exc
+            raise ConflictError(
+                "system_configuration_conflict", "Profile save was rejected."
+            ) from exc
         return self.get(record.id)
 
     def _check_hash(self, record, expected_hash):
@@ -267,14 +289,17 @@ class SystemConfigurationService:
 
     def _stale(self):
         self.session.rollback()
-        raise ConflictError("profile_changed", "The saved profile changed. Reload it before saving.")
+        raise ConflictError(
+            "profile_changed", "The saved profile changed. Reload it before saving."
+        )
 
     def activate(self, configuration_id: int) -> SystemConfiguration:
         self.validate(configuration_id)
         record = self.get(configuration_id)
         if not record.is_active:
             self.session.execute(
-                update(SystemConfiguration).where(SystemConfiguration.is_active.is_(True))
+                update(SystemConfiguration)
+                .where(SystemConfiguration.is_active.is_(True))
                 .values(is_active=False)
             )
             record.is_active = True

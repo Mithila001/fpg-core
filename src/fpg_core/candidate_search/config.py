@@ -23,7 +23,6 @@ class CandidateSearchConfig:
         _positive_int("trial_count", self.trial_count)
         _positive_int("max_grid_node_count", self.max_grid_node_count, minimum=9)
         if self.random_seed is not None and (
-            isinstance(self.random_seed, bool)
-            or not isinstance(self.random_seed, int)
+            isinstance(self.random_seed, bool) or not isinstance(self.random_seed, int)
         ):
             raise TypeError("random_seed must be an integer or None.")

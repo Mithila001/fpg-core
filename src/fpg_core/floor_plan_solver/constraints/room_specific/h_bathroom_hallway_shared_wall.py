@@ -22,13 +22,19 @@ class BathroomHallwaySharedWallConstraint:
     def apply(self, context: ModelContext, settings: ConstraintSettings) -> None:
         side_count = settings.get("maximum_shared_sides", 1)
         if type(side_count) is not int or not 0 <= side_count <= 4:
-            raise InvalidProfileError("maximum_shared_sides must be an integer from 0 to 4")
+            raise InvalidProfileError(
+                "maximum_shared_sides must be an integer from 0 to 4"
+            )
         try:
             extra_length = float(settings.get("additional_shared_length", 10.0))
         except (TypeError, ValueError) as exc:
-            raise InvalidProfileError("additional_shared_length must be numeric") from exc
+            raise InvalidProfileError(
+                "additional_shared_length must be numeric"
+            ) from exc
         if not math.isfinite(extra_length) or extra_length < 0:
-            raise InvalidProfileError("additional_shared_length must be finite and non-negative")
+            raise InvalidProfileError(
+                "additional_shared_length must be finite and non-negative"
+            )
         allowance = context.problem.scale.maximum_length(extra_length)
         hallways = tuple(
             room
@@ -42,7 +48,7 @@ class BathroomHallwaySharedWallConstraint:
         )
 
         for bathroom in bathrooms:
-            side_overlaps = {side: [] for side in _SIDES}
+            side_overlaps: dict[str, list[Any]] = {side: [] for side in _SIDES}
             for hallway in hallways:
                 for side, overlap in _shared_side_overlaps(
                     context, bathroom, hallway

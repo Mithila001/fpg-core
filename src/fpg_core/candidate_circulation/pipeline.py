@@ -59,8 +59,16 @@ def refine_candidate_circulation(
     consolidation = consolidate_hallways(validated, unused_keys=unused_keys)
     if consolidation is None:
         consolidated_keys: set[str] = set()
-        final_validated = _validated_without_keys(validated, unused_keys) if unused_keys else validated
-        final_pass = run_routing_passes(final_validated)[-1] if unused_keys else initial_final_pass
+        final_validated = (
+            _validated_without_keys(validated, unused_keys)
+            if unused_keys
+            else validated
+        )
+        final_pass = (
+            run_routing_passes(final_validated)[-1]
+            if unused_keys
+            else initial_final_pass
+        )
         cleaned_points = tuple(
             indexed.point
             for indexed in validated.indexed_points
@@ -70,7 +78,9 @@ def refine_candidate_circulation(
         consolidated_keys = set(consolidation.removed_keys)
         final_validated = consolidation.validated
         final_pass = consolidation.routing_passes[-1]
-        cleaned_points = tuple(indexed.point for indexed in final_validated.indexed_points)
+        cleaned_points = tuple(
+            indexed.point for indexed in final_validated.indexed_points
+        )
 
     removal_reasons = {
         **{key: HallwayRemovalReason.UNUSED for key in unused_keys},
@@ -82,17 +92,32 @@ def refine_candidate_circulation(
             points=cleaned_points,
         ),
         final_circulation=FinalCirculation(
-            routes=tuple(_path_details(final_validated, route) for route in final_pass.routes),
+            routes=tuple(
+                _path_details(final_validated, route) for route in final_pass.routes
+            ),
             hallways=tuple(
                 RetainedHallwayTraffic(
-                    point_key=point.point_key, room_id=str(point.point.room_id),
-                    hint_index=point.point.hint_index, x=point.point.x, y=point.point.y,
-                    public_route_count=final_pass.hallway_traffic[point.point_key].public_route_count,
-                    private_route_count=final_pass.hallway_traffic[point.point_key].private_route_count,
-                    public_importance_weight=final_pass.hallway_traffic[point.point_key].public_importance_weight,
-                    private_importance_weight=final_pass.hallway_traffic[point.point_key].private_importance_weight,
+                    point_key=point.point_key,
+                    room_id=str(point.point.room_id),
+                    hint_index=point.point.hint_index,
+                    x=point.point.x,
+                    y=point.point.y,
+                    public_route_count=final_pass.hallway_traffic[
+                        point.point_key
+                    ].public_route_count,
+                    private_route_count=final_pass.hallway_traffic[
+                        point.point_key
+                    ].private_route_count,
+                    public_importance_weight=final_pass.hallway_traffic[
+                        point.point_key
+                    ].public_importance_weight,
+                    private_importance_weight=final_pass.hallway_traffic[
+                        point.point_key
+                    ].private_importance_weight,
                     traffic_class=final_pass.hallway_classes[point.point_key],
-                ) for point in final_validated.indexed_points if point.point.room_type is RoomType.HALLWAY
+                )
+                for point in final_validated.indexed_points
+                if point.point.room_type is RoomType.HALLWAY
             ),
         ),
         hallway_classifications=_hallway_classifications(
@@ -176,9 +201,7 @@ def _build_details(
             validated,
             routing_pass,
             removal_reasons,
-            previous_classes=(
-                passes[index - 1].hallway_classes if index > 0 else None
-            ),
+            previous_classes=(passes[index - 1].hallway_classes if index > 0 else None),
         )
         for index, routing_pass in enumerate(passes)
     )
@@ -202,9 +225,7 @@ def _build_details(
         if point.point_key in removal_reasons
     )
     return CandidateCirculationDetails(
-        circulation_efficiency_score=_circulation_efficiency_score(
-            final_pass.routes
-        ),
+        circulation_efficiency_score=_circulation_efficiency_score(final_pass.routes),
         routing_pass_count=len(passes),
         grid_node_count=validated.grid_node_count,
         passes=pass_details,
@@ -228,9 +249,7 @@ def _routing_pass_details(
             previous_classes is not None
             and routing_pass.hallway_classes != previous_classes
         ),
-        paths=tuple(
-            _path_details(validated, route) for route in routing_pass.routes
-        ),
+        paths=tuple(_path_details(validated, route) for route in routing_pass.routes),
         hallway_traffic=_hallway_traffic_details(
             validated,
             routing_pass,
@@ -336,10 +355,7 @@ def _final_hallway_traffic_details(
         if reason is HallwayRemovalReason.UNUSED:
             usage = initial_final_pass.hallway_traffic[point.point_key]
             traffic_class = HallwayTrafficClass.UNUSED
-        elif (
-            reason is HallwayRemovalReason.CONSOLIDATED
-            and consolidation is not None
-        ):
+        elif reason is HallwayRemovalReason.CONSOLIDATED and consolidation is not None:
             snapshot = consolidation.removed_snapshots[point.point_key]
             usage = snapshot.traffic
             traffic_class = snapshot.traffic_class
@@ -370,7 +386,10 @@ def _circulation_efficiency_score(routes: tuple[ResolvedRoute, ...]) -> float:
     total_importance_weight = sum(route.rule.importance_weight for route in routes)
     if total_importance_weight <= 0:
         return 0.0
-    return sum(
-        route.path_efficiency_score * route.rule.importance_weight
-        for route in routes
-    ) / total_importance_weight
+    return (
+        sum(
+            route.path_efficiency_score * route.rule.importance_weight
+            for route in routes
+        )
+        / total_importance_weight
+    )

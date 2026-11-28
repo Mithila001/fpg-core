@@ -63,7 +63,9 @@ class SoftConstraintUse:
             raise InvalidProfileError(
                 f"Soft constraint '{self.key}' must have a finite weight in 0..10"
             )
-        weight = Decimal(str(self.weight)).quantize(Decimal("0.1"), rounding=ROUND_CEILING)
+        weight = Decimal(str(self.weight)).quantize(
+            Decimal("0.1"), rounding=ROUND_CEILING
+        )
         object.__setattr__(self, "weight", float(weight))
         object.__setattr__(
             self,

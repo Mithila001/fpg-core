@@ -11,5 +11,3 @@ def row_document(row: Any) -> dict[str, Any]:
         column.key: to_jsonable(getattr(row, column.key))
         for column in inspect(row).mapper.column_attrs
     }
-
-

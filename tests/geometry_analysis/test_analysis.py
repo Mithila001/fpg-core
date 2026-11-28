@@ -40,7 +40,9 @@ def test_footprint_void_and_rectilinearity() -> None:
 
 
 def test_recess_detection_can_include_section_entrances() -> None:
-    footprint = Polygon(((0, 0), (10, 0), (10, 10), (7, 10), (7, 4), (3, 4), (3, 10), (0, 10)))
+    footprint = Polygon(
+        ((0, 0), (10, 0), (10, 10), (7, 10), (7, 4), (3, 4), (3, 10), (0, 10))
+    )
 
     plain = detect_recesses(footprint, 1e-6)
     detailed = detect_recesses(footprint, 1e-6, include_section_entrances=True)
@@ -54,9 +56,9 @@ def test_recess_detection_can_include_section_entrances() -> None:
 def test_exterior_profile_exposure_and_shape_measurements() -> None:
     footprint = Polygon(((0, 0), (10, 0), (10, 10), (6, 10), (6, 7), (0, 7)))
     profile = exterior_profile(footprint, "back")
-    assert [(segment.start, segment.end, segment.position) for segment in profile.segments] == [
-        (0, 6, 7), (6, 10, 10)
-    ]
+    assert [
+        (segment.start, segment.end, segment.position) for segment in profile.segments
+    ] == [(0, 6, 7), (6, 10, 10)]
     assert [step.depth for step in profile.steps] == [3]
 
     room = box(0, 0, 10, 10)

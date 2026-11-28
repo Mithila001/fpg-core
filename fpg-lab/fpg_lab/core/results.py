@@ -39,5 +39,3 @@ def result_document(value: Any) -> dict[str, Any]:
     if not isinstance(document, dict):
         raise TypeError("A stage result must serialize to a JSON object")
     return document
-
-

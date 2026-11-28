@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from shapely.geometry import LineString, Polygon, box
 from shapely.ops import unary_union
 
@@ -171,6 +173,7 @@ class WallExtensionProcessor(FloorPlanProcessor):
     config_type = WallExtensionConfig
 
     def is_applicable(self, floor_plan, context, config):
+        config = cast(WallExtensionConfig, config)
         if config.transformation_version in floor_plan.applied_transformations:
             return False, "this transformation version was already applied"
         if context.specification is None or context.solver_config is None:
@@ -190,6 +193,7 @@ class WallExtensionProcessor(FloorPlanProcessor):
         return True, "applicable"
 
     def process(self, floor_plan, context, config):
+        config = cast(WallExtensionConfig, config)
         tolerance = context.numeric.tolerance
         rooms = sorted(
             (r for r in floor_plan.rooms if r.role is RoomRole.STANDARD),
@@ -218,7 +222,7 @@ class WallExtensionProcessor(FloorPlanProcessor):
                             "problem",
                             bounds=target.bounds,
                             detail=name,
-                            geometry=tuple(target.exterior.coords),
+                            geometry=tuple((x, y) for x, y in target.exterior.coords),
                             associated_room_ids=tuple(
                                 room.id
                                 for room in rooms
@@ -226,7 +230,7 @@ class WallExtensionProcessor(FloorPlanProcessor):
                                 > tolerance
                             ),
                             shared_walls=tuple(
-                                (room.id, tuple(line.coords))
+                                (room.id, tuple((x, y) for x, y in line.coords))
                                 for room in rooms
                                 for line in lines(
                                     shared_boundary(shapes[room.id], target)
@@ -274,7 +278,10 @@ class WallExtensionProcessor(FloorPlanProcessor):
                                 or not candidate.is_valid
                                 or candidate.interiors
                                 or not is_rectilinear(
-                                    tuple(candidate.exterior.coords)[:-1], tolerance
+                                    tuple((x, y) for x, y in candidate.exterior.coords)[
+                                        :-1
+                                    ],
+                                    tolerance,
                                 )
                             ):
                                 if debug:
@@ -447,7 +454,7 @@ class WallExtensionProcessor(FloorPlanProcessor):
                                         room.id,
                                         patch.bounds,
                                         f"problem measurements {before} -> {after}",
-                                        tuple(patch.exterior.coords),
+                                        tuple((x, y) for x, y in patch.exterior.coords),
                                     )
                                 )
                             rank = (
@@ -475,6 +482,7 @@ class WallExtensionProcessor(FloorPlanProcessor):
             _, room, candidate = best
             room.boundary = from_shapely(candidate, tolerance)
             if debug:
+                assert context.specification is not None
                 spec = next(
                     item for item in context.specification.rooms if item.id == room.id
                 )
@@ -495,7 +503,7 @@ class WallExtensionProcessor(FloorPlanProcessor):
                         room.id,
                         candidate.bounds,
                         f"problem measurements before {before}; size exception={exception}",
-                        tuple(candidate.exterior.coords),
+                        tuple((x, y) for x, y in candidate.exterior.coords),
                     )
                 )
             shapes[room.id] = candidate

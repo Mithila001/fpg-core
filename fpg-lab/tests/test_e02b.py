@@ -127,8 +127,6 @@ def test_portable_stages_accept_architectural_defects():
         decode_plan(invalid)
 
 
-
-
 def decode_config(document):
     return CoreConfigCodec().decode_floor_scoring(document)
 
@@ -150,8 +148,12 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
         with runtime.database.session_factory() as session:
             service = SystemConfigurationService(session, runtime.codec)
             profile = service.duplicate(service.get_active().id, "scoring fixture")
-            saved = service.save_section(profile.id, "floor_plan_scoring", default_config_document(),
-                                         expected_hash=profile.config_hash)
+            saved = service.save_section(
+                profile.id,
+                "floor_plan_scoring",
+                default_config_document(),
+                expected_hash=profile.config_hash,
+            )
             profile_id, profile_hash = saved.id, saved.config_hash
             config = saved.configuration_data["floor_plan_scoring"]
             session.add(E02Run(status="completed", snapshot={"existing": True}, cases=[]))
@@ -167,16 +169,25 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
             interrupted_id = interrupted.id
         changed = deepcopy(config)
         changed["groups"][1]["weight"] = 3
-        settings = next(rule["settings"] for rule in changed["evaluators"]
-                        if rule["key"] == "room_relationship_quality")
+        settings = next(
+            rule["settings"]
+            for rule in changed["evaluators"]
+            if rule["key"] == "room_relationship_quality"
+        )
         settings["proximity_rules"][0]["preferred_maximum_distance"] = 6
-        settings["proximity_rules"].append({
-            **settings["proximity_rules"][0], "rule_id": "custom", "target_type": "living_room",
-        })
+        settings["proximity_rules"].append(
+            {
+                **settings["proximity_rules"][0],
+                "rule_id": "custom",
+                "target_type": "living_room",
+            }
+        )
         settings["clustering_rules"].pop()
         with runtime.database.session_factory() as session:
             service = SystemConfigurationService(session)
-            service.save_section(profile_id, "floor_plan_scoring", changed, expected_hash=profile_hash)
+            service.save_section(
+                profile_id, "floor_plan_scoring", changed, expected_hash=profile_hash
+            )
             _, validated = service.for_flow(profile_id, "e02b")
             assert validated.payload["floor_plan_scoring"] == changed
 
@@ -203,10 +214,14 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
         assert official["result"]["total_score"] == production.result.total_score
         assert official["result"]["passed_critical"] == production.result.passed_critical is False
         results = {item["evaluator_key"]: item for item in official["details"]["evaluator_results"]}
-        statuses = {attempt["evaluator_key"]: attempt["status"] for attempt in historical.diagnostics}
+        statuses = {
+            attempt["evaluator_key"]: attempt["status"] for attempt in historical.diagnostics
+        }
         assert statuses == {
-            "room_size_consistency": "completed", "room_relationship_quality": "completed",
-            "living_room_balance": "completed", "bedroom_quality": "not_applicable",
+            "room_size_consistency": "completed",
+            "room_relationship_quality": "completed",
+            "living_room_balance": "completed",
+            "bedroom_quality": "not_applicable",
         }
         for attempt in historical.diagnostics:
             assert results[attempt["evaluator_key"]]["raw_score"] is None
@@ -218,7 +233,9 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
         assert recess["sections"][0]["entrances"]
         relationships = results["room_relationship_quality"]["visualization_payload"]["rules"]
         assert [rule["rule"]["rule_id"] for rule in relationships] == [
-            "kitchen_dining", "living_dining", "communal",
+            "kitchen_dining",
+            "living_dining",
+            "communal",
         ]
         assert relationships[0]["pairs"] == [
             {"source_id": "k", "target_id": "d", "distance": 0, "score": 100},
@@ -274,8 +291,10 @@ def test_diagnostics_handle_exceptions_inapplicability_and_passed_gate():
     official = score_floor_plan(request, mode=ExecutionMode.DEBUG, registry=registry)
     attempts = diagnose_skipped_evaluators(request, official, registry=registry)
     assert {item.evaluator_key: item.status for item in attempts} == {
-        "room_size_consistency": "failed", "room_relationship_quality": "not_applicable",
-        "living_room_balance": "completed", "bedroom_quality": "not_applicable",
+        "room_size_consistency": "failed",
+        "room_relationship_quality": "not_applicable",
+        "living_room_balance": "completed",
+        "bedroom_quality": "not_applicable",
     }
     assert "test evaluator failure" in attempts[0].error
 
@@ -288,13 +307,16 @@ def test_diagnostics_handle_exceptions_inapplicability_and_passed_gate():
     assert official.result == score_floor_plan(request).result
     assert diagnose_skipped_evaluators(request, official) == ()
 
+
 def test_unmet_solver_adjacency_does_not_gate_functional_scoring():
     document = portable_plan()
     floor_plan = document["floor_plan"]
     floor_plan["rooms"] = floor_plan["rooms"][:3]
     floor_plan["identity_redirects"] = {}
     floor_plan["boundary"] = polygon(rectangle(0, 0, 110, 10))
-    for entry, (left, right) in zip(floor_plan["rooms"], [(0, 10), (10, 100), (100, 110)], strict=True):
+    for entry, (left, right) in zip(
+        floor_plan["rooms"], [(0, 10), (10, 100), (100, 110)], strict=True
+    ):
         entry["boundary"] = polygon(rectangle(left, 0, right, 10))
 
     spec = document["specification"]
@@ -304,7 +326,9 @@ def test_unmet_solver_adjacency_does_not_gate_functional_scoring():
         {"source_room_id": "k", "target_room_ids": ["l"], "match_policy": "and", "strength": "hard"}
     ]
 
-    request = FloorPlanScoringInput(*decode_plan(document), decode_config(default_config_document()))
+    request = FloorPlanScoringInput(
+        *decode_plan(document), decode_config(default_config_document())
+    )
     execution = score_floor_plan(request, mode=ExecutionMode.DEBUG)
     assert execution.result.passed_critical
     evaluations = {item.evaluator_key: item for item in execution.details.evaluator_results}

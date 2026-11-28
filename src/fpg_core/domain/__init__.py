@@ -25,19 +25,19 @@ from .buildable_space import (
 from .candidate import CandidatePoint, HallwayRoomCountRange
 from .candidate_grid import CandidateMap, CandidateSearchSpace, ResolvedCandidateGrid
 from .circulation import (
-    CirculationPathDetails,
-    FinalCirculation,
-    RetainedHallwayTraffic,
     CirculationGrid,
     CirculationGridNode,
+    CirculationPathDetails,
     CirculationRouteRule,
-    RouteDistancePolicy,
     CirculationTrafficClass,
     DestinationSelection,
+    FinalCirculation,
     GridRoutingCostProfile,
     HallwayClassification,
     HallwayTrafficClass,
+    RetainedHallwayTraffic,
     RouteCostBreakdown,
+    RouteDistancePolicy,
 )
 from .execution import ExecutionMetadata, ExecutionMode, FeatureExecution
 from .floor_plan import (

@@ -364,7 +364,9 @@ class FpgCoreAdapter:
             mode=self.execution_mode(debug=debug),
         )
 
-    def post_process_floor_plan(self, specification: Any, floor_plan: Any, *, solver_config: Any, debug: bool) -> Any:
+    def post_process_floor_plan(
+        self, specification: Any, floor_plan: Any, *, solver_config: Any, debug: bool
+    ) -> Any:
         from copy import deepcopy
 
         from fpg_core.floor_plan_post_processing import (
@@ -410,8 +412,13 @@ class FpgCoreAdapter:
         config = self._required("candidate_circulation")
         available = {point.room_type for point in candidate.points}
         rules = tuple(
-            rule for rule in config.route_rules
-            if rule.source_room_type in available and (rule.destination_room_type in available or rule.destination_selection is DestinationSelection.ASSIGNED_RELATION)
+            rule
+            for rule in config.route_rules
+            if rule.source_room_type in available
+            and (
+                rule.destination_room_type in available
+                or rule.destination_selection is DestinationSelection.ASSIGNED_RELATION
+            )
         )
         if not rules:
             raise FpgCoreAdapterError("No circulation route rules match the candidate rooms")

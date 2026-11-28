@@ -20,12 +20,14 @@ class FullySharedWallConstraint:
         rules_by_room = {}
         for room in rooms:
             rules = [
-                rule for rule in settings["rules"]
+                rule
+                for rule in settings["rules"]
                 if rule["minimum_shared_sides"] > 0
                 and room.room.room_type in rule["room_types"]
                 and (
                     "when" not in rule
-                    or (rule["when"]["room_type"] in room_types) == rule["when"]["exists"]
+                    or (rule["when"]["room_type"] in room_types)
+                    == rule["when"]["exists"]
                 )
             ]
             if rules:
@@ -47,13 +49,21 @@ class FullySharedWallConstraint:
             faces_a = (first.y, first.x_end, first.y_end, first.x)
             faces_b = (second.y, second.x_end, second.y_end, second.x)
             projections = (
-                _projected_overlap(context, first.x, first.x_end, second.x, second.x_end, floor.width),
-                _projected_overlap(context, first.y, first.y_end, second.y, second.y_end, floor.length),
+                _projected_overlap(
+                    context, first.x, first.x_end, second.x, second.x_end, floor.width
+                ),
+                _projected_overlap(
+                    context, first.y, first.y_end, second.y, second.y_end, floor.length
+                ),
             )
             for side, face in enumerate(faces_a):
                 opposite = (side + 2) % 4
                 shared = _touching_overlap(
-                    context, face, faces_b[opposite], projections[side % 2], limits[side]
+                    context,
+                    face,
+                    faces_b[opposite],
+                    projections[side % 2],
+                    limits[side],
                 )
                 if first_sides is not None:
                     first_sides[side].append(shared)
@@ -68,7 +78,12 @@ class FullySharedWallConstraint:
 
 
 def _projected_overlap(
-    context: ModelContext, start_a: Any, end_a: Any, start_b: Any, end_b: Any, limit: int
+    context: ModelContext,
+    start_a: Any,
+    end_a: Any,
+    start_b: Any,
+    end_b: Any,
+    limit: int,
 ) -> Any:
     model = context.model
     start = model.NewIntVar(0, limit, context.new_name("shared_wall_start"))
@@ -96,7 +111,10 @@ def _touching_overlap(
 
 
 def _require_wall_group(
-    context: ModelContext, room: RoomVariables, shared: tuple[Any, ...], rule: ConstraintSettings
+    context: ModelContext,
+    room: RoomVariables,
+    shared: tuple[Any, ...],
+    rule: ConstraintSettings,
 ) -> None:
     count = rule["minimum_shared_sides"]
     groups = tuple(combinations(range(4), count))
@@ -106,23 +124,31 @@ def _require_wall_group(
     floor = context.problem.floor
     tolerance = rule.get("uncovered_length_tolerance", 0)
     # Use the coordinate scale with an exact floor, including near grid boundaries.
-    length = Fraction(str(tolerance)) if type(tolerance) is float else Fraction(tolerance)
+    length = (
+        Fraction(str(tolerance)) if type(tolerance) is float else Fraction(tolerance)
+    )
     allowance = min(
         length * context.problem.scale.factor // 1, 2 * (floor.width + floor.length)
     )
     lengths = (room.width, room.length, room.width, room.length)
     # Non-overlap makes the positive segments on a wall disjoint.
-    uncovered = tuple(length - contact for length, contact in zip(lengths, shared, strict=True))
+    uncovered = tuple(
+        length - contact for length, contact in zip(lengths, shared, strict=True)
+    )
     model = context.model
     choices = []
     for group in groups:
         enforced_by = []
         if len(groups) > 1:
-            choice = model.NewBoolVar(context.new_name("shared_wall_group", room.room.id_key))
+            choice = model.NewBoolVar(
+                context.new_name("shared_wall_group", room.room.id_key)
+            )
             choices.append(choice)
             enforced_by.append(choice)
         for side in group:
             model.Add(shared[side] > 0).OnlyEnforceIf(enforced_by)
-        model.Add(sum(uncovered[side] for side in group) <= allowance).OnlyEnforceIf(enforced_by)
+        model.Add(sum(uncovered[side] for side in group) <= allowance).OnlyEnforceIf(
+            enforced_by
+        )
     if choices:
         model.AddBoolOr(choices)

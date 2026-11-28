@@ -70,8 +70,13 @@ def validate_config(
             raise ScoringConfigurationError(
                 f"Evaluator '{key}' references unknown group '{group_key}'."
             )
-        if rule.key == ROOM_RELATIONSHIP_QUALITY_KEY and rule.group_key != FUNCTIONAL_GROUP:
-            raise ScoringConfigurationError("Room Relationship Quality requires the functional group.")
+        if (
+            rule.key == ROOM_RELATIONSHIP_QUALITY_KEY
+            and rule.group_key != FUNCTIONAL_GROUP
+        ):
+            raise ScoringConfigurationError(
+                "Room Relationship Quality requires the functional group."
+            )
         effectively_enabled = rule.enabled and group_key in enabled_groups
         if effectively_enabled:
             if not registry.contains(rule.key):

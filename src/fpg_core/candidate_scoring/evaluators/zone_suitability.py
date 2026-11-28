@@ -79,9 +79,7 @@ class ZoneSuitabilityEvaluator(CandidateEvaluator):
                     )
                 )
                 metrics[f"room.{point.room_id}.score"] = score
-                metrics[f"room.{point.room_id}.distance_to_zone"] = (
-                    distance_to_zone
-                )
+                metrics[f"room.{point.room_id}.distance_to_zone"] = distance_to_zone
 
             if score < 100.0:
                 findings.append(

@@ -33,5 +33,3 @@ def decode_plan(document):
     )
     validate_scoring_input(plan, spec)
     return plan, spec
-
-

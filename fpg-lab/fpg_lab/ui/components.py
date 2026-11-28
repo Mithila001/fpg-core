@@ -15,10 +15,15 @@ from fpg_lab.runtime import LabRuntime
 async def profile_picker(runtime: LabRuntime) -> ui.select:
     from fpg_lab.services.common import SystemConfigurationService
 
-    profiles = await db_call(runtime, lambda session: [
-        (profile.id, profile.name, profile.is_active)
-        for profile in SystemConfigurationService(session, runtime.codec).list(limit=500, offset=0)[0]
-    ])
+    profiles = await db_call(
+        runtime,
+        lambda session: [
+            (profile.id, profile.name, profile.is_active)
+            for profile in SystemConfigurationService(session, runtime.codec).list(
+                limit=500, offset=0
+            )[0]
+        ],
+    )
     options = {profile_id: name for profile_id, name, _ in profiles}
     active = next((profile_id for profile_id, _, selected in profiles if selected), None)
     return ui.select(options, value=active, label="Profile").classes("min-w-64")
@@ -182,9 +187,7 @@ def shell(
 ActionRole = Literal["main", "general", "subtle", "danger"]
 
 
-def action_button(
-    label: str | None = None, *, role: ActionRole = "general", **kwargs: Any
-) -> Any:
+def action_button(label: str | None = None, *, role: ActionRole = "general", **kwargs: Any) -> Any:
     """FPG-Lab action semantics; use role, not one-off color choices."""
     colors = {"main": "positive", "general": "info", "subtle": "secondary", "danger": "negative"}
     options = {"color": colors[role], **kwargs}

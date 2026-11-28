@@ -55,6 +55,7 @@ def solve(types, ys, maximum, *, scale=1, when=None):
         ),
         mode=ExecutionMode.DEBUG,
     )
+    assert result.details is not None
     assert "front_wall_setback" in result.details.applied_hard_constraints
     return result.result.status
 

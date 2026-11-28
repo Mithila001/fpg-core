@@ -1,4 +1,5 @@
 """Setup and inspection for file-backed solver runs."""
+
 import json
 
 from nicegui import app, run, ui
@@ -31,19 +32,48 @@ async def main_page(runtime):
         maps = {}
         ui.label(str(exc)).classes("text-rose-300")
     if not maps:
-        ui.label("No hint maps are available. Add the supplied portable maps to hint_maps.json.").classes("text-amber-300")
-    values = {**({"__all__": "All maps"} if len(maps) == 4 else {}), **{name: name for name in maps}}
+        ui.label(
+            "No hint maps are available. Add the supplied portable maps to hint_maps.json."
+        ).classes("text-amber-300")
+    values = {
+        **({"__all__": "All maps"} if len(maps) == 4 else {}),
+        **{name: name for name in maps},
+    }
     stored_map = app.storage.tab.get("e02a_hint_map")
     default_map = next(iter(maps), "__all__")
     ui.label("Hint map").classes("font-semibold text-sm")
-    picker = ui.radio(values, value=stored_map if stored_map in values else default_map).props("dense").classes("max-h-48 overflow-auto")
+    picker = (
+        ui.radio(values, value=stored_map if stored_map in values else default_map)
+        .props("dense")
+        .classes("max-h-48 overflow-auto")
+    )
     stored_count = app.storage.tab.get("e02a_refinement_count", 0)
-    refinement_count = ui.radio({count: str(count) for count in range(6)}, value=stored_count if stored_count in range(6) else 0).props("inline")
+    refinement_count = ui.radio(
+        {count: str(count) for count in range(6)},
+        value=stored_count if stored_count in range(6) else 0,
+    ).props("inline")
     ui.label("Refinement stage count")
-    seconds = ui.number("Initial time limit (seconds; blank uses profile)", min=0.01, value=app.storage.tab.get("e02a_initial_time_limit"))
-    seed = ui.number("Random seed (blank uses profile)", min=0, precision=0, value=app.storage.tab.get("e02a_random_seed"))
-    retry_feasible = ui.checkbox("Retry until a feasible floor plan is found", value=app.storage.tab.get("e02a_retry_feasible", False))
-    maximum_attempts = ui.number("Maximum generation attempts", min=1, precision=0, value=app.storage.tab.get("e02a_maximum_attempts", 10))
+    seconds = ui.number(
+        "Initial time limit (seconds; blank uses profile)",
+        min=0.01,
+        value=app.storage.tab.get("e02a_initial_time_limit"),
+    )
+    seed = ui.number(
+        "Random seed (blank uses profile)",
+        min=0,
+        precision=0,
+        value=app.storage.tab.get("e02a_random_seed"),
+    )
+    retry_feasible = ui.checkbox(
+        "Retry until a feasible floor plan is found",
+        value=app.storage.tab.get("e02a_retry_feasible", False),
+    )
+    maximum_attempts = ui.number(
+        "Maximum generation attempts",
+        min=1,
+        precision=0,
+        value=app.storage.tab.get("e02a_maximum_attempts", 10),
+    )
     maximum_attempts.bind_enabled_from(retry_feasible, "value")
     feedback = ui.label().classes("text-sm whitespace-pre-wrap")
 
@@ -56,20 +86,44 @@ async def main_page(runtime):
     refinement_count.on_value_change(
         lambda event: app.storage.tab.update(e02a_refinement_count=event.value)
     )
-    for element, key in ((seconds, "e02a_initial_time_limit"), (seed, "e02a_random_seed"),
-                         (retry_feasible, "e02a_retry_feasible"), (maximum_attempts, "e02a_maximum_attempts")):
+    for element, key in (
+        (seconds, "e02a_initial_time_limit"),
+        (seed, "e02a_random_seed"),
+        (retry_feasible, "e02a_retry_feasible"),
+        (maximum_attempts, "e02a_maximum_attempts"),
+    ):
         element.on_value_change(lambda event, key=key: app.storage.tab.update({key: event.value}))
 
     async def validate():
         try:
-            await run.io_bound(prepare, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None, retry_feasible.value, maximum_attempts.value)
+            await run.io_bound(
+                prepare,
+                runtime,
+                selection(),
+                refinement_count.value,
+                profile.value,
+                seconds.value,
+                int(seed.value) if seed.value is not None else None,
+                retry_feasible.value,
+                maximum_attempts.value,
+            )
             feedback.set_text("Configuration and selected maps are valid.")
         except Exception as exc:
             feedback.set_text(str(exc))
 
     async def submit():
         try:
-            run_id = await run.io_bound(start, runtime, selection(), refinement_count.value, profile.value, seconds.value, int(seed.value) if seed.value is not None else None, retry_feasible.value, maximum_attempts.value)
+            run_id = await run.io_bound(
+                start,
+                runtime,
+                selection(),
+                refinement_count.value,
+                profile.value,
+                seconds.value,
+                int(seed.value) if seed.value is not None else None,
+                retry_feasible.value,
+                maximum_attempts.value,
+            )
             ui.navigate.to(f"/experiments/e02a/runs/{run_id}")
         except Exception as exc:
             feedback.set_text(str(exc))
@@ -78,14 +132,26 @@ async def main_page(runtime):
         action_button("Validate", on_click=validate)
         action_button("Run", role="main", on_click=submit)
     ui.label("Run history").classes("text-lg font-semibold mt-4")
-    records = await db_call(runtime, lambda session: [row_document(row) for row in session.scalars(select(E02Run).order_by(E02Run.id.desc()).limit(50))])
+    records = await db_call(
+        runtime,
+        lambda session: [
+            row_document(row)
+            for row in session.scalars(select(E02Run).order_by(E02Run.id.desc()).limit(50))
+        ],
+    )
     for record in records:
-        ui.link(f"Run #{record['id']} · {record['status']}", f"/experiments/e02a/runs/{record['id']}")
+        ui.link(
+            f"Run #{record['id']} · {record['status']}", f"/experiments/e02a/runs/{record['id']}"
+        )
 
 
 async def run_page(runtime, experiment_id):
     state = {"record": None, "case": None, "stage": None}
-    workspace = ResultWorkspace(f"E-02-A run #{experiment_id}", back_link="/experiments/e02a", views=("Canvas", "Scores", "Diagnostics"))
+    workspace = ResultWorkspace(
+        f"E-02-A run #{experiment_id}",
+        back_link="/experiments/e02a",
+        views=("Canvas", "Scores", "Diagnostics"),
+    )
     with workspace.main("Canvas"):
         chart = ui.plotly(figures.floor_plan(None)).classes("lab-primary-plot")
     with workspace.main("Scores"):
@@ -112,7 +178,9 @@ async def run_page(runtime, experiment_id):
         cases = item["cases"]
         status.set_text(f"{item['status']} · {len(cases)} / {len(item['snapshot']['maps'])} cases")
         terminate.set_enabled(item["status"] in ("queued", "running", "termination_requested"))
-        retry_button.set_enabled(item["status"] not in ("queued", "running", "termination_requested"))
+        retry_button.set_enabled(
+            item["status"] not in ("queued", "running", "termination_requested")
+        )
         case_picker.options = {i: case["name"] for i, case in enumerate(cases)}
         if case_picker.value not in case_picker.options:
             case_picker.value = 0 if cases else None
@@ -143,9 +211,13 @@ async def run_page(runtime, experiment_id):
                 if case["status"] == "running" and case.get("current_attempt"):
                     ui.label(f"Generation attempt {case['current_attempt']}")
                 score = ((case.get("scoring") or {}).get("result") or {}).get("total_score")
-                ui.label(f"{case['status']} · score {score if score is not None else '—'} · {case.get('duration_ms', 0)} ms")
+                ui.label(
+                    f"{case['status']} · score {score if score is not None else '—'} · {case.get('duration_ms', 0)} ms"
+                )
                 if case.get("error"):
-                    ui.label(f"{case['error']['stage']}: {case['error']['message']}").classes("text-amber-300")
+                    ui.label(f"{case['error']['stage']}: {case['error']['message']}").classes(
+                        "text-amber-300"
+                    )
             else:
                 ui.label("Waiting for a case.")
             if item.get("error"):
@@ -165,11 +237,13 @@ async def run_page(runtime, experiment_id):
 
     async def refresh():
         try:
+
             def read(session):
                 row = session.get(E02Run, experiment_id)
                 if row is None:
                     raise ValueError("Run not found")
                 return row_document(row)
+
             item = await db_call(runtime, read)
             if item != state["record"]:
                 state["record"] = item
@@ -186,6 +260,7 @@ async def run_page(runtime, experiment_id):
             if row and row.status in ("queued", "running"):
                 row.status = "termination_requested"
                 session.commit()
+
         await db_call(runtime, request)
         timer.activate()
 
@@ -199,7 +274,9 @@ async def run_page(runtime, experiment_id):
     async def copy_floor_plan():
         try:
             document = export_stage(state["record"], state["case"], state["stage"])
-            await ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})")
+            await ui.run_javascript(
+                f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})"
+            )
             ui.notify("Floor plan copied")
         except Exception as exc:
             notify_error(exc)

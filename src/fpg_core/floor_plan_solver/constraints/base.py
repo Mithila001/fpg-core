@@ -16,7 +16,9 @@ def require_room_types(values: Iterable[object], label: str) -> tuple[RoomType, 
     try:
         raw_values = tuple(values)
     except TypeError as exc:
-        raise InvalidProfileError(f"{label} must be an iterable of RoomType members") from exc
+        raise InvalidProfileError(
+            f"{label} must be an iterable of RoomType members"
+        ) from exc
     room_types: list[RoomType] = []
     for value in raw_values:
         if not isinstance(value, RoomType):
@@ -45,8 +47,12 @@ OBJECTIVE_SCALE = 1_000
 
 
 def ceil_ratio(
-    context: ModelContext, numerator: Any, denominator: Any, maximum: int,
-    *, denominator_max: int | None = None,
+    context: ModelContext,
+    numerator: Any,
+    denominator: Any,
+    maximum: int,
+    *,
+    denominator_max: int | None = None,
 ) -> Any:
     result = context.model.NewIntVar(0, maximum, context.new_name("penalty"))
     upper = denominator if denominator_max is None else denominator_max
@@ -63,8 +69,12 @@ def average_penalties(context: ModelContext, terms: list[tuple[Any, int]]) -> An
         return 0
     if len(terms) == 1:
         return terms[0][0]
-    return ceil_ratio(context, sum(value * weight for value, weight in terms),
-                      sum(weight for _, weight in terms), PENALTY_MAX)
+    return ceil_ratio(
+        context,
+        sum(value * weight for value, weight in terms),
+        sum(weight for _, weight in terms),
+        PENALTY_MAX,
+    )
 
 
 class HardConstraint(Protocol):
@@ -74,8 +84,7 @@ class HardConstraint(Protocol):
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class SoftConstraint(Protocol):
@@ -85,5 +94,4 @@ class SoftConstraint(Protocol):
         self,
         context: ModelContext,
         settings: ConstraintSettings,
-    ) -> Any:
-        ...
+    ) -> Any: ...

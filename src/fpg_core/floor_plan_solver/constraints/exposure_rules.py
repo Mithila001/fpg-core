@@ -85,4 +85,8 @@ class SoftExteriorWallExposure:
 
     def build_penalty(self, context, settings):
         misses = apply_rules(context, settings, self.key, soft=True)
-        return ceil_ratio(context, PENALTY_MAX * sum(misses), len(misses), PENALTY_MAX) if misses else 0
+        return (
+            ceil_ratio(context, PENALTY_MAX * sum(misses), len(misses), PENALTY_MAX)
+            if misses
+            else 0
+        )

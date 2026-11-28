@@ -242,7 +242,9 @@ class FunctionalGroupDocument(StrictModel):
 
 
 class FunctionalGroupPuritySettingsDocument(StrictModel):
-    groups: list[FunctionalGroupDocument] = Field(default_factory=lambda: [FunctionalGroupDocument(name="bedrooms", room_types=["bedroom"])])
+    groups: list[FunctionalGroupDocument] = Field(
+        default_factory=lambda: [FunctionalGroupDocument(name="bedrooms", room_types=["bedroom"])]
+    )
     direct_interruption_penalty: float = Field(default=1.0, ge=0, allow_inf_nan=False)
     regional_intrusion_penalty: float = Field(default=0.5, ge=0, allow_inf_nan=False)
     connection_tolerance_grid_steps: float = Field(default=0.5, ge=0, allow_inf_nan=False)

@@ -95,7 +95,13 @@ def _state(connection):
         return revision, "newer"
     if not schema and revision == 0:
         return revision, "empty"
-    recognized = any(_matches_schema(schema, expected) for expected in (CURRENT_SCHEMA_HASH, PREVIOUS_SCHEMA_HASH if revision >= 2 else REVIEWED_SCHEMA_HASH))
+    recognized = any(
+        _matches_schema(schema, expected)
+        for expected in (
+            CURRENT_SCHEMA_HASH,
+            PREVIOUS_SCHEMA_HASH if revision >= 2 else REVIEWED_SCHEMA_HASH,
+        )
+    )
     if not recognized:
         return revision, "unknown"
     return revision, "current" if revision == REVISION else "upgrade_required"
@@ -133,8 +139,7 @@ def _counts(connection, names=None):
     return {
         table.name: connection.scalar(select(func.count()).select_from(table))
         for table in Base.metadata.sorted_tables
-        if (names is None or table.name in names)
-        and table.name in _schema(connection)
+        if (names is None or table.name in names) and table.name in _schema(connection)
     }
 
 
@@ -363,7 +368,9 @@ def _enable_room_quality_evaluators(data, baseline):
     groups = scoring["groups"]
     functional = next((group for group in groups if group["key"] == "functional"), None)
     if functional is None:
-        functional = deepcopy(next(group for group in baseline["groups"] if group["key"] == "functional"))
+        functional = deepcopy(
+            next(group for group in baseline["groups"] if group["key"] == "functional")
+        )
         critical = next(group for group in groups if group["key"] == "critical")
         functional["order"] = max(functional["order"], critical["order"] + 1)
         groups.append(functional)
@@ -383,18 +390,29 @@ def _enable_room_quality_evaluators(data, baseline):
 def _upgrade_interior_doors(data):
     openings = data["openings"]
     units = data["project_units_per_meter"]
-    bathroom = {"door_width": units * 0.8, "preferred_clearance": units * 0.2,
-                "minimum_clearance": 0.0, "minimum_shared_wall": units * 0.8,
-                "placement_preference": "center"}
-    openings.setdefault("interior_doors", {
-        "default": {"door_width": openings["dimensions"]["door_width"],
-                    "preferred_clearance": openings["geometry"]["corner_clearance"],
-                    "minimum_clearance": 0.0,
-                    "minimum_shared_wall": openings["dimensions"]["minimum_shared_wall"],
-                    "placement_preference": "wall_end"},
-        "overrides": [{"room_type": room_type, "policy": deepcopy(bathroom)}
-                      for room_type in ("bathroom", "attached_bathroom")],
-    })
+    bathroom = {
+        "door_width": units * 0.8,
+        "preferred_clearance": units * 0.2,
+        "minimum_clearance": 0.0,
+        "minimum_shared_wall": units * 0.8,
+        "placement_preference": "center",
+    }
+    openings.setdefault(
+        "interior_doors",
+        {
+            "default": {
+                "door_width": openings["dimensions"]["door_width"],
+                "preferred_clearance": openings["geometry"]["corner_clearance"],
+                "minimum_clearance": 0.0,
+                "minimum_shared_wall": openings["dimensions"]["minimum_shared_wall"],
+                "placement_preference": "wall_end",
+            },
+            "overrides": [
+                {"room_type": room_type, "policy": deepcopy(bathroom)}
+                for room_type in ("bathroom", "attached_bathroom")
+            ],
+        },
+    )
     return data
 
 
@@ -414,18 +432,32 @@ def _upgrade_opening_quality(data):
     for room_type in ("bathroom", "attached_bathroom"):
         if room_type not in eligible:
             eligible.append(room_type)
-    policy.setdefault("window_policies", [
-        {"room_type": room_type, "policy": {
-            "width": units * 0.5 if room_type in ("bathroom", "attached_bathroom") else openings["dimensions"]["window_width"],
-            "target_count": 1,
-            "preferred_clearance": units * 0.2 if room_type in ("bathroom", "attached_bathroom") else openings["geometry"]["corner_clearance"],
-            "minimum_clearance": 0.0,
-        }} for room_type in eligible
-    ])
-    policy.setdefault("normal_connection_caps", [
-        {"room_type": room_type, "maximum": 1}
-        for room_type in ("bedroom", "kitchen", "bathroom", "attached_bathroom")
-    ])
+    policy.setdefault(
+        "window_policies",
+        [
+            {
+                "room_type": room_type,
+                "policy": {
+                    "width": units * 0.5
+                    if room_type in ("bathroom", "attached_bathroom")
+                    else openings["dimensions"]["window_width"],
+                    "target_count": 1,
+                    "preferred_clearance": units * 0.2
+                    if room_type in ("bathroom", "attached_bathroom")
+                    else openings["geometry"]["corner_clearance"],
+                    "minimum_clearance": 0.0,
+                },
+            }
+            for room_type in eligible
+        ],
+    )
+    policy.setdefault(
+        "normal_connection_caps",
+        [
+            {"room_type": room_type, "maximum": 1}
+            for room_type in ("bedroom", "kitchen", "bathroom", "attached_bathroom")
+        ],
+    )
     policy.setdefault("prevent_duplicate_connections", True)
     pairs = policy["allowed_room_pairs"]
     if not any({pair["first"], pair["second"]} == {"kitchen", "dining_room"} for pair in pairs):
@@ -457,8 +489,13 @@ def _migration(connection, session, report, *, dry_run):
         try:
             expected_version = 7 if revision >= 10 else 6
             profile_version = row.configuration_data.get("schema_version")
-            if row.schema_version != str(profile_version) or profile_version not in (expected_version, 8):
-                raise ValueError(f"schema_version: expected version {expected_version} for database revision {revision}")
+            if row.schema_version != str(profile_version) or profile_version not in (
+                expected_version,
+                8,
+            ):
+                raise ValueError(
+                    f"schema_version: expected version {expected_version} for database revision {revision}"
+                )
             primary = revision == 0 and row.name == PRIMARY_PROFILE
             if primary:
                 validated = baseline
@@ -471,37 +508,75 @@ def _migration(connection, session, report, *, dry_run):
                         data, baseline.payload["floor_plan_scoring"]
                     )
                 if revision < 4:
-                    data = _upgrade_post_processing(
-                        data, baseline.payload["post_processing"]
-                    )
+                    data = _upgrade_post_processing(data, baseline.payload["post_processing"])
                 if revision < 5:
                     data = _upgrade_front_wall_setback(data, baseline.payload)
                 if revision < 6:
-                    data = _enable_room_quality_evaluators(data, baseline.payload["floor_plan_scoring"])
+                    data = _enable_room_quality_evaluators(
+                        data, baseline.payload["floor_plan_scoring"]
+                    )
                 if revision < 7 and data["openings"]["geometry"]["corner_clearance"] == 0:
-                    data["openings"]["geometry"]["corner_clearance"] = data["project_units_per_meter"] * 0.5
+                    data["openings"]["geometry"]["corner_clearance"] = (
+                        data["project_units_per_meter"] * 0.5
+                    )
                 if revision < 8:
                     data = _upgrade_interior_doors(data)
                 if revision < 9:
                     data = _upgrade_opening_quality(data)
                 if revision < 10:
                     scoring = data["candidate_scoring"]
-                    scoring["evaluator_rules"] = [rule for rule in scoring["evaluator_rules"] if rule["key"] != "relationship_quality"]
+                    scoring["evaluator_rules"] = [
+                        rule
+                        for rule in scoring["evaluator_rules"]
+                        if rule["key"] != "relationship_quality"
+                    ]
                     for rule in scoring["evaluator_rules"]:
                         rule["weight"] = 1.0
                     existing = {rule["key"] for rule in scoring["evaluator_rules"]}
-                    scoring["evaluator_rules"].extend(deepcopy(rule) for rule in baseline.payload["candidate_scoring"]["evaluator_rules"] if rule["key"] in {"circulation_quality", "functional_group_purity"} and rule["key"] not in existing)
+                    scoring["evaluator_rules"].extend(
+                        deepcopy(rule)
+                        for rule in baseline.payload["candidate_scoring"]["evaluator_rules"]
+                        if rule["key"] in {"circulation_quality", "functional_group_purity"}
+                        and rule["key"] not in existing
+                    )
                     scoring.pop("raise_on_evaluator_error", None)
                     scoring.pop("not_applicable_quality_contributes", None)
                     data["schema_version"] = 7
                 if revision < 11:
                     for rule in data["candidate_circulation"]["route_rules"]:
                         if rule["id"] == 5:
-                            if rule == next((item for item in baseline.payload["candidate_circulation"]["route_rules"] if item["id"] == 5), None):
+                            if rule == next(
+                                (
+                                    item
+                                    for item in baseline.payload["candidate_circulation"][
+                                        "route_rules"
+                                    ]
+                                    if item["id"] == 5
+                                ),
+                                None,
+                            ):
                                 continue
-                            if (rule["source_room_type"], rule["destination_room_type"], rule["destination_selection"]) != ("bedroom", "attached_bathroom", "lowest_cost_match"):
-                                raise ValueError("route rule 5 is customized; update it manually before migration")
-                            rule.update(name="Attached bathroom to assigned bedroom", source_room_type="attached_bathroom", destination_room_type="bedroom", destination_selection="assigned_relation", allow_global_transit=False, allowed_transit_room_types=[], required_transit_room_types=[], distance_policy={"preferred_max_grid_steps": 2, "over_limit_score_multiplier": 0.25})
+                            if (
+                                rule["source_room_type"],
+                                rule["destination_room_type"],
+                                rule["destination_selection"],
+                            ) != ("bedroom", "attached_bathroom", "lowest_cost_match"):
+                                raise ValueError(
+                                    "route rule 5 is customized; update it manually before migration"
+                                )
+                            rule.update(
+                                name="Attached bathroom to assigned bedroom",
+                                source_room_type="attached_bathroom",
+                                destination_room_type="bedroom",
+                                destination_selection="assigned_relation",
+                                allow_global_transit=False,
+                                allowed_transit_room_types=[],
+                                required_transit_room_types=[],
+                                distance_policy={
+                                    "preferred_max_grid_steps": 2,
+                                    "over_limit_score_multiplier": 0.25,
+                                },
+                            )
                     data["schema_version"] = 8
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
@@ -521,7 +596,9 @@ def _migration(connection, session, report, *, dry_run):
     if not any(row.name == PRIMARY_PROFILE for row in rows):
         report["profiles"].append({"name": PRIMARY_PROFILE, "action": "create E02A baseline"})
     report["action"] = "initialize schema" if compatibility == "empty" else "upgrade saved profiles"
-    report["created_tables"] = ["fpg_e02c_run"] if compatibility == "upgrade_required" and revision < 7 else []
+    report["created_tables"] = (
+        ["fpg_e02c_run"] if compatibility == "upgrade_required" and revision < 7 else []
+    )
     if compatibility == "upgrade_required" and revision < 2:
         report["removed_floor_plan_runs"] = connection.exec_driver_sql(
             "SELECT count(*) FROM fpg_p01_floor_plan_run"

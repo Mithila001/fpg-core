@@ -132,7 +132,9 @@ class RecordingAdapter(FpgCoreAdapter):
         self.calls.append(profile)
         return Execution(Solve(PLAN))
 
-    def post_process_floor_plan(self, specification: Any, floor_plan: Any, *, solver_config: Any, debug: bool) -> Any:
+    def post_process_floor_plan(
+        self, specification: Any, floor_plan: Any, *, solver_config: Any, debug: bool
+    ) -> Any:
         self.calls.append("post")
         return Execution(Post(PLAN))
 
@@ -253,7 +255,6 @@ def test_flows_and_persistence(tmp_path: Path, flow: str, debug: bool) -> None:
         )
 
 
-
 def test_rejected_candidate(tmp_path: Path) -> None:
     class Adapter(RecordingAdapter):
         reject = True
@@ -273,7 +274,9 @@ def test_submission_failure_and_invalid_input(tmp_path: Path) -> None:
         with pytest.raises(ValidationError):
             runtime.start_experiment("p01a", {**payload("p01a"), "trial_count": 0})
         with pytest.raises(ValidationError):
-            runtime.start_experiment("p01b", {"preset_id": 1, "initial_time_limit": 1, "iterations": 101})
+            runtime.start_experiment(
+                "p01b", {"preset_id": 1, "initial_time_limit": 1, "iterations": 101}
+            )
         with runtime.database.session_factory() as session:
             assert list(session.scalars(select(P01Experiment))) == []
         runtime.jobs.shutdown()
@@ -316,7 +319,9 @@ def test_shutdown_terminates_active_and_queued_jobs(tmp_path: Path) -> None:
         entered = Event()
         release = Event()
 
-    runtime = initialized_runtime(database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=Adapter)
+    runtime = initialized_runtime(
+        database_url=f"sqlite:///{tmp_path / 'lab.db'}", adapter_factory=Adapter
+    )
     runtime.start()
     create_profile(runtime)
     first = runtime.start_experiment("p01a", payload("p01a"))

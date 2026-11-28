@@ -105,10 +105,10 @@ ROOM_SIZE_CONSISTENCY_KEY = EvaluatorKey("room_size_consistency")
 Public aggregation values:
 
 ```python
-RoomAreaAggregation.MIN      # "min"
+RoomAreaAggregation.MIN  # "min"
 RoomAreaAggregation.AVERAGE  # "average"
-RoomAreaAggregation.MAX      # "max"
-RoomAreaAggregation.TOTAL    # "total"
+RoomAreaAggregation.MAX  # "max"
+RoomAreaAggregation.TOTAL  # "total"
 ```
 
 Cross-type relation rule:

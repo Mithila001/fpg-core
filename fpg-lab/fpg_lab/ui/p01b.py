@@ -46,7 +46,9 @@ async def main_page(runtime, flow="p01b"):
             seconds = ui.number("Initial solver time limit (seconds)", min=0.01, value=5).classes(
                 "w-full"
             )
-            seed = ui.number("Random seed (blank uses profile)", min=0, precision=0).classes("w-full")
+            seed = ui.number("Random seed (blank uses profile)", min=0, precision=0).classes(
+                "w-full"
+            )
         preview = ui.column().classes("lab-setup-main order-1")
     history = ui.column().classes("w-full")
     history_page = ui.number("History page", min=1, value=1, precision=0).classes("w-36")
@@ -229,7 +231,9 @@ async def main_page(runtime, flow="p01b"):
 
         with ui.row():
             start_button = action_button("Start", role="main", on_click=start_quick)
-            action_button("Cancel", role="subtle", on_click=lambda: (cancel_quick(), quick_dialog.close()))
+            action_button(
+                "Cancel", role="subtle", on_click=lambda: (cancel_quick(), quick_dialog.close())
+            )
             apply_button = action_button("Quick Apply", on_click=apply_quick)
             save_button = action_button("Save and Apply", role="main", on_click=save_quick)
         quick["timer"] = ui.timer(0.5, poll_quick, active=False)
@@ -369,7 +373,10 @@ async def run_page(runtime, experiment_id, flow="p01b"):
     """Inspect a saved P01B/P01C run without shrinking the primary floor plan."""
     service_type = P01CService if flow == "p01c" else P01BService
     state: dict[str, Any] = {
-        "iteration": 0, "stage": 0, "rows": [], "experiment": None,
+        "iteration": 0,
+        "stage": 0,
+        "rows": [],
+        "experiment": None,
         "selected_stage": "Initial",
     }
     timer: Timer
@@ -392,7 +399,9 @@ async def run_page(runtime, experiment_id, flow="p01b"):
             following = action_button("Next").props("dense outline")
         stages_area = ui.column().classes("w-full gap-1")
         overlay = ui.checkbox("Show original hint points", value=False).props("dense")
-        action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props("dense flat")
+        action_button("Refresh", role="subtle", on_click=lambda: timer.activate()).props(
+            "dense flat"
+        )
         terminate_button = action_button("Terminate run", role="danger").props("dense outline")
     with workspace.context("Canvas"):
         details_area = ui.column().classes("w-full gap-2")
@@ -400,9 +409,7 @@ async def run_page(runtime, experiment_id, flow="p01b"):
     with workspace.context("Scores"):
         ui.label("Stored scoring data for the selected iteration.").classes("lab-muted text-sm")
     with workspace.context("Diagnostics"):
-        ui.label("Saved stage data, errors and iteration provenance.").classes(
-            "lab-muted text-sm"
-        )
+        ui.label("Saved stage data, errors and iteration provenance.").classes("lab-muted text-sm")
 
     def render() -> None:
         item = state["experiment"]
@@ -412,7 +419,9 @@ async def run_page(runtime, experiment_id, flow="p01b"):
         status.set_text(
             f"{item['status']} · {item['completed_trial_count']}/{item['requested_trial_count']} iterations"
         )
-        terminate_button.set_enabled(item["status"] in ("queued", "running", "termination_requested"))
+        terminate_button.set_enabled(
+            item["status"] in ("queued", "running", "termination_requested")
+        )
         if not item.get("hint_points") or "preset" not in item["hint_points"]:
             details_area.clear()
             with details_area:
@@ -427,7 +436,8 @@ async def run_page(runtime, experiment_id, flow="p01b"):
         following.set_enabled(state["iteration"] + 1 < len(rows))
         position.set_text(
             f"{state['iteration'] + 1} / {item['requested_trial_count']}"
-            if rows else "No iterations yet"
+            if rows
+            else "No iterations yet"
         )
         stages_area.clear()
         score_area.clear()
@@ -444,8 +454,12 @@ async def run_page(runtime, experiment_id, flow="p01b"):
         row = rows[state["iteration"]]
         stages = row["stages"]
         state["stage"] = next(
-            (index for index, stage in enumerate(stages)
-             if stage["name"] == state["selected_stage"]), 0,
+            (
+                index
+                for index, stage in enumerate(stages)
+                if stage["name"] == state["selected_stage"]
+            ),
+            0,
         )
         if stages:
             state["selected_stage"] = stages[state["stage"]]["name"]
@@ -466,8 +480,11 @@ async def run_page(runtime, experiment_id, flow="p01b"):
             for point in item["hint_points"]["preset"]["candidate"]["points"]:
                 figure.add_trace(
                     go.Scatter(
-                        x=[point["x"]], y=[point["y"]], mode="markers+text",
-                        text=[point["room_id"]], textposition="top center",
+                        x=[point["x"]],
+                        y=[point["y"]],
+                        mode="markers+text",
+                        text=[point["room_id"]],
+                        textposition="top center",
                         name=point["room_id"],
                         marker={"size": 12, "color": figures.color(point.get("room_type", ""))},
                     )
@@ -485,9 +502,9 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                 f"stage {(stage or {}).get('duration_ms', 0)} ms"
             ).classes("lab-muted text-sm")
             if row.get("error"):
-                ui.label(
-                    f"{row['error']['stage']}: {row['error']['message']}"
-                ).classes("text-amber-300 text-sm")
+                ui.label(f"{row['error']['stage']}: {row['error']['message']}").classes(
+                    "text-amber-300 text-sm"
+                )
             if not plan:
                 ui.label("No floor plan saved for this stage.").classes("lab-muted text-sm")
             if flow == "p01c":
@@ -512,15 +529,20 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                         )
                         ui.notify("Floor plan and openings copied")
 
-                    action_button("Copy final floor plan", role="subtle", icon="content_copy", on_click=copy_plan).props(
-                        "dense flat"
-                    )
+                    action_button(
+                        "Copy final floor plan",
+                        role="subtle",
+                        icon="content_copy",
+                        on_click=copy_plan,
+                    ).props("dense flat")
         with room_area:
             if plan:
                 ui.label("Rooms").classes("font-semibold text-sm")
                 for room in plan.get("rooms", []):
                     with ui.row().classes("items-center gap-2"):
-                        ui.icon("square", color=figures.color(str(room.get("room_type", room["id"]))))
+                        ui.icon(
+                            "square", color=figures.color(str(room.get("room_type", room["id"])))
+                        )
                         ui.label(room.get("name") or room["id"]).classes("text-sm")
         with score_area:
             if row.get("scoring"):
@@ -536,10 +558,13 @@ async def run_page(runtime, experiment_id, flow="p01b"):
                 json_panel("Iteration error", row["error"])
             if row.get("scoring"):
                 json_panel("Iteration scoring", row["scoring"])
-            json_panel("Run input and configuration", {
-                "hint_points": item.get("hint_points"),
-                "system_configuration_snapshot": item.get("system_configuration_snapshot"),
-            })
+            json_panel(
+                "Run input and configuration",
+                {
+                    "hint_points": item.get("hint_points"),
+                    "system_configuration_snapshot": item.get("system_configuration_snapshot"),
+                },
+            )
 
     def select_stage(index: int) -> None:
         stages = state["rows"][state["iteration"]]["stages"]
@@ -553,6 +578,7 @@ async def run_page(runtime, experiment_id, flow="p01b"):
 
     async def refresh() -> None:
         try:
+
             def read(session):
                 experiment = service_type(session).get_experiment(experiment_id)
                 rows = session.scalars(

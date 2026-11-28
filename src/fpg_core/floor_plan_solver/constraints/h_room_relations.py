@@ -14,9 +14,7 @@ class HardRoomRelationsConstraint:
         settings: ConstraintSettings,
     ) -> None:
         overlap_value = float(settings.get("minimum_overlap", 0.6))
-        minimum_overlap = max(
-            1, context.problem.scale.minimum_length(overlap_value)
-        )
+        minimum_overlap = max(1, context.problem.scale.minimum_length(overlap_value))
 
         for relation in context.problem.relations:
             if relation.strength != "hard":
@@ -37,6 +35,4 @@ class HardRoomRelationsConstraint:
                 for adjacent in adjacency_options:
                     context.model.Add(adjacent == 1).OnlyEnforceIf(source.present)
             else:
-                context.model.AddBoolOr(
-                    adjacency_options + [source.present.Not()]
-                )
+                context.model.AddBoolOr(adjacency_options + [source.present.Not()])

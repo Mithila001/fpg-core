@@ -26,11 +26,16 @@ def _read_all(path: Path) -> list[str]:
         if not isinstance(node, (ast.Assign, ast.AnnAssign)):
             continue
         targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        if not any(isinstance(target, ast.Name) and target.id == "__all__" for target in targets):
+        if not any(
+            isinstance(target, ast.Name) and target.id == "__all__"
+            for target in targets
+        ):
             continue
         value = node.value
         if not isinstance(value, (ast.List, ast.Tuple)):
-            raise ValueError(f"{path}: __all__ must be a literal list/tuple for manifest generation")
+            raise ValueError(
+                f"{path}: __all__ must be a literal list/tuple for manifest generation"
+            )
         exports: list[str] = []
         for item in value.elts:
             if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
@@ -91,10 +96,14 @@ def main() -> int:
     rendered = render_manifest()
     if args.check:
         if not OUTPUT_PATH.is_file():
-            print(f"missing public API manifest: {OUTPUT_PATH.relative_to(PROJECT_ROOT)}")
+            print(
+                f"missing public API manifest: {OUTPUT_PATH.relative_to(PROJECT_ROOT)}"
+            )
             return 1
         if OUTPUT_PATH.read_text(encoding="utf-8") != rendered:
-            print("public API manifest is stale; run tools/generate_public_api_manifest.py")
+            print(
+                "public API manifest is stale; run tools/generate_public_api_manifest.py"
+            )
             return 1
         print("public API manifest is current")
         return 0

@@ -50,7 +50,7 @@ Typical shape:
 ```python
 FeatureInput(
     request=...,  # request/operation-specific data
-    config=...,   # reusable algorithm policy
+    config=...,  # reusable algorithm policy
 )
 ```
 

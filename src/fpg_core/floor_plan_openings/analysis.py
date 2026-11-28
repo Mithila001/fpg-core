@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
+from shapely.geometry import GeometryCollection, MultiPolygon
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry import Polygon as ShapelyPolygon
 from shapely.ops import unary_union
@@ -125,11 +127,21 @@ def analyze_floor_plan(
         )
 
     footprint = unary_union(list(room_shapes.values()))
-    polygons = (footprint,) if footprint.geom_type == "Polygon" else footprint.geoms
-    shells = tuple(ShapelyPolygon(polygon.exterior) for polygon in polygons if polygon.geom_type == "Polygon")
-    exterior_rings = tuple(shell.exterior for shell in shells if not any(
-        other is not shell and other.covers(shell) for other in shells
-    ))
+    polygons = (
+        (footprint,)
+        if isinstance(footprint, ShapelyPolygon)
+        else cast(MultiPolygon | GeometryCollection, footprint).geoms
+    )
+    shells = tuple(
+        ShapelyPolygon(polygon.exterior)
+        for polygon in polygons
+        if isinstance(polygon, ShapelyPolygon)
+    )
+    exterior_rings = tuple(
+        shell.exterior
+        for shell in shells
+        if not any(other is not shell and other.covers(shell) for other in shells)
+    )
 
     by_line: dict[tuple[WallOrientation, int], list[_RawSegment]] = {}
     for segment in raw:
@@ -139,25 +151,44 @@ def analyze_floor_plan(
     for (orientation, fixed), segments in sorted(
         by_line.items(), key=lambda item: (item[0][0].value, item[0][1])
     ):
-        endpoints = sorted({value for segment in segments for value in (segment.start, segment.end)})
+        endpoints = sorted(
+            {value for segment in segments for value in (segment.start, segment.end)}
+        )
         for start, end in zip(endpoints, endpoints[1:], strict=False):
             if start == end:
                 continue
-            covering = [segment for segment in segments if segment.start <= start and segment.end >= end]
+            covering = [
+                segment
+                for segment in segments
+                if segment.start <= start and segment.end >= end
+            ]
             room_ids = tuple(
                 sorted(
-                    {segment.room_id for segment in covering if segment.room_id is not None},
+                    {
+                        segment.room_id
+                        for segment in covering
+                        if segment.room_id is not None
+                    },
                     key=str,
                 )
             )
             midpoint = (start + end) / (2 * scale)
-            point = ShapelyPoint(midpoint, fixed / scale) if orientation is WallOrientation.HORIZONTAL else ShapelyPoint(fixed / scale, midpoint)
-            on_exterior = any(ring.distance(point) <= config.geometry.tolerance for ring in exterior_rings)
+            point = (
+                ShapelyPoint(midpoint, fixed / scale)
+                if orientation is WallOrientation.HORIZONTAL
+                else ShapelyPoint(fixed / scale, midpoint)
+            )
+            on_exterior = any(
+                ring.distance(point) <= config.geometry.tolerance
+                for ring in exterior_rings
+            )
             if len(room_ids) > 2:
                 raise OpeningInputError("more than two rooms share an atomic wall span")
             if len(room_ids) == 2:
                 atomic.append(
-                    _AtomicWall(orientation, fixed, start, end, WallKind.SHARED, room_ids, None)
+                    _AtomicWall(
+                        orientation, fixed, start, end, WallKind.SHARED, room_ids, None
+                    )
                 )
             elif len(room_ids) == 1 and on_exterior:
                 side = _exterior_side(

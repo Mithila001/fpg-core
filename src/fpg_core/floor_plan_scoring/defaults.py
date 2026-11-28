@@ -14,10 +14,10 @@ from .config import (
 )
 from .evaluators import (
     BEDROOM_QUALITY_KEY,
-    LIVING_ROOM_BALANCE_KEY,
     ENCLOSED_VOIDS_KEY,
     GEOMETRY_INTEGRITY_KEY,
     INWARD_RECESS_KEY,
+    LIVING_ROOM_BALANCE_KEY,
     ROOM_RELATIONSHIP_QUALITY_KEY,
     ROOM_SIZE_CONSISTENCY_KEY,
     BedroomQualityEvaluator,
@@ -93,7 +93,8 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
             RoomSizeConsistencySettings(
                 relation_rules=tuple(
                     RoomSizeRelationRule(
-                        reference_type=reference, compared_type=compared,
+                        reference_type=reference,
+                        compared_type=compared,
                         max_ratio=DEFAULT_ROOM_SIZE_MAX_RATIO,
                         reference_aggregation=RoomAreaAggregation.MIN,
                         compared_aggregation=RoomAreaAggregation.MAX,
@@ -101,7 +102,9 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
                     for compared, reference in DEFAULT_ROOM_SIZE_PAIRS
                 ),
                 consistency_rules=tuple(
-                    RoomTypeConsistencyRule(room_type=room_type, maximum_spread_ratio=spread)
+                    RoomTypeConsistencyRule(
+                        room_type=room_type, maximum_spread_ratio=spread
+                    )
                     for room_type, spread in DEFAULT_ROOM_SIZE_SPREADS
                 ),
                 default_full_penalty_ratio_delta=0.50,
@@ -115,25 +118,37 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
             RoomRelationshipQualitySettings(
                 proximity_rules=(
                     RoomProximityRule(
-                        rule_id="kitchen_dining", source_type=RoomType.KITCHEN,
+                        rule_id="kitchen_dining",
+                        source_type=RoomType.KITCHEN,
                         target_type=RoomType.DINING_ROOM,
-                        preferred_maximum_distance=5, zero_score_distance=30,
+                        preferred_maximum_distance=5,
+                        zero_score_distance=30,
                     ),
                     RoomProximityRule(
-                        rule_id="living_dining", source_type=RoomType.LIVING_ROOM,
+                        rule_id="living_dining",
+                        source_type=RoomType.LIVING_ROOM,
                         target_type=RoomType.DINING_ROOM,
-                        preferred_maximum_distance=5, zero_score_distance=30,
+                        preferred_maximum_distance=5,
+                        zero_score_distance=30,
                     ),
                 ),
                 clustering_rules=(
                     RoomClusteringRule(
                         rule_id="communal",
-                        room_types=(RoomType.LIVING_ROOM, RoomType.DINING_ROOM, RoomType.KITCHEN),
-                        preferred_maximum_distance=60, zero_score_distance=120, weight=0.5,
+                        room_types=(
+                            RoomType.LIVING_ROOM,
+                            RoomType.DINING_ROOM,
+                            RoomType.KITCHEN,
+                        ),
+                        preferred_maximum_distance=60,
+                        zero_score_distance=120,
+                        weight=0.5,
                     ),
                     RoomClusteringRule(
-                        rule_id="bedrooms", room_types=(RoomType.BEDROOM,),
-                        preferred_maximum_distance=50, zero_score_distance=100,
+                        rule_id="bedrooms",
+                        room_types=(RoomType.BEDROOM,),
+                        preferred_maximum_distance=50,
+                        zero_score_distance=100,
                     ),
                 ),
             ),
@@ -158,7 +173,6 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
         ),
     ),
 )
-
 
 
 # Compatibility constant retained for existing consumers.

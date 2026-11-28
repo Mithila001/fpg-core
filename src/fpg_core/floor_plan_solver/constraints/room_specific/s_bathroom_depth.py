@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from ....domain import RoomType
 from ...model import ModelContext
-from ..base import ConstraintSettings, PENALTY_MAX, ceil_ratio, require_room_types
+from ..base import PENALTY_MAX, ConstraintSettings, ceil_ratio, require_room_types
 from ..geometry import active_linear_penalty
 
 
@@ -40,5 +40,9 @@ class BathroomDepthConstraint:
             penalties.append(penalty)
         if not penalties:
             return 0
-        return ceil_ratio(context, PENALTY_MAX * sum(penalties),
-                          2 * floor.length * len(penalties), PENALTY_MAX)
+        return ceil_ratio(
+            context,
+            PENALTY_MAX * sum(penalties),
+            2 * floor.length * len(penalties),
+            PENALTY_MAX,
+        )

@@ -41,9 +41,11 @@ class ResultWorkspace:
                     ui.link(back_label, back_link).classes("text-sm lab-muted no-underline")
                     ui.label(title).classes("text-lg font-semibold lab-text")
                 if len(views) > 1:
-                    self.selector = ui.toggle(list(views), value=self.active_view).props(
-                        "dense no-caps"
-                    ).classes("lab-result-view-switch")
+                    self.selector = (
+                        ui.toggle(list(views), value=self.active_view)
+                        .props("dense no-caps")
+                        .classes("lab-result-view-switch")
+                    )
                     self.selector.on_value_change(lambda event: self.select_view(event.value))
                 else:
                     self.selector = None

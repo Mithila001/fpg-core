@@ -214,18 +214,16 @@ class Workspace:
             self.lock_panel = ui.column().classes("w-full rounded border border-white/10 p-3 gap-2")
             with ui.column().classes("w-full border-t border-white/10 pt-3 gap-2"):
                 ui.label("Configuration").classes("font-semibold")
-                self.file_status = ui.label(f"Editing {profile_name}").classes(
-                    "lab-muted text-sm"
-                )
+                self.file_status = ui.label(f"Editing {profile_name}").classes("lab-muted text-sm")
                 self.save_button = (
                     action_button("Save configuration", role="main", on_click=self.save_draft)
                     .props("dense no-caps")
                     .classes("w-full")
                 )
                 with ui.row().classes("w-full gap-1"):
-                    action_button("Refresh profile inputs", role="subtle", on_click=self.preview).props(
-                        "dense no-caps"
-                    )
+                    action_button(
+                        "Refresh profile inputs", role="subtle", on_click=self.preview
+                    ).props("dense no-caps")
                     self.export_button = action_button(
                         "Export JSON", role="subtle", on_click=self.export_draft
                     ).props("dense no-caps")
@@ -315,12 +313,19 @@ class Workspace:
         self.save_button.disable()
         self.reset_button.disable()
         try:
-            contents = await db_call(self.runtime, lambda session: (
-                SystemConfigurationService(session, self.runtime.codec).save_section(
-                    self.profile_id, "experiments.e03a", config.model_dump(mode="json"),
-                    expected_hash=self.expected,
-                ).config_hash
-            ))
+            contents = await db_call(
+                self.runtime,
+                lambda session: (
+                    SystemConfigurationService(session, self.runtime.codec)
+                    .save_section(
+                        self.profile_id,
+                        "experiments.e03a",
+                        config.model_dump(mode="json"),
+                        expected_hash=self.expected,
+                    )
+                    .config_hash
+                ),
+            )
             if contents is not None:
                 self.expected = contents
                 self.file_status.set_text(
@@ -364,10 +369,14 @@ class Workspace:
             self.redraw_configuration()
 
         try:
-            source = await db_call(self.runtime, lambda session: (
-                SystemConfigurationService(session, self.runtime.codec)
-                .for_flow(self.profile_id, "e03a_refresh")[1].payload
-            ))
+            source = await db_call(
+                self.runtime,
+                lambda session: (
+                    SystemConfigurationService(session, self.runtime.codec)
+                    .for_flow(self.profile_id, "e03a_refresh")[1]
+                    .payload
+                ),
+            )
             await _preview_import(self.draft, source, apply)
         except Exception as exc:
             notify_error(exc)

@@ -39,9 +39,15 @@ class P01Service:
             from fpg_lab.flows.p01b import effective_profiles
 
             initial, refinement = effective_profiles(validated.config, hint_points)
-            hint_points = {**hint_points, "effective_solver": to_jsonable({
-                "initial": initial, "refinement": refinement,
-            })}
+            hint_points = {
+                **hint_points,
+                "effective_solver": to_jsonable(
+                    {
+                        "initial": initial,
+                        "refinement": refinement,
+                    }
+                ),
+            }
         experiment = P01Experiment(
             flow_type=self.flow_type,
             status="queued",

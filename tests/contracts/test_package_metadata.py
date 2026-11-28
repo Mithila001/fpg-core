@@ -26,11 +26,11 @@ def _source_checkout_version() -> str:
 
 
 def test_package_versions_and_consumer_reference_stay_in_sync() -> None:
-    pyproject = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    version = str(pyproject["project"]["version"])
-    reference = (PROJECT_ROOT / "docs" / "API_GUIDE.md").read_text(
-        encoding="utf-8"
+    pyproject = tomllib.loads(
+        (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
     )
+    version = str(pyproject["project"]["version"])
+    reference = (PROJECT_ROOT / "docs" / "API_GUIDE.md").read_text(encoding="utf-8")
 
     assert _source_checkout_version() == version
     assert f"Distribution name/version: `fpg-core` `{version}`" in reference

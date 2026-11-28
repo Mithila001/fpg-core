@@ -34,7 +34,9 @@ class CandidateCirculationInput:
             raise TypeError("config must be a CandidateCirculationConfig instance.")
         if self.room_relations is not None:
             relations = tuple(self.room_relations)
-            if any(not isinstance(relation, RoomRelationSpec) for relation in relations):
+            if any(
+                not isinstance(relation, RoomRelationSpec) for relation in relations
+            ):
                 raise TypeError("room_relations must contain RoomRelationSpec values.")
             object.__setattr__(self, "room_relations", relations)
 
@@ -60,12 +62,11 @@ class CandidateCirculationResult:
             raise TypeError("candidate must be a CandidateMap instance.")
 
         classifications = tuple(self.hallway_classifications)
-        if self.final_circulation is not None and not isinstance(self.final_circulation, FinalCirculation):
-            raise TypeError("final_circulation must be a FinalCirculation instance.")
-        if any(
-            not isinstance(item, HallwayClassification)
-            for item in classifications
+        if self.final_circulation is not None and not isinstance(
+            self.final_circulation, FinalCirculation
         ):
+            raise TypeError("final_circulation must be a FinalCirculation instance.")
+        if any(not isinstance(item, HallwayClassification) for item in classifications):
             raise TypeError(
                 "Every hallway classification must be a HallwayClassification."
             )

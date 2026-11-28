@@ -140,9 +140,15 @@ class RouteDistancePolicy:
     over_limit_score_multiplier: float
 
     def __post_init__(self) -> None:
-        if isinstance(self.preferred_max_grid_steps, bool) or not isinstance(self.preferred_max_grid_steps, int) or self.preferred_max_grid_steps < 0:
+        if (
+            isinstance(self.preferred_max_grid_steps, bool)
+            or not isinstance(self.preferred_max_grid_steps, int)
+            or self.preferred_max_grid_steps < 0
+        ):
             raise ValueError("preferred_max_grid_steps must be a non-negative integer.")
-        multiplier = _finite_number("over_limit_score_multiplier", self.over_limit_score_multiplier)
+        multiplier = _finite_number(
+            "over_limit_score_multiplier", self.over_limit_score_multiplier
+        )
         if not 0 <= multiplier <= 1:
             raise ValueError("over_limit_score_multiplier must be between 0 and 1.")
         object.__setattr__(self, "over_limit_score_multiplier", multiplier)
@@ -189,12 +195,12 @@ class CirculationRouteRule:
                 "destination_selection must be a DestinationSelection member."
             )
         if not isinstance(self.traffic_class, CirculationTrafficClass):
-            raise TypeError(
-                "traffic_class must be a CirculationTrafficClass member."
-            )
+            raise TypeError("traffic_class must be a CirculationTrafficClass member.")
         if not isinstance(self.allow_global_transit, bool):
             raise TypeError("allow_global_transit must be a bool.")
-        if self.distance_policy is not None and not isinstance(self.distance_policy, RouteDistancePolicy):
+        if self.distance_policy is not None and not isinstance(
+            self.distance_policy, RouteDistancePolicy
+        ):
             raise TypeError("distance_policy must be a RouteDistancePolicy.")
 
         allowed_types = tuple(self.allowed_transit_room_types)
@@ -253,9 +259,7 @@ class HallwayClassification:
                 "Hallway classification hint_index must be greater than zero."
             )
         if not isinstance(self.traffic_class, HallwayTrafficClass):
-            raise TypeError(
-                "traffic_class must be a HallwayTrafficClass member."
-            )
+            raise TypeError("traffic_class must be a HallwayTrafficClass member.")
         object.__setattr__(self, "room_id", RoomId(room_id))
 
     @property
@@ -314,12 +318,16 @@ class CirculationPathDetails:
 
     @property
     def distance_violation(self) -> bool:
-        return self.distance_policy is not None and self.step_count > self.distance_policy.preferred_max_grid_steps
+        return (
+            self.distance_policy is not None
+            and self.step_count > self.distance_policy.preferred_max_grid_steps
+        )
 
 
 @dataclass(frozen=True, slots=True)
 class RetainedHallwayTraffic:
     """Final traffic weights for a retained hallway point."""
+
     point_key: str
     room_id: str
     hint_index: int
@@ -335,6 +343,7 @@ class RetainedHallwayTraffic:
 @dataclass(frozen=True, slots=True)
 class FinalCirculation:
     """Routes and hallway traffic for the cleaned candidate."""
+
     routes: tuple[CirculationPathDetails, ...]
     hallways: tuple[RetainedHallwayTraffic, ...]
 

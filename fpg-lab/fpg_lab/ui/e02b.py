@@ -53,15 +53,25 @@ async def main_page(runtime):
         with ui.column().classes("lab-setup-sidebar"):
             profile = await profile_picker(runtime)
             profile.classes("w-full")
-            saved = ui.select({}, label="Saved floor plans", clearable=True).props("dense outlined").classes("w-full")
+            saved = (
+                ui.select({}, label="Saved floor plans", clearable=True)
+                .props("dense outlined")
+                .classes("w-full")
+            )
             launch = action_button("Run", role="main").classes("w-full")
             launch.disable()
-            action_button("Import", icon="upload", on_click=lambda: import_dialog.open()).props("dense outline")
+            action_button("Import", icon="upload", on_click=lambda: import_dialog.open()).props(
+                "dense outline"
+            )
             remove = action_button("Delete", role="danger").props("dense flat")
             remove.disable()
             ui.separator()
-            action_button("Scoring settings", role="subtle", on_click=lambda: config_dialog.open()).props("dense")
-            action_button("History", role="subtle", on_click=lambda: history_dialog.open()).props("dense")
+            action_button(
+                "Scoring settings", role="subtle", on_click=lambda: config_dialog.open()
+            ).props("dense")
+            action_button("History", role="subtle", on_click=lambda: history_dialog.open()).props(
+                "dense"
+            )
 
     with ui.dialog() as import_dialog, ui.card().classes("w-[52rem] max-w-full gap-3"):
         ui.label("Import floor plan").classes("text-lg font-semibold")
@@ -73,7 +83,10 @@ async def main_page(runtime):
             save.disable()
             action_button("Close", role="subtle", on_click=import_dialog.close).props("dense")
 
-    with ui.dialog() as config_dialog, ui.card().classes("w-[60rem] max-w-full max-h-[85vh] overflow-auto"):
+    with (
+        ui.dialog() as config_dialog,
+        ui.card().classes("w-[60rem] max-w-full max-h-[85vh] overflow-auto"),
+    ):
         ui.label("Scoring settings").classes("text-lg font-semibold")
         config_status = ui.label().classes("text-sm whitespace-pre-wrap")
         with ui.row().classes("gap-2"):
@@ -83,11 +96,17 @@ async def main_page(runtime):
             action_button("Close", role="subtle", on_click=config_dialog.close).props("dense")
         config_area = ui.column().classes("w-full gap-2")
 
-    with ui.dialog() as history_dialog, ui.card().classes("w-[32rem] max-w-full max-h-[80vh] overflow-auto"):
+    with (
+        ui.dialog() as history_dialog,
+        ui.card().classes("w-[32rem] max-w-full max-h-[80vh] overflow-auto"),
+    ):
         ui.label("Recent runs").classes("text-lg font-semibold")
-        history = await db_call(runtime, lambda session: session.execute(
-            select(E02BRun.id, E02BRun.status).order_by(E02BRun.id.desc()).limit(50)
-        ).all())
+        history = await db_call(
+            runtime,
+            lambda session: session.execute(
+                select(E02BRun.id, E02BRun.status).order_by(E02BRun.id.desc()).limit(50)
+            ).all(),
+        )
         if not history:
             ui.label("No saved runs yet.").classes("text-sm lab-muted")
         for run_id, status in history:
@@ -194,7 +213,13 @@ async def main_page(runtime):
         try:
             layout_id = plan_state["layout_id"]
             document = plan_state["document"] if layout_id is None else None
-            run_id = await run.io_bound(start, runtime, document=document, layout_id=layout_id, configuration_id=profile.value)
+            run_id = await run.io_bound(
+                start,
+                runtime,
+                document=document,
+                layout_id=layout_id,
+                configuration_id=profile.value,
+            )
             ui.navigate.to(f"{PATH}/runs/{run_id}")
         except Exception as exc:
             launch.set_enabled(plan_state["document"] is not None)
@@ -301,6 +326,7 @@ async def _config_editor(runtime, profile, area, feedback, save, validate, disca
         area.clear()
         save.disable()
         try:
+
             def read(session):
                 record, validated = SystemConfigurationService(session, runtime.codec).for_flow(
                     profile_id, "e02b"
@@ -333,11 +359,16 @@ async def _config_editor(runtime, profile, area, feedback, save, validate, disca
         save.disable()
         try:
             document = await draft()
-            new_hash = await db_call(runtime, lambda session: (
-                SystemConfigurationService(session, runtime.codec).save_section(
-                    profile_id, "floor_plan_scoring", document, expected_hash=expected
-                ).config_hash
-            ))
+            new_hash = await db_call(
+                runtime,
+                lambda session: (
+                    SystemConfigurationService(session, runtime.codec)
+                    .save_section(
+                        profile_id, "floor_plan_scoring", document, expected_hash=expected
+                    )
+                    .config_hash
+                ),
+            )
             if loaded == saved_profile:
                 loaded = profile_id, new_hash
                 feedback.set_text("Scoring settings saved.")
@@ -550,10 +581,14 @@ def _inspection(workspace, title, key, official, diagnostic, document):
             _measurements({"Geometry tolerance": plots.number(payload["tolerance"])})
         if items:
             ui.label("Findings and measurements").classes("font-semibold text-sm")
-            picker = ui.radio(
-                {-1: "No highlight", **{index: item.label for index, item in enumerate(items)}},
-                value=-1,
-            ).props("dense").classes("w-full max-h-64 overflow-auto")
+            picker = (
+                ui.radio(
+                    {-1: "No highlight", **{index: item.label for index, item in enumerate(items)}},
+                    value=-1,
+                )
+                .props("dense")
+                .classes("w-full max-h-64 overflow-auto")
+            )
             if overlays:
                 with (
                     ui.expansion("Plot overlays", value=len(overlays) <= 3)

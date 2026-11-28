@@ -65,8 +65,6 @@ class ResolvedRoute:
         )
 
 
-
-
 @dataclass(slots=True)
 class HallwayTraffic:
     public_route_count: int = 0
@@ -137,8 +135,15 @@ def _resolve_all_rules(
             candidates: list[ResolvedRoute] = []
             selected_destinations = destinations
             if rule.destination_selection is DestinationSelection.ASSIGNED_RELATION:
-                assigned = {target for relation in validated.source.room_relations or () if relation.source_room_id == source.point.room_id for target in relation.target_room_ids}
-                selected_destinations = [point for point in destinations if point.point.room_id in assigned]
+                assigned = {
+                    target
+                    for relation in validated.source.room_relations or ()
+                    if relation.source_room_id == source.point.room_id
+                    for target in relation.target_room_ids
+                }
+                selected_destinations = [
+                    point for point in destinations if point.point.room_id in assigned
+                ]
             for destination in selected_destinations:
                 route = _route_between(
                     validated=validated,
@@ -253,10 +258,7 @@ def _route_between(
             required_transit_satisfied = state[3]
             if next_node != target:
                 occupant = validated.occupied_nodes.get(next_node)
-                if (
-                    occupant is not None
-                    and occupant.point.room_type in required_types
-                ):
+                if occupant is not None and occupant.point.room_type in required_types:
                     required_transit_satisfied = 1
             next_state = (
                 next_node[0],
@@ -271,12 +273,16 @@ def _route_between(
             if existing_cost is not None:
                 if new_cost > existing_cost + 1e-12:
                     continue
-                if math.isclose(
-                    new_cost,
-                    existing_cost,
-                    rel_tol=0.0,
-                    abs_tol=1e-12,
-                ) and existing_tie is not None and candidate_tie >= existing_tie:
+                if (
+                    math.isclose(
+                        new_cost,
+                        existing_cost,
+                        rel_tol=0.0,
+                        abs_tol=1e-12,
+                    )
+                    and existing_tie is not None
+                    and candidate_tie >= existing_tie
+                ):
                     continue
 
             distances[next_state] = new_cost
@@ -327,15 +333,16 @@ def _route_between(
         turn_cost=turn_cost,
         traffic_conflict_cost=traffic_conflict_cost,
         total_cost=(
-            movement_cost
-            + perimeter_bias_cost
-            + turn_cost
-            + traffic_conflict_cost
+            movement_cost + perimeter_bias_cost + turn_cost + traffic_conflict_cost
         ),
         turn_count=tie_values[final_state][0],
         manhattan_reference_cost=(
-            max(0, abs(source.x_index - destination.x_index)
-                + abs(source.y_index - destination.y_index) - 1)
+            max(
+                0,
+                abs(source.x_index - destination.x_index)
+                + abs(source.y_index - destination.y_index)
+                - 1,
+            )
             * validated.source.config.costs.empty_node_cost
             + validated.source.config.costs.traversable_hint_node_cost
         ),
@@ -373,7 +380,10 @@ def _can_enter(
     if room_type is None:
         return False
     return (
-        (rule.allow_global_transit and room_type in validated.source.config.always_traversable_room_types)
+        (
+            rule.allow_global_transit
+            and room_type in validated.source.config.always_traversable_room_types
+        )
         or room_type in rule.allowed_transit_room_types
         or room_type in rule.required_transit_room_types
     )
@@ -522,9 +532,7 @@ def _classify_hallways(
 
     for point in hallway_points:
         usage = traffic[point.point_key]
-        total_route_count = (
-            usage.public_route_count + usage.private_route_count
-        )
+        total_route_count = usage.public_route_count + usage.private_route_count
         if total_route_count == 0:
             classifications[point.point_key] = HallwayTrafficClass.UNUSED
         elif single_hallway:

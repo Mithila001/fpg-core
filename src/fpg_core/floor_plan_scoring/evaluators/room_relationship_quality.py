@@ -161,13 +161,15 @@ class RoomRelationshipQualityEvaluator(FloorPlanEvaluator):
                         }
                     )
 
-        for rule in config.clustering_rules:
-            if not rule.enabled:
+        for cluster_rule in config.clustering_rules:
+            if not cluster_rule.enabled:
                 continue
             rooms = [
-                room for room in context.rooms if room.room_type in rule.room_types
+                room
+                for room in context.rooms
+                if room.room_type in cluster_rule.room_types
             ]
-            if len(rooms) < 2 or not set(rule.room_types) <= {
+            if len(rooms) < 2 or not set(cluster_rule.room_types) <= {
                 room.room_type for room in rooms
             }:
                 continue
@@ -175,13 +177,13 @@ class RoomRelationshipQualityEvaluator(FloorPlanEvaluator):
                 (dist(first.centroid, second.centroid), first.room_id, second.room_id)
                 for first, second in combinations(rooms, 2)
             )
-            score = rule.score(distance)
-            weighted_scores.append((score, rule.weight))
+            score = cluster_rule.score(distance)
+            weighted_scores.append((score, cluster_rule.weight))
             if debug:
                 details.append(
                     {
                         "kind": "clustering",
-                        "rule": rule,
+                        "rule": cluster_rule,
                         "score": score,
                         "distance": distance,
                         "room_ids": [room.room_id for room in rooms],
