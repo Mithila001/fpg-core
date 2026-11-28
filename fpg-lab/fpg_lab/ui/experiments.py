@@ -1,24 +1,31 @@
 from __future__ import annotations
 
 import json
+import tempfile
+import zipfile
 from collections.abc import Callable
+from copy import deepcopy
+from datetime import datetime
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
-from nicegui import run, ui
+from fastapi.responses import FileResponse
+from nicegui import app, run, ui
 from sqlalchemy import select
+from starlette.background import BackgroundTask
 
 from fpg_lab.core.serialization import to_jsonable
 from fpg_lab.core.settings import ROOT
 from fpg_lab.database.models import P01CandidateTrial
 from fpg_lab.database.serialization import row_document
 from fpg_lab.flows.p01 import ACTIVE_STATUSES
-from fpg_lab.inputs import FloorPlanRequest
+from fpg_lab.inputs import FloorPlanRequest, SystemConfigurationUpdate
 from fpg_lab.runtime import FLOW_SERVICES, LabRuntime
 from fpg_lab.services.common import FloorPlanTemplateService, SystemConfigurationService
 from fpg_lab.ui.components import (
     action_button,
     db_call,
-    editor_value,
     format_experiment_code,
     json_panel,
     notify_error,
@@ -133,7 +140,14 @@ def register_experiments(runtime: LabRuntime) -> None:
         def apply_template() -> None:
             selected = next((t for t in templates if t["id"] == template.value), None)
             if selected:
+                request_content["content"] = {"json": deepcopy(selected["template_data"])}
                 set_editor(request_editor, selected["template_data"])
+
+        request_content: dict[str, Any] = {}
+
+        def remember_request(event: Any) -> None:
+            request_content["content"] = event.content
+            request_editor.properties["content"] = event.content
 
         with ui.card().classes("w-full p-5 gap-4"):
             with ui.row().classes("w-full items-center"):
@@ -160,27 +174,177 @@ def register_experiments(runtime: LabRuntime) -> None:
                     "Create and activate a configuration before running an experiment."
                 ).classes("text-amber-300")
                 ui.link("Open configurations", "/configurations")
-            request_editor = ui.json_editor(
-                {
-                    "content": {
-                        "json": default_template["template_data"]
-                        if default_template
-                        else json.loads(
-                            (ROOT / "seed/floor_plan_template.example.json").read_text(
-                                encoding="utf-8"
+            with (
+                ui.dialog() as request_dialog,
+                ui.card().classes("w-[90vw] max-w-5xl max-h-[85vh] overflow-auto"),
+            ):
+                ui.label("Floor-plan request").classes("text-xl font-semibold")
+                request_editor = ui.json_editor(
+                    {
+                        "content": {
+                            "json": default_template["template_data"]
+                            if default_template
+                            else json.loads(
+                                (ROOT / "seed/floor_plan_template.example.json").read_text(
+                                    encoding="utf-8"
+                                )
+                            )["template_data"]
+                        }
+                    },
+                    schema=FloorPlanRequest.model_json_schema(),
+                    on_change=remember_request,
+                ).classes("nicegui-json-editor w-full min-h-72")
+                request_content["content"] = request_editor.properties["content"]
+                action_button("Close", role="subtle", on_click=request_dialog.close)
+            action_button("Edit floor-plan request", role="general", on_click=request_dialog.open)
+
+            state: dict[str, Any] = {"profile": None, "loading": False}
+            with ui.card().classes("w-full p-4"):
+                ui.label("System configuration quick settings").classes("font-semibold")
+                with ui.row().classes("items-center"):
+                    seed = ui.number("Random seed", min=0, precision=0)
+                    spacing = ui.number("Grid spacing", min=2, precision=0)
+                    save_settings = action_button("Save", role="general")
+                    settings_status = ui.label().classes("text-amber-300")
+
+            def dirty() -> bool:
+                record = state["profile"]
+                if record is None:
+                    return False
+                config = record["configuration_data"]
+                return (
+                    seed.value != config["candidate_search"]["random_seed"]
+                    or spacing.value != config["preprocessing"]["candidate_search_grid_spacing"]
+                )
+
+            def mark_settings() -> None:
+                if not state["loading"]:
+                    settings_status.set_text("Unsaved changes" if dirty() else "")
+
+            async def load_profile() -> None:
+                try:
+                    state["loading"] = True
+                    profile_id = profile.value
+                    record = (
+                        await db_call(
+                            runtime,
+                            lambda session: row_document(
+                                SystemConfigurationService(session, runtime.codec).resolve(
+                                    profile_id
+                                )
+                            ),
+                        )
+                        if profile_id is not None
+                        else None
+                    )
+                    if profile.value != profile_id:
+                        return
+                    state["profile"] = record
+                    seed.set_value(
+                        record["configuration_data"]["candidate_search"]["random_seed"]
+                        if record
+                        else None
+                    )
+                    spacing.set_value(
+                        record["configuration_data"]["preprocessing"][
+                            "candidate_search_grid_spacing"
+                        ]
+                        if record
+                        else None
+                    )
+                    settings_status.set_text("")
+                except Exception as exc:
+                    state["profile"] = None
+                    notify_error(exc)
+                finally:
+                    state["loading"] = False
+
+            async def save_profile() -> None:
+                try:
+                    record = state["profile"]
+                    if record is None or record["id"] != profile.value:
+                        raise ValueError("Select a system configuration")
+                    if seed.value is not None and (seed.value < 0 or int(seed.value) != seed.value):
+                        raise ValueError("Random seed must be a non-negative integer or empty")
+                    if (
+                        spacing.value is None
+                        or spacing.value <= 0
+                        or int(spacing.value) != spacing.value
+                        or int(spacing.value) % 2
+                    ):
+                        raise ValueError("Grid spacing must be a positive even integer")
+                    config = deepcopy(record["configuration_data"])
+                    config["candidate_search"]["random_seed"] = (
+                        int(seed.value) if seed.value is not None else None
+                    )
+                    config["preprocessing"]["candidate_search_grid_spacing"] = int(spacing.value)
+                    payload = SystemConfigurationUpdate(
+                        name=record["name"],
+                        description=record["description"],
+                        configuration_data=config,
+                    )
+                    state["profile"] = await db_call(
+                        runtime,
+                        lambda session: row_document(
+                            SystemConfigurationService(session, runtime.codec).save(
+                                record["id"], payload, expected_hash=record["config_hash"]
                             )
-                        )["template_data"]
-                    }
-                },
-                schema=FloorPlanRequest.model_json_schema(),
-            ).classes("nicegui-json-editor w-full min-h-72")
+                        ),
+                    )
+                    mark_settings()
+                    ui.notify("Configuration saved", type="positive")
+                except Exception as exc:
+                    notify_error(exc)
+
+            seed.on_value_change(mark_settings)
+            spacing.on_value_change(mark_settings)
+            profile.on_value_change(load_profile)
+            save_settings.on_click(save_profile)
+            await load_profile()
+
+            async def remember_trials() -> None:
+                value = trial_count.value
+                if value is not None and 1 <= value <= 100000 and int(value) == value:
+                    await ui.run_javascript(
+                        f"sessionStorage.setItem('fpg_p01a_trial_count', {json.dumps(str(int(value)))})"
+                    )
+
+            try:
+                stored = await ui.run_javascript("sessionStorage.getItem('fpg_p01a_trial_count')")
+                if stored is not None and str(stored).isdigit() and 1 <= int(stored) <= 100000:
+                    trial_count.set_value(int(stored))
+            except Exception:
+                pass
+            trial_count.on_value_change(remember_trials)
 
             async def start() -> None:
                 start_button.disable()
                 try:
                     if profile.value is None:
                         raise ValueError("Select a system configuration")
-                    request = await editor_value(request_editor)
+                    if (
+                        state["loading"]
+                        or state["profile"] is None
+                        or state["profile"]["id"] != profile.value
+                        or dirty()
+                    ):
+                        raise ValueError(
+                            "Save or reload the system configuration quick settings before starting"
+                        )
+                    if (
+                        trial_count.value is None
+                        or not 1 <= trial_count.value <= 100000
+                        or int(trial_count.value) != trial_count.value
+                    ):
+                        raise ValueError("Trials must be an integer between 1 and 100,000")
+                    content = request_content["content"]
+                    request = (
+                        content["json"]
+                        if "json" in content
+                        else json.loads(content.get("text", ""))
+                    )
+                    if not isinstance(request, dict):
+                        raise ValueError("Enter a JSON object")
                     payload = {
                         "floor_plan_request": request,
                         "system_configuration_id": profile.value,
@@ -199,30 +363,136 @@ def register_experiments(runtime: LabRuntime) -> None:
                     f"Start {format_experiment_code(flow)}", role="main", on_click=start
                 )
 
-        area = ui.column().classes("w-full")
+        selected: set[int] = set()
+        exporting = False
+        with ui.row().classes("w-full items-center justify-between"):
+            history_title = ui.label("Saved experiments").classes("text-xl font-semibold")
+            with ui.row().classes("items-center"):
+                compact = ui.checkbox("Compact", value=True)
+                export_button = action_button("Export (0)", role="general")
+        fields = (
+            "id",
+            "status",
+            "completed_trial_count",
+            "requested_trial_count",
+            "best_candidate_score",
+            "created_at",
+        )
+        columns = [
+            {
+                "name": field,
+                "label": field.replace("_", " ").title(),
+                "field": field,
+                "sortable": True,
+                "align": "left",
+            }
+            for field in fields
+        ]
+        columns.append(
+            {"name": "selected", "label": "Select", "field": "selected", "align": "right"}
+        )
+        widget = ui.table(columns=columns, rows=[], row_key="id", pagination=25).classes("w-full")
+        widget.add_slot(
+            "body-cell-id",
+            '<q-td :props="props"><a class="text-primary underline" :href="\'/experiments/'
+            + flow
+            + "/runs/' + props.row.id\">{{ props.row.id }}</a></q-td>",
+        )
+        widget.add_slot(
+            "body-cell-selected",
+            '<q-td :props="props"><q-checkbox :model-value="props.row.selected" @update:model-value="$parent.$emit(\'select-record\', {id: props.row.id, selected: $event})" /></q-td>',
+        )
         page = ui.number("History page", value=1, min=1, precision=0).classes("w-36")
         timer: ui.timer
+
+        def update_export() -> None:
+            if export_button is not None:
+                export_button.set_text(f"Export ({len(selected)})")
+                export_button.set_enabled(bool(selected) and not exporting)
+
+        async def export() -> None:
+            nonlocal exporting
+            if not selected or exporting:
+                return
+            exporting = True
+            update_export()
+            path = None
+            ids, is_compact = sorted(selected), bool(compact.value)
+            mode = "compact" if is_compact else "full"
+            stem = f"p01a-{mode}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as temporary:
+                    path = Path(temporary.name)
+
+                def write(session: Any) -> None:
+                    with tempfile.TemporaryDirectory() as directory:
+                        json_path = Path(directory) / f"{stem}.json"
+                        with json_path.open("w", encoding="utf-8", newline="") as output:
+                            FLOW_SERVICES[flow](session).export_history(ids, is_compact, output)
+                        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                            archive.write(json_path, arcname=json_path.name)
+
+                await db_call(runtime, write)
+                filename = f"{stem}.zip"
+                url = f"/p01a-export/{uuid4().hex}"
+                claimed = False
+
+                @app.get(url, include_in_schema=False)
+                def download() -> FileResponse:
+                    nonlocal claimed
+                    claimed = True
+                    app.remove_route(url)
+                    return FileResponse(
+                        path,
+                        filename=filename,
+                        media_type="application/zip",
+                        background=BackgroundTask(path.unlink, missing_ok=True),
+                    )
+
+                def cleanup() -> None:
+                    if not claimed:
+                        app.remove_route(url)
+                        path.unlink(missing_ok=True)
+
+                ui.context.client.on_delete(cleanup)
+                ui.download.from_url(url, filename)
+                ui.notify("Download prepared. Incomplete histories are identified in the export.")
+            except Exception as exc:
+                if path is not None:
+                    path.unlink(missing_ok=True)
+                notify_error(exc)
+            finally:
+                exporting = False
+                update_export()
+
+        export_button.on_click(export)
+
+        def select_record(event: Any) -> None:
+            record_id = int(event.args["id"])
+            if event.args["selected"]:
+                selected.add(record_id)
+            else:
+                selected.discard(record_id)
+            for row in widget.rows:
+                if row["id"] == record_id:
+                    row["selected"] = record_id in selected
+            widget.update()
+            update_export()
+
+        widget.on("select-record", select_record)
+        update_export()
 
         async def refresh_history() -> None:
             try:
                 items, total = await db_call(
                     runtime, lambda session: _history(session, flow, int(page.value or 1))
                 )
-                area.clear()
-                with area:
-                    ui.label(f"Saved experiments · {total} total").classes("text-xl font-semibold")
-                    table(
-                        items,
-                        (
-                            "id",
-                            "status",
-                            "completed_trial_count",
-                            "requested_trial_count",
-                            "best_candidate_score",
-                            "created_at",
-                        ),
-                        f"/experiments/{flow}/runs/",
-                    )
+                history_title.set_text(f"Saved experiments · {total} total")
+                widget.rows = [
+                    {**{key: item.get(key) for key in fields}, "selected": item["id"] in selected}
+                    for item in items
+                ]
+                widget.update()
                 if not any(item["status"] in ACTIVE_STATUSES for item in items):
                     timer.deactivate()
             except Exception as exc:
