@@ -22,7 +22,7 @@ class ExteriorDoorFeature:
             room.room_type is RoomType.VERANDA for room in prepared.rooms_by_id.values()
         )
         if has_veranda:
-            minimum = round(config.dimensions.minimum_shared_wall * prepared.scale)
+            minimum = round(config.interior_doors.resolve((RoomType.LIVING_ROOM, RoomType.VERANDA)).minimum_shared_wall * prepared.scale)
             has_veranda_connection = any(
                 wall.kind is WallKind.SHARED
                 and wall.length >= minimum

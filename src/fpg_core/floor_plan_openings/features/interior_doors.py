@@ -25,16 +25,14 @@ class InteriorDoorFeature:
         prepared: PreparedFloorPlan,
         config: FloorPlanOpeningsConfig,
     ) -> tuple[OpeningDemand, ...]:
-        minimum = round(config.dimensions.minimum_shared_wall * prepared.scale)
-        width = round(config.dimensions.door_width * prepared.scale)
-        clearance = round(config.geometry.corner_clearance * prepared.scale)
         candidates = []
         for wall in prepared.walls:
-            if wall.kind is not WallKind.SHARED or wall.length < minimum:
+            if wall.kind is not WallKind.SHARED:
                 continue
             left = prepared.rooms_by_id[wall.room_ids[0]]
             right = prepared.rooms_by_id[wall.room_ids[1]]
-            if self._allowed(left.room_type, right.room_type, config):
+            policy = config.interior_doors.resolve((left.room_type, right.room_type))
+            if wall.length >= round(policy.minimum_shared_wall * prepared.scale) and self._allowed(left.room_type, right.room_type, config):
                 candidates.append((wall, left, right))
 
         connection_types: dict[RoomId, set[RoomType]] = {}
@@ -88,6 +86,9 @@ class InteriorDoorFeature:
                     category = "preferred_hallway"
                     tier = "preferred_hallway"
 
+            policy = config.interior_doors.resolve((left.room_type, right.room_type))
+            width = round(policy.door_width * prepared.scale)
+            clearance = round(policy.minimum_clearance * prepared.scale)
             options = (
                 PlacementOption(
                     id=f"interior:{index}:{wall.id}",

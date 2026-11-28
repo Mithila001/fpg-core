@@ -6,6 +6,11 @@
 
 ## Unreleased
 
+- Breaking: interior door widths and corner clearances now use `interior_doors`
+  policies, rather than exterior dimensions and geometry clearance. Configure the
+  default and room overrides explicitly; Lab revision 8 carries existing standard
+  dimensions forward and adds bathroom overrides. Historical snapshots are unchanged.
+
 - Breaking behavior change: opening generation defaults to a 5-unit corner
   clearance instead of zero. Set an explicit clearance to retain a custom policy.
   Lab revision 7 migrates zero-clearance profiles to 0.5 metres in their own

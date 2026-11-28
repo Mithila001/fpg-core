@@ -26,7 +26,7 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 7
+REVISION = 8
 # Revision 6 enables living room and bedroom quality scoring; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 PREVIOUS_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
@@ -380,6 +380,24 @@ def _enable_room_quality_evaluators(data, baseline):
     return data
 
 
+def _upgrade_interior_doors(data):
+    openings = data["openings"]
+    units = data["project_units_per_meter"]
+    bathroom = {"door_width": units * 0.8, "preferred_clearance": units * 0.2,
+                "minimum_clearance": 0.0, "minimum_shared_wall": units * 0.8,
+                "placement_preference": "center"}
+    openings.setdefault("interior_doors", {
+        "default": {"door_width": openings["dimensions"]["door_width"],
+                    "preferred_clearance": openings["geometry"]["corner_clearance"],
+                    "minimum_clearance": 0.0,
+                    "minimum_shared_wall": openings["dimensions"]["minimum_shared_wall"],
+                    "placement_preference": "wall_end"},
+        "overrides": [{"room_type": room_type, "policy": deepcopy(bathroom)}
+                      for room_type in ("bathroom", "attached_bathroom")],
+    })
+    return data
+
+
 def _migration(connection, session, report, *, dry_run):
     revision, compatibility = _state(connection)
     report.update(from_revision=revision, compatibility=compatibility)
@@ -421,6 +439,8 @@ def _migration(connection, session, report, *, dry_run):
                     data = _enable_room_quality_evaluators(data, baseline.payload["floor_plan_scoring"])
                 if revision < 7 and data["openings"]["geometry"]["corner_clearance"] == 0:
                     data["openings"]["geometry"]["corner_clearance"] = data["project_units_per_meter"] * 0.5
+                if revision < 8:
+                    data = _upgrade_interior_doors(data)
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):
@@ -439,7 +459,7 @@ def _migration(connection, session, report, *, dry_run):
     if not any(row.name == PRIMARY_PROFILE for row in rows):
         report["profiles"].append({"name": PRIMARY_PROFILE, "action": "create E02A baseline"})
     report["action"] = "initialize schema" if compatibility == "empty" else "upgrade saved profiles"
-    report["created_tables"] = ["fpg_e02c_run"] if compatibility == "upgrade_required" else []
+    report["created_tables"] = ["fpg_e02c_run"] if compatibility == "upgrade_required" and revision < 7 else []
     if compatibility == "upgrade_required" and revision < 2:
         report["removed_floor_plan_runs"] = connection.exec_driver_sql(
             "SELECT count(*) FROM fpg_p01_floor_plan_run"

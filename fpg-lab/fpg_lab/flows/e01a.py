@@ -9,7 +9,7 @@ from typing import Any
 from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import polylabel, unary_union
 
-RADIUS = 4.0
+RADIUS = 3.0
 GRID = 2.0
 
 
@@ -184,7 +184,7 @@ def simulate(plan: Mapping[str, Any], trips: Sequence[tuple[str, str]] | None = 
                 if safe.covers(line):
                     candidates.append((line.length, dest, points))
         if not candidates:
-            failures.append({"source": source, "destination": requested, "reason": "No route with 8-unit clearance"})
+            failures.append({"source": source, "destination": requested, "reason": f"No route with {2 * RADIUS:g}-unit clearance"})
             continue
         length, dest, points = min(candidates, key=lambda item: (item[0], item[1]))
         routes.append({"source": source, "destination": dest, "length": length,

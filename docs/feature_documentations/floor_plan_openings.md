@@ -64,9 +64,42 @@ SolverConfig(
 `coordinate_scale` must be at least `1`; geometry tolerance and dimensions must be
 positive; corner/window clearances cannot be negative. Solver time and workers must
 be positive and the random seed cannot be negative. At 10 project units per metre,
-the default 5-unit clearance requires a 20-unit wall for a 10-unit interior
-door and a 26-unit wall for a 16-unit window. Exterior-door fallback retains
-its existing behavior.
+the default window clearance requires a 26-unit wall for a 16-unit window.
+Exterior-door fallback retains its existing behavior. Interior doors use the policy below.
+
+### Interior door policy
+
+```python
+InteriorDoorPolicy(
+    door_width=10.0, preferred_clearance=5.0, minimum_clearance=0.0,
+    minimum_shared_wall=10.0, placement_preference="wall_end",
+)
+InteriorDoorConfig(
+    default=InteriorDoorPolicy(),
+    overrides=(
+        (RoomType.BATHROOM, InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center")),
+        (RoomType.ATTACHED_BATHROOM, InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center")),
+    ),
+)
+```
+
+`FloorPlanOpeningsConfig.interior_doors` holds the default and ordered room-type
+policy overrides. The first matching override wins regardless of wall direction;
+room types may occur once. Dimensions are project units, positive and finite;
+clearances are finite and nonnegative, and preferred clearance must be at least
+minimum clearance. `placement_preference` is `wall_end` or `center`.
+
+The minimum shared-wall length, exact door width and clearance at both wall ends
+are hard constraints. Preferred clearance is a soft target applied independently at
+both ends. The solver first minimizes total selected interior-door clearance deficits,
+then maximizes opening selection and placement preferences without increasing that
+minimum; both searches share the configured time budget. If the minimum cannot be
+proven in time, a feasible result may not optimize optional openings. Short walls
+can therefore have less corner space, but door width is never reduced. Standard
+interior doors prefer a wall end; bathroom overrides prefer the center. The existing
+`geometry.corner_clearance` and `dimensions.door_width` continue to govern exterior
+doors and windows; they no longer set interior policy. Callers customizing those
+values must set `interior_doors` explicitly as well.
 
 ### FeaturePolicy
 
@@ -200,6 +233,7 @@ FloorPlanOpeningsConfig(
     ),
     geometry: GeometryConfig = GeometryConfig(),
     dimensions: DimensionConfig = DimensionConfig(),
+    interior_doors: InteriorDoorConfig = InteriorDoorConfig(),
     policy: FeaturePolicy = FeaturePolicy(),
     objective: ObjectiveConfig = ObjectiveConfig(),
     solver: SolverConfig = SolverConfig(),
@@ -277,7 +311,8 @@ and structured `OpeningIssue` values.
 
 DEBUG issues can identify conditions such as no main-entrance candidate, a
 required-access room with no door candidate, an optional demand with no candidate, an
-unselected optional demand, or an undersized exterior door.
+unselected optional demand, an undersized exterior door, or `reduced_preferred_clearance`
+with requested and actual clearance at each end.
 
 The solved result contains a **copy** of the source floor plan with generated
 `FloorPlanOpening` objects.
@@ -327,8 +362,8 @@ plan_with_openings = execution.result.floor_plan
 
 The source plan is never mutated. `allowed_room_pairs` fully owns interior connection
 compatibility. Required door access is now mandatory in valid configurations. Door
-placement is corner/wall-end oriented using room-type priority; windows remain
-center-oriented. Run opening generation after geometry-changing post-processing if the
+placement uses the resolved interior policy; wall-end placement uses room-type priority
+and bathroom doors default to centered placement. Windows remain center-oriented. Run opening generation after geometry-changing post-processing if the
 openings must remain aligned with the final room boundaries.
 
 
@@ -338,14 +373,16 @@ Expected generation outcomes are represented by `OpeningGenerationStatus` and `O
 
 ## Public Export Inventory
 
-### `fpg_core.floor_plan_openings` exports (20)
+### `fpg_core.floor_plan_openings` exports (22)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
 | `generate_openings` | function | `generate_openings(request: 'OpeningGenerationRequest', *, registry: 'OpeningFeatureRegistry \| None' = None, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'OpeningGenerationExecution'` | Generate openings on a finalized floor plan without mutating it. |
 | `DimensionConfig` | dataclass/contract | `(door_width: 'float' = 10.0, window_width: 'float' = 16.0, minimum_shared_wall: 'float' = 10.0) -> None` | DimensionConfig(door_width: 'float' = 10.0, window_width: 'float' = 16.0, minimum_shared_wall: 'float' = 10.0) |
 | `FeaturePolicy` | dataclass/contract | `(allowed_room_pairs: 'tuple[tuple[RoomType, RoomType], ...]' = ((RoomType.BEDROOM, RoomType.LIVING_ROOM), (RoomType.KITCHEN, RoomType.LIVING_ROOM), (RoomType.BATHROOM, RoomType.LIVING_ROOM), (RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM), (RoomType.VERANDA, RoomType.LIVING_ROOM), (RoomType.GARAGE, RoomType.LIVING_ROOM), (RoomType.DINING_ROOM, RoomType.LIVING_ROOM), (RoomType.BEDROOM, RoomType.HALLWAY), (RoomType.BATHROOM, RoomType.HALLWAY), (RoomType.LIVING_ROOM, RoomType.HALLWAY), (RoomType.KITCHEN, RoomType.HALLWAY), (RoomType.DINING_ROOM, RoomType.HALLWAY), (RoomType.VERANDA, RoomType.HALLWAY), (RoomType.GARAGE, RoomType.HALLWAY), (RoomType.HALLWAY, RoomType.HALLWAY)), room_door_caps: 'tuple[tuple[RoomType, int], ...]' = ((RoomType.BEDROOM, 2), (RoomType.BATHROOM, 1), (RoomType.LIVING_ROOM, 10), (RoomType.HALLWAY, 10), (RoomType.KITCHEN, 1), (RoomType.ATTACHED_BATHROOM, 1), (RoomType.VERANDA, 1), (RoomType.GARAGE, 1), (RoomType.DINING_ROOM, 2)), secondary_room_priority: 'tuple[RoomType, ...]' = (RoomType.KITCHEN, RoomType.HALLWAY), window_room_types: 'tuple[RoomType, ...]' = (RoomType.BEDROOM, RoomType.LIVING_ROOM, RoomType.KITCHEN, RoomType.DINING_ROOM), main_side_priority: 'tuple[str, ...]' = ('south', 'east', 'north', 'west'), secondary_side_priority: 'tuple[str, ...]' = ('north', 'west', 'east', 'south'), window_side_priority: 'tuple[str, ...]' = ('east', 'north', 'south', 'west'), required_access_room_types: 'tuple[RoomType, ...]' = (RoomType.BEDROOM, RoomType.BATHROOM, RoomType.ATTACHED_BATHROOM, RoomType.LIVING_ROOM, RoomType.KITCHEN, RoomType.DINING_ROOM, RoomType.HALLWAY, RoomType.VERANDA, RoomType.GARAGE), door_placement_priority: 'tuple[tuple[RoomType, int], ...]' = ((RoomType.BEDROOM, 100), (RoomType.BATHROOM, 100), (RoomType.ATTACHED_BATHROOM, 100), (RoomType.KITCHEN, 80), (RoomType.DINING_ROOM, 60), (RoomType.GARAGE, 60), (RoomType.VERANDA, 40), (RoomType.LIVING_ROOM, 20), (RoomType.HALLWAY, 10))) -> None` | Consumer-owned authoritative room-pair, access, door-limit, side-priority, and door-end-placement policy. |
-| `FloorPlanOpeningsConfig` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits', 'required_room_access'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
+| `FloorPlanOpeningsConfig` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits', 'required_room_access'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>, interior_doors: 'InteriorDoorConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
+| `InteriorDoorConfig` | dataclass/contract | Default policy and ordered room-type overrides. | See interior door policy above. |
+| `InteriorDoorPolicy` | dataclass/contract | Width, preferred and minimum clearances, minimum wall and placement preference. | See interior door policy above. |
 | `GeometryConfig` | dataclass/contract | `(coordinate_scale: 'int' = 10, tolerance: 'float' = 1e-06, corner_clearance: 'float' = 5.0, window_spacing: 'float' = 5.0) -> None` | GeometryConfig(coordinate_scale: 'int' = 10, tolerance: 'float' = 1e-06, corner_clearance: 'float' = 5.0, window_spacing: 'float' = 5.0) |
 | `ObjectiveConfig` | dataclass/contract | `(tier_order: 'tuple[str, ...]' = ('window', 'secondary_entrance', 'other_interior', 'preferred_hallway', 'bathroom_hallway', 'attached_bathroom', 'main_entrance')) -> None` | ObjectiveConfig(tier_order: 'tuple[str, ...]' = ('window', 'secondary_entrance', 'other_interior', 'preferred_hallway', 'bathroom_hallway', 'attached_bathroom', 'main_entrance')) |
 | `SolverConfig` | dataclass/contract | `(max_time_seconds: 'float' = 10.0, num_search_workers: 'int' = 1, random_seed: 'int' = 0, cp_model_presolve: 'bool' = True, log_search_progress: 'bool' = False) -> None` | SolverConfig(max_time_seconds: 'float' = 10.0, num_search_workers: 'int' = 1, random_seed: 'int' = 0, cp_model_presolve: 'bool' = True, log_search_progress: 'bool' = False) |
@@ -357,7 +394,7 @@ Expected generation outcomes are represented by `OpeningGenerationStatus` and `O
 | `OpeningIssue` | dataclass/contract | `(code: 'str', message: 'str', feature_id: 'str \| None' = None, demand_id: 'str \| None' = None, wall_id: 'str \| None' = None) -> None` | OpeningIssue(code: 'str', message: 'str', feature_id: 'str \| None' = None, demand_id: 'str \| None' = None, wall_id: 'str \| None' = None) |
 | `DEFAULT_OPENING_CONFIG` | dataclass/contract | `constructor has no separately inspectable signature` | Reusable configuration controlling opening generation behavior. |
 | `DEFAULT_OPENING_PROFILE` | dataclass/contract | `constructor has no separately inspectable signature` | Reusable configuration controlling opening generation behavior. |
-| `OpeningGenerationProfile` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits', 'required_room_access'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
+| `OpeningGenerationProfile` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits', 'required_room_access'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>, interior_doors: 'InteriorDoorConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
 | `OpeningFeatureRegistry` | class/interface/registry | `() -> 'None'` | Documented in the corresponding feature/shared section. |
 | `create_default_registry` | function | `create_default_registry() -> 'OpeningFeatureRegistry'` | Documented in the corresponding feature/shared section. |
 | `OpeningConfigurationError` | exception | `constructor has no separately inspectable signature` | Raised for programmer-facing configuration or registry errors. |

@@ -7,7 +7,7 @@ Call `generate_openings(OpeningGenerationRequest(floor_plan=..., config=...), mo
 - `FloorPlanOpeningsConfig.policy.allowed_room_pairs` is the **sole authority** for interior room-type connections. The algorithm does not silently allow all hallway pairs or special attached-bathroom pairs.
 - The default allowed pairs include bedroom/attached-bathroom and several explicit hallway combinations. It does **not** include every logically imaginable pair (for example, kitchen/dining); consumers must align opening policy with hard adjacency requirements.
 - `shared_placement` and `required_room_access` are **structural** constraints and cannot be disabled. `required_room_access` requires exactly one selected main entrance for non-empty plans and a connected door path from that entrance to every required-access room. A separate connected island is not sufficient.
-- `room_door_caps` applies per room type without hidden exceptions. Door positions favor usable shared-wall ends/corners, prioritized by `door_placement_priority`; windows remain more center-oriented. Hard bounds, clearances, and non-overlap take precedence.
+- `room_door_caps` applies per room type without hidden exceptions. Interior door policies choose centered or wall-end placement, with minimum clearance hard and preferred clearance optimized before optional openings. Wall-end positions use `door_placement_priority`; windows remain center-oriented. Hard bounds and non-overlap take precedence.
 - Defaults: door width `8`, window width `16`, minimum shared wall `10`, window spacing `5` project units. All are policy/configuration, not universal regulations.
 
 ## Outcomes

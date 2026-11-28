@@ -201,8 +201,13 @@ def validate_generated_floor_plan(
         if opening.opening_type is OpeningType.WINDOW and length != window_width:
             raise OpeningExtractionError(f"opening {opening.id!s} has an invalid window width")
         if opening.opening_type is OpeningType.DOOR:
-            if match[0].kind is WallKind.SHARED and length != door_width:
-                raise OpeningExtractionError(f"opening {opening.id!s} has an invalid interior door width")
+            if match[0].kind is WallKind.SHARED:
+                policy = config.interior_doors.resolve(tuple(prepared.rooms_by_id[room_id].room_type for room_id in match[0].room_ids))
+                minimum = round(policy.minimum_clearance * prepared.scale)
+                if length != round(policy.door_width * prepared.scale):
+                    raise OpeningExtractionError(f"opening {opening.id!s} has an invalid interior door width")
+                if match[1][0] < minimum or match[0].length - match[1][1] < minimum:
+                    raise OpeningExtractionError(f"opening {opening.id!s} violates minimum interior clearance")
             if match[0].kind is WallKind.EXTERIOR and not (0 < length <= door_width):
                 raise OpeningExtractionError(f"opening {opening.id!s} has an invalid exterior door width")
         placements.append((opening, match[0], match[1]))

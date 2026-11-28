@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import isfinite
+from typing import Literal
 
 from ..domain import RoomType
 from .constraints import (
@@ -56,6 +58,42 @@ _DEFAULT_ALLOWED_ROOM_PAIRS: tuple[tuple[RoomType, RoomType], ...] = (
     (RoomType.GARAGE, RoomType.HALLWAY),
     (RoomType.HALLWAY, RoomType.HALLWAY),
 )
+
+
+@dataclass(frozen=True, slots=True)
+class InteriorDoorPolicy:
+    door_width: float = 10.0
+    preferred_clearance: float = 5.0
+    minimum_clearance: float = 0.0
+    minimum_shared_wall: float = 10.0
+    placement_preference: Literal["wall_end", "center"] = "wall_end"
+
+    def __post_init__(self) -> None:
+        values = (self.door_width, self.preferred_clearance, self.minimum_clearance, self.minimum_shared_wall)
+        if not all(isfinite(value) for value in values) or self.door_width <= 0 or self.minimum_shared_wall <= 0:
+            raise OpeningConfigurationError("interior door dimensions must be finite and positive")
+        if self.minimum_clearance < 0 or self.preferred_clearance < self.minimum_clearance:
+            raise OpeningConfigurationError("preferred clearance must be at least the non-negative minimum")
+        if self.placement_preference not in {"wall_end", "center"}:
+            raise OpeningConfigurationError("unknown interior door placement preference")
+
+
+@dataclass(frozen=True, slots=True)
+class InteriorDoorConfig:
+    default: InteriorDoorPolicy = field(default_factory=InteriorDoorPolicy)
+    overrides: tuple[tuple[RoomType, InteriorDoorPolicy], ...] = field(default_factory=lambda: (
+        (RoomType.BATHROOM, InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center")),
+        (RoomType.ATTACHED_BATHROOM, InteriorDoorPolicy(8.0, 2.0, 0.0, 8.0, "center")),
+    ))
+
+    def __post_init__(self) -> None:
+        types = [room_type for room_type, _ in self.overrides]
+        if any(not isinstance(room_type, RoomType) for room_type in types) or len(types) != len(set(types)):
+            raise OpeningConfigurationError("interior door overrides must have unique room types")
+
+    def resolve(self, room_types: tuple[RoomType, ...]) -> InteriorDoorPolicy:
+        # The first configured override wins, independent of wall direction.
+        return next((policy for room_type, policy in self.overrides if room_type in room_types), self.default)
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,6 +256,7 @@ class FloorPlanOpeningsConfig:
     policy: FeaturePolicy = field(default_factory=FeaturePolicy)
     objective: ObjectiveConfig = field(default_factory=ObjectiveConfig)
     solver: SolverConfig = field(default_factory=SolverConfig)
+    interior_doors: InteriorDoorConfig = field(default_factory=InteriorDoorConfig)
 
     def __post_init__(self) -> None:
         if not self.name.strip():

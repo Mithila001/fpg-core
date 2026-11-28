@@ -141,3 +141,23 @@ preserved. The dry run reports affected profile hashes and conflicts. Stop Lab,
 back up the selected database and use `migrate --dry-run --json` before applying
 `migrate --json`; then run `profiles validate --all --json`. No reset is needed.
 Run-only reset includes E02C runs.
+
+
+## Revision 8 interior door policies
+
+Revision 8 changes saved opening profiles without a SQL schema change. The standard
+interior policy copies each profile's existing door width, minimum shared wall and
+corner clearance as preferred clearance. Its hard minimum is zero. Bathroom and
+attached-bathroom overrides use 0.8 m width and minimum wall, 0.2 m preferred
+clearance and centered placement, scaled to the profile's units. Existing exterior
+and window settings, saved plans, run history and snapshots remain unchanged.
+
+Stop Lab and headless execution, back up the database, then run from `fpg-lab/`:
+
+```powershell
+python -m scripts.lab_db migrate --dry-run --json
+python -m scripts.lab_db migrate --json
+python -m scripts.lab_db profiles validate --all --json
+```
+
+Review the dry-run conflicts and proposed hashes before applying. No reset is needed.

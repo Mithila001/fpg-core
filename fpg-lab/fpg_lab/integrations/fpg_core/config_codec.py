@@ -588,6 +588,8 @@ class CoreConfigCodec:
             FeaturePolicy,
             FloorPlanOpeningsConfig,
             GeometryConfig,
+            InteriorDoorConfig,
+            InteriorDoorPolicy,
             ObjectiveConfig,
             SolverConfig,
         )
@@ -599,6 +601,10 @@ class CoreConfigCodec:
             enabled_constraints=tuple(source.enabled_constraints),
             geometry=GeometryConfig(**source.geometry.model_dump()),
             dimensions=DimensionConfig(**source.dimensions.model_dump()),
+            interior_doors=InteriorDoorConfig(
+                default=InteriorDoorPolicy(**source.interior_doors.default.model_dump()),
+                overrides=tuple((RoomType(item.room_type), InteriorDoorPolicy(**item.policy.model_dump())) for item in source.interior_doors.overrides),
+            ),
             policy=FeaturePolicy(
                 allowed_room_pairs=tuple(
                     (RoomType(x.first), RoomType(x.second)) for x in policy.allowed_room_pairs

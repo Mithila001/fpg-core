@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from time import perf_counter
 from typing import Any
 
 from ortools.sat.python import cp_model
@@ -103,6 +104,13 @@ def _issues(built: BuiltOpeningModel, solver: Any, solved: bool) -> tuple[Openin
                     )
                 )
             for item in selected:
+                if item.demand.feature_id == "interior_doors":
+                    policy = built.context.config.interior_doors.resolve(tuple(built.context.prepared.rooms_by_id[room_id].room_type for room_id in item.wall.room_ids))
+                    scale = built.context.prepared.scale
+                    start = solver.Value(item.start) / scale
+                    end = (item.wall.length - solver.Value(item.end)) / scale
+                    if start < policy.preferred_clearance or end < policy.preferred_clearance:
+                        result.append(OpeningIssue("reduced_preferred_clearance", f"Preferred clearance {policy.preferred_clearance:g}; actual start {start:g}, end {end:g} project units", demand.feature_id, demand.id, item.wall.id))
                 if item.option.undersized:
                     result.append(
                         OpeningIssue(
@@ -131,7 +139,30 @@ def solve_opening_model(
     solver.parameters.cp_model_presolve = bool(solver_config.cp_model_presolve)
     solver.parameters.log_search_progress = bool(solver_config.log_search_progress)
 
+    started = perf_counter()
     status_code = solver.Solve(built.context.model)
+    if status_code == cp_model.OPTIMAL and built.has_objective:
+        deficit = sum(solver.Value(value) if not isinstance(value, int) else value for value in built.clearance_deficits)
+        remaining = float(solver_config.max_time_seconds) - (perf_counter() - started)
+        if remaining > 0:
+            built.context.model.Add(sum(built.clearance_deficits) == deficit)
+            built.context.model.Maximize(built.secondary_objective)
+            second = cp_model.CpSolver()
+            second.parameters.num_search_workers = int(solver_config.num_search_workers)
+            second.parameters.random_seed = int(solver_config.random_seed)
+            second.parameters.cp_model_presolve = bool(solver_config.cp_model_presolve)
+            second.parameters.log_search_progress = bool(solver_config.log_search_progress)
+            second.parameters.max_time_in_seconds = remaining
+            second_status = second.Solve(built.context.model)
+            if second_status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                solver, status_code = second, second_status
+            else:
+                status_code = cp_model.FEASIBLE
+        else:
+            status_code = cp_model.FEASIBLE
+    elif status_code == cp_model.FEASIBLE:
+        # The best clearance was not proven, so do not prioritize optional openings.
+        pass
     status = _map_status(status_code)
     solved = status.has_solution
     floor_plan = None

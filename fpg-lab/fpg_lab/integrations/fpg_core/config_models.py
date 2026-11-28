@@ -456,6 +456,24 @@ class OpeningDimensionsDocument(StrictModel):
     minimum_shared_wall: float = Field(gt=0, allow_inf_nan=False)
 
 
+class InteriorDoorPolicyDocument(StrictModel):
+    door_width: float = Field(gt=0, allow_inf_nan=False)
+    preferred_clearance: float = Field(ge=0, allow_inf_nan=False)
+    minimum_clearance: float = Field(ge=0, allow_inf_nan=False)
+    minimum_shared_wall: float = Field(gt=0, allow_inf_nan=False)
+    placement_preference: Literal["wall_end", "center"]
+
+
+class InteriorDoorOverrideDocument(StrictModel):
+    room_type: RoomTypeValue
+    policy: InteriorDoorPolicyDocument
+
+
+class InteriorDoorsDocument(StrictModel):
+    default: InteriorDoorPolicyDocument
+    overrides: list[InteriorDoorOverrideDocument]
+
+
 class OpeningRoomPairDocument(StrictModel):
     first: RoomTypeValue
     second: RoomTypeValue
@@ -503,6 +521,7 @@ class OpeningsDocument(StrictModel):
     ]
     geometry: OpeningGeometryDocument
     dimensions: OpeningDimensionsDocument
+    interior_doors: InteriorDoorsDocument
     policy: OpeningFeaturePolicyDocument
     objective: OpeningObjectiveDocument
     solver: OpeningSolverDocument

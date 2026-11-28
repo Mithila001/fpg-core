@@ -15,6 +15,7 @@ from .domain import (
     OpeningDemand,
     PlacementOption,
     PreparedFloorPlan,
+    WallKind,
     WallOrientation,
 )
 from .exceptions import OpeningConfigurationError
@@ -32,6 +33,7 @@ class PlacementVariables:
     interval: Any
     position_cost: Any
     option_cost: int
+    clearance_deficit: Any
 
 
 @dataclass(slots=True)
@@ -65,6 +67,8 @@ class OpeningModelContext:
 class BuiltOpeningModel:
     context: OpeningModelContext
     has_objective: bool
+    secondary_objective: Any
+    clearance_deficits: tuple[Any, ...]
 
 
 def _build_demands(
@@ -187,7 +191,9 @@ def _create_position_cost(
         context.new_name("position_cost", option.id),
     )
 
-    if demand.opening_type is OpeningType.DOOR:
+    interior = demand.opening_type is OpeningType.DOOR and wall.kind is WallKind.SHARED
+    policy = context.config.interior_doors.resolve(tuple(context.prepared.rooms_by_id[room_id].room_type for room_id in wall.room_ids)) if interior else None
+    if demand.opening_type is OpeningType.DOOR and (policy is None or policy.placement_preference == "wall_end"):
         preferred_end = _preferred_door_end(context, demand, wall)
         edge_deviation = context.model.NewIntVar(
             0,
@@ -216,12 +222,12 @@ def _create_position_cost(
 
 def _create_variables(context: OpeningModelContext) -> None:
     walls = context.prepared.wall_by_id()
-    clearance = round(
-        context.config.geometry.corner_clearance * context.prepared.scale
-    )
     for demand in context.demands:
         for option_index, option in enumerate(demand.options):
             wall = walls[option.wall_id]
+            interior = demand.opening_type is OpeningType.DOOR and wall.kind is WallKind.SHARED
+            policy = context.config.interior_doors.resolve(tuple(context.prepared.rooms_by_id[room_id].room_type for room_id in wall.room_ids)) if interior else None
+            clearance = round((policy.minimum_clearance if policy else context.config.geometry.corner_clearance) * context.prepared.scale)
             latest = wall.length - clearance - option.width
             if latest < clearance:
                 raise OpeningConfigurationError(
@@ -254,6 +260,18 @@ def _create_variables(context: OpeningModelContext) -> None:
                 clearance=clearance,
                 latest=latest,
             )
+            deficit = 0
+            if policy:
+                preferred = round(policy.preferred_clearance * context.prepared.scale)
+                deficits = []
+                for distance in (start, wall.length - end):
+                    raw = context.model.NewIntVar(0, preferred, context.new_name("raw_clearance_deficit", option.id))
+                    context.model.AddMaxEquality(raw, [0, preferred - distance])
+                    active = context.model.NewIntVar(0, preferred, context.new_name("clearance_deficit", option.id))
+                    context.model.Add(active == raw).OnlyEnforceIf(selected)
+                    context.model.Add(active == 0).OnlyEnforceIf(selected.Not())
+                    deficits.append(active)
+                deficit = sum(deficits)
             variables = PlacementVariables(
                 demand=demand,
                 option=option,
@@ -263,6 +281,7 @@ def _create_variables(context: OpeningModelContext) -> None:
                 end=end,
                 interval=interval,
                 position_cost=position_cost,
+                clearance_deficit=deficit,
                 option_cost=(
                     option.preference_rank * (len(demand.options) + 1) + option_index
                 ),
@@ -288,18 +307,14 @@ def _apply_constraints(context: OpeningModelContext) -> None:
         context.applied_constraints.append(constraint_id)
 
 
-def _apply_objective(context: OpeningModelContext) -> bool:
+def _apply_objective(context: OpeningModelContext) -> tuple[bool, Any]:
     if not context.all_variables:
-        return False
+        return False, 0
     maximum_position = sum(
         item.wall.length * (item.wall.length + 1) + item.wall.length
         for item in context.all_variables
     )
     option_stride = maximum_position + 1
-    preference_costs = [
-        item.position_cost + item.option_cost * option_stride * item.selected
-        for item in context.all_variables
-    ]
     maximum_preference = sum(
         item.wall.length * (item.wall.length + 1)
         + item.wall.length
@@ -332,6 +347,17 @@ def _apply_objective(context: OpeningModelContext) -> bool:
             f"objective tiers are not configured: {', '.join(sorted(unknown))}"
         )
 
+    objective_bound = sum(
+        item.wall.length * (item.wall.length + 1) + item.wall.length
+        + item.option_cost * option_stride + coefficient_by_tier[item.demand.objective_tier]
+        for item in context.all_variables
+    )
+    if objective_bound >= (1 << 62):
+        raise OpeningConfigurationError("opening objective exceeds safe integer limits")
+    preference_costs = [
+        item.position_cost + item.option_cost * option_stride * item.selected
+        for item in context.all_variables
+    ]
     rewards = []
     for demand in context.demands:
         selection = demand_selection[demand.id]
@@ -340,9 +366,11 @@ def _apply_objective(context: OpeningModelContext) -> bool:
             context.objective_terms.append(
                 f"select:{demand.id}:{demand.objective_tier}"
             )
-    context.model.Maximize(sum(rewards) - sum(preference_costs))
+    secondary = sum(rewards) - sum(preference_costs)
+    context.model.Minimize(sum(item.clearance_deficit for item in context.all_variables))
+    context.objective_terms.append("interior_clearance_deficit")
     context.objective_terms.append("wall_preference_and_opening_positioning")
-    return True
+    return True, secondary
 
 
 def build_opening_model(
@@ -359,5 +387,5 @@ def build_opening_model(
     )
     _create_variables(context)
     _apply_constraints(context)
-    has_objective = _apply_objective(context)
-    return BuiltOpeningModel(context=context, has_objective=has_objective)
+    has_objective, secondary = _apply_objective(context)
+    return BuiltOpeningModel(context=context, has_objective=has_objective, secondary_objective=secondary, clearance_deficits=tuple(item.clearance_deficit for item in context.all_variables))

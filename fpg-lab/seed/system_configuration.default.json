@@ -2148,6 +2148,13 @@
         "window_width": 16.0,
         "minimum_shared_wall": 10.0
       },
+      "interior_doors": {
+        "default": {"door_width": 10.0, "preferred_clearance": 5.0, "minimum_clearance": 0.0, "minimum_shared_wall": 10.0, "placement_preference": "wall_end"},
+        "overrides": [
+          {"room_type": "bathroom", "policy": {"door_width": 8.0, "preferred_clearance": 2.0, "minimum_clearance": 0.0, "minimum_shared_wall": 8.0, "placement_preference": "center"}},
+          {"room_type": "attached_bathroom", "policy": {"door_width": 8.0, "preferred_clearance": 2.0, "minimum_clearance": 0.0, "minimum_shared_wall": 8.0, "placement_preference": "center"}}
+        ]
+      },
       "policy": {
         "allowed_room_pairs": [
           {

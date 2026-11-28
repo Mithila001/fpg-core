@@ -8,7 +8,7 @@ from uuid import uuid4
 import plotly.graph_objects as go
 from nicegui import app, run, ui
 
-from fpg_lab.flows.e01a import simulate
+from fpg_lab.flows.e01a import RADIUS, simulate
 from fpg_lab.flows.e01a_plans import plans
 from fpg_lab.integrations.fpg_core.traffic_plan import import_traffic_plan
 from fpg_lab.ui.components import action_button, format_experiment_code, notify_error, shell
@@ -177,7 +177,7 @@ async def result_page(run_id: str) -> None:
                 "dense outline"
             )
             action_button("Clear paths", role="subtle", on_click=lambda: select_paths(False)).props("dense flat")
-        ui.label("10 project units / metre · 8-unit walking width").classes("lab-muted text-xs")
+        ui.label(f"10 project units / metre - {2 * RADIUS:g}-unit walking width").classes("lab-muted text-xs")
         ui.link("New simulation", "/experiments/e01a").classes("text-sm")
     with workspace.context("Canvas"):
         ui.label(f"{len(result['routes'])} routes · {len(result['failures'])} unreachable").classes(
