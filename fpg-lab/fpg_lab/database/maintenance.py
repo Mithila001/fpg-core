@@ -26,13 +26,15 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 6
+REVISION = 7
 # Revision 6 enables living room and bedroom quality scoring; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
-CURRENT_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
+PREVIOUS_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
+CURRENT_SCHEMA_HASH = "f67dd1c6d91f646cbe8146dbe0be8740707c15214fc9f405b9bf2032d17e4563"
 RUN_TABLES = {
     "fpg_e02_run",
     "fpg_e02b_run",
+    "fpg_e02c_run",
     "fpg_p01_experiment",
     "fpg_p01_candidate_trial",
     "fpg_p01b_iteration",
@@ -93,7 +95,7 @@ def _state(connection):
         return revision, "newer"
     if not schema and revision == 0:
         return revision, "empty"
-    expected = CURRENT_SCHEMA_HASH if revision >= 2 else REVIEWED_SCHEMA_HASH
+    expected = CURRENT_SCHEMA_HASH if revision >= 7 else PREVIOUS_SCHEMA_HASH if revision >= 2 else REVIEWED_SCHEMA_HASH
     if not _matches_schema(schema, expected):
         return revision, "unknown"
     return revision, "current" if revision == REVISION else "upgrade_required"
@@ -131,7 +133,8 @@ def _counts(connection, names=None):
     return {
         table.name: connection.scalar(select(func.count()).select_from(table))
         for table in Base.metadata.sorted_tables
-        if names is None or table.name in names
+        if (names is None or table.name in names)
+        and table.name in _schema(connection)
     }
 
 
@@ -416,6 +419,8 @@ def _migration(connection, session, report, *, dry_run):
                     data = _upgrade_front_wall_setback(data, baseline.payload)
                 if revision < 6:
                     data = _enable_room_quality_evaluators(data, baseline.payload["floor_plan_scoring"])
+                if revision < 7 and data["openings"]["geometry"]["corner_clearance"] == 0:
+                    data["openings"]["geometry"]["corner_clearance"] = data["project_units_per_meter"] * 0.5
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):
@@ -434,6 +439,7 @@ def _migration(connection, session, report, *, dry_run):
     if not any(row.name == PRIMARY_PROFILE for row in rows):
         report["profiles"].append({"name": PRIMARY_PROFILE, "action": "create E02A baseline"})
     report["action"] = "initialize schema" if compatibility == "empty" else "upgrade saved profiles"
+    report["created_tables"] = ["fpg_e02c_run"] if compatibility == "upgrade_required" else []
     if compatibility == "upgrade_required" and revision < 2:
         report["removed_floor_plan_runs"] = connection.exec_driver_sql(
             "SELECT count(*) FROM fpg_p01_floor_plan_run"
@@ -454,6 +460,10 @@ def _migration(connection, session, report, *, dry_run):
         Base.metadata.create_all(connection)
         if not _matches_schema(_schema(connection), CURRENT_SCHEMA_HASH):
             raise ValueError("Generated schema differs from supported Lab schema.")
+    if compatibility == "upgrade_required" and revision < 7:
+        Base.metadata.tables["fpg_e02c_run"].create(connection)
+        if not _matches_schema(_schema(connection), CURRENT_SCHEMA_HASH):
+            raise ValueError("Upgraded schema differs from supported Lab schema.")
     for row, values in proposals:
         for key, value in values.items():
             setattr(row, key, value)

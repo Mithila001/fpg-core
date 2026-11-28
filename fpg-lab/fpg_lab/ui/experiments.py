@@ -79,6 +79,11 @@ def register_experiments(runtime: LabRuntime) -> None:
             from fpg_lab.ui.e02a import main_page as e02a_page
             await e02a_page(runtime)
             return
+        if flow == "e02c":
+            from fpg_lab.ui.e02c import main_page
+
+            await main_page(runtime)
+            return
         if flow == "e02b":
             from fpg_lab.ui.e02b import main_page as e02b_page
 
@@ -232,6 +237,11 @@ def register_experiments(runtime: LabRuntime) -> None:
     @ui.page("/experiments/{flow}/runs/{experiment_id}")
     async def run_page(flow: str, experiment_id: int) -> None:
         timer: ui.timer
+        if flow == "e02c":
+            from fpg_lab.ui.e02c import run_page as e02c_run_page
+
+            await e02c_run_page(runtime, experiment_id)
+            return
         if flow == "e02b":
             from fpg_lab.ui.e02b import run_page as e02b_run_page
 

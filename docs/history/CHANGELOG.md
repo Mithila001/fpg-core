@@ -6,6 +6,11 @@
 
 ## Unreleased
 
+- Breaking behavior change: opening generation defaults to a 5-unit corner
+  clearance instead of zero. Set an explicit clearance to retain a custom policy.
+  Lab revision 7 migrates zero-clearance profiles to 0.5 metres in their own
+  units, leaving nonzero settings and historical snapshots intact.
+
 - Re-enabled living room balance and bedroom quality as default functional
   scoring evaluators. Lab revision 6 enables both in saved profiles, preserving
   existing custom settings and historical run snapshots. Final score weighting

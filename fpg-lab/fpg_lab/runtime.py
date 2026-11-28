@@ -14,7 +14,7 @@ from fpg_lab.core.exceptions import AppError, InvalidInputError
 from fpg_lab.core.results import error_payload
 from fpg_lab.core.settings import get_settings
 from fpg_lab.database.maintenance import execution_lock, require_current
-from fpg_lab.database.models import E02BRun, E02Run, P01Experiment
+from fpg_lab.database.models import E02BRun, E02CRun, E02Run, P01Experiment
 from fpg_lab.database.models.common import utc_now
 from fpg_lab.database.session import Database
 from fpg_lab.flows.p01 import (
@@ -125,6 +125,9 @@ class LabRuntime:
                 recover_interrupted_experiments(session)
                 session.execute(update(E02Run).where(E02Run.status.in_(ACTIVE_STATUSES)).values(status="interrupted"))
                 session.execute(update(E02BRun).where(E02BRun.status.in_(ACTIVE_STATUSES)).values(
+                    status="interrupted", error={"stage": "startup", "message": "Previous Lab process stopped before completion."},
+                ))
+                session.execute(update(E02CRun).where(E02CRun.status.in_(ACTIVE_STATUSES)).values(
                     status="interrupted", error={"stage": "startup", "message": "Previous Lab process stopped before completion."},
                 ))
                 session.commit()

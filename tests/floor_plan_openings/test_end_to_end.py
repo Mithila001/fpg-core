@@ -14,7 +14,7 @@ from fpg_core.domain import (
     Point,
     RoomId,
 )
-from fpg_core.floor_plan_openings import DEFAULT_OPENING_PROFILE
+from fpg_core.floor_plan_openings import DEFAULT_OPENING_PROFILE, GeometryConfig
 from fpg_core.floor_plan_openings.api import (
     OpeningDiagnostics,
     OpeningGenerationRequest,
@@ -83,3 +83,7 @@ def test_invalid_mode_is_rejected(floor_plan: FloorPlan) -> None:
             OpeningGenerationRequest(floor_plan, DEFAULT_OPENING_PROFILE),
             mode="debug",  # type: ignore[arg-type]
         )
+
+
+def test_default_corner_clearance_is_five_project_units():
+    assert GeometryConfig().corner_clearance == 5.0

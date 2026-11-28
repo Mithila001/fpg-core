@@ -238,7 +238,7 @@ class SystemConfigurationService:
         document = deepcopy(record.configuration_data)
         if section == "experiments.e03a":
             document["experiments"]["e03a"] = value
-        elif section == "floor_plan_scoring":
+        elif section in {"floor_plan_scoring", "openings"}:
             document[section] = value
         else:
             raise ValueError(f"Unknown editable section {section!r}")

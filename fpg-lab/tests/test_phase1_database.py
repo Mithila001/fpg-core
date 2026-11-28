@@ -12,6 +12,7 @@ from fpg_lab.database.base import Base
 from fpg_lab.database.models import (
     E02BRun,
     E02BSavedPlan,
+    E02CRun,
     E02Run,
     FloorPlanTemplate,
     P01BIteration,
@@ -31,6 +32,8 @@ PROFILE = SystemConfiguration.__tablename__
 def reviewed_database(path, *, conflict=False):
     database = Database(f"sqlite:///{path}")
     Base.metadata.create_all(database.engine)
+    with database.engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE fpg_e02c_run")
     ddl = (Path(__file__).parent / "revision1_floor_plan_run.sql").read_text(encoding="utf-8")
     with database.engine.begin() as connection:
         for statement in ddl.split(";"):
@@ -231,6 +234,7 @@ def test_resets_preserve_reusable_records_and_require_stopped_execution(tmp_path
             [
                 E02Run(status="completed", snapshot={}, cases=[{"fixture": True}]),
                 E02BRun(status="completed", snapshot={}),
+                E02CRun(status="completed", snapshot={}),
                 P01BIteration(experiment_id=experiment.id, number=1, status="completed"),
                 P01BPreset(name="retain preset", data={"fixture": True}),
                 E02BSavedPlan(name="retain plan", document={"fixture": True}),
@@ -449,4 +453,46 @@ def test_revision6_enables_room_quality_in_all_profiles(tmp_path):
                 assert rules["living_room_balance"]["settings"]["maximum_excess_ratio"] == 1.5
                 assert profile.configuration_data["floor_plan_solver"] == custom_data["floor_plan_solver"]
     assert not db.migrate(database)["applied"]
+    database.dispose()
+
+
+def test_revision7_adds_e02c_and_migrates_only_zero_clearance(tmp_path):
+    database = Database(f"sqlite:///{tmp_path / 'revision7.db'}")
+    db.migrate(database)
+    db.seed(database)
+    codec = CoreConfigCodec()
+    with database.session_factory() as session:
+        service = SystemConfigurationService(session)
+        primary = service.get_active()
+        original = deepcopy(primary.configuration_data)
+        original["openings"]["geometry"]["corner_clearance"] = 0
+        primary.configuration_data = original
+        primary.config_hash = codec.hash_payload(original)
+        custom = service.duplicate(primary.id, "custom clearance")
+        custom_data = deepcopy(custom.configuration_data)
+        custom_data["openings"]["geometry"]["corner_clearance"] = 2.5
+        custom.configuration_data = custom_data
+        custom.config_hash = codec.hash_payload(custom_data)
+        saved = E02BSavedPlan(name="retained", document={"portable": True})
+        history = E02BRun(status="completed", snapshot={"historical": True})
+        session.add_all([saved, history])
+        session.commit()
+        profile_ids, saved_id, history_id = (primary.id, custom.id), saved.id, history.id
+    with database.engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE fpg_e02c_run")
+        connection.exec_driver_sql("PRAGMA user_version = 6")
+
+    planned = db.migrate(database, dry_run=True)
+    assert not planned["applied"] and not planned["conflicts"]
+    assert planned["created_tables"] == ["fpg_e02c_run"]
+    assert {item["id"] for item in planned["profiles"]} == {profile_ids[0]}
+    assert db.status(database)["revision"] == 6
+    assert db.migrate(database)["applied"]
+    assert not db.migrate(database)["applied"]
+    with database.session_factory() as session:
+        assert session.get(SystemConfiguration, profile_ids[0]).configuration_data["openings"]["geometry"]["corner_clearance"] == 5
+        assert session.get(SystemConfiguration, profile_ids[1]).configuration_data["openings"]["geometry"]["corner_clearance"] == 2.5
+        assert session.get(E02BSavedPlan, saved_id).name == "retained"
+        assert session.get(E02BRun, history_id).snapshot == {"historical": True}
+        assert session.get(E02CRun, 1) is None
     database.dispose()

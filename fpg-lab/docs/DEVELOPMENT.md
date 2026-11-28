@@ -130,3 +130,14 @@ Stop Lab, back up the selected SQLite file, and run the existing
 commands. Resolve any profile validation conflicts before applying the migration.
 Older custom solver room-size rules using the removed legacy settings must
 already conform to the current solver contract.
+
+
+## Revision 7 opening generation migration
+
+Revision 7 adds E02C run storage and changes saved profiles with zero corner
+clearance to 0.5 metres expressed in each profile?s project units. Nonzero
+clearances, saved plans, other profile settings and historical snapshots are
+preserved. The dry run reports affected profile hashes and conflicts. Stop Lab,
+back up the selected database and use `migrate --dry-run --json` before applying
+`migrate --json`; then run `profiles validate --all --json`. No reset is needed.
+Run-only reset includes E02C runs.

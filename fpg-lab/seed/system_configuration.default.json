@@ -2140,7 +2140,7 @@
       "geometry": {
         "coordinate_scale": 10,
         "tolerance": 1e-06,
-        "corner_clearance": 0.0,
+        "corner_clearance": 5.0,
         "window_spacing": 5.0
       },
       "dimensions": {

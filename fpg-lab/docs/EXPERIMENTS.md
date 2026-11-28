@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | E01A | Explore walking routes and traffic on prepared plans. | [E01](experiments/e01.md) |
 | E02A | Inspect solve, optional refinement, post-processing and scoring on prepared hint maps. | [E02](experiments/e02.md) |
+| E02C | Generate and inspect openings on a portable floor plan. | [E02](experiments/e02.md#e02c-floor-plan-opening-generation) |
 | E02B | Compare official scoring and independent evaluator diagnostics on a supplied plan. | [E02](experiments/e02.md#e02b-final-floor-plan-evaluation-inspector) |
 | E03A | Explore feasible integer room dimensions under analytical area rules. | [E03](experiments/e03.md) |
 | P01A | Run the candidate search through circulation and candidate scoring. | [P01](experiments/p01.md) |

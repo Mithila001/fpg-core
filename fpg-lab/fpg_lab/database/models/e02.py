@@ -31,3 +31,14 @@ class E02BRun(Base, TimestampMixin):
     diagnostics: Mapped[list | None] = mapped_column(JSONDocument)
     duration_seconds: Mapped[float | None] = mapped_column(Float)
     error: Mapped[dict | None] = mapped_column(JSONDocument)
+
+
+class E02CRun(Base, TimestampMixin):
+    __tablename__ = "fpg_e02c_run"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSONDocument, nullable=False)
+    result: Mapped[dict | None] = mapped_column(JSONDocument)
+    diagnostics: Mapped[dict | None] = mapped_column(JSONDocument)
+    duration_seconds: Mapped[float | None] = mapped_column(Float)
+    error: Mapped[dict | None] = mapped_column(JSONDocument)

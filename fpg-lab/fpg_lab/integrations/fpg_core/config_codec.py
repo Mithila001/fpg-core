@@ -50,6 +50,7 @@ FLOW_REQUIRED_SECTIONS = {
     "p01_preview": ("preprocessing",),
     "e02a": ("floor_plan_solver", "post_processing", "floor_plan_scoring"),
     "e02b": ("floor_plan_scoring",),
+    "e02c": ("openings",),
     "e03a": (),
     "e03a_refresh": ("preprocessing", "floor_plan_solver"),
 }

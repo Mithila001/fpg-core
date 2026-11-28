@@ -28,6 +28,7 @@ EXPERIMENTS = {
         "Quick Solver Results Test",
         "File-backed hint maps → solve → refine → post-process → score",
     ),
+    "e02c": ("Floor Plan Opening Generation", "Generate and inspect doors and windows on a saved plan"),
     "e02b": ("Final Floor Plan Evaluation Inspector", "Inspect official scoring and evaluator measurements"),
     "e01a": ("Floor Traffic", "Preset floor plans → walking paths → traffic heatmap"),
     "p01a": ("Candidate search", "Preprocess → search → circulation → candidate score"),

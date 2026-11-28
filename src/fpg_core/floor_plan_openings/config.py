@@ -14,7 +14,7 @@ from .exceptions import OpeningConfigurationError
 class GeometryConfig:
     coordinate_scale: int = 10
     tolerance: float = 1e-6
-    corner_clearance: float = 0.0
+    corner_clearance: float = 5.0
     window_spacing: float = 5.0
 
     def __post_init__(self) -> None:
