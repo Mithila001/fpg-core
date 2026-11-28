@@ -91,8 +91,8 @@ class CoreConfigCodec:
     def _validate(self, payload, required, *, full=False, flow=None):
         if not isinstance(payload, Mapping):
             raise CoreConfigurationError("configuration_data must be a JSON object")
-        if type(payload.get("schema_version")) is not int or payload["schema_version"] != 8:
-            raise CoreConfigurationError("schema_version: expected Lab configuration version 8")
+        if type(payload.get("schema_version")) is not int or payload["schema_version"] != 9:
+            raise CoreConfigurationError("schema_version: expected Lab configuration version 9")
         missing = [name for name in required if payload.get(name) is None]
         if missing:
             raise CoreConfigurationError(f"Missing configuration sections: {', '.join(missing)}")
@@ -341,7 +341,6 @@ class CoreConfigCodec:
             CirculationTrafficClass,
             DestinationSelection,
             RoomType,
-            RouteDistancePolicy,
         )
 
         return tuple(
@@ -358,9 +357,6 @@ class CoreConfigCodec:
                 ),
                 importance_weight=x.importance_weight,
                 allow_global_transit=x.allow_global_transit,
-                distance_policy=RouteDistancePolicy(**x.distance_policy.model_dump())
-                if x.distance_policy
-                else None,
             )
             for x in rules
         )
@@ -414,12 +410,14 @@ class CoreConfigCodec:
                         ExteriorClearanceRule(
                             room_types=tuple(RoomType(v) for v in rule.room_types),
                             required_clear_room_count=rule.required_clear_room_count,
-                            clearance_width=rule.clearance_width,
+                            clearance_width=20.0,
                             direction=LandSide(rule.direction),
                         )
                         for rule in item.settings.rules
                     )
                 }
+            elif item.key == "spatial_occupancy":
+                settings = {}
             else:
                 settings = item.settings.model_dump()
             rules.append(

@@ -6,6 +6,7 @@ from .functional_group_purity import (
     FunctionalGroupPurityEvaluator,
 )
 from .spatial_distribution import SPATIAL_DISTRIBUTION_KEY, SpatialDistributionEvaluator
+from .spatial_occupancy import SPATIAL_OCCUPANCY_KEY, SpatialOccupancyEvaluator
 from .zone_suitability import ZONE_SUITABILITY_KEY, ZoneSuitabilityEvaluator
 
 __all__ = [
@@ -18,6 +19,8 @@ __all__ = [
     "FunctionalGroupPurityEvaluator",
     "SPATIAL_DISTRIBUTION_KEY",
     "SpatialDistributionEvaluator",
+    "SPATIAL_OCCUPANCY_KEY",
+    "SpatialOccupancyEvaluator",
     "ZONE_SUITABILITY_KEY",
     "ZoneSuitabilityEvaluator",
 ]

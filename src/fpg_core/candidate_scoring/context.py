@@ -32,4 +32,23 @@ class ScoringContextFactory:
     """Single extension point for preparing shared evaluator data."""
 
     def build(self, scoring_input: CandidateScoringInput) -> ScoringContext:
-        return ScoringContext(scoring_input=scoring_input)
+        from shapely.geometry import Point, box
+
+        from .evaluators.common import build_evaluation_data
+        from .footprints import build_footprints
+
+        context = ScoringContext(scoring_input=scoring_input)
+        data = build_evaluation_data(context)
+        footprints = build_footprints(scoring_input.specification, data)
+        return ScoringContext(
+            scoring_input=scoring_input,
+            derived={
+                "evaluation_data": data,
+                "footprints": footprints,
+                "circles": {
+                    key: Point(f.point.x, f.point.y).buffer(f.radius)
+                    for key, f in footprints.items()
+                },
+                "floor_geometry": box(0, 0, data.floor_width, data.floor_length),
+            },
+        )

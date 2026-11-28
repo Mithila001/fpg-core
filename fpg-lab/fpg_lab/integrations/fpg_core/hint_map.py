@@ -67,6 +67,8 @@ def validate_export(data: dict) -> FloorPlanGenerationSpec:
 
 def candidate_hints(document):
     return tuple(
-        RoomPlacementHint(room_id=point["room_id"], x=point["x"], y=point["y"])
+        RoomPlacementHint(
+            room_id=point["room_id"], x=point["x"], y=point["y"], position_reference="center"
+        )
         for point in document["candidate"]["points"]
     )

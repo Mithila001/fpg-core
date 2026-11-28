@@ -1,0 +1,50 @@
+# Phase 2 observations
+
+Run with Core 0.2.0 source, 29 Nov 2026. Synthetic specification: 200 x 200
+project units, living/kitchen/dining/bedroom/hallway, 10-unit candidate grid, fixed
+Optuna seed 314159. Old objective was the retained spatial-distribution evaluator;
+new objective was spatial occupancy alone. Search score columns are objective
+specific; compare occupancy metrics for physical outcome.
+
+| Objective | Trials | Seconds | Mean search score | Mean occupancy | Best occupancy |
+|---|---:|---:|---:|---:|---:|
+| Distribution | 100 | 1.257 | 13.08 | 88.91 | 100 |
+| Occupancy | 100 | 1.368 | 90.27 | 90.27 | 100 |
+| Distribution | 500 | 8.818 | 15.08 | 90.06 | 100 |
+| Occupancy | 500 | 10.133 | 88.95 | 88.95 | 100 |
+
+At these counts and on this small synthetic space, occupancy did not beat the
+distribution objective on mean occupancy at 500 trials; it was marginally higher
+at 100. Both found candidates with approximately 100 occupancy. Occupancy cost was
+about 6.4% and 11.9% more time at 100 and 500. This does not establish improvement
+on real prepared inputs; the old objective's low raw scores are not comparable.
+
+Controlled evaluator maps ran through the circulation router and all five default
+quality evaluators (the circulation, occupancy, clearance and bedroom group results
+are saved in `component_results.json`). The assigned attached-bathroom relationship
+scored 100 proximity at zero boundary distance and 0 at 86.98 units; the aggregate
+circulation result fell from 81.93 to 74.44. Exterior clearance fell from 100 on the
+well-arranged map to 73.16 when access was blocked. Bedroom compactness fell from
+100 to 0 on the scattered map, and unrelated living/dining points were reported as
+intrusions. An assigned attached bathroom placed on the group connection was not
+reported as an intrusion. These are evaluator self-checks on hand-authored maps,
+not architectural judgments.
+
+The initial-generation solver profile returned INFEASIBLE for all three hand-authored
+maps (desirable, clustered, scattered) under the synthetic specification. The
+previous basic solver check, with constraints disabled, solved all three optimally;
+mean center movement was 11.76, 21.67 and 10.69 units. The constrained result cannot
+be used to compare candidate quality because this synthetic specification does not
+satisfy the profile's full architectural assumptions. A prepared request and valid
+candidate maps are still needed for the representative constrained-generation test.
+
+Focused allocation/occupancy/center tests passed (4 tests); floor-plan solver tests
+passed (121 tests). Lab's Core verifier and profile validation passed. The candidate
+flow integration test fails before scoring when its random sampled map cannot route
+a bathroom to a living room. Two existing floor-plan-scoring tests also fail on an
+unrelated fixture that includes `kitchen` absent from its specification.
+
+Not yet measured: component-level proximity/clearance/group maps, full P01 configs,
+real prepared request comparisons, representative constrained solver generations,
+or replay/export rendering. No recommendation to adjust configured weights or
+distances follows from this synthetic sample.

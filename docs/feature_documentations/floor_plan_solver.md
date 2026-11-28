@@ -46,6 +46,7 @@ RoomPlacementHint(
     y: float,
     width: float | None = None,
     length: float | None = None,
+    position_reference: Literal["origin", "center"] = "origin",
 )
 ```
 
@@ -54,6 +55,12 @@ are optional seed geometry. `existing_floor_plan` is optional unless the selecte
 policy requires it. Unknown/duplicate hint room IDs are invalid; hint sizes, when
 provided, must be positive. Prepared hints are clamped to feasible floor/room bounds.
 Existing-plan rooms absent from the specification are ignored as seed inputs.
+The default position reference is the lower-left origin. Set `position_reference="center"`
+for candidate-search coordinates: preparation estimates dimensions to derive an
+origin hint, while position tolerance and seed stability use the actual solved
+rectangle center. Center coordinates must be finite and inside the floor. Estimated
+dimensions do not add size constraints. Existing-floor-plan refinement seeds retain
+their original geometry semantics.
 
 ## Structural rules that are always active
 
@@ -585,7 +592,7 @@ The solver does not expose a separate warning collection. Expected solver outcom
 | `ProfileCatalog` | dataclass/contract | `(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') -> None` | ProfileCatalog(initial: 'GenerationProfile', refinement_a: 'GenerationProfile', refinement_b: 'GenerationProfile') |
 | `REFINEMENT_A_PROFILE` | dataclass/contract | `constructor has no separately inspectable signature` | Complete reusable configuration for one CP-SAT generation stage. |
 | `REFINEMENT_B_PROFILE` | dataclass/contract | `constructor has no separately inspectable signature` | Complete reusable configuration for one CP-SAT generation stage. |
-| `RoomPlacementHint` | dataclass/contract | `(room_id: 'RoomId', x: 'float', y: 'float', width: 'float \| None' = None, length: 'float \| None' = None) -> None` | Candidate-search hint for a room's lower-left position and optional size. |
+| `RoomPlacementHint` | dataclass/contract | `(room_id: 'RoomId', x: 'float', y: 'float', width: 'float \| None' = None, length: 'float \| None' = None, position_reference: "Literal['origin', 'center']" = 'origin') -> None` | Room position and optional size; coordinates default to the lower-left. |
 | `SeedPolicy` | dataclass/contract | `(source: 'SeedSource' = <SeedSource.NONE: 'none'>, require_source: 'bool' = False, apply_hints: 'bool' = True, position_tolerance: 'float \| None' = None, size_tolerance: 'float \| None' = None) -> None` | Controls how candidate or existing-layout geometry is used as a seed. |
 | `SeedSource` | enum | `NONE='none'; CANDIDATE_HINTS='candidate_hints'; EXISTING_FLOOR_PLAN='existing_floor_plan'` | Documented in the corresponding feature/shared section. |
 | `SoftConstraintUse` | dataclass/contract | `(key: 'str', weight: 'float', settings: 'Mapping[str, Any]' = <factory>) -> None` | Configuration for one enabled soft constraint and its objective weight. |

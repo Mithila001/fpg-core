@@ -15,6 +15,14 @@ Stop Lab and headless execution before migration or reset. Runtime and maintenan
 use a local advisory execution lock. Stop older Lab processes manually before
 upgrading from revision 0.
 
+Revision 12 upgrades saved profiles to schema 9. Stop Lab, run `migrate --dry-run
+--json`, review the proposed profile changes, then run `migrate --json` and
+`profiles validate --all --json`. It enables spatial occupancy, disables spatial
+distribution, replaces grid-step scoring preferences with initial project-unit
+distances, and removes the obsolete fixed clearance widths. It preserves historical
+run snapshots and results. Custom distance settings require review after migration;
+old grid steps are not converted to project units.
+
 | Command | Result |
 | --- | --- |
 | `status --json` | Schema compatibility, revision, profile revisions and table counts. |

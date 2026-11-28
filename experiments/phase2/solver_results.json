@@ -1,0 +1,26 @@
+[
+  {
+    "map": "desirable",
+    "occupancy_score": 99.99999999999996,
+    "status": "infeasible",
+    "solve_seconds": 0.011196799998288043,
+    "center_movements": [],
+    "mean_center_movement": null
+  },
+  {
+    "map": "clustered",
+    "occupancy_score": 15.814016052320966,
+    "status": "infeasible",
+    "solve_seconds": 0.007691500002692919,
+    "center_movements": [],
+    "mean_center_movement": null
+  },
+  {
+    "map": "scattered",
+    "occupancy_score": 99.99999999999996,
+    "status": "infeasible",
+    "solve_seconds": 0.007801400002790615,
+    "center_movements": [],
+    "mean_center_movement": null
+  }
+]

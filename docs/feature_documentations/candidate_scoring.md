@@ -6,7 +6,7 @@
 
 Scores a candidate hint map on a 0..100 scale using independently configurable
 critical and quality evaluators. Built-ins cover relative zone suitability, exterior
-clearance, spatial distribution, circulation quality, and functional group purity. Use it to rank
+clearance, spatial occupancy, circulation quality, and functional group purity; spatial distribution remains available for comparison. Use it to rank
 candidate points before room geometry exists.
 
 ## Public API
@@ -65,29 +65,62 @@ minimum_score=None, settings={})` selects a registered evaluator.
 | `HALLWAY` | `(1,2)`, `(2,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
 | `VERANDA` | `(1,1)`, `(2,1)`, `(3,1)` |
 | `GARAGE` | `(1,1)`, `(3,1)` |
-- `ExteriorClearanceRule` chooses room types, required qualifying room count,
-  positive corridor width, and front/back/left/right direction.
-- `circulation_quality` settings default to efficiency weight 0.7, traffic separation
-  weight 0.3, single hallway penalty multiplier 0.5 and multiple hallway multiplier 1.0.
-  Weights are nonnegative with positive sum and multipliers range from 0 to 1.
-  Efficiency is the importance-weighted mean of clamped 100 ? Manhattan reference
-  cost divided by movement, perimeter and turn costs; traffic conflict cost is excluded.
-  Separation weights each retained hallway's mixing ratio `2 * min(public, private) /
-  (public + private)` by its total traffic. A hallway-free factor is not applicable.
-  After combining applicable factors, the evaluator multiplies the complete score
-  once by the lowest multiplier among routes exceeding their distance policies; no
-  violation means a multiplier of 1. DEBUG details expose the base score,
-  multiplier and violating route identities and step counts. Policies are soft and
-  do not reject candidates.
-- `functional_group_purity` defaults to one bedrooms group, direct penalty 1.0,
-  regional penalty 0.5, and connection tolerance 0.5 grid steps. Each group with at
-  least two non-hallway points uses deterministic MST connections and a convex hull
-  for non-collinear groups. Each foreign non-hallway point incurs its highest
-  applicable penalty once; group score is `clamp(100 * (1 - penalty / members))`.
-  Group scores are averaged. Distant members are not penalized merely for distance.
-  Convex hulls may include acceptable spaces in irregular groups; this is an
-  experimental baseline.
-- Spatial-distribution settings are passed in the evaluator rule mapping. Defaults are
+- `ExteriorClearanceRule` selects room types, a required number of distinct source
+  rooms and an exterior direction. `clearance_width` remains a legacy required
+  constructor argument but is ignored: the projected width is each source circle's
+  diameter. Blocker-circle intersections are projected to lateral intervals and
+  their union determines the continuous clearance score. Multiple hallway hints
+  count as one room, using its best hint. A rule averages its highest-scoring
+  required number of rooms, with missing rooms contributing zero; no eligible
+  rooms makes the rule inapplicable. Clearance is a preference, not a guarantee of
+  wall contact.
+- `spatial_occupancy` averages the scores of all hint circles. Each score is 100
+  times one minus the union of overlap inside the floor and the overflow outside it,
+  divided by the same polygonal circle area. DEBUG details contain room identity,
+  center, allocated area, radius, overlap and overflow ratios, and score.
+- `circulation_quality` combines applicable proximity, route efficiency, and traffic
+  separation at weights 0.5, 0.3, and 0.2. `proximity_preferences` maps sorted
+  room-type pairs (such as `attached_bathroom:bedroom`) to preferred and zero-score
+  distances in project units, as pairs or mappings with `preferred_distance` and
+  `zero_score_distance`. Scores fall linearly between these distances. Route pairs
+  are counted once using route importance. Efficiency uses the Manhattan reference
+  cost divided by movement, perimeter and turn costs; traffic separation retains
+  the configurable single/multiple hallway mixing multipliers. Legacy route-distance
+  policies do not affect this score. DEBUG details expose each component and pair.
+- `functional_group_purity` averages group results combining purity and MST-edge
+  boundary-distance compactness with equal weights. Defaults are a bedrooms group,
+  direct and regional intrusion penalties of 1.0 and 0.5, `connection_tolerance=5`,
+  and compactness preferred and zero-score distances of 5 and 30 project units.
+  Actual bedroom-to-attached-bathroom relations exempt the assigned bathroom from
+  intrusion, but do not exempt it from occupancy overlap. DEBUG details expose
+  both components, MST edges, hull and intrusions.
+
+The initial physical proximity preferences are experimental, in project units:
+
+| Pair | Preferred | Zero score |
+|---|---:|---:|
+| Attached bathroom / assigned bedroom | 2 | 20 |
+| Living / veranda | 0 | 30 |
+| Kitchen / dining | 5 | 30 |
+| Living / kitchen | 10 | 50 |
+| Living / dining | 5 | 35 |
+| Bedroom / common bathroom | 10 | 50 |
+| Living / bedroom | 10 | 60 |
+| Living / common bathroom | 10 | 50 |
+| Garage / kitchen | 15 | 60 |
+| Garage / living | 5 | 40 |
+| Garage / veranda | 5 | 35 |
+
+Room circles use resolved `RoomSizeSpec` values. Reserve every preprocessed hallway's
+minimum area, then allocate each non-hallway room its minimum plus a common fraction
+of its available expansion, clamped to 0..1. Hallway radius is half its maximum
+width. Pass the **full preprocessed specification** to scoring even if circulation
+removed hallway hints; pass the candidate-specific specification only to the solver.
+An insufficient minimum-area budget raises `ScoringInputError` while constructing the
+scoring context, rather than failing a positioning evaluator. Preprocessing normally
+rejects such a floor before search.
+
+Spatial-distribution settings are passed in the evaluator rule mapping. Defaults are
   `nnd_weight=0.4`, `coverage_weight=0.6`, `nnd_cv_sensitivity=8`,
   `sample_count_per_axis=20`, and `gap_zero_score_ratio=1.5`; both weights must be
   non-negative with a positive sum, sensitivities positive, and samples at least 2.
@@ -95,7 +128,7 @@ minimum_score=None, settings={})` selects a registered evaluator.
 ## Recommended values
 
 Start with `create_default_config()` and `create_default_registry()`. It uses weights
-1.0 for each of the five evaluators and 20-unit clearance rules; these are
+1.0 for each of the five active evaluators, with spatial distribution disabled; these are
 package baselines, not universal architectural standards. Use DEBUG metrics to
 calibrate project-specific zones and weights.
 
@@ -106,6 +139,10 @@ calibrate project-specific zones and weights.
 execution reports raw score, configured/normalized weight, contribution, optional
 threshold result, and status. DEBUG mode includes evaluator metrics/details;
 PRODUCTION deliberately removes them.
+The redesigned clearance evaluator returns a DEBUG mapping containing `rules`,
+each with `projections`, blockers, bounds, obstructed width and scores. The
+previously exported clearance detail dataclasses remain available for historical
+consumers but are not produced by the redesigned evaluator.
 
 ## Errors / failure conditions
 
@@ -147,7 +184,7 @@ Candidate Scoring communicates non-fatal observations through structured `ScoreF
 
 ## Public Export Inventory
 
-### `fpg_core.candidate_scoring` exports (44)
+### `fpg_core.candidate_scoring` exports (46)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
@@ -176,6 +213,8 @@ Candidate Scoring communicates non-fatal observations through structured `ScoreF
 | `ExteriorClearanceRule` | dataclass/contract | `(room_types: 'tuple[RoomType, ...]', required_clear_room_count: 'int', clearance_width: 'float', direction: 'LandSide') -> None` | One global-direction clearance requirement for selected room types. |
 | `ExteriorClearanceRuleEvaluation` | dataclass/contract | `(rule_index: 'int', room_types: 'tuple[RoomType, ...]', required_clear_room_count: 'int', clearance_width: 'float', direction: 'LandSide', applicable: 'bool', eligible_room_count: 'int', clear_room_count: 'int', score: 'float \| None', room_evaluations: 'tuple[ExteriorClearanceRoomEvaluation, ...]') -> None` | Detailed score calculation for one configured clearance rule. |
 | `FindingSeverity` | enum | `INFO='info'; WARNING='warning'; ERROR='error'` | Documented in the corresponding feature/shared section. |
+| `SPATIAL_OCCUPANCY_KEY` | constant/type alias | `'spatial_occupancy'` | Key for continuous footprint occupancy scoring. |
+| `SpatialOccupancyEvaluator` | class/interface/registry | `()` | Scores footprint overlap and overflow. |
 | `SPATIAL_DISTRIBUTION_KEY` | constant/type alias | `'spatial_distribution'` | Documented in the corresponding feature/shared section. |
 | `ScoreFinding` | dataclass/contract | `(code: 'str', message: 'str', severity: 'FindingSeverity' = <FindingSeverity.INFO: 'info'>, subject_ids: 'tuple[str, ...]' = ()) -> None` | Structured explanation emitted by an evaluator or the manager. |
 | `ScoringConfig` | dataclass/contract | `(evaluator_rules: 'tuple[EvaluatorRule, ...]', fail_fast_on_critical_failure: 'bool' = True) -> None` | Configuration for the complete evaluator pipeline. |

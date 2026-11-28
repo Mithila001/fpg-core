@@ -106,6 +106,8 @@ class PreparedRoomSeed:
     y: int
     width: int | None
     length: int | None
+    center_x: int | None = None
+    center_y: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -359,8 +361,43 @@ def _prepare_candidate_seed(
         )
         bound_width = width if width is not None else room.min_width
         bound_length = length if length is not None else room.min_length
-        x = _clamp(scale.nearest_length(hint.x), 0, floor.width - bound_width)
-        y = _clamp(scale.nearest_length(hint.y), 0, floor.length - bound_length)
+        center_x = center_y = None
+        if hint.position_reference == "center":
+            if not (math.isfinite(hint.x) and math.isfinite(hint.y)) or not (
+                0 <= hint.x <= scale.to_domain(floor.width)
+                and 0 <= hint.y <= scale.to_domain(floor.length)
+            ):
+                raise InvalidSpecificationError(
+                    f"Center hint for room '{key}' must be inside the floor"
+                )
+            center_x = scale.nearest_length(hint.x)
+            center_y = scale.nearest_length(hint.y)
+            estimated_side = math.sqrt((room.min_area + room.max_area) / 2)
+            if width is None:
+                max_width = (
+                    floor.width
+                    if room.width_axis is RoomWidthAxis.Y
+                    else min(room.max_short_side, floor.width)
+                )
+                bound_width = _clamp(round(estimated_side), room.min_width, max_width)
+            if length is None:
+                max_length = (
+                    min(room.max_short_side, floor.length)
+                    if room.width_axis is RoomWidthAxis.Y
+                    else floor.length
+                )
+                bound_length = _clamp(
+                    round((room.min_area + room.max_area) / (2 * bound_width)),
+                    room.min_length,
+                    max_length,
+                )
+            x = _clamp(round(center_x - bound_width / 2), 0, floor.width - bound_width)
+            y = _clamp(
+                round(center_y - bound_length / 2), 0, floor.length - bound_length
+            )
+        else:
+            x = _clamp(scale.nearest_length(hint.x), 0, floor.width - bound_width)
+            y = _clamp(scale.nearest_length(hint.y), 0, floor.length - bound_length)
 
         seeds[key] = PreparedRoomSeed(
             room_id=room.id,
@@ -369,6 +406,8 @@ def _prepare_candidate_seed(
             y=y,
             width=width,
             length=length,
+            center_x=center_x,
+            center_y=center_y,
         )
 
     if not seeds:

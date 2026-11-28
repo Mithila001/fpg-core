@@ -200,7 +200,7 @@ class SystemConfigurationService:
     def resolve(self, configuration_id: int | None = None) -> SystemConfiguration:
         record = self.get_active() if configuration_id is None else self.get(configuration_id)
         if (
-            record.schema_version != "8"
+            record.schema_version != "9"
             or not isinstance(record.configuration_data, dict)
             or record.config_hash != self.codec.hash_payload(record.configuration_data)
         ):

@@ -1,0 +1,2899 @@
+[
+  {
+    "name": "well_arranged",
+    "total": 89.98689672708348,
+    "route_error": null,
+    "evaluators": {
+      "zone_suitability": {
+        "score": 99.5,
+        "details": "ZoneSuitabilityDetails(floor_width=200.0, floor_length=200.0, zone_count_per_axis=3, falloff_multiplier=1.5, rules=(ZoneSuitabilityRuleDetails(room_type=<RoomType.BEDROOM: 'bedroom'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.BATHROOM: 'bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.LIVING_ROOM: 'living_room'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2))), ZoneSuitabilityRuleDetails(room_type=<RoomType.KITCHEN: 'kitchen'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.DINING_ROOM: 'dining_room'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.HALLWAY: 'hallway'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.VERANDA: 'veranda'>, preferred_cells=((1, 1), (2, 1), (3, 1))), ZoneSuitabilityRuleDetails(room_type=<RoomType.GARAGE: 'garage'>, preferred_cells=((1, 1), (3, 1)))), points=(ZoneSuitabilityPointDetails(point_id='living', source_room_id='living', room_name='living', room_type=<RoomType.LIVING_ROOM: 'living_room'>, hint_index=1, x=60.0, y=60.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='kitchen', source_room_id='kitchen', room_name='kitchen', room_type=<RoomType.KITCHEN: 'kitchen'>, hint_index=1, x=80.0, y=60.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.033333333333333326, score=95.0, inside_preferred_zone=False), ZoneSuitabilityPointDetails(point_id='dining', source_room_id='dining', room_name='dining', room_type=<RoomType.DINING_ROOM: 'dining_room'>, hint_index=1, x=80.0, y=80.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed1', source_room_id='bed1', room_name='bed1', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=40.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed2', source_room_id='bed2', room_name='bed2', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=60.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='attached', source_room_id='attached', room_name='attached', room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, hint_index=1, x=40.0, y=110.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bath', source_room_id='bath', room_name='bath', room_type=<RoomType.BATHROOM: 'bathroom'>, hint_index=1, x=150.0, y=100.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='veranda', source_room_id='veranda', room_name='veranda', room_type=<RoomType.VERANDA: 'veranda'>, hint_index=1, x=60.0, y=30.0, preferred_cells=((1, 1), (2, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='garage', source_room_id='garage', room_name='garage', room_type=<RoomType.GARAGE: 'garage'>, hint_index=1, x=140.0, y=40.0, preferred_cells=((1, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='hall', source_room_id='hall', room_name='hall', room_type=<RoomType.HALLWAY: 'hallway'>, hint_index=1, x=100.0, y=100.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True)))"
+      },
+      "exterior_clearance": {
+        "score": 100.0,
+        "details": {
+          "floor_width": 200.0,
+          "floor_length": 200.0,
+          "rules": [
+            {
+              "rule_index": 0,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "veranda"
+              ]
+            },
+            {
+              "rule_index": 1,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "garage"
+              ]
+            },
+            {
+              "rule_index": 2,
+              "direction": "back",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "hall"
+              ]
+            }
+          ]
+        }
+      },
+      "circulation_quality": {
+        "score": 81.92738484692624,
+        "details": {
+          "efficiency_score": 79.48539137434065,
+          "proximity_score": 76.1635348692481,
+          "relationships": [
+            {
+              "room_ids": [
+                "bed1",
+                "living"
+              ],
+              "distance": 10.86998453713042,
+              "score": 98.26003092573916,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bed2",
+                "living"
+              ],
+              "distance": 6.148624987134625,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bath",
+                "living"
+              ],
+              "distance": 64.63720300509567,
+              "score": 0.0,
+              "weight": 2.0,
+              "preferred_distance": 10,
+              "zero_score_distance": 50
+            },
+            {
+              "room_ids": [
+                "living",
+                "veranda"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 0,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "dining",
+                "kitchen"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 5,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "attached",
+                "bed1"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 2,
+              "zero_score_distance": 20
+            }
+          ],
+          "separation_score": 100.0,
+          "hallways": [
+            {
+              "point_key": "hall[1]",
+              "public_weight": 0.0,
+              "private_weight": 2.0,
+              "mixing_ratio": 0.0,
+              "penalty": 0.0,
+              "weight": 2.0
+            }
+          ],
+          "penalty_multiplier": 0.5,
+          "base_score": 81.92738484692624
+        }
+      },
+      "spatial_occupancy": {
+        "score": 68.50709878849112,
+        "details": {
+          "rooms": [
+            {
+              "point_id": "living",
+              "room_id": "living",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.36105577587580606,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 63.894422412419374
+            },
+            {
+              "point_id": "kitchen",
+              "room_id": "kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.5322902348936354,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 46.77097651063644
+            },
+            {
+              "point_id": "dining",
+              "room_id": "dining",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 80.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.3937886828326444,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 60.62113171673553
+            },
+            {
+              "point_id": "bed1",
+              "room_id": "bed1",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.7378939738541358,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 26.210602614586392
+            },
+            {
+              "point_id": "bed2",
+              "room_id": "bed2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.41076454144636015,
+              "overflow_ratio": 3.7956555884343834e-16,
+              "score": 58.923545855363955
+            },
+            {
+              "point_id": "attached",
+              "room_id": "attached",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 110.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.6686509656005674,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 33.13490343994324
+            },
+            {
+              "point_id": "bath",
+              "room_id": "bath",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "veranda",
+              "room_id": "veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 30.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.044845946647735765,
+              "overflow_ratio": 5.060874117912513e-16,
+              "score": 95.51540533522636
+            },
+            {
+              "point_id": "garage",
+              "room_id": "garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 140.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 3.795655588434385e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "hall",
+              "room_id": "hall",
+              "room_type": "hallway",
+              "hint_index": 1,
+              "x": 100.0,
+              "y": 100.0,
+              "radius": 6.0,
+              "allocated_area": 113.09733552923255,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": -2.51707228822379e-16,
+              "score": 100.0
+            }
+          ],
+          "score": 68.50709878849112
+        }
+      },
+      "functional_group_purity": {
+        "score": 100.0,
+        "details": {
+          "groups": [
+            {
+              "name": "bedrooms",
+              "members": [
+                {
+                  "room_id": "bed1",
+                  "x": 40.0,
+                  "y": 100.0
+                },
+                {
+                  "room_id": "bed2",
+                  "x": 60.0,
+                  "y": 100.0
+                }
+              ],
+              "edges": [
+                [
+                  {
+                    "x": 40.0,
+                    "y": 100.0
+                  },
+                  {
+                    "x": 60.0,
+                    "y": 100.0
+                  }
+                ]
+              ],
+              "hull": [],
+              "intrusions": [],
+              "score": 100.0,
+              "purity_score": 100.0,
+              "compactness_score": 100.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "distant_attached_bath",
+    "total": 90.79437826190019,
+    "route_error": null,
+    "evaluators": {
+      "zone_suitability": {
+        "score": 99.5,
+        "details": "ZoneSuitabilityDetails(floor_width=200.0, floor_length=200.0, zone_count_per_axis=3, falloff_multiplier=1.5, rules=(ZoneSuitabilityRuleDetails(room_type=<RoomType.BEDROOM: 'bedroom'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.BATHROOM: 'bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.LIVING_ROOM: 'living_room'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2))), ZoneSuitabilityRuleDetails(room_type=<RoomType.KITCHEN: 'kitchen'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.DINING_ROOM: 'dining_room'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.HALLWAY: 'hallway'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.VERANDA: 'veranda'>, preferred_cells=((1, 1), (2, 1), (3, 1))), ZoneSuitabilityRuleDetails(room_type=<RoomType.GARAGE: 'garage'>, preferred_cells=((1, 1), (3, 1)))), points=(ZoneSuitabilityPointDetails(point_id='living', source_room_id='living', room_name='living', room_type=<RoomType.LIVING_ROOM: 'living_room'>, hint_index=1, x=60.0, y=60.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='kitchen', source_room_id='kitchen', room_name='kitchen', room_type=<RoomType.KITCHEN: 'kitchen'>, hint_index=1, x=80.0, y=60.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.033333333333333326, score=95.0, inside_preferred_zone=False), ZoneSuitabilityPointDetails(point_id='dining', source_room_id='dining', room_name='dining', room_type=<RoomType.DINING_ROOM: 'dining_room'>, hint_index=1, x=80.0, y=80.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed1', source_room_id='bed1', room_name='bed1', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=40.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed2', source_room_id='bed2', room_name='bed2', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=60.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='attached', source_room_id='attached', room_name='attached', room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, hint_index=1, x=150.0, y=150.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bath', source_room_id='bath', room_name='bath', room_type=<RoomType.BATHROOM: 'bathroom'>, hint_index=1, x=150.0, y=100.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='veranda', source_room_id='veranda', room_name='veranda', room_type=<RoomType.VERANDA: 'veranda'>, hint_index=1, x=60.0, y=30.0, preferred_cells=((1, 1), (2, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='garage', source_room_id='garage', room_name='garage', room_type=<RoomType.GARAGE: 'garage'>, hint_index=1, x=140.0, y=40.0, preferred_cells=((1, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='hall', source_room_id='hall', room_name='hall', room_type=<RoomType.HALLWAY: 'hallway'>, hint_index=1, x=100.0, y=100.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True)))"
+      },
+      "exterior_clearance": {
+        "score": 100.0,
+        "details": {
+          "floor_width": 200.0,
+          "floor_length": 200.0,
+          "rules": [
+            {
+              "rule_index": 0,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "veranda"
+              ]
+            },
+            {
+              "rule_index": 1,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "garage"
+              ]
+            },
+            {
+              "rule_index": 2,
+              "direction": "back",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "hall"
+              ]
+            }
+          ]
+        }
+      },
+      "circulation_quality": {
+        "score": 74.44067143344768,
+        "details": {
+          "efficiency_score": 83.9414447019611,
+          "proximity_score": 58.516476045718676,
+          "relationships": [
+            {
+              "room_ids": [
+                "bed1",
+                "living"
+              ],
+              "distance": 10.86998453713042,
+              "score": 98.26003092573916,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bed2",
+                "living"
+              ],
+              "distance": 6.148624987134625,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bath",
+                "living"
+              ],
+              "distance": 64.63720300509567,
+              "score": 0.0,
+              "weight": 2.0,
+              "preferred_distance": 10,
+              "zero_score_distance": 50
+            },
+            {
+              "room_ids": [
+                "living",
+                "veranda"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 0,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "dining",
+                "kitchen"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 5,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "attached",
+                "bed1"
+              ],
+              "distance": 86.97908472308035,
+              "score": 0.0,
+              "weight": 1.5,
+              "preferred_distance": 2,
+              "zero_score_distance": 20
+            }
+          ],
+          "separation_score": 100.0,
+          "hallways": [
+            {
+              "point_key": "hall[1]",
+              "public_weight": 0.0,
+              "private_weight": 2.0,
+              "mixing_ratio": 0.0,
+              "penalty": 0.0,
+              "weight": 2.0
+            }
+          ],
+          "penalty_multiplier": 0.5,
+          "base_score": 74.44067143344768
+        }
+      },
+      "spatial_occupancy": {
+        "score": 80.03121987605324,
+        "details": {
+          "rooms": [
+            {
+              "point_id": "living",
+              "room_id": "living",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.36105577587580606,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 63.894422412419374
+            },
+            {
+              "point_id": "kitchen",
+              "room_id": "kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.5322902348936354,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 46.77097651063644
+            },
+            {
+              "point_id": "dining",
+              "room_id": "dining",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 80.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.3937886828326444,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 60.62113171673553
+            },
+            {
+              "point_id": "bed1",
+              "room_id": "bed1",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.293659259270139,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 70.63407407298608
+            },
+            {
+              "point_id": "bed2",
+              "room_id": "bed2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.3712381128747131,
+              "overflow_ratio": 3.7956555884343834e-16,
+              "score": 62.87618871252866
+            },
+            {
+              "point_id": "attached",
+              "room_id": "attached",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 150.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 1.2652185294781281e-16,
+              "score": 99.99999999999999
+            },
+            {
+              "point_id": "bath",
+              "room_id": "bath",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "veranda",
+              "room_id": "veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 30.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.044845946647735765,
+              "overflow_ratio": 5.060874117912513e-16,
+              "score": 95.51540533522636
+            },
+            {
+              "point_id": "garage",
+              "room_id": "garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 140.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 3.795655588434385e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "hall",
+              "room_id": "hall",
+              "room_type": "hallway",
+              "hint_index": 1,
+              "x": 100.0,
+              "y": 100.0,
+              "radius": 6.0,
+              "allocated_area": 113.09733552923255,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": -2.51707228822379e-16,
+              "score": 100.0
+            }
+          ],
+          "score": 80.03121987605324
+        }
+      },
+      "functional_group_purity": {
+        "score": 100.0,
+        "details": {
+          "groups": [
+            {
+              "name": "bedrooms",
+              "members": [
+                {
+                  "room_id": "bed1",
+                  "x": 40.0,
+                  "y": 100.0
+                },
+                {
+                  "room_id": "bed2",
+                  "x": 60.0,
+                  "y": 100.0
+                }
+              ],
+              "edges": [
+                [
+                  {
+                    "x": 40.0,
+                    "y": 100.0
+                  },
+                  {
+                    "x": 60.0,
+                    "y": 100.0
+                  }
+                ]
+              ],
+              "hull": [],
+              "intrusions": [],
+              "score": 100.0,
+              "purity_score": 100.0,
+              "compactness_score": 100.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "blocked_exterior",
+    "total": 82.40620522084578,
+    "route_error": null,
+    "evaluators": {
+      "zone_suitability": {
+        "score": 98.0,
+        "details": "ZoneSuitabilityDetails(floor_width=200.0, floor_length=200.0, zone_count_per_axis=3, falloff_multiplier=1.5, rules=(ZoneSuitabilityRuleDetails(room_type=<RoomType.BEDROOM: 'bedroom'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.BATHROOM: 'bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.LIVING_ROOM: 'living_room'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2))), ZoneSuitabilityRuleDetails(room_type=<RoomType.KITCHEN: 'kitchen'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.DINING_ROOM: 'dining_room'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.HALLWAY: 'hallway'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.VERANDA: 'veranda'>, preferred_cells=((1, 1), (2, 1), (3, 1))), ZoneSuitabilityRuleDetails(room_type=<RoomType.GARAGE: 'garage'>, preferred_cells=((1, 1), (3, 1)))), points=(ZoneSuitabilityPointDetails(point_id='living', source_room_id='living', room_name='living', room_type=<RoomType.LIVING_ROOM: 'living_room'>, hint_index=1, x=60.0, y=60.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='kitchen', source_room_id='kitchen', room_name='kitchen', room_type=<RoomType.KITCHEN: 'kitchen'>, hint_index=1, x=60.0, y=40.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.1333333333333333, score=80.0, inside_preferred_zone=False), ZoneSuitabilityPointDetails(point_id='dining', source_room_id='dining', room_name='dining', room_type=<RoomType.DINING_ROOM: 'dining_room'>, hint_index=1, x=80.0, y=80.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed1', source_room_id='bed1', room_name='bed1', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=40.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed2', source_room_id='bed2', room_name='bed2', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=60.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='attached', source_room_id='attached', room_name='attached', room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, hint_index=1, x=40.0, y=110.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bath', source_room_id='bath', room_name='bath', room_type=<RoomType.BATHROOM: 'bathroom'>, hint_index=1, x=150.0, y=100.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='veranda', source_room_id='veranda', room_name='veranda', room_type=<RoomType.VERANDA: 'veranda'>, hint_index=1, x=60.0, y=30.0, preferred_cells=((1, 1), (2, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='garage', source_room_id='garage', room_name='garage', room_type=<RoomType.GARAGE: 'garage'>, hint_index=1, x=140.0, y=40.0, preferred_cells=((1, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='hall', source_room_id='hall', room_name='hall', room_type=<RoomType.HALLWAY: 'hallway'>, hint_index=1, x=100.0, y=100.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True)))"
+      },
+      "exterior_clearance": {
+        "score": 73.15572921582226,
+        "details": {
+          "floor_width": 200.0,
+          "floor_length": 200.0,
+          "rules": [
+            {
+              "rule_index": 0,
+              "direction": "front",
+              "score": 19.467187647466776,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "kitchen",
+                      "room_id": "kitchen"
+                    }
+                  ],
+                  "obstructed_width": 27.261464317863194,
+                  "clearance_ratio": 0.19467187647466777,
+                  "score": 19.467187647466776
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "kitchen",
+                      "room_id": "kitchen"
+                    }
+                  ],
+                  "obstructed_width": 27.261464317863194,
+                  "clearance_ratio": 0.19467187647466777,
+                  "score": 19.467187647466776
+                }
+              ],
+              "selected_room_ids": [
+                "veranda"
+              ]
+            },
+            {
+              "rule_index": 1,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "garage"
+              ]
+            },
+            {
+              "rule_index": 2,
+              "direction": "back",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    43.07431249356731,
+                    40.0,
+                    76.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed1",
+                      "room_id": "bed1"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    },
+                    {
+                      "point_id": "veranda",
+                      "room_id": "veranda"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    43.07431249356731,
+                    40.0,
+                    76.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed1",
+                      "room_id": "bed1"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    },
+                    {
+                      "point_id": "veranda",
+                      "room_id": "veranda"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "hall"
+              ]
+            }
+          ]
+        }
+      },
+      "circulation_quality": {
+        "score": 79.38297376505828,
+        "details": {
+          "efficiency_score": 75.60793054233405,
+          "proximity_score": 73.40118920471613,
+          "relationships": [
+            {
+              "room_ids": [
+                "bed1",
+                "living"
+              ],
+              "distance": 10.86998453713042,
+              "score": 98.26003092573916,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bed2",
+                "living"
+              ],
+              "distance": 6.148624987134625,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bath",
+                "living"
+              ],
+              "distance": 64.63720300509567,
+              "score": 0.0,
+              "weight": 2.0,
+              "preferred_distance": 10,
+              "zero_score_distance": 50
+            },
+            {
+              "room_ids": [
+                "living",
+                "veranda"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 0,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "dining",
+                "kitchen"
+              ],
+              "distance": 10.86998453713042,
+              "score": 76.52006185147832,
+              "weight": 1.0,
+              "preferred_distance": 5,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "attached",
+                "bed1"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 2,
+              "zero_score_distance": 20
+            }
+          ],
+          "separation_score": 100.0,
+          "hallways": [
+            {
+              "point_key": "hall[1]",
+              "public_weight": 0.0,
+              "private_weight": 2.0,
+              "mixing_ratio": 0.0,
+              "penalty": 0.0,
+              "weight": 2.0
+            }
+          ],
+          "penalty_multiplier": 0.5,
+          "base_score": 79.38297376505828
+        }
+      },
+      "spatial_occupancy": {
+        "score": 61.492323123348285,
+        "details": {
+          "rooms": [
+            {
+              "point_id": "living",
+              "room_id": "living",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.3712381128747132,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 62.87618871252866
+            },
+            {
+              "point_id": "kitchen",
+              "room_id": "kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.8779378496513239,
+              "overflow_ratio": 3.795655588434385e-16,
+              "score": 12.206215034867569
+            },
+            {
+              "point_id": "dining",
+              "room_id": "dining",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 80.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.1551577072091482,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 84.48422927908516
+            },
+            {
+              "point_id": "bed1",
+              "room_id": "bed1",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.7378939738541358,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 26.210602614586392
+            },
+            {
+              "point_id": "bed2",
+              "room_id": "bed2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.41076454144636015,
+              "overflow_ratio": 3.7956555884343834e-16,
+              "score": 58.923545855363955
+            },
+            {
+              "point_id": "attached",
+              "room_id": "attached",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 110.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.6686509656005674,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 33.13490343994324
+            },
+            {
+              "point_id": "bath",
+              "room_id": "bath",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "veranda",
+              "room_id": "veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 30.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.6291245370289203,
+              "overflow_ratio": 5.060874117912513e-16,
+              "score": 37.08754629710791
+            },
+            {
+              "point_id": "garage",
+              "room_id": "garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 140.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 3.795655588434385e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "hall",
+              "room_id": "hall",
+              "room_type": "hallway",
+              "hint_index": 1,
+              "x": 100.0,
+              "y": 100.0,
+              "radius": 6.0,
+              "allocated_area": 113.09733552923255,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": -2.51707228822379e-16,
+              "score": 100.0
+            }
+          ],
+          "score": 61.492323123348285
+        }
+      },
+      "functional_group_purity": {
+        "score": 100.0,
+        "details": {
+          "groups": [
+            {
+              "name": "bedrooms",
+              "members": [
+                {
+                  "room_id": "bed1",
+                  "x": 40.0,
+                  "y": 100.0
+                },
+                {
+                  "room_id": "bed2",
+                  "x": 60.0,
+                  "y": 100.0
+                }
+              ],
+              "edges": [
+                [
+                  {
+                    "x": 40.0,
+                    "y": 100.0
+                  },
+                  {
+                    "x": 60.0,
+                    "y": 100.0
+                  }
+                ]
+              ],
+              "hull": [],
+              "intrusions": [],
+              "score": 100.0,
+              "purity_score": 100.0,
+              "compactness_score": 100.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "scattered_bedrooms",
+    "total": 66.60212270917455,
+    "route_error": null,
+    "evaluators": {
+      "zone_suitability": {
+        "score": 97.5,
+        "details": "ZoneSuitabilityDetails(floor_width=200.0, floor_length=200.0, zone_count_per_axis=3, falloff_multiplier=1.5, rules=(ZoneSuitabilityRuleDetails(room_type=<RoomType.BEDROOM: 'bedroom'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.BATHROOM: 'bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.LIVING_ROOM: 'living_room'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2))), ZoneSuitabilityRuleDetails(room_type=<RoomType.KITCHEN: 'kitchen'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.DINING_ROOM: 'dining_room'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.HALLWAY: 'hallway'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.VERANDA: 'veranda'>, preferred_cells=((1, 1), (2, 1), (3, 1))), ZoneSuitabilityRuleDetails(room_type=<RoomType.GARAGE: 'garage'>, preferred_cells=((1, 1), (3, 1)))), points=(ZoneSuitabilityPointDetails(point_id='living', source_room_id='living', room_name='living', room_type=<RoomType.LIVING_ROOM: 'living_room'>, hint_index=1, x=60.0, y=60.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='kitchen', source_room_id='kitchen', room_name='kitchen', room_type=<RoomType.KITCHEN: 'kitchen'>, hint_index=1, x=80.0, y=60.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.033333333333333326, score=95.0, inside_preferred_zone=False), ZoneSuitabilityPointDetails(point_id='dining', source_room_id='dining', room_name='dining', room_type=<RoomType.DINING_ROOM: 'dining_room'>, hint_index=1, x=80.0, y=80.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed1', source_room_id='bed1', room_name='bed1', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=30.0, y=30.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed2', source_room_id='bed2', room_name='bed2', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=170.0, y=170.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='attached', source_room_id='attached', room_name='attached', room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, hint_index=1, x=40.0, y=40.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.1333333333333333, score=80.0, inside_preferred_zone=False), ZoneSuitabilityPointDetails(point_id='bath', source_room_id='bath', room_name='bath', room_type=<RoomType.BATHROOM: 'bathroom'>, hint_index=1, x=150.0, y=100.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='veranda', source_room_id='veranda', room_name='veranda', room_type=<RoomType.VERANDA: 'veranda'>, hint_index=1, x=60.0, y=30.0, preferred_cells=((1, 1), (2, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='garage', source_room_id='garage', room_name='garage', room_type=<RoomType.GARAGE: 'garage'>, hint_index=1, x=140.0, y=40.0, preferred_cells=((1, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='hall', source_room_id='hall', room_name='hall', room_type=<RoomType.HALLWAY: 'hallway'>, hint_index=1, x=100.0, y=100.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True)))"
+      },
+      "exterior_clearance": {
+        "score": 89.60512961797242,
+        "details": {
+          "floor_width": 200.0,
+          "floor_length": 200.0,
+          "rules": [
+            {
+              "rule_index": 0,
+              "direction": "front",
+              "score": 68.81538885391727,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "bed1",
+                      "room_id": "bed1"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    }
+                  ],
+                  "obstructed_width": 10.556419665364281,
+                  "clearance_ratio": 0.6881538885391727,
+                  "score": 68.81538885391727
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "bed1",
+                      "room_id": "bed1"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    }
+                  ],
+                  "obstructed_width": 10.556419665364281,
+                  "clearance_ratio": 0.6881538885391727,
+                  "score": 68.81538885391727
+                }
+              ],
+              "selected_room_ids": [
+                "veranda"
+              ]
+            },
+            {
+              "rule_index": 1,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "garage"
+              ]
+            },
+            {
+              "rule_index": 2,
+              "direction": "back",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "hall"
+              ]
+            }
+          ]
+        }
+      },
+      "circulation_quality": {
+        "score": 73.53859734912291,
+        "details": {
+          "efficiency_score": 80.42277547746853,
+          "proximity_score": 58.8235294117647,
+          "relationships": [
+            {
+              "room_ids": [
+                "bed1",
+                "living"
+              ],
+              "distance": 8.575031858327478,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bed2",
+                "living"
+              ],
+              "distance": 121.71211684817507,
+              "score": 0.0,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bath",
+                "living"
+              ],
+              "distance": 64.63720300509567,
+              "score": 0.0,
+              "weight": 2.0,
+              "preferred_distance": 10,
+              "zero_score_distance": 50
+            },
+            {
+              "room_ids": [
+                "living",
+                "veranda"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 0,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "dining",
+                "kitchen"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 5,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "attached",
+                "bed1"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 2,
+              "zero_score_distance": 20
+            }
+          ],
+          "separation_score": 100.0,
+          "hallways": [
+            {
+              "point_key": "hall[1]",
+              "public_weight": 0.0,
+              "private_weight": 3.5,
+              "mixing_ratio": 0.0,
+              "penalty": 0.0,
+              "weight": 3.5
+            }
+          ],
+          "penalty_multiplier": 0.5,
+          "base_score": 73.53859734912291
+        }
+      },
+      "spatial_occupancy": {
+        "score": 72.36688657877741,
+        "details": {
+          "rooms": [
+            {
+              "point_id": "living",
+              "room_id": "living",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.43134470748461506,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 56.86552925153847
+            },
+            {
+              "point_id": "kitchen",
+              "room_id": "kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.5322902348936354,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 46.77097651063644
+            },
+            {
+              "point_id": "dining",
+              "room_id": "dining",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 80.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.3162098292280702,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 68.37901707719296
+            },
+            {
+              "point_id": "bed1",
+              "room_id": "bed1",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 30.0,
+              "y": 30.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.48507475959991064,
+              "overflow_ratio": 3.7956555884343854e-16,
+              "score": 51.4925240400089
+            },
+            {
+              "point_id": "bed2",
+              "room_id": "bed2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 170.0,
+              "y": 170.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 1.2652185294781281e-16,
+              "score": 99.99999999999999
+            },
+            {
+              "point_id": "attached",
+              "room_id": "attached",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.7349339955775542,
+              "overflow_ratio": 3.7956555884343854e-16,
+              "score": 26.506600442244537
+            },
+            {
+              "point_id": "bath",
+              "room_id": "bath",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "veranda",
+              "room_id": "veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 30.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.2634578153384705,
+              "overflow_ratio": 5.060874117912513e-16,
+              "score": 73.65421846615288
+            },
+            {
+              "point_id": "garage",
+              "room_id": "garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 140.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 3.795655588434385e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "hall",
+              "room_id": "hall",
+              "room_type": "hallway",
+              "hint_index": 1,
+              "x": 100.0,
+              "y": 100.0,
+              "radius": 6.0,
+              "allocated_area": 113.09733552923255,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": -2.51707228822379e-16,
+              "score": 100.0
+            }
+          ],
+          "score": 72.36688657877741
+        }
+      },
+      "functional_group_purity": {
+        "score": 0.0,
+        "details": {
+          "groups": [
+            {
+              "name": "bedrooms",
+              "members": [
+                {
+                  "room_id": "bed1",
+                  "x": 30.0,
+                  "y": 30.0
+                },
+                {
+                  "room_id": "bed2",
+                  "x": 170.0,
+                  "y": 170.0
+                }
+              ],
+              "edges": [
+                [
+                  {
+                    "x": 30.0,
+                    "y": 30.0
+                  },
+                  {
+                    "x": 170.0,
+                    "y": 170.0
+                  }
+                ]
+              ],
+              "hull": [],
+              "intrusions": [
+                {
+                  "room_id": "living",
+                  "x": 60.0,
+                  "y": 60.0,
+                  "kind": "direct",
+                  "penalty": 1.0
+                },
+                {
+                  "room_id": "dining",
+                  "x": 80.0,
+                  "y": 80.0,
+                  "kind": "direct",
+                  "penalty": 1.0
+                }
+              ],
+              "score": 0.0,
+              "purity_score": 0.0,
+              "compactness_score": 0.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "overlapping",
+    "total": 89.00183093947011,
+    "route_error": null,
+    "evaluators": {
+      "zone_suitability": {
+        "score": 99.5,
+        "details": "ZoneSuitabilityDetails(floor_width=200.0, floor_length=200.0, zone_count_per_axis=3, falloff_multiplier=1.5, rules=(ZoneSuitabilityRuleDetails(room_type=<RoomType.BEDROOM: 'bedroom'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.BATHROOM: 'bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.LIVING_ROOM: 'living_room'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2))), ZoneSuitabilityRuleDetails(room_type=<RoomType.KITCHEN: 'kitchen'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.DINING_ROOM: 'dining_room'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.HALLWAY: 'hallway'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.VERANDA: 'veranda'>, preferred_cells=((1, 1), (2, 1), (3, 1))), ZoneSuitabilityRuleDetails(room_type=<RoomType.GARAGE: 'garage'>, preferred_cells=((1, 1), (3, 1)))), points=(ZoneSuitabilityPointDetails(point_id='living', source_room_id='living', room_name='living', room_type=<RoomType.LIVING_ROOM: 'living_room'>, hint_index=1, x=60.0, y=60.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='kitchen', source_room_id='kitchen', room_name='kitchen', room_type=<RoomType.KITCHEN: 'kitchen'>, hint_index=1, x=70.0, y=60.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.033333333333333326, score=95.0, inside_preferred_zone=False), ZoneSuitabilityPointDetails(point_id='dining', source_room_id='dining', room_name='dining', room_type=<RoomType.DINING_ROOM: 'dining_room'>, hint_index=1, x=80.0, y=80.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed1', source_room_id='bed1', room_name='bed1', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=40.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed2', source_room_id='bed2', room_name='bed2', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=60.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='attached', source_room_id='attached', room_name='attached', room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, hint_index=1, x=40.0, y=110.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bath', source_room_id='bath', room_name='bath', room_type=<RoomType.BATHROOM: 'bathroom'>, hint_index=1, x=150.0, y=100.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='veranda', source_room_id='veranda', room_name='veranda', room_type=<RoomType.VERANDA: 'veranda'>, hint_index=1, x=60.0, y=30.0, preferred_cells=((1, 1), (2, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='garage', source_room_id='garage', room_name='garage', room_type=<RoomType.GARAGE: 'garage'>, hint_index=1, x=140.0, y=40.0, preferred_cells=((1, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='hall', source_room_id='hall', room_name='hall', room_type=<RoomType.HALLWAY: 'hallway'>, hint_index=1, x=100.0, y=100.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True)))"
+      },
+      "exterior_clearance": {
+        "score": 100.0,
+        "details": {
+          "floor_width": 200.0,
+          "floor_length": 200.0,
+          "rules": [
+            {
+              "rule_index": 0,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "veranda"
+              ]
+            },
+            {
+              "rule_index": 1,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "garage"
+              ]
+            },
+            {
+              "rule_index": 2,
+              "direction": "back",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    53.07431249356731,
+                    60.0,
+                    86.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed1",
+                      "room_id": "bed1"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    53.07431249356731,
+                    60.0,
+                    86.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed1",
+                      "room_id": "bed1"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "hall"
+              ]
+            }
+          ]
+        }
+      },
+      "circulation_quality": {
+        "score": 81.65294648220815,
+        "details": {
+          "efficiency_score": 78.57059682528036,
+          "proximity_score": 76.1635348692481,
+          "relationships": [
+            {
+              "room_ids": [
+                "bed1",
+                "living"
+              ],
+              "distance": 10.86998453713042,
+              "score": 98.26003092573916,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bed2",
+                "living"
+              ],
+              "distance": 6.148624987134625,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bath",
+                "living"
+              ],
+              "distance": 64.63720300509567,
+              "score": 0.0,
+              "weight": 2.0,
+              "preferred_distance": 10,
+              "zero_score_distance": 50
+            },
+            {
+              "room_ids": [
+                "living",
+                "veranda"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 0,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "dining",
+                "kitchen"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 5,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "attached",
+                "bed1"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 2,
+              "zero_score_distance": 20
+            }
+          ],
+          "separation_score": 100.0,
+          "hallways": [
+            {
+              "point_key": "hall[1]",
+              "public_weight": 0.0,
+              "private_weight": 2.0,
+              "mixing_ratio": 0.0,
+              "penalty": 0.0,
+              "weight": 2.0
+            }
+          ],
+          "penalty_multiplier": 0.5,
+          "base_score": 81.65294648220815
+        }
+      },
+      "spatial_occupancy": {
+        "score": 63.85620821514241,
+        "details": {
+          "rooms": [
+            {
+              "point_id": "living",
+              "room_id": "living",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.6609114313721859,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 33.908856862781384
+            },
+            {
+              "point_id": "kitchen",
+              "room_id": "kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 70.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.7826395746922717,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 21.7360425307728
+            },
+            {
+              "point_id": "dining",
+              "room_id": "dining",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 80.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.30272433861357784,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 69.72756613864219
+            },
+            {
+              "point_id": "bed1",
+              "room_id": "bed1",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.7378939738541358,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 26.210602614586392
+            },
+            {
+              "point_id": "bed2",
+              "room_id": "bed2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.41076454144636015,
+              "overflow_ratio": 3.7956555884343834e-16,
+              "score": 58.923545855363955
+            },
+            {
+              "point_id": "attached",
+              "room_id": "attached",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 110.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.6686509656005674,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 33.13490343994324
+            },
+            {
+              "point_id": "bath",
+              "room_id": "bath",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "veranda",
+              "room_id": "veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 30.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.05079435290665785,
+              "overflow_ratio": 5.060874117912513e-16,
+              "score": 94.92056470933416
+            },
+            {
+              "point_id": "garage",
+              "room_id": "garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 140.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 3.795655588434385e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "hall",
+              "room_id": "hall",
+              "room_type": "hallway",
+              "hint_index": 1,
+              "x": 100.0,
+              "y": 100.0,
+              "radius": 6.0,
+              "allocated_area": 113.09733552923255,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": -2.51707228822379e-16,
+              "score": 100.0
+            }
+          ],
+          "score": 63.85620821514241
+        }
+      },
+      "functional_group_purity": {
+        "score": 100.0,
+        "details": {
+          "groups": [
+            {
+              "name": "bedrooms",
+              "members": [
+                {
+                  "room_id": "bed1",
+                  "x": 40.0,
+                  "y": 100.0
+                },
+                {
+                  "room_id": "bed2",
+                  "x": 60.0,
+                  "y": 100.0
+                }
+              ],
+              "edges": [
+                [
+                  {
+                    "x": 40.0,
+                    "y": 100.0
+                  },
+                  {
+                    "x": 60.0,
+                    "y": 100.0
+                  }
+                ]
+              ],
+              "hull": [],
+              "intrusions": [],
+              "score": 100.0,
+              "purity_score": 100.0,
+              "compactness_score": 100.0
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "assigned_bathroom_on_group_edge",
+    "total": 87.88939644222489,
+    "route_error": null,
+    "evaluators": {
+      "zone_suitability": {
+        "score": 99.5,
+        "details": "ZoneSuitabilityDetails(floor_width=200.0, floor_length=200.0, zone_count_per_axis=3, falloff_multiplier=1.5, rules=(ZoneSuitabilityRuleDetails(room_type=<RoomType.BEDROOM: 'bedroom'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.BATHROOM: 'bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.LIVING_ROOM: 'living_room'>, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2))), ZoneSuitabilityRuleDetails(room_type=<RoomType.KITCHEN: 'kitchen'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.DINING_ROOM: 'dining_room'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.HALLWAY: 'hallway'>, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3))), ZoneSuitabilityRuleDetails(room_type=<RoomType.VERANDA: 'veranda'>, preferred_cells=((1, 1), (2, 1), (3, 1))), ZoneSuitabilityRuleDetails(room_type=<RoomType.GARAGE: 'garage'>, preferred_cells=((1, 1), (3, 1)))), points=(ZoneSuitabilityPointDetails(point_id='living', source_room_id='living', room_name='living', room_type=<RoomType.LIVING_ROOM: 'living_room'>, hint_index=1, x=60.0, y=60.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='kitchen', source_room_id='kitchen', room_name='kitchen', room_type=<RoomType.KITCHEN: 'kitchen'>, hint_index=1, x=80.0, y=60.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.033333333333333326, score=95.0, inside_preferred_zone=False), ZoneSuitabilityPointDetails(point_id='dining', source_room_id='dining', room_name='dining', room_type=<RoomType.DINING_ROOM: 'dining_room'>, hint_index=1, x=80.0, y=80.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed1', source_room_id='bed1', room_name='bed1', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=40.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bed2', source_room_id='bed2', room_name='bed2', room_type=<RoomType.BEDROOM: 'bedroom'>, hint_index=1, x=80.0, y=100.0, preferred_cells=((1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='attached', source_room_id='attached', room_name='attached', room_type=<RoomType.ATTACHED_BATHROOM: 'attached_bathroom'>, hint_index=1, x=60.0, y=100.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='bath', source_room_id='bath', room_name='bath', room_type=<RoomType.BATHROOM: 'bathroom'>, hint_index=1, x=150.0, y=150.0, preferred_cells=((1, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='veranda', source_room_id='veranda', room_name='veranda', room_type=<RoomType.VERANDA: 'veranda'>, hint_index=1, x=60.0, y=30.0, preferred_cells=((1, 1), (2, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='garage', source_room_id='garage', room_name='garage', room_type=<RoomType.GARAGE: 'garage'>, hint_index=1, x=140.0, y=40.0, preferred_cells=((1, 1), (3, 1)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True), ZoneSuitabilityPointDetails(point_id='hall', source_room_id='hall', room_name='hall', room_type=<RoomType.HALLWAY: 'hallway'>, hint_index=1, x=100.0, y=100.0, preferred_cells=((1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3)), distance_to_zone=0.0, score=100.0, inside_preferred_zone=True)))"
+      },
+      "exterior_clearance": {
+        "score": 91.87309025990919,
+        "details": {
+          "floor_width": 200.0,
+          "floor_length": 200.0,
+          "rules": [
+            {
+              "rule_index": 0,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "veranda",
+                  "room_id": "veranda",
+                  "bounds": [
+                    43.07431249356731,
+                    0,
+                    76.9256875064327,
+                    30.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "veranda"
+              ]
+            },
+            {
+              "rule_index": 1,
+              "direction": "front",
+              "score": 100.0,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "garage",
+                  "room_id": "garage",
+                  "bounds": [
+                    123.0743124935673,
+                    0,
+                    156.9256875064327,
+                    40.0
+                  ],
+                  "blockers": [],
+                  "obstructed_width": 0,
+                  "clearance_ratio": 1.0,
+                  "score": 100.0
+                }
+              ],
+              "selected_room_ids": [
+                "garage"
+              ]
+            },
+            {
+              "rule_index": 2,
+              "direction": "back",
+              "score": 75.61927077972754,
+              "required_count": 1,
+              "rooms": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    }
+                  ],
+                  "obstructed_width": 2.925687506432695,
+                  "clearance_ratio": 0.7561927077972754,
+                  "score": 75.61927077972754
+                }
+              ],
+              "projections": [
+                {
+                  "point_id": "kitchen",
+                  "room_id": "kitchen",
+                  "bounds": [
+                    63.07431249356731,
+                    60.0,
+                    96.9256875064327,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "living",
+                      "room_id": "living"
+                    },
+                    {
+                      "point_id": "dining",
+                      "room_id": "dining"
+                    },
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    },
+                    {
+                      "point_id": "attached",
+                      "room_id": "attached"
+                    },
+                    {
+                      "point_id": "hall",
+                      "room_id": "hall"
+                    }
+                  ],
+                  "obstructed_width": 33.85137501286538,
+                  "clearance_ratio": 0.0,
+                  "score": 0.0
+                },
+                {
+                  "point_id": "hall",
+                  "room_id": "hall",
+                  "bounds": [
+                    94.0,
+                    100.0,
+                    106.0,
+                    200.0
+                  ],
+                  "blockers": [
+                    {
+                      "point_id": "bed2",
+                      "room_id": "bed2"
+                    }
+                  ],
+                  "obstructed_width": 2.925687506432695,
+                  "clearance_ratio": 0.7561927077972754,
+                  "score": 75.61927077972754
+                }
+              ],
+              "selected_room_ids": [
+                "hall"
+              ]
+            }
+          ]
+        }
+      },
+      "circulation_quality": {
+        "score": 82.30739841410421,
+        "details": {
+          "efficiency_score": 81.2638588750106,
+          "proximity_score": 75.85648150320206,
+          "relationships": [
+            {
+              "room_ids": [
+                "bed1",
+                "living"
+              ],
+              "distance": 10.86998453713042,
+              "score": 98.26003092573916,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bed2",
+                "living"
+              ],
+              "distance": 10.86998453713042,
+              "score": 98.26003092573916,
+              "weight": 1.5,
+              "preferred_distance": 10,
+              "zero_score_distance": 60
+            },
+            {
+              "room_ids": [
+                "bath",
+                "living"
+              ],
+              "distance": 93.42784560071317,
+              "score": 0.0,
+              "weight": 2.0,
+              "preferred_distance": 10,
+              "zero_score_distance": 50
+            },
+            {
+              "room_ids": [
+                "living",
+                "veranda"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 0,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "dining",
+                "kitchen"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.0,
+              "preferred_distance": 5,
+              "zero_score_distance": 30
+            },
+            {
+              "room_ids": [
+                "attached",
+                "bed1"
+              ],
+              "distance": 0.0,
+              "score": 100.0,
+              "weight": 1.5,
+              "preferred_distance": 2,
+              "zero_score_distance": 20
+            }
+          ],
+          "separation_score": 100.0,
+          "hallways": [
+            {
+              "point_key": "hall[1]",
+              "public_weight": 0.0,
+              "private_weight": 2.0,
+              "mixing_ratio": 0.0,
+              "penalty": 0.0,
+              "weight": 2.0
+            }
+          ],
+          "penalty_multiplier": 0.5,
+          "base_score": 82.30739841410421
+        }
+      },
+      "spatial_occupancy": {
+        "score": 68.06374351138028,
+        "details": {
+          "rooms": [
+            {
+              "point_id": "living",
+              "room_id": "living",
+              "room_type": "living_room",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.36105577587580606,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 63.894422412419374
+            },
+            {
+              "point_id": "kitchen",
+              "room_id": "kitchen",
+              "room_type": "kitchen",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 60.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.5322902348936354,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 46.77097651063644
+            },
+            {
+              "point_id": "dining",
+              "room_id": "dining",
+              "room_type": "dining_room",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 80.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.6324196584561405,
+              "overflow_ratio": 2.530437058956256e-16,
+              "score": 36.758034154385925
+            },
+            {
+              "point_id": "bed1",
+              "room_id": "bed1",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 40.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.293659259270139,
+              "overflow_ratio": 2.5304370589562563e-16,
+              "score": 70.63407407298608
+            },
+            {
+              "point_id": "bed2",
+              "room_id": "bed2",
+              "room_type": "bedroom",
+              "hint_index": 1,
+              "x": 80.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.5531878386210018,
+              "overflow_ratio": 3.7956555884343834e-16,
+              "score": 44.681216137899774
+            },
+            {
+              "point_id": "attached",
+              "room_id": "attached",
+              "room_type": "attached_bathroom",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 100.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.6098690884982092,
+              "overflow_ratio": 3.7956555884343834e-16,
+              "score": 39.013091150179044
+            },
+            {
+              "point_id": "bath",
+              "room_id": "bath",
+              "room_type": "bathroom",
+              "hint_index": 1,
+              "x": 150.0,
+              "y": 150.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 1.2652185294781281e-16,
+              "score": 99.99999999999999
+            },
+            {
+              "point_id": "veranda",
+              "room_id": "veranda",
+              "room_type": "veranda",
+              "hint_index": 1,
+              "x": 60.0,
+              "y": 30.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.044845946647735765,
+              "overflow_ratio": 5.060874117912513e-16,
+              "score": 95.51540533522636
+            },
+            {
+              "point_id": "garage",
+              "room_id": "garage",
+              "room_type": "garage",
+              "hint_index": 1,
+              "x": 140.0,
+              "y": 40.0,
+              "radius": 16.925687506432688,
+              "allocated_area": 900.0,
+              "overlap_ratio": 0.0,
+              "overflow_ratio": 3.795655588434385e-16,
+              "score": 99.99999999999997
+            },
+            {
+              "point_id": "hall",
+              "room_id": "hall",
+              "room_type": "hallway",
+              "hint_index": 1,
+              "x": 100.0,
+              "y": 100.0,
+              "radius": 6.0,
+              "allocated_area": 113.09733552923255,
+              "overlap_ratio": 0.16629784659930189,
+              "overflow_ratio": -2.51707228822379e-16,
+              "score": 83.37021534006983
+            }
+          ],
+          "score": 68.06374351138028
+        }
+      },
+      "functional_group_purity": {
+        "score": 97.70275002573075,
+        "details": {
+          "groups": [
+            {
+              "name": "bedrooms",
+              "members": [
+                {
+                  "room_id": "bed1",
+                  "x": 40.0,
+                  "y": 100.0
+                },
+                {
+                  "room_id": "bed2",
+                  "x": 80.0,
+                  "y": 100.0
+                }
+              ],
+              "edges": [
+                [
+                  {
+                    "x": 40.0,
+                    "y": 100.0
+                  },
+                  {
+                    "x": 80.0,
+                    "y": 100.0
+                  }
+                ]
+              ],
+              "hull": [],
+              "intrusions": [],
+              "score": 97.70275002573075,
+              "purity_score": 100.0,
+              "compactness_score": 95.4055000514615
+            }
+          ]
+        }
+      }
+    }
+  }
+]

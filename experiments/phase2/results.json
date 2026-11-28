@@ -1,0 +1,174 @@
+[
+  {
+    "objective": "distribution",
+    "seed": 314159,
+    "trials": 100,
+    "elapsed_seconds": 1.2570171999977902,
+    "seconds_per_trial": 0.012570171999977902,
+    "mean_search_score": 13.078881366431979,
+    "best_search_score": 59.33895940539985,
+    "mean_occupancy_score": 88.91327680012728,
+    "best_occupancy_score": 99.99999999999997,
+    "best_candidate": [
+      {
+        "room_id": "room_0",
+        "room_type": "living_room",
+        "x": 170.0,
+        "y": 40.0
+      },
+      {
+        "room_id": "room_1",
+        "room_type": "kitchen",
+        "x": 130.0,
+        "y": 70.0
+      },
+      {
+        "room_id": "room_2",
+        "room_type": "dining_room",
+        "x": 20.0,
+        "y": 160.0
+      },
+      {
+        "room_id": "room_3",
+        "room_type": "bedroom",
+        "x": 190.0,
+        "y": 160.0
+      },
+      {
+        "room_id": "room_4",
+        "room_type": "hallway",
+        "x": 40.0,
+        "y": 70.0
+      }
+    ]
+  },
+  {
+    "objective": "occupancy",
+    "seed": 314159,
+    "trials": 100,
+    "elapsed_seconds": 1.36785680000321,
+    "seconds_per_trial": 0.013678568000032101,
+    "mean_search_score": 90.27176746380286,
+    "best_search_score": 99.99999999999997,
+    "mean_occupancy_score": 90.27176746380286,
+    "best_occupancy_score": 99.99999999999997,
+    "best_candidate": [
+      {
+        "room_id": "room_0",
+        "room_type": "living_room",
+        "x": 120.0,
+        "y": 90.0
+      },
+      {
+        "room_id": "room_1",
+        "room_type": "kitchen",
+        "x": 20.0,
+        "y": 120.0
+      },
+      {
+        "room_id": "room_2",
+        "room_type": "dining_room",
+        "x": 50.0,
+        "y": 80.0
+      },
+      {
+        "room_id": "room_3",
+        "room_type": "bedroom",
+        "x": 150.0,
+        "y": 30.0
+      },
+      {
+        "room_id": "room_4",
+        "room_type": "hallway",
+        "x": 80.0,
+        "y": 160.0
+      }
+    ]
+  },
+  {
+    "objective": "distribution",
+    "seed": 314159,
+    "trials": 500,
+    "elapsed_seconds": 8.818014800002857,
+    "seconds_per_trial": 0.017636029600005713,
+    "mean_search_score": 15.083496758061125,
+    "best_search_score": 62.04305971195106,
+    "mean_occupancy_score": 90.06145515311304,
+    "best_occupancy_score": 99.99999999999999,
+    "best_candidate": [
+      {
+        "room_id": "room_0",
+        "room_type": "living_room",
+        "x": 50.0,
+        "y": 40.0
+      },
+      {
+        "room_id": "room_1",
+        "room_type": "kitchen",
+        "x": 160.0,
+        "y": 150.0
+      },
+      {
+        "room_id": "room_2",
+        "room_type": "dining_room",
+        "x": 30.0,
+        "y": 130.0
+      },
+      {
+        "room_id": "room_3",
+        "room_type": "bedroom",
+        "x": 190.0,
+        "y": 170.0
+      },
+      {
+        "room_id": "room_4",
+        "room_type": "hallway",
+        "x": 190.0,
+        "y": 40.0
+      }
+    ]
+  },
+  {
+    "objective": "occupancy",
+    "seed": 314159,
+    "trials": 500,
+    "elapsed_seconds": 9.990748500000336,
+    "seconds_per_trial": 0.019981497000000674,
+    "mean_search_score": 88.94771375326138,
+    "best_search_score": 99.99999999999999,
+    "mean_occupancy_score": 88.94771375326138,
+    "best_occupancy_score": 99.99999999999999,
+    "best_candidate": [
+      {
+        "room_id": "room_0",
+        "room_type": "living_room",
+        "x": 120.0,
+        "y": 150.0
+      },
+      {
+        "room_id": "room_1",
+        "room_type": "kitchen",
+        "x": 130.0,
+        "y": 60.0
+      },
+      {
+        "room_id": "room_2",
+        "room_type": "dining_room",
+        "x": 60.0,
+        "y": 130.0
+      },
+      {
+        "room_id": "room_3",
+        "room_type": "bedroom",
+        "x": 180.0,
+        "y": 130.0
+      },
+      {
+        "room_id": "room_4",
+        "room_type": "hallway",
+        "x": 160.0,
+        "y": 170.0
+      }
+    ]
+  }
+]

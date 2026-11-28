@@ -60,21 +60,33 @@ class SeedStabilityConstraint:
             if variables is None:
                 continue
 
+            centered = room_seed.center_x is not None and room_seed.center_y is not None
+            factor = 2 if centered else 1
             x_delta = context.model.NewIntVar(
-                0, floor.width, context.new_name("seed_x_delta", room_id_key)
+                0, factor * floor.width, context.new_name("seed_x_delta", room_id_key)
             )
             y_delta = context.model.NewIntVar(
-                0, floor.length, context.new_name("seed_y_delta", room_id_key)
+                0, factor * floor.length, context.new_name("seed_y_delta", room_id_key)
             )
-            context.model.AddAbsEquality(x_delta, variables.x - room_seed.x)
-            context.model.AddAbsEquality(y_delta, variables.y - room_seed.y)
+            context.model.AddAbsEquality(
+                x_delta,
+                2 * variables.x + variables.width - 2 * room_seed.center_x
+                if centered
+                else variables.x - room_seed.x,
+            )
+            context.model.AddAbsEquality(
+                y_delta,
+                2 * variables.y + variables.length - 2 * room_seed.center_y
+                if centered
+                else variables.y - room_seed.y,
+            )
 
             components = []
             if position_multiplier:
                 position = ceil_ratio(
                     context,
                     PENALTY_MAX * (x_delta * floor.length + y_delta * floor.width),
-                    2 * floor.width * floor.length,
+                    factor * 2 * floor.width * floor.length,
                     PENALTY_MAX,
                 )
                 components.append((position, position_multiplier))

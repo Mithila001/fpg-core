@@ -117,8 +117,8 @@ Validation and meaning:
   empty nodes, the destination, and explicitly allowed or required types remain
   traversable. The default is `True`.
 - An optional distance policy requires a non-negative integer step threshold and a
-  finite multiplier from 0 to 1. It is carried into final routes for scoring; it
-  does not affect route feasibility.
+  finite multiplier from 0 to 1. It is carried into final routes as legacy diagnostic data; current circulation quality
+  ignores it and it does not affect route feasibility.
 - `CirculationTrafficClass` values are `PUBLIC='public'` and `PRIVATE='private'`.
 - `always_traversable_room_types` must contain unique `RoomType` members.
 - `max_routing_passes` defaults to `3` and must be between `2` and `10` inclusive.
@@ -337,7 +337,7 @@ Candidate Circulation has no separate warning collection. In `DEBUG`, `Candidate
 | `HallwayTrafficDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', public_route_count: 'int', private_route_count: 'int', public_importance_weight: 'float', private_importance_weight: 'float', traffic_class: 'HallwayTrafficClass', removed: 'bool', removal_reason: 'HallwayRemovalReason | None') -> None` | Traffic totals, final role, and optional removal reason for one hallway hint. |
 | `RemovedHallwayPointDetails` | dataclass/contract | `(point_key: 'str', room_id: 'str', hint_index: 'int', x: 'float', y: 'float', reason: 'HallwayRemovalReason') -> None` | Identity, position, and removal reason for one removed hallway hint. |
 | `RouteCostBreakdown` | dataclass/contract | `(movement_cost: 'float', perimeter_bias_cost: 'float', turn_cost: 'float', traffic_conflict_cost: 'float', total_cost: 'float') -> None` | Cost components accumulated by one resolved circulation route. |
-| `RouteDistancePolicy` | dataclass/contract | `RouteDistancePolicy(preferred_max_grid_steps, over_limit_score_multiplier)` | Optional soft route-length penalty. |
+| `RouteDistancePolicy` | dataclass/contract | `RouteDistancePolicy(preferred_max_grid_steps, over_limit_score_multiplier)` | Legacy route-length diagnostic policy; current candidate scoring ignores it. |
 | `RoutingCostProfile` | dataclass/contract | `(empty_node_cost: 'float', traversable_hint_node_cost: 'float', turn_cost: 'float', perimeter_bias_max_cost: 'float', traffic_conflict_cost: 'float') -> None` | Routing costs including the multi-pass hallway conflict penalty. |
 | `RoutingPassDetails` | dataclass/contract | `(pass_number: 'int', classifications_changed_from_previous: 'bool', paths: 'tuple[CirculationPathDetails, ...]', hallway_traffic: 'tuple[HallwayTrafficDetails, ...]') -> None` | DEBUG snapshot of one routing and hallway-classification pass. |
 | `TrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Backward-compatible feature-boundary alias of `CirculationTrafficClass`. |

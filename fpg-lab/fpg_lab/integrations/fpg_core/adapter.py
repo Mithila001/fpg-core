@@ -333,7 +333,9 @@ class FpgCoreAdapter:
         from fpg_core.floor_plan_solver import RoomPlacementHint
 
         return tuple(
-            RoomPlacementHint(room_id=point.room_id, x=point.x, y=point.y)
+            RoomPlacementHint(
+                room_id=point.room_id, x=point.x, y=point.y, position_reference="center"
+            )
             for point in candidate.points
         )
 

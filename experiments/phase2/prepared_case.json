@@ -1,0 +1,55 @@
+{
+  "spec_room_count": 11,
+  "candidate_count": 8,
+  "candidate": [
+    {
+      "room_id": "bedroom-1",
+      "type": "bedroom",
+      "x": 20.5,
+      "y": 26.0
+    },
+    {
+      "room_id": "bedroom-2",
+      "type": "bedroom",
+      "x": 40.5,
+      "y": 26.0
+    },
+    {
+      "room_id": "bathroom-1",
+      "type": "bathroom",
+      "x": 20.5,
+      "y": 46.0
+    },
+    {
+      "room_id": "living-room-1",
+      "type": "living_room",
+      "x": 60.5,
+      "y": 46.0
+    },
+    {
+      "room_id": "kitchen-1",
+      "type": "kitchen",
+      "x": 80.5,
+      "y": 46.0
+    },
+    {
+      "room_id": "dining-room-1",
+      "type": "dining_room",
+      "x": 80.5,
+      "y": 66.0
+    },
+    {
+      "room_id": "veranda-1",
+      "type": "veranda",
+      "x": 60.5,
+      "y": 26.0
+    },
+    {
+      "room_id": "hallway_1",
+      "type": "hallway",
+      "x": 40.5,
+      "y": 46.0
+    }
+  ],
+  "error": "CirculationPathNotFoundError: Route rule 1 ('bedroom_to_living') could not reach any living_room point from 'bedroom-1[1]'."
+}

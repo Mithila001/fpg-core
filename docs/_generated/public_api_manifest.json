@@ -76,7 +76,7 @@
     },
     "fpg_core.candidate_scoring": {
       "source": "src/fpg_core/candidate_scoring/__init__.py",
-      "export_count": 43,
+      "export_count": 45,
       "exports": [
         "CandidateEvaluator",
         "CandidateScoreManager",
@@ -111,6 +111,8 @@
         "ScoringResult",
         "SpatialDistributionDetails",
         "SpatialDistributionEvaluator",
+        "SPATIAL_OCCUPANCY_KEY",
+        "SpatialOccupancyEvaluator",
         "SpatialDistributionPointDetails",
         "ZONE_SUITABILITY_KEY",
         "ZoneSuitabilityConfig",

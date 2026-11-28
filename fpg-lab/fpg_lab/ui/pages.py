@@ -171,7 +171,7 @@ async def records_page(runtime: LabRuntime, kind: str) -> None:
             "name": name.value,
             "description": (description.value or "").strip() or None,
             "configuration_data" if is_config else "template_data": data,
-            "schema_version": str(data.get("schema_version", 8)) if is_config else "1",
+            "schema_version": str(data.get("schema_version", 9)) if is_config else "1",
         }
         return model.model_validate(values)
 

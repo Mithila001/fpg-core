@@ -115,9 +115,9 @@ async def candidate_replay(
         )
         summary = ui.label().classes("text-sm")
     with context_area:
-        view = ui.toggle(["Hints", "Heatmap", "Circulation", "Groups"], value="Hints").props(
-            "dense"
-        )
+        view = ui.toggle(
+            ["Hints", "Heatmap", "Occupancy", "Circulation", "Groups"], value="Hints"
+        ).props("dense")
         with ui.expansion(f"Rooms · {len(room_ids)} selected").classes("w-full") as rooms_panel:
             with ui.row().classes("w-full items-center gap-2"):
                 single = ui.switch("Select one", value=False).props("dense")
@@ -195,6 +195,7 @@ async def candidate_replay(
         )
         is_circulation = view.value == "Circulation"
         is_groups = view.value == "Groups"
+        is_occupancy = view.value == "Occupancy"
         rooms_panel.set_visibility(not is_circulation)
         rooms_panel.set_text(f"Rooms · {len(room_ids)} selected")
         heatmap.set_visibility(view.value == "Heatmap")
@@ -206,7 +207,7 @@ async def candidate_replay(
             not before_cleanup.value
             if is_circulation
             else True
-            if is_groups
+            if is_groups or is_occupancy
             else bool(source.value)
         )
         if is_circulation and not frame.get("circulation_data"):
@@ -234,6 +235,22 @@ async def candidate_replay(
         )
         if is_groups:
             replay.add_group_overlay(canvas.figure, frame)
+        if is_occupancy:
+            evaluations = (frame.get("candidate_scoring_data") or {}).get("evaluator_results", [])
+            occupancy = next(
+                (e for e in evaluations if e.get("evaluator_key") == "spatial_occupancy"), {}
+            )
+            for room in (occupancy.get("details") or {}).get("rooms", []):
+                x, y, radius = room["x"], room["y"], room["radius"]
+                canvas.figure.add_shape(
+                    type="circle",
+                    x0=x - radius,
+                    y0=y - radius,
+                    x1=x + radius,
+                    y1=y + radius,
+                    line={"color": "#ed8936", "width": 1},
+                    opacity=0.7,
+                )
         route_panel.clear()
         available = circulation.paths(frame, before=bool(before_cleanup.value))
         if is_circulation:
@@ -307,7 +324,7 @@ async def candidate_replay(
                                 violated = path["step_count"] > policy["preferred_max_grid_steps"]
                                 applied = policy["over_limit_score_multiplier"] if violated else 1.0
                                 ui.label(
-                                    f"Assigned rooms: {path['source_room_id']} → {path['destination_room_id']} · Limit {policy['preferred_max_grid_steps']} steps · {'Exceeded' if violated else 'Within limit'} · Multiplier {applied:g}"
+                                    f"Historical policy: {path['source_room_id']} → {path['destination_room_id']} · Limit {policy['preferred_max_grid_steps']} steps · {'Exceeded' if violated else 'Within limit'} · Multiplier {applied:g}"
                                 ).classes("text-sm")
                             ui.label(
                                 " · ".join(
@@ -329,13 +346,17 @@ async def candidate_replay(
                     ui.label(
                         f"Circulation quality: {display(quality.get('raw_score'))} / 100"
                     ).classes("text-sm")
-                    if "base_score" in detail:
+                    if "distance_multiplier" in detail:
                         ui.label(
                             f"Before distance penalty: {display(detail['base_score'])} / 100 · Distance multiplier: {display(detail['distance_multiplier'])}"
                         ).classes("text-sm")
                     ui.label(
-                        f"Efficiency: {display(detail.get('efficiency_score'))} ? Separation: {display(detail.get('separation_score'))}"
+                        f"Proximity: {display(detail.get('proximity_score'))} · Efficiency: {display(detail.get('efficiency_score'))} · Separation: {display(detail.get('separation_score'))}"
                     ).classes("text-sm")
+                    for relationship in detail.get("relationships", []):
+                        ui.label(
+                            f"{' ↔ '.join(relationship['room_ids'])}: distance {relationship['distance']:.2f}, score {relationship['score']:.2f}"
+                        ).classes("text-sm")
                     for hallway in detail.get("hallways", []):
                         ui.label(
                             f"{hallway['point_key']}: public {hallway['public_weight']:.2f}, private {hallway['private_weight']:.2f}, mixing {hallway['mixing_ratio']:.2f}, penalty {hallway['penalty']:.2f}"
@@ -356,10 +377,19 @@ async def candidate_replay(
                 )
                 for group in ((purity or {}).get("details") or {}).get("groups", []):
                     ui.label(f"{group['name']}: {group['score']:.2f} / 100").classes("text-sm")
+                    if "purity_score" in group:
+                        ui.label(
+                            f"Purity {group['purity_score']:.2f} · Compactness {group['compactness_score']:.2f}"
+                        ).classes("text-sm")
                     for intrusion in group["intrusions"]:
                         ui.label(
                             f"{intrusion['room_id']}: {intrusion['kind']} intrusion, penalty {intrusion['penalty']:.2f}"
                         ).classes("text-sm")
+            if is_occupancy:
+                for room in (occupancy.get("details") or {}).get("rooms", []):
+                    ui.label(
+                        f"{room['room_id']}: {room['score']:.2f} / 100 · overlap {room['overlap_ratio']:.1%} · overflow {room['overflow_ratio']:.1%} · area {room['allocated_area']:.1f}"
+                    ).classes("text-sm")
             if frame.get("error_data"):
                 ui.label(
                     str(frame["error_data"].get("message", "Trial failed or was rejected"))

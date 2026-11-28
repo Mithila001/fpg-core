@@ -26,7 +26,7 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 11
+REVISION = 12
 # Revision 6 enables living room and bedroom quality scoring; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 PREVIOUS_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
@@ -487,7 +487,7 @@ def _migration(connection, session, report, *, dry_run):
     proposals = []
     for row in rows:
         try:
-            expected_version = 7 if revision >= 10 else 6
+            expected_version = 8 if revision >= 11 else 7 if revision >= 10 else 6
             profile_version = row.configuration_data.get("schema_version")
             if row.schema_version != str(profile_version) or profile_version not in (
                 expected_version,
@@ -578,6 +578,41 @@ def _migration(connection, session, report, *, dry_run):
                                 },
                             )
                     data["schema_version"] = 8
+                if revision < 12:
+                    scoring = data["candidate_scoring"]
+                    baseline_rules = {
+                        rule["key"]: rule
+                        for rule in baseline.payload["candidate_scoring"]["evaluator_rules"]
+                    }
+                    for rule in scoring["evaluator_rules"]:
+                        rule["weight"] = 1.0
+                        if rule["key"] == "spatial_distribution":
+                            rule["enabled"] = False
+                        elif rule["key"] == "circulation_quality":
+                            old = rule["settings"]
+                            rule["settings"] = deepcopy(
+                                baseline_rules["circulation_quality"]["settings"]
+                            )
+                            for key in (
+                                "single_hallway_penalty_multiplier",
+                                "multiple_hallway_penalty_multiplier",
+                            ):
+                                if key in old:
+                                    rule["settings"][key] = old[key]
+                        elif rule["key"] == "functional_group_purity":
+                            rule["settings"].pop("connection_tolerance_grid_steps", None)
+                        elif rule["key"] == "exterior_clearance":
+                            for clearance_rule in rule["settings"]["rules"]:
+                                clearance_rule.pop("clearance_width", None)
+                    if not any(
+                        rule["key"] == "spatial_occupancy" for rule in scoring["evaluator_rules"]
+                    ):
+                        scoring["evaluator_rules"].append(
+                            deepcopy(baseline_rules["spatial_occupancy"])
+                        )
+                    for route in data["candidate_circulation"]["route_rules"]:
+                        route.pop("distance_policy", None)
+                    data["schema_version"] = 9
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):

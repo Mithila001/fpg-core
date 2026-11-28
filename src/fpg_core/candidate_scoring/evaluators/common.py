@@ -64,6 +64,8 @@ def build_evaluation_data(context: ScoringContext) -> EvaluationData:
     receive unique evaluator-only IDs; the original candidate remains untouched.
     """
 
+    if "evaluation_data" in context.derived:
+        return context.derived["evaluation_data"]
     specification = context.scoring_input.specification
     candidate = context.scoring_input.candidate
     floor_width, floor_length = _extract_floor_size(specification)

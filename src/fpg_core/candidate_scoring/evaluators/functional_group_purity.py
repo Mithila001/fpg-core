@@ -6,6 +6,7 @@ from typing import Any
 
 from ...domain import ExecutionMode, RoomType
 from ..context import ScoringContext
+from ..footprints import boundary_distance, proximity_score
 from ..types import EvaluationStatus, EvaluatorKey, EvaluatorResult
 from .base import CandidateEvaluator
 from .common import build_evaluation_data, clamp_score, setting_float
@@ -54,10 +55,18 @@ class FunctionalGroupPurityEvaluator(CandidateEvaluator):
     def evaluate(
         self, context: ScoringContext, settings: Mapping[str, Any]
     ) -> EvaluatorResult:
+        if "connection_tolerance_grid_steps" in settings:
+            raise ValueError(
+                "Replace connection_tolerance_grid_steps with connection_tolerance in project units."
+            )
         for key in (
             "direct_interruption_penalty",
             "regional_intrusion_penalty",
-            "connection_tolerance_grid_steps",
+            "connection_tolerance",
+            "compactness_preferred_distance",
+            "compactness_zero_score_distance",
+            "purity_weight",
+            "compactness_weight",
         ):
             if key in settings and (
                 isinstance(settings[key], bool)
@@ -66,13 +75,19 @@ class FunctionalGroupPurityEvaluator(CandidateEvaluator):
                 raise ValueError(f"Setting '{key}' must be numeric.")
         direct = setting_float(settings, "direct_interruption_penalty", 1.0)
         regional = setting_float(settings, "regional_intrusion_penalty", 0.5)
-        tolerance_steps = setting_float(
-            settings, "connection_tolerance_grid_steps", 0.5
-        )
-        if min(direct, regional, tolerance_steps) < 0:
+        tolerance = setting_float(settings, "connection_tolerance", 5.0)
+        preferred = setting_float(settings, "compactness_preferred_distance", 5.0)
+        zero = setting_float(settings, "compactness_zero_score_distance", 30.0)
+        purity_weight = setting_float(settings, "purity_weight", 0.5)
+        compactness_weight = setting_float(settings, "compactness_weight", 0.5)
+        if (
+            min(direct, regional, tolerance, purity_weight, compactness_weight) < 0
+            or purity_weight + compactness_weight <= 0
+        ):
             raise ValueError(
                 "Group purity penalties and tolerance must be nonnegative."
             )
+        proximity_score(0, preferred, zero)
         groups = settings.get(
             "groups", ({"name": "bedrooms", "room_types": ("bedroom",)},)
         )
@@ -83,7 +98,8 @@ class FunctionalGroupPurityEvaluator(CandidateEvaluator):
             for p in build_evaluation_data(context).points
             if p.room_type is not RoomType.HALLWAY
         ]
-        tolerance = context.scoring_input.candidate.grid.grid_spacing * tolerance_steps
+        footprints = context.derived["footprints"]
+        relations = context.scoring_input.specification.room_relations
         diagnostics = []
         for group in groups:
             if (
@@ -115,8 +131,25 @@ class FunctionalGroupPurityEvaluator(CandidateEvaluator):
                 edges.append((a, b))
             hull = _hull(members)
             intrusions: list[dict[str, Any]] = []
+            member_ids = {p.source_room_id for p in members}
             for point in points:
                 if point in members:
+                    continue
+                if point.room_type is RoomType.ATTACHED_BATHROOM and any(
+                    (
+                        str(relation.source_room_id) == point.source_room_id
+                        and any(
+                            str(target) in member_ids
+                            for target in relation.target_room_ids
+                        )
+                    )
+                    or (
+                        str(relation.source_room_id) in member_ids
+                        and point.source_room_id
+                        in {str(target) for target in relation.target_room_ids}
+                    )
+                    for relation in relations
+                ):
                     continue
                 is_direct = any(_interrupts(point, a, b, tolerance) for a, b in edges)
                 is_region = bool(hull) and all(
@@ -136,8 +169,19 @@ class FunctionalGroupPurityEvaluator(CandidateEvaluator):
                             "penalty": penalty,
                         }
                     )
-            score = clamp_score(
+            purity = clamp_score(
                 100 * (1 - sum(i["penalty"] for i in intrusions) / len(members))
+            )
+            compactness = sum(
+                proximity_score(
+                    boundary_distance(footprints[a.room_id], footprints[b.room_id]),
+                    preferred,
+                    zero,
+                )
+                for a, b in edges
+            ) / len(edges)
+            score = (purity * purity_weight + compactness * compactness_weight) / (
+                purity_weight + compactness_weight
             )
             diagnostics.append(
                 {
@@ -151,6 +195,8 @@ class FunctionalGroupPurityEvaluator(CandidateEvaluator):
                     "hull": [{"x": p.x, "y": p.y} for p in hull],
                     "intrusions": intrusions,
                     "score": score,
+                    "purity_score": purity,
+                    "compactness_score": compactness,
                 }
             )
         if not diagnostics:

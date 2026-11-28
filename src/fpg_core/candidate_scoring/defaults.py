@@ -12,11 +12,13 @@ from .evaluators import (
     EXTERIOR_CLEARANCE_KEY,
     FUNCTIONAL_GROUP_PURITY_KEY,
     SPATIAL_DISTRIBUTION_KEY,
+    SPATIAL_OCCUPANCY_KEY,
     ZONE_SUITABILITY_KEY,
     CirculationQualityEvaluator,
     ExteriorClearanceEvaluator,
     FunctionalGroupPurityEvaluator,
     SpatialDistributionEvaluator,
+    SpatialOccupancyEvaluator,
     ZoneSuitabilityEvaluator,
 )
 from .registry import EvaluatorRegistry
@@ -31,6 +33,7 @@ def create_default_registry() -> EvaluatorRegistry:
             CirculationQualityEvaluator(),
             FunctionalGroupPurityEvaluator(),
             SpatialDistributionEvaluator(),
+            SpatialOccupancyEvaluator(),
         )
     )
 
@@ -92,6 +95,13 @@ def create_default_config(
             ),
             EvaluatorRule(
                 key=SPATIAL_DISTRIBUTION_KEY,
+                category=EvaluatorCategory.QUALITY,
+                enabled=False,
+                weight=1.0,
+                order=40,
+            ),
+            EvaluatorRule(
+                key=SPATIAL_OCCUPANCY_KEY,
                 category=EvaluatorCategory.QUALITY,
                 weight=1.0,
                 order=40,

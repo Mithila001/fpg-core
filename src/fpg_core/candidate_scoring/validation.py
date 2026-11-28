@@ -45,6 +45,25 @@ def validate_scoring_config(
 
     for rule in config.evaluator_rules:
         _validate_rule(rule)
+        if rule.enabled and str(rule.key) == "circulation_quality":
+            from .evaluators.circulation_quality import validate_proximity_preferences
+
+            try:
+                validate_proximity_preferences(
+                    rule.settings.get("proximity_preferences")
+                )
+            except (TypeError, ValueError, KeyError) as exc:
+                raise ScoringConfigurationError(
+                    f"Invalid proximity preferences: {exc}"
+                ) from exc
+        if (
+            rule.enabled
+            and str(rule.key) == "functional_group_purity"
+            and "connection_tolerance_grid_steps" in rule.settings
+        ):
+            raise ScoringConfigurationError(
+                "Replace connection_tolerance_grid_steps with connection_tolerance in project units."
+            )
 
         key_value = str(rule.key)
         if key_value in seen_keys:

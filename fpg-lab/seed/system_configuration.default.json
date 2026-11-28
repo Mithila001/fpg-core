@@ -1,9 +1,9 @@
 {
   "name": "research-default",
-  "description": "Lab schema 8 research starter profile for local fpg-core. Setbacks and room references are example policy, not regulatory guidance.",
-  "schema_version": "8",
+  "description": "Lab schema 9 research starter profile for local fpg-core. Setbacks and room references are example policy, not regulatory guidance.",
+  "schema_version": "9",
   "configuration_data": {
-    "schema_version": 8,
+    "schema_version": 9,
     "project_units_per_meter": 10,
     "buildable_space": {
       "active_profile": {
@@ -367,8 +367,7 @@
           "allowed_transit_room_types": [],
           "required_transit_room_types": [],
           "importance_weight": 1.5,
-          "allow_global_transit": false,
-          "distance_policy": {"preferred_max_grid_steps": 2, "over_limit_score_multiplier": 0.25}
+          "allow_global_transit": false
         },
         {
           "id": 6,
@@ -706,7 +705,6 @@
                   "veranda"
                 ],
                 "required_clear_room_count": 1,
-                "clearance_width": 20.0,
                 "direction": "front"
               },
               {
@@ -714,7 +712,6 @@
                   "garage"
                 ],
                 "required_clear_room_count": 1,
-                "clearance_width": 20.0,
                 "direction": "front"
               },
               {
@@ -723,7 +720,6 @@
                   "hallway"
                 ],
                 "required_clear_room_count": 1,
-                "clearance_width": 20.0,
                 "direction": "back"
               }
             ]
@@ -731,7 +727,7 @@
         },
         {
           "category": "quality",
-          "enabled": true,
+          "enabled": false,
           "order": 40,
           "weight": 1.0,
           "minimum_score": null,
@@ -752,10 +748,57 @@
           "minimum_score": null,
           "key": "circulation_quality",
           "settings": {
-            "efficiency_weight": 0.7,
-            "traffic_separation_weight": 0.3,
+            "efficiency_weight": 0.3,
+            "traffic_separation_weight": 0.2,
             "single_hallway_penalty_multiplier": 0.5,
-            "multiple_hallway_penalty_multiplier": 1.0
+            "multiple_hallway_penalty_multiplier": 1.0,
+            "proximity_weight": 0.5,
+            "proximity_preferences": {
+              "attached_bathroom:bedroom": {
+                "preferred_distance": 2,
+                "zero_score_distance": 20
+              },
+              "living_room:veranda": {
+                "preferred_distance": 0,
+                "zero_score_distance": 30
+              },
+              "dining_room:kitchen": {
+                "preferred_distance": 5,
+                "zero_score_distance": 30
+              },
+              "kitchen:living_room": {
+                "preferred_distance": 10,
+                "zero_score_distance": 50
+              },
+              "dining_room:living_room": {
+                "preferred_distance": 5,
+                "zero_score_distance": 35
+              },
+              "bathroom:bedroom": {
+                "preferred_distance": 10,
+                "zero_score_distance": 50
+              },
+              "bedroom:living_room": {
+                "preferred_distance": 10,
+                "zero_score_distance": 60
+              },
+              "bathroom:living_room": {
+                "preferred_distance": 10,
+                "zero_score_distance": 50
+              },
+              "garage:kitchen": {
+                "preferred_distance": 15,
+                "zero_score_distance": 60
+              },
+              "garage:living_room": {
+                "preferred_distance": 5,
+                "zero_score_distance": 40
+              },
+              "garage:veranda": {
+                "preferred_distance": 5,
+                "zero_score_distance": 35
+              }
+            }
           }
         },
         {
@@ -776,8 +819,21 @@
             ],
             "direct_interruption_penalty": 1.0,
             "regional_intrusion_penalty": 0.5,
-            "connection_tolerance_grid_steps": 0.5
+            "connection_tolerance": 5.0,
+            "compactness_preferred_distance": 5.0,
+            "compactness_zero_score_distance": 30.0,
+            "purity_weight": 0.5,
+            "compactness_weight": 0.5
           }
+        },
+        {
+          "category": "quality",
+          "enabled": true,
+          "order": 40,
+          "weight": 1.0,
+          "minimum_score": null,
+          "key": "spatial_occupancy",
+          "settings": {}
         }
       ],
       "fail_fast_on_critical_failure": true

@@ -197,18 +197,36 @@ def apply_seed_policy(context: ModelContext) -> None:
                 context.model.AddHint(variables.length, room_seed.length)
 
         if position_delta is not None:
-            _bounded_constraint(
-                context.model,
-                variables.x,
-                max(0, room_seed.x - position_delta),
-                min(floor.width - room.min_width, room_seed.x + position_delta),
-            )
-            _bounded_constraint(
-                context.model,
-                variables.y,
-                max(0, room_seed.y - position_delta),
-                min(floor.length - room.min_length, room_seed.y + position_delta),
-            )
+            if room_seed.center_x is not None and room_seed.center_y is not None:
+                context.model.Add(
+                    2 * variables.x + variables.width
+                    >= 2 * (room_seed.center_x - position_delta)
+                )
+                context.model.Add(
+                    2 * variables.x + variables.width
+                    <= 2 * (room_seed.center_x + position_delta)
+                )
+                context.model.Add(
+                    2 * variables.y + variables.length
+                    >= 2 * (room_seed.center_y - position_delta)
+                )
+                context.model.Add(
+                    2 * variables.y + variables.length
+                    <= 2 * (room_seed.center_y + position_delta)
+                )
+            else:
+                _bounded_constraint(
+                    context.model,
+                    variables.x,
+                    max(0, room_seed.x - position_delta),
+                    min(floor.width - room.min_width, room_seed.x + position_delta),
+                )
+                _bounded_constraint(
+                    context.model,
+                    variables.y,
+                    max(0, room_seed.y - position_delta),
+                    min(floor.length - room.min_length, room_seed.y + position_delta),
+                )
 
         if size_delta is not None and room_seed.width is not None:
             _bounded_constraint(

@@ -13,12 +13,14 @@ from .evaluators import (
     EXTERIOR_CLEARANCE_KEY,
     FUNCTIONAL_GROUP_PURITY_KEY,
     SPATIAL_DISTRIBUTION_KEY,
+    SPATIAL_OCCUPANCY_KEY,
     ZONE_SUITABILITY_KEY,
     CandidateEvaluator,
     CirculationQualityEvaluator,
     ExteriorClearanceEvaluator,
     FunctionalGroupPurityEvaluator,
     SpatialDistributionEvaluator,
+    SpatialOccupancyEvaluator,
     ZoneSuitabilityEvaluator,
 )
 from .exceptions import EvaluatorExecutionError
@@ -80,6 +82,8 @@ __all__ = [
     "ScoringResult",
     "SpatialDistributionDetails",
     "SpatialDistributionEvaluator",
+    "SPATIAL_OCCUPANCY_KEY",
+    "SpatialOccupancyEvaluator",
     "SpatialDistributionPointDetails",
     "ZONE_SUITABILITY_KEY",
     "ZoneSuitabilityConfig",

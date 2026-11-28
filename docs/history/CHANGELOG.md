@@ -6,6 +6,14 @@
 
 ## Unreleased
 
+- Breaking: candidate scoring uses shared room footprints, spatial occupancy,
+  physical proximity, footprint clearance, and group compactness. Supply the full
+  preprocessed specification to scoring. Lab schema 9/revision 12 replaces old
+  grid-step scoring settings; migrate saved profiles and review the initial physical
+  distances. Historical snapshots are preserved.
+- Lab candidate-derived solver hints now identify coordinates as room centers;
+  direct Core callers may opt in with `position_reference="center"`. Existing
+  lower-left hints and refinement seeds retain their previous interpretation.
 - Breaking: assigned-relation circulation rules require prepared room relations;
   the Lab adapter now requires `prepared` when running circulation. Lab profiles
   require revision 11/schema 8 migration. Candidate Search observations can be

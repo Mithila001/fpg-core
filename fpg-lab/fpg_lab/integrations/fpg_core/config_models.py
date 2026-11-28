@@ -174,11 +174,6 @@ class RoutingCostDocument(StrictModel):
     traffic_conflict_cost: float = Field(gt=0, allow_inf_nan=False)
 
 
-class RouteDistancePolicyDocument(StrictModel):
-    preferred_max_grid_steps: int = Field(ge=0, strict=True)
-    over_limit_score_multiplier: float = Field(ge=0, le=1, allow_inf_nan=False)
-
-
 class RouteRuleDocument(StrictModel):
     id: int = Field(ge=0)
     name: str = Field(min_length=1, max_length=200)
@@ -190,7 +185,7 @@ class RouteRuleDocument(StrictModel):
     required_transit_room_types: list[RoomTypeValue] = Field(default_factory=list)
     importance_weight: float = Field(gt=0, allow_inf_nan=False)
     allow_global_transit: bool = True
-    distance_policy: RouteDistancePolicyDocument | None = None
+    distance_policy: None = None
 
 
 class CandidateCirculationDocument(StrictModel):
@@ -215,7 +210,6 @@ class ZoneSuitabilitySettingsDocument(StrictModel):
 class ExteriorClearanceRuleDocument(StrictModel):
     room_types: list[RoomTypeValue] = Field(min_length=1)
     required_clear_room_count: int = Field(gt=0)
-    clearance_width: float = Field(gt=0, allow_inf_nan=False)
     direction: LandSideValue
 
 
@@ -224,15 +218,28 @@ class ExteriorClearanceSettingsDocument(StrictModel):
 
 
 class CirculationQualitySettingsDocument(StrictModel):
-    efficiency_weight: float = Field(default=0.7, ge=0, allow_inf_nan=False)
-    traffic_separation_weight: float = Field(default=0.3, ge=0, allow_inf_nan=False)
+    proximity_weight: float = Field(default=0.5, ge=0, allow_inf_nan=False)
+    efficiency_weight: float = Field(default=0.3, ge=0, allow_inf_nan=False)
+    traffic_separation_weight: float = Field(default=0.2, ge=0, allow_inf_nan=False)
+    proximity_preferences: dict[str, ProximityPreferenceDocument]
     single_hallway_penalty_multiplier: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
     multiple_hallway_penalty_multiplier: float = Field(default=1.0, ge=0, le=1, allow_inf_nan=False)
 
     @model_validator(mode="after")
     def validate_weights(self):
-        if self.efficiency_weight + self.traffic_separation_weight <= 0:
+        if self.proximity_weight + self.efficiency_weight + self.traffic_separation_weight <= 0:
             raise ValueError("circulation weights must have a positive sum")
+        return self
+
+
+class ProximityPreferenceDocument(StrictModel):
+    preferred_distance: float = Field(ge=0, allow_inf_nan=False)
+    zero_score_distance: float = Field(gt=0, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_distances(self):
+        if self.zero_score_distance <= self.preferred_distance:
+            raise ValueError("zero_score_distance must exceed preferred_distance")
         return self
 
 
@@ -247,7 +254,20 @@ class FunctionalGroupPuritySettingsDocument(StrictModel):
     )
     direct_interruption_penalty: float = Field(default=1.0, ge=0, allow_inf_nan=False)
     regional_intrusion_penalty: float = Field(default=0.5, ge=0, allow_inf_nan=False)
-    connection_tolerance_grid_steps: float = Field(default=0.5, ge=0, allow_inf_nan=False)
+    connection_tolerance: float = Field(default=5.0, ge=0, allow_inf_nan=False)
+    compactness_preferred_distance: float = Field(default=5.0, ge=0, allow_inf_nan=False)
+    compactness_zero_score_distance: float = Field(default=30.0, gt=0, allow_inf_nan=False)
+    purity_weight: float = Field(default=0.5, ge=0, allow_inf_nan=False)
+    compactness_weight: float = Field(default=0.5, ge=0, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_compactness(self):
+        if (
+            self.compactness_zero_score_distance <= self.compactness_preferred_distance
+            or self.purity_weight + self.compactness_weight <= 0
+        ):
+            raise ValueError("invalid compactness distances or weights")
+        return self
 
 
 class SpatialDistributionSettingsDocument(StrictModel):
@@ -297,12 +317,18 @@ class SpatialDistributionEvaluatorDocument(CandidateEvaluatorBaseDocument):
     settings: SpatialDistributionSettingsDocument
 
 
+class SpatialOccupancyEvaluatorDocument(CandidateEvaluatorBaseDocument):
+    key: Literal["spatial_occupancy"]
+    settings: dict[str, Any] = Field(default_factory=dict, max_length=0)
+
+
 CandidateEvaluatorDocument = Annotated[
     ZoneSuitabilityEvaluatorDocument
     | ExteriorClearanceEvaluatorDocument
     | CirculationQualityEvaluatorDocument
     | FunctionalGroupPurityEvaluatorDocument
-    | SpatialDistributionEvaluatorDocument,
+    | SpatialDistributionEvaluatorDocument
+    | SpatialOccupancyEvaluatorDocument,
     Field(discriminator="key"),
 ]
 
@@ -666,7 +692,7 @@ class ExperimentsDocument(StrictModel):
 
 
 class SystemConfigurationDocument(StrictModel):
-    schema_version: Literal[8] = 8
+    schema_version: Literal[9] = 9
     project_units_per_meter: int = Field(gt=0)
     buildable_space: BuildableSpaceDocument | None = None
     preprocessing: PreprocessingDocument | None = None

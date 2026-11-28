@@ -186,9 +186,9 @@ class ZoneSuitabilityConfig:
 class ExteriorClearanceRule:
     """One global-direction clearance requirement for selected room types.
 
-    A source room qualifies when at least one of its hint points has no other
-    room hint point inside the configured corridor. Multiple hallway hints are
-    therefore still counted as one room.
+    The legacy ``clearance_width`` is retained for input compatibility; the
+    evaluator projects the source footprint's diameter instead. Multiple
+    hallway hints still count as one room.
     """
 
     room_types: tuple[RoomType, ...]

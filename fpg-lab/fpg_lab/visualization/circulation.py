@@ -40,7 +40,7 @@ def path_label(path: Mapping[str, Any], styles: Mapping[str, Mapping[str, str]])
     if policy:
         violation = path["step_count"] > policy["preferred_max_grid_steps"]
         multiplier = policy["over_limit_score_multiplier"] if violation else 1.0
-        distance = f" · {path['step_count']} steps (limit {policy['preferred_max_grid_steps']}, multiplier {multiplier:g})"
+        distance = f" · historical policy: {path['step_count']} steps (limit {policy['preferred_max_grid_steps']}, multiplier {multiplier:g})"
     return (
         f"{path['rule_name']} · {label(path['source_room_id'])} → "
         f"{label(path['destination_room_id'])} · {path['traffic_class']} · "

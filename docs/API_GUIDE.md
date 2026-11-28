@@ -471,7 +471,7 @@ surfaces; consumers may catch the documented feature-root base class.
 
 | Feature | Public default/profile | Exact role and important values |
 |---|---|---|
-| Candidate Scoring | `create_default_config()` | enables zone suitability, exterior clearance, circulation quality, spatial distribution, and functional group purity, each with weight 1.0 |
+| Candidate Scoring | `create_default_config()` | enables zone suitability, exterior clearance, circulation quality, spatial occupancy, and functional group purity, each with weight 1.0; spatial distribution is disabled |
 | Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1, enforce `hallway_shared_wall` with a maximum shared wall of 12 project units, and enable the configurable bathroom hallway sharing rule (one unrestricted side plus 10 project units across other sides); all enabled soft constraints default to weight 1 and contribute one 0?100 penalty each |
 | Post-Processing | `INITIAL_GENERATION_PROFILE` | order: placeholder removal, grid snap, problem-driven wall extension, hallway merge, rectilinear simplification; tolerance `1e-6`, grid 1, rejects existing openings |
 | Openings | `DEFAULT_OPENING_CONFIG` / `DEFAULT_OPENING_PROFILE` | name `default_openings`; features `interior_doors`, `exterior_doors`, `windows`; mandatory main and secondary entrances and room access; room-specific window and interior door policies; connection limits; 10 s, one worker, seed 0 |

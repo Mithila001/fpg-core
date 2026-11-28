@@ -13,7 +13,7 @@ record when the ID is omitted. Seed assets supply maintenance operations and
 prepared inputs such as hint maps remain separately portable.
 
 Four values identify different things. SQLite `user_version` is the database
-revision. The profile payload uses Lab schema 8, which maps to Core aggregate
+revision. The profile payload uses Lab schema 9, which maps to Core aggregate
 schema 2. The installed Core package version identifies the validator and
 execution dependency. The configuration hash identifies the normalized saved
 document and guards edits. Persistent run submission captures the profile ID,

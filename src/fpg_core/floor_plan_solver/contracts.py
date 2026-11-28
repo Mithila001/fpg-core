@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 from ..domain import FeatureExecution, FloorPlan, FloorPlanGenerationSpec, RoomId
 from .config import FloorPlanSolverConfig
@@ -10,15 +10,18 @@ from .config import FloorPlanSolverConfig
 
 @dataclass(frozen=True, slots=True)
 class RoomPlacementHint:
-    """Candidate-search hint for a room's lower-left position and optional size."""
+    """Room position and optional size; coordinates default to the lower-left."""
 
     room_id: RoomId
     x: float
     y: float
     width: float | None = None
     length: float | None = None
+    position_reference: Literal["origin", "center"] = "origin"
 
     def __post_init__(self) -> None:
+        if self.position_reference not in ("origin", "center"):
+            raise ValueError("position_reference must be 'origin' or 'center'")
         if self.width is not None and self.width <= 0:
             raise ValueError("Hint width must be greater than zero")
         if self.length is not None and self.length <= 0:
