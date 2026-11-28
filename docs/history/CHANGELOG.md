@@ -6,6 +6,11 @@
 
 ## Unreleased
 
+- Breaking: removed `room_size_hierarchy` and the `room_size_relations.rules`
+  setting. Migrate saved solver profiles to `cross_type_rules` and
+  `same_type_rules`, or use the current seed. Empty settings now include a
+  bedroom spread preference. Historical snapshots are not modified.
+
 - Added the general `front_wall_setback` hard constraint to built-in solver
   profiles and the Lab baseline, with conditional room-type rules and
   geometry-repair protection. Revision 5 adds missing rules to saved Lab

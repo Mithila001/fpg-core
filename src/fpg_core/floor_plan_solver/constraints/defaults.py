@@ -7,7 +7,6 @@ from .h_front_wall_setback import FrontWallSetbackConstraint
 from .h_fully_shared_wall import FullySharedWallConstraint
 from .h_minimum_coverage import MinimumCoverageConstraint
 from .h_room_relations import HardRoomRelationsConstraint
-from .h_room_size_hierarchy import RoomSizeHierarchyConstraint
 from .registry import ConstraintRegistry
 from .room_specific.h_attached_bathroom_pairing import AttachedBathroomPairingConstraint
 from .room_specific.h_bathroom_hallway_shared_wall import (
@@ -48,7 +47,6 @@ def build_default_registry() -> ConstraintRegistry:
     registry.register_hard(FrontWallSetbackConstraint())
     registry.register_hard(BoundaryPlacementConstraint())
     registry.register_hard(FullySharedWallConstraint())
-    registry.register_hard(RoomSizeHierarchyConstraint())
 
     registry.register_soft(SoftRoomRelationsConstraint())
     registry.register_soft(RoomSizeRelationsConstraint())

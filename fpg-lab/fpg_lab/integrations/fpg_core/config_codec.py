@@ -479,7 +479,7 @@ class CoreConfigCodec:
                 )
             if key in {"room_type", "compared_type", "reference_type"}:
                 return room_type(value, path)
-            if key in {"overrides", "ratios_by_room_type"}:
+            if key == "overrides":
                 return {
                     room_type(item_key, path): settings(item_value, f"{path}.{item_key}")
                     for item_key, item_value in value.items()

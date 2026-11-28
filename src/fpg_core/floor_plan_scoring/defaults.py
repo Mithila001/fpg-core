@@ -4,6 +4,7 @@ from ..domain import RoomType
 from ..domain.room_size_preferences import (
     DEFAULT_ROOM_SIZE_MAX_RATIO,
     DEFAULT_ROOM_SIZE_PAIRS,
+    DEFAULT_ROOM_SIZE_SPREADS,
 )
 from .config import (
     EvaluatorRule,
@@ -95,11 +96,9 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
                     )
                     for compared, reference in DEFAULT_ROOM_SIZE_PAIRS
                 ),
-                consistency_rules=(
-                    RoomTypeConsistencyRule(
-                        room_type=RoomType.BEDROOM,
-                        maximum_spread_ratio=0.25,
-                    ),
+                consistency_rules=tuple(
+                    RoomTypeConsistencyRule(room_type=room_type, maximum_spread_ratio=spread)
+                    for room_type, spread in DEFAULT_ROOM_SIZE_SPREADS
                 ),
                 default_full_penalty_ratio_delta=0.50,
             ),

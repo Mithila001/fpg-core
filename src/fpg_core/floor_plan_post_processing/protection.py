@@ -180,35 +180,6 @@ def candidate_protection(
                     or width * precision > height * maximum + tolerance
                 ):
                     return "aspect ratio"
-        elif key == "room_size_hierarchy":
-            by_id = {item.id: item for item in rooms}
-            ordered = [by_id[item.id] for item in spec.rooms if item.id in by_id]
-            anchor = next(
-                (
-                    item
-                    for room_type in settings.get(
-                        "anchor_room_types", (RoomType.LIVING_ROOM,)
-                    )
-                    for item in ordered
-                    if item.room_type == room_type
-                ),
-                None,
-            )
-            if anchor is not None:
-                precision = settings.get("precision", 1000)
-                for item in ordered:
-                    rule = settings.get("ratios_by_room_type", {}).get(item.room_type)
-                    if item.id == anchor.id or rule is None:
-                        continue
-                    minimum = round(rule.get("min_ratio", 0.0) * precision)
-                    maximum = round(rule.get("max_ratio", 1.0) * precision)
-                    if (
-                        after[item.id].area * precision + tolerance
-                        < after[anchor.id].area * minimum
-                        or after[item.id].area * precision
-                        > after[anchor.id].area * maximum + tolerance
-                    ):
-                        return "room size hierarchy"
         elif key == "boundary_placement":
             for rule in settings.get("rules", ()):
                 if room.room_type not in rule["room_types"]:

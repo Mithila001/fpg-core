@@ -194,8 +194,51 @@ metre in examples, but applications own unit conversion.
 
 Exposure settings must use `rules`; legacy settings and retired constraint keys are not supported. Replace saved profiles or development database configurations with the current seed configuration before running them. Historical snapshots are not migrated and may not be executable with current Core. Unknown constraint keys are rejected when the solver validates its registry.
 
-`room_size_hierarchy` is registered for custom configurations but is not enabled by
-the built-in profiles.
+### Room-size proportionality
+
+`room_size_relations` is a soft constraint. Its settings accept `precision`
+(integer 1..1000000, default 1000), `cross_type_rules` and `same_type_rules`.
+A cross-type rule contains distinct `RoomType` members `compared_type` and
+`reference_type`, at least one positive finite `min_ratio` or `max_ratio`, and
+optional integer `penalty_multiplier` (1..1000000, default 1). Ratios describe
+compared area divided by reference area. A same-type rule contains `room_type`,
+nonnegative finite `maximum_spread_ratio` and the same optional multiplier;
+its limit is largest area <= (1 + spread) times smallest area. Ratios are at
+most 1000000, rounded to the nearest precision unit; positive values that round
+to zero are rejected. Duplicate ordered type pairs and duplicate same-type rules
+are invalid. Unknown fields and the former `rules` format are rejected.
+
+For example:
+
+```python
+SoftConstraintUse("room_size_relations", weight=1.0, settings={
+    "precision": 1000,
+    "cross_type_rules": [{"compared_type": RoomType.KITCHEN,
+                          "reference_type": RoomType.LIVING_ROOM,
+                          "min_ratio": 0.4, "max_ratio": 0.8}],
+    "same_type_rules": [{"room_type": RoomType.BEDROOM,
+                         "maximum_spread_ratio": 0.25}],
+})
+```
+
+Each applicable cross-type rule covers every combination through extrema: the
+minimum bound compares the smallest compared area to the largest reference area;
+the maximum uses the opposite extrema. Same-type rules require two rooms.
+Absent types are skipped. Each bound's positive scaled violation is divided by
+the selected reference extreme's maximum area capacity, capped at 100 points,
+and rounded upward. The larger bound penalty represents a two-bound rule;
+applicable rules are averaged using their multipliers. The result is in the
+solver's 0?100 range; it never imposes a proportionality feasibility limit.
+Extrema are shared by room type, though more rules add model variables and may
+increase solve time. Oversized integer products are rejected.
+
+All three built-in profiles use the 12 existing maximum-ratio 1.0 ordering
+preferences and bedroom spread 0.25, with equal multipliers and overall weight
+1.0. Final scoring shares these defaults but evaluates independently; E03A is
+an independent analyzer and is not synchronized automatically. Saved Lab
+profiles with the old `rules` setting must be rewritten as `cross_type_rules`;
+remove any `room_size_hierarchy` entry. Profiles with empty settings pick up the
+new defaults automatically. Historical snapshots are not migrated.
 
 `bathroom_hallway_shared_wall` is a registered hard constraint enabled in the
 built-in profiles. Custom profiles must include its key explicitly. Settings:
@@ -325,7 +368,7 @@ weight. Hard constraints determine feasibility.
 | Constraint | Combined penalty in points |
 |---|---|
 | `room_relations` | Percentage of missed soft relationships. Each AND group passes if all targets qualify, and each OR group passes if any target qualifies. |
-| `room_size_relations` | For each applicable ratio bound, divide positive excess or shortfall by the reference area's maximum capacity, convert to points and cap at 100. Average the bounds using their optional relative rule multipliers. Upper bounds compare the largest compared room with the smallest reference room. Lower bounds reverse the extrema. |
+| `room_size_relations` | Worst applicable bound per proportionality rule, normalized to 0?100 and averaged by rule multiplier; see [room-size proportionality](#room-size-proportionality). |
 | `floor_cluster_position` | Divide the absolute side-margin difference by floor width and front setback by floor length. Average the resulting percentages using the enabled component multipliers. |
 | `dead_space` | Empty area inside the rooms' bounding rectangle as a percentage of that rectangle. |
 | `hallway_efficiency` | Average hallway area as a percentage of floor area and unshared hallway wall as a percentage of total hallway perimeter. Use `area_penalty_multiplier` (default 1) for area and 1 for wall. A zero area multiplier disables the area component. |

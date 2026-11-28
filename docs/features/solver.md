@@ -19,7 +19,7 @@ Every room supplied in `FloorPlanGenerationSpec.rooms` must be placed. The solve
 | `exterior_wall_exposure`, `living_room_front` | Configured exterior exposure and conditional living-room front exposure |
 | `front_wall_setback` | Relative maximum distance from the foremost room edge, independent of boundary exposure |
 
-`room_size_hierarchy` is registered for custom configurations but not enabled by the defaults. Hard constraints determine feasibility and may not be relaxed to improve the objective.
+Hard constraints determine feasibility and may not be relaxed to improve the objective. Room-size proportionality is a soft preference.
 
 The [solver contract](../feature_documentations/floor_plan_solver.md#authoring-a-soft-constraint) defines the 0?100 combined penalty and 0?10 weight. The soft objective combines weighted penalties: `room_relations`, `room_size_relations`, `floor_cluster_position`, `dead_space`, `hallway_efficiency`, `bathroom_depth`, `exterior_wall_exposure`, and (in refinement) `seed_stability`. Exterior exposure uses unobstructed paths from room walls toward the generation boundary, which need not coincide with the wall. A minimum-length requirement refers to one continuous segment. Only rooms block these paths; FULL_SPAN clearance, openings, and post-processing are separate concerns. Shared CP-SAT geometry allows room policies to compose exposure while keeping their settings configurable. `hallway_efficiency` measures perimeter minus shared walls, a different quantity.
 

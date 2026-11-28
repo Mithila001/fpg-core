@@ -1000,7 +1000,90 @@
         "soft_constraints": [
           {
             "key": "room_size_relations",
-            "settings": {},
+            "settings": {
+              "precision": 1000,
+              "cross_type_rules": [
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "bedroom",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "dining_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "kitchen",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "garage",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "bedroom",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "dining_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "kitchen",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "garage",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bedroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "kitchen",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                }
+              ],
+              "same_type_rules": [
+                {
+                  "room_type": "bedroom",
+                  "maximum_spread_ratio": 0.25,
+                  "penalty_multiplier": 1
+                }
+              ]
+            },
             "weight": 1.0
           },
           {
@@ -1358,7 +1441,90 @@
         "soft_constraints": [
           {
             "key": "room_size_relations",
-            "settings": {},
+            "settings": {
+              "precision": 1000,
+              "cross_type_rules": [
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "bedroom",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "dining_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "kitchen",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "garage",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "bedroom",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "dining_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "kitchen",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "garage",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bedroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "kitchen",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                }
+              ],
+              "same_type_rules": [
+                {
+                  "room_type": "bedroom",
+                  "maximum_spread_ratio": 0.25,
+                  "penalty_multiplier": 1
+                }
+              ]
+            },
             "weight": 1.0
           },
           {
@@ -1724,7 +1890,90 @@
         "soft_constraints": [
           {
             "key": "room_size_relations",
-            "settings": {},
+            "settings": {
+              "precision": 1000,
+              "cross_type_rules": [
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "bedroom",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "dining_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "kitchen",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bathroom",
+                  "reference_type": "garage",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "bedroom",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "dining_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "kitchen",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "attached_bathroom",
+                  "reference_type": "garage",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "bedroom",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                },
+                {
+                  "compared_type": "kitchen",
+                  "reference_type": "living_room",
+                  "max_ratio": 1.0,
+                  "penalty_multiplier": 1
+                }
+              ],
+              "same_type_rules": [
+                {
+                  "room_type": "bedroom",
+                  "maximum_spread_ratio": 0.25,
+                  "penalty_multiplier": 1
+                }
+              ]
+            },
             "weight": 1.0
           },
           {
