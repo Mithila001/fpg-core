@@ -14,21 +14,26 @@ from .types import EvaluatorCategory, EvaluatorKey
 
 DEFAULT_VALID_ZONES: Mapping[RoomType, tuple[tuple[int, int], ...]] = MappingProxyType(
     {
-        RoomType.VERANDA: ((1, 1), (2, 1), (3, 1)),
-        RoomType.GARAGE: ((1, 1), (3, 1)),
-        RoomType.KITCHEN: (
+        RoomType.BEDROOM: (
             (1, 1),
             (2, 1),
             (3, 1),
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (1, 3),
+            (2, 3),
+            (3, 3),
+        ),
+        RoomType.BATHROOM: (
             (1, 2),
             (3, 2),
             (1, 3),
             (2, 3),
             (3, 3),
         ),
-        RoomType.HALLWAY: (
+        RoomType.ATTACHED_BATHROOM: (
             (1, 2),
-            (2, 2),
             (3, 2),
             (1, 3),
             (2, 3),
@@ -42,15 +47,38 @@ DEFAULT_VALID_ZONES: Mapping[RoomType, tuple[tuple[int, int], ...]] = MappingPro
             (2, 2),
             (3, 2),
         ),
-        RoomType.BATHROOM: (
-            (1, 1),
-            (2, 1),
-            (3, 1),
+        RoomType.KITCHEN: (
             (1, 2),
+            (2, 2),
             (3, 2),
             (1, 3),
             (2, 3),
             (3, 3),
+        ),
+        RoomType.DINING_ROOM: (
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (1, 3),
+            (2, 3),
+            (3, 3),
+        ),
+        RoomType.HALLWAY: (
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (1, 3),
+            (2, 3),
+            (3, 3),
+        ),
+        RoomType.VERANDA: (
+            (1, 1),
+            (2, 1),
+            (3, 1),
+        ),
+        RoomType.GARAGE: (
+            (1, 1),
+            (3, 1),
         ),
     }
 )

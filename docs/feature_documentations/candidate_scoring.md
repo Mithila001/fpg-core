@@ -56,12 +56,15 @@ minimum_score=None, settings={})` selects a registered evaluator.
 
 | `DEFAULT_VALID_ZONES` room type | Exact 1-based `(x, y)` cells |
 |---|---|
+| `BEDROOM` | `(1,1)`, `(2,1)`, `(3,1)`, `(1,2)`, `(2,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
+| `BATHROOM` | `(1,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
+| `ATTACHED_BATHROOM` | `(1,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
+| `LIVING_ROOM` | `(1,1)`, `(2,1)`, `(3,1)`, `(1,2)`, `(2,2)`, `(3,2)` |
+| `KITCHEN` | `(1,2)`, `(2,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
+| `DINING_ROOM` | `(1,2)`, `(2,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
+| `HALLWAY` | `(1,2)`, `(2,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
 | `VERANDA` | `(1,1)`, `(2,1)`, `(3,1)` |
 | `GARAGE` | `(1,1)`, `(3,1)` |
-| `KITCHEN` | `(1,1)`, `(2,1)`, `(3,1)`, `(1,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
-| `HALLWAY` | `(1,2)`, `(2,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
-| `LIVING_ROOM` | `(1,1)`, `(2,1)`, `(3,1)`, `(1,2)`, `(2,2)`, `(3,2)` |
-| `BATHROOM` | `(1,1)`, `(2,1)`, `(3,1)`, `(1,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
 - `ExteriorClearanceRule` chooses room types, required qualifying room count,
   positive corridor width, and front/back/left/right direction.
 - `circulation_quality` settings default to efficiency weight 0.7, traffic separation
