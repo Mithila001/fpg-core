@@ -3,23 +3,25 @@ from .config import (
     DEFAULT_VALID_ZONES,
     EvaluatorRule,
     ExteriorClearanceRule,
-    RelationshipQualityConfig,
     ScoringConfig,
     ZoneSuitabilityConfig,
 )
 from .context import ScoringContext, ScoringContextFactory
 from .defaults import create_default_config, create_default_registry
 from .evaluators import (
+    CIRCULATION_QUALITY_KEY,
     EXTERIOR_CLEARANCE_KEY,
-    RELATIONSHIP_QUALITY_KEY,
+    FUNCTIONAL_GROUP_PURITY_KEY,
     SPATIAL_DISTRIBUTION_KEY,
     ZONE_SUITABILITY_KEY,
     CandidateEvaluator,
+    CirculationQualityEvaluator,
     ExteriorClearanceEvaluator,
-    RelationshipQualityEvaluator,
+    FunctionalGroupPurityEvaluator,
     SpatialDistributionEvaluator,
     ZoneSuitabilityEvaluator,
 )
+from .exceptions import EvaluatorExecutionError
 from .manager import CandidateScoreManager
 from .registry import EvaluatorRegistry
 from .types import (
@@ -35,9 +37,6 @@ from .types import (
     ExteriorClearanceRoomEvaluation,
     ExteriorClearanceRuleEvaluation,
     FindingSeverity,
-    RelationshipPathDetails,
-    RelationshipQualityDetails,
-    RelationshipRouteFailureDetails,
     ScoreFinding,
     ScoringResult,
     SpatialDistributionDetails,
@@ -54,10 +53,15 @@ __all__ = [
     "ClearanceCorridorBounds",
     "ClearanceCorridorDebug",
     "DEFAULT_VALID_ZONES",
+    "CIRCULATION_QUALITY_KEY",
+    "FUNCTIONAL_GROUP_PURITY_KEY",
+    "CirculationQualityEvaluator",
+    "FunctionalGroupPurityEvaluator",
     "EXTERIOR_CLEARANCE_KEY",
     "EvaluationStatus",
     "EvaluatorCategory",
     "EvaluatorExecutionResult",
+    "EvaluatorExecutionError",
     "EvaluatorKey",
     "EvaluatorRegistry",
     "EvaluatorResult",
@@ -68,12 +72,6 @@ __all__ = [
     "ExteriorClearanceRule",
     "ExteriorClearanceRuleEvaluation",
     "FindingSeverity",
-    "RELATIONSHIP_QUALITY_KEY",
-    "RelationshipPathDetails",
-    "RelationshipQualityConfig",
-    "RelationshipQualityDetails",
-    "RelationshipQualityEvaluator",
-    "RelationshipRouteFailureDetails",
     "SPATIAL_DISTRIBUTION_KEY",
     "ScoreFinding",
     "ScoringConfig",

@@ -14,5 +14,9 @@ class EvaluatorContractError(CandidateScoringError):
     """Raised when an evaluator violates the standard evaluator contract."""
 
 
+class EvaluatorExecutionError(CandidateScoringError):
+    """Raised when an evaluator fails to execute successfully."""
+
+
 class EvaluatorRegistrationError(CandidateScoringError):
     """Raised for duplicate or missing evaluator registrations."""

@@ -25,6 +25,9 @@ from .buildable_space import (
 from .candidate import CandidatePoint, HallwayRoomCountRange
 from .candidate_grid import CandidateMap, CandidateSearchSpace, ResolvedCandidateGrid
 from .circulation import (
+    CirculationPathDetails,
+    FinalCirculation,
+    RetainedHallwayTraffic,
     CirculationGrid,
     CirculationGridNode,
     CirculationRouteRule,
@@ -70,6 +73,9 @@ __all__ = [
     "CandidateMap",
     "CandidatePoint",
     "CandidateSearchSpace",
+    "CirculationPathDetails",
+    "FinalCirculation",
+    "RetainedHallwayTraffic",
     "CirculationGrid",
     "CirculationGridNode",
     "CirculationRouteRule",

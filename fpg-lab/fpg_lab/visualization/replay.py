@@ -238,3 +238,29 @@ def replay_map(
                 )
             )
     return result
+
+
+def add_group_overlay(figure, frame):
+    """Draw persisted group diagnostics without recalculating historical scores."""
+    scoring = (frame.get("candidate_scoring_data") or {})
+    result = next((r for r in scoring.get("evaluator_results", []) if r.get("evaluator_key") == "functional_group_purity"), None)
+    groups = ((result or {}).get("details") or {}).get("groups")
+    if groups is None:
+        figure.add_annotation(text="Group diagnostics unavailable for this trial", x=0.5, y=1, xref="paper", yref="paper", showarrow=False)
+        return
+    for group in groups:
+        members = group["members"]
+        figure.add_trace(go.Scatter(
+            x=[p["x"] for p in members], y=[p["y"] for p in members],
+            mode="markers", marker=dict(symbol="circle-open", size=22, color="#a78bfa"),
+            name=f"{group['name']} members", text=[p["room_id"] for p in members],
+            hovertemplate="%{text}<extra></extra>",
+        ))
+        hull = group["hull"]
+        if hull:
+            closed = [*hull, hull[0]]
+            figure.add_trace(go.Scatter(x=[p["x"] for p in closed], y=[p["y"] for p in closed], mode="lines", fill="toself", opacity=0.2, name=f"{group['name']} region"))
+        for edge in group["edges"]:
+            figure.add_trace(go.Scatter(x=[p["x"] for p in edge], y=[p["y"] for p in edge], mode="lines", line=dict(color="#a78bfa", dash="dash"), name=f"{group['name']} connection", showlegend=False))
+        for intrusion in group["intrusions"]:
+            figure.add_trace(go.Scatter(x=[intrusion["x"]], y=[intrusion["y"]], mode="markers", marker=dict(symbol="x" if intrusion["kind"] == "direct" else "diamond-open", size=18, color="#fb7185"), name=f"{intrusion['kind']} intrusion", text=f"Penalty {intrusion['penalty']}", hovertemplate="%{text}<extra></extra>"))

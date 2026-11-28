@@ -90,6 +90,11 @@ Ubuntu uses `.venv/bin/python` for the same commands. Lab owns its `.env` and lo
 `data/` directory. See [Lab's README](fpg-lab/README.md) for setup, resets, other
 experiments, and static checks.
 
+Keep temporary test databases, pytest directories, logs, and experiment exports
+outside the repository when possible. Remove disposable artifacts after checks;
+retain research results only when they are intentionally needed, in a designated
+local data location rather than alongside project source files.
+
 ## VS Code interpreters
 
 Open [fpg.code-workspace](fpg.code-workspace) with **File > Open Workspace from

@@ -82,11 +82,9 @@ def main() -> None:
             refine_candidate_circulation,
         )
         from fpg_core.candidate_scoring import (
-            RELATIONSHIP_QUALITY_KEY,
             CandidateScoringInput,
             EvaluatorCategory,
             EvaluatorRule,
-            RelationshipQualityConfig,
             create_default_config,
             create_default_registry,
             evaluate_candidate,
@@ -139,8 +137,6 @@ def main() -> None:
         CandidateScoringInput,
         EvaluatorCategory,
         EvaluatorRule,
-        RelationshipQualityConfig,
-        RELATIONSHIP_QUALITY_KEY,
         create_default_config,
         create_default_registry,
         evaluate_candidate,

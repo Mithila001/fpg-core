@@ -9,6 +9,9 @@ hallway traffic, removes unused hallway hints, and can conservatively consolidat
 nearby retained hallway hints. It does not generate a second grid and does not mutate
 the supplied `CandidateMap`.
 
+Final routes and retained hallway traffic are available in `result.final_circulation`
+in production and debug modes, after cleanup. Intermediate passes remain DEBUG only.
+
 ## Public API
 
 ```python
@@ -169,12 +172,13 @@ Production result:
 CandidateCirculationResult(
     candidate: CandidateMap,
     hallway_classifications: tuple[HallwayClassification, ...] = (),
+    final_circulation: FinalCirculation | None = None,
 )
 ```
 
 `result.candidate` preserves the original `ResolvedCandidateGrid` and removes hallway
 points classified as unused or safely consolidated. `hallway_classifications`
-contains the classifications for hallway hints retained in the production candidate.
+contains classifications for original hallway hints, including those removed during cleanup. `final_circulation.hallways` contains retained hallway traffic only.
 
 In `ExecutionMode.PRODUCTION`, `execution.details is None`.
 
@@ -289,7 +293,7 @@ Candidate Circulation has no separate warning collection. In `DEBUG`, `Candidate
 | `CandidateCirculationError` | exception | `constructor has no separately inspectable signature` | Base exception for candidate circulation failures. |
 | `CandidateCirculationInput` | dataclass/contract | `(candidate: 'CandidateMap', config: 'CandidateCirculationConfig') -> None` | Candidate map and reusable circulation policy. |
 | `CandidateCirculationInputError` | exception | `constructor has no separately inspectable signature` | Raised when the circulation input or configuration is invalid. |
-| `CandidateCirculationResult` | dataclass/contract | `(candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = ()) -> None` | Production result with cleaned candidate and retained hallway traffic tags. |
+| `CandidateCirculationResult` | dataclass/contract | `(candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = (), final_circulation: 'FinalCirculation | None' = None) -> None` | Production result with cleaned candidate and retained hallway traffic tags. |
 | `CirculationPathDetails` | dataclass/contract | `(rule_id: 'int', rule_name: 'str', traffic_class: 'CirculationTrafficClass', destination_selection: 'DestinationSelection', allowed_transit_room_types: 'tuple[RoomType, ...]', required_transit_room_types: 'tuple[RoomType, ...]', required_transit_point_keys: 'tuple[str, ...]', importance_weight: 'float', source_point_key: 'str', source_room_id: 'str', source_room_type: 'RoomType', destination_point_key: 'str', destination_room_id: 'str', destination_room_type: 'RoomType', nodes: 'tuple[CirculationGridNode, ...]', step_count: 'int', manhattan_step_count: 'int', detour_step_count: 'int', turn_count: 'int', manhattan_reference_cost: 'float', costs: 'RouteCostBreakdown', path_efficiency_score: 'float') -> None` | DEBUG data for one expanded and resolved route, including required-transit evidence. |
 | `CirculationTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'` | Architectural traffic carried by a configured route. |
 | `CirculationPathNotFoundError` | exception | `constructor has no separately inspectable signature` | Raised when a configured route cannot be resolved on the grid. |

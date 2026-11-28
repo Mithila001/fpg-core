@@ -8,14 +8,11 @@ from typing import NewType
 
 from ..domain import (
     CandidateMap,
-    CirculationGridNode,
-    CirculationTrafficClass,
-    DestinationSelection,
+    FinalCirculation,
     FloorPlanGenerationSpec,
     HallwayClassification,
     LandSide,
     RoomType,
-    RouteCostBreakdown,
 )
 
 EvaluatorKey = NewType("EvaluatorKey", str)
@@ -203,56 +200,6 @@ class ExteriorClearanceDetails:
 
 
 @dataclass(frozen=True, slots=True)
-class RelationshipPathDetails:
-    """DEBUG-only information for one resolved relationship route."""
-
-    rule_id: int
-    rule_name: str
-    traffic_class: CirculationTrafficClass
-    destination_selection: DestinationSelection
-    source_point_id: str
-    source_room_id: str
-    source_room_type: RoomType
-    destination_point_id: str
-    destination_room_id: str
-    destination_room_type: RoomType
-    nodes: tuple[CirculationGridNode, ...]
-    step_count: int
-    manhattan_step_count: int
-    detour_step_count: int
-    turn_count: int
-    manhattan_reference_cost: float
-    costs: RouteCostBreakdown
-    path_efficiency_score: float
-
-
-@dataclass(frozen=True, slots=True)
-class RelationshipRouteFailureDetails:
-    """DEBUG-only information for one relationship route that could not resolve."""
-
-    rule_id: int
-    rule_name: str
-    traffic_class: CirculationTrafficClass
-    source_point_id: str
-    source_room_id: str
-    destination_point_id: str | None
-    destination_room_id: str | None
-    message: str
-
-
-@dataclass(frozen=True, slots=True)
-class RelationshipQualityDetails:
-    """Single-pass relationship routing data collected in DEBUG mode."""
-
-    floor_width: float
-    floor_length: float
-    grid_node_count: int
-    path_efficiency_score: float
-    paths: tuple[RelationshipPathDetails, ...]
-    route_failures: tuple[RelationshipRouteFailureDetails, ...]
-
-
-@dataclass(frozen=True, slots=True)
 class EvaluatorResult:
     """Standard result returned by every concrete evaluator.
 
@@ -311,12 +258,15 @@ class CandidateScoringInput:
     specification: FloorPlanGenerationSpec
     candidate: CandidateMap
     hallway_classifications: tuple[HallwayClassification, ...] = ()
+    final_circulation: FinalCirculation | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.specification, FloorPlanGenerationSpec):
             raise TypeError("specification must be a FloorPlanGenerationSpec instance.")
         if not isinstance(self.candidate, CandidateMap):
             raise TypeError("candidate must be a CandidateMap instance.")
+        if self.final_circulation is not None and not isinstance(self.final_circulation, FinalCirculation):
+            raise TypeError("final_circulation must be a FinalCirculation instance.")
         classifications = tuple(self.hallway_classifications)
         if any(
             not isinstance(item, HallwayClassification)

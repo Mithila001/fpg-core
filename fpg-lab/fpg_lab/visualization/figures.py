@@ -284,7 +284,7 @@ def evaluator_histories(trials: Sequence[Mapping[str, Any]]) -> dict[str, go.Fig
                 best = score if best is None else max(best, score)
             scores.append(score)
             maxima.append(best)
-            details.append([status, evaluation.get("contribution")])
+            details.append([status, evaluation.get("contribution"), evaluation.get("configured_weight"), evaluation.get("normalized_weight")])
         xs = [trial["trial_no"] for trial in ordered]
         result.add_trace(
             go.Scatter(
@@ -295,7 +295,8 @@ def evaluator_histories(trials: Sequence[Mapping[str, Any]]) -> dict[str, go.Fig
                 connectgaps=False,
                 customdata=details,
                 hovertemplate="Trial %{x}<br>Score %{y:.2f}<br>Status %{customdata[0]}"
-                "<br>Contribution %{customdata[1]}<extra></extra>",
+                "<br>Contribution %{customdata[1]}<br>Configured weight %{customdata[2]}"
+                "<br>Normalized weight %{customdata[3]}<extra></extra>",
             )
         )
         result.add_trace(

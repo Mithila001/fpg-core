@@ -18,7 +18,8 @@ def paths(frame: Mapping[str, Any], *, before: bool) -> list[dict[str, Any]] | N
     if before:
         passes = details(frame).get("passes") or []
         return passes[-1].get("paths", []) if passes else None
-    return (document.get("lab_final_routing") or {}).get("paths")
+    final = ((document.get("result") or {}).get("final_circulation") or {})
+    return final.get("routes")
 
 
 def path_key(path: Mapping[str, Any]) -> tuple[int, str, str]:
@@ -29,10 +30,13 @@ def path_label(path: Mapping[str, Any], styles: Mapping[str, Mapping[str, str]])
     def label(room_id: str) -> str:
         return styles.get(room_id, {}).get("label", room_id)
 
+    costs = path["costs"]
+    effective = costs["movement_cost"] + costs["perimeter_bias_cost"] + costs["turn_cost"]
+    efficiency = min(100.0, 100.0 * path["manhattan_reference_cost"] / effective) if effective else 100.0
     return (
         f"{path['rule_name']} · {label(path['source_room_id'])} → "
         f"{label(path['destination_room_id'])} · {path['traffic_class']} · "
-        f"{path['path_efficiency_score']:.2f}/100"
+        f"{efficiency:.2f}/100"
     )
 
 
@@ -75,10 +79,10 @@ def add_overlay(
         (passes[-1].get("hallway_traffic") or []) if before and passes
         else diagnostic.get("final_hallway_traffic") or []
     )
-    final_routing = (frame.get("circulation_data") or {}).get("lab_final_routing") or {}
-    if not before and "hallway_traffic" in final_routing:
+    final_routing = ((frame.get("circulation_data") or {}).get("result") or {}).get("final_circulation") or {}
+    if not before and "hallways" in final_routing:
         traffic = [h for h in traffic if h.get("removed")] + [
-            dict(h, removed=False, removal_reason=None) for h in final_routing["hallway_traffic"]
+            dict(h, removed=False, removal_reason=None) for h in final_routing["hallways"]
         ]
     hallway_labels = {
         styles.get(h["room_id"], {}).get("label", h["room_id"]) for h in traffic

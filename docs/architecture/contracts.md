@@ -37,3 +37,6 @@ Candidate search returns a `CandidateMap` plus score/trial metadata inside its `
 - Keep Optuna, OR-Tools, Shapely, and other implementation details out of shared domain contracts unless intentionally public.
 - For an export change, run `python tools/generate_public_api_manifest.py` and commit the generated JSON; the check mode must then pass.
 - Consumer wiring, HTTP, persistence, progress transport, jobs, and deployment belong outside this package.
+
+`FinalCirculation` in the shared domain carries the final routes and retained hallway
+traffic from Candidate Circulation to Candidate Scoring in production and debug modes.

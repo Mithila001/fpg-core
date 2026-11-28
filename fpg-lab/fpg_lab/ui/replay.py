@@ -101,7 +101,7 @@ async def candidate_replay(
         ).classes("w-full")
         summary = ui.label().classes("text-sm")
     with context_area:
-        view = ui.toggle(["Hints", "Heatmap", "Circulation"], value="Hints").props("dense")
+        view = ui.toggle(["Hints", "Heatmap", "Circulation", "Groups"], value="Hints").props("dense")
         with ui.expansion(f"Rooms · {len(room_ids)} selected").classes("w-full") as rooms_panel:
             with ui.row().classes("w-full items-center gap-2"):
                 single = ui.switch("Select one", value=False).props("dense")
@@ -176,6 +176,7 @@ async def candidate_replay(
             f'label-value="Trial {frame["trial_no"]}" aria-valuetext="Trial {frame["trial_no"]}"'
         )
         is_circulation = view.value == "Circulation"
+        is_groups = view.value == "Groups"
         rooms_panel.set_visibility(not is_circulation)
         rooms_panel.set_text(f"Rooms · {len(room_ids)} selected")
         heatmap.set_visibility(view.value == "Heatmap")
@@ -183,7 +184,7 @@ async def candidate_replay(
         route_panel.set_visibility(is_circulation)
         source.set_visibility(not is_circulation)
         onion.set_enabled(not is_circulation and not heatmap_active)
-        cleaned = not before_cleanup.value if is_circulation else bool(source.value)
+        cleaned = not before_cleanup.value if is_circulation else True if is_groups else bool(source.value)
         if is_circulation and not frame.get("circulation_data"):
             cleaned = False
         counts = None
@@ -204,9 +205,11 @@ async def candidate_replay(
             previous_frames=0
             if is_circulation
             else max(0, min(int(onion.value or 0), len(all_frames) - 1)),
-            selected_rooms=None if is_circulation else room_ids,
+            selected_rooms=None if is_circulation or is_groups else room_ids,
             heatmap_counts=counts,
         )
+        if is_groups:
+            replay.add_group_overlay(canvas.figure, frame)
         route_panel.clear()
         available = circulation.paths(frame, before=bool(before_cleanup.value))
         if is_circulation:
@@ -223,13 +226,11 @@ async def candidate_replay(
                     "text-xs lab-muted"
                 )
                 if available is None:
-                    routing = (frame.get("circulation_data") or {}).get("lab_final_routing") or {}
                     ui.label(
-                        routing.get("error")
-                        or (
+
                             "No saved paths. Older runs can show Before cleanup; "
-                            "new debug runs record the after-cleanup diagnostic reroute."
-                        )
+                            "new runs record the final circulation routes."
+
                     ).classes("text-sm text-amber-300")
                 else:
                     visible_keys = {circulation.path_key(path) for path in available}
@@ -267,7 +268,7 @@ async def candidate_replay(
         with diagnostics:
             if is_circulation:
                 if not before_cleanup.value and available is not None:
-                    ui.label("After cleanup · Lab diagnostic reroute").classes("text-sm lab-muted")
+                    ui.label("After cleanup: final routes").classes("text-sm lab-muted")
                 selected = [p for p in available or [] if circulation.path_key(p) in selected_paths]
                 if selected:
                     with ui.expansion("Path scores and costs").classes("w-full"):
@@ -285,27 +286,37 @@ async def candidate_replay(
                                     for name, value in costs.items()
                                 )
                             ).classes("text-sm")
-                efficiency = (
-                    (frame.get("circulation_data") or {}).get("lab_final_routing") or {}
-                ).get("efficiency_score")
-                if before_cleanup.value and available:
-                    total_weight = sum(p["importance_weight"] for p in available)
-                    efficiency = (
-                        sum(p["path_efficiency_score"] * p["importance_weight"] for p in available)
-                        / total_weight
-                        if total_weight
-                        else None
-                    )
-                if efficiency is not None:
-                    ui.label(f"Circulation efficiency for this view: {efficiency:.2f}/100").classes(
-                        "text-sm"
-                    )
+                scoring_result = (frame.get("candidate_scoring_data") or {})
+                quality = next((r for r in scoring_result.get("evaluator_results", []) if r.get("evaluator_key") == "circulation_quality"), None)
+                if quality:
+                    detail = quality.get("details") or {}
+                    ui.label(f"Circulation quality: {display(quality.get('raw_score'))} / 100").classes("text-sm")
+                    ui.label(f"Efficiency: {display(detail.get('efficiency_score'))} ? Separation: {display(detail.get('separation_score'))}").classes("text-sm")
+                    for hallway in detail.get("hallways", []):
+                        ui.label(f"{hallway['point_key']}: public {hallway['public_weight']:.2f}, private {hallway['private_weight']:.2f}, mixing {hallway['mixing_ratio']:.2f}, penalty {hallway['penalty']:.2f}").classes("text-sm")
+                else:
+                    ui.label("Circulation scoring diagnostics unavailable for this trial.").classes("text-sm lab-muted")
+            if is_groups:
+                scoring_result = (frame.get("candidate_scoring_data") or {})
+                purity = next((r for r in scoring_result.get("evaluator_results", []) if r.get("evaluator_key") == "functional_group_purity"), None)
+                for group in ((purity or {}).get("details") or {}).get("groups", []):
+                    ui.label(f"{group['name']}: {group['score']:.2f} / 100").classes("text-sm")
+                    for intrusion in group["intrusions"]:
+                        ui.label(f"{intrusion['room_id']}: {intrusion['kind']} intrusion, penalty {intrusion['penalty']:.2f}").classes("text-sm")
             if frame.get("error_data"):
                 ui.label(
                     str(frame["error_data"].get("message", "Trial failed or was rejected"))
                 ).classes("text-amber-300")
                 json_panel("Trial error", frame["error_data"])
             if frame.get("candidate_scoring_data"):
+                for evaluation in frame["candidate_scoring_data"].get("evaluator_results", []):
+                    ui.label(
+                        f"{evaluation['evaluator_key']}: {evaluation['status']}; "
+                        f"raw {display(evaluation.get('raw_score'))}, "
+                        f"weight {display(evaluation.get('configured_weight'))}, "
+                        f"normalized {display(evaluation.get('normalized_weight'))}, "
+                        f"contribution {display(evaluation.get('contribution'))}"
+                    ).classes("text-sm")
                 json_panel("Evaluator details", frame["candidate_scoring_data"])
         previous.set_enabled(index > 0)
         following.set_enabled(index < len(sequence) - 1)

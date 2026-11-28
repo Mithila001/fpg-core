@@ -8,12 +8,18 @@ from ..domain import (
     ExecutionMetadata,
     ExecutionMode,
     FeatureExecution,
+    FinalCirculation,
     HallwayClassification,
     HallwayTrafficClass,
+    RetainedHallwayTraffic,
     RoomType,
     RouteCostBreakdown,
 )
-from .consolidation import HallwayConsolidationResult, consolidate_hallways
+from .consolidation import (
+    HallwayConsolidationResult,
+    _validated_without_keys,
+    consolidate_hallways,
+)
 from .contracts import (
     CandidateCirculationDetails,
     CandidateCirculationInput,
@@ -53,8 +59,8 @@ def refine_candidate_circulation(
     consolidation = consolidate_hallways(validated, unused_keys=unused_keys)
     if consolidation is None:
         consolidated_keys: set[str] = set()
-        final_validated = validated
-        final_pass = initial_final_pass
+        final_validated = _validated_without_keys(validated, unused_keys) if unused_keys else validated
+        final_pass = run_routing_passes(final_validated)[-1] if unused_keys else initial_final_pass
         cleaned_points = tuple(
             indexed.point
             for indexed in validated.indexed_points
@@ -74,6 +80,20 @@ def refine_candidate_circulation(
         candidate=CandidateMap(
             grid=validated.source.candidate.grid,
             points=cleaned_points,
+        ),
+        final_circulation=FinalCirculation(
+            routes=tuple(_path_details(final_validated, route) for route in final_pass.routes),
+            hallways=tuple(
+                RetainedHallwayTraffic(
+                    point_key=point.point_key, room_id=str(point.point.room_id),
+                    hint_index=point.point.hint_index, x=point.point.x, y=point.point.y,
+                    public_route_count=final_pass.hallway_traffic[point.point_key].public_route_count,
+                    private_route_count=final_pass.hallway_traffic[point.point_key].private_route_count,
+                    public_importance_weight=final_pass.hallway_traffic[point.point_key].public_importance_weight,
+                    private_importance_weight=final_pass.hallway_traffic[point.point_key].private_importance_weight,
+                    traffic_class=final_pass.hallway_classes[point.point_key],
+                ) for point in final_validated.indexed_points if point.point.room_type is RoomType.HALLWAY
+            ),
         ),
         hallway_classifications=_hallway_classifications(
             validated,

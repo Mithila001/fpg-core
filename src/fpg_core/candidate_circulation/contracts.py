@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from ..domain import (
     CandidateMap,
     CandidatePoint,
+    FinalCirculation,
     HallwayClassification,
     ResolvedCandidateGrid,
 )
@@ -45,12 +46,15 @@ class CandidateCirculationResult:
 
     candidate: CandidateMap
     hallway_classifications: tuple[HallwayClassification, ...] = ()
+    final_circulation: FinalCirculation | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.candidate, CandidateMap):
             raise TypeError("candidate must be a CandidateMap instance.")
 
         classifications = tuple(self.hallway_classifications)
+        if self.final_circulation is not None and not isinstance(self.final_circulation, FinalCirculation):
+            raise TypeError("final_circulation must be a FinalCirculation instance.")
         if any(
             not isinstance(item, HallwayClassification)
             for item in classifications

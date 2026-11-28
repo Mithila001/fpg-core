@@ -5,6 +5,7 @@ from dataclasses import replace
 from ..domain import ExecutionMode
 from .config import EvaluatorRule, ScoringConfig
 from .context import ScoringContext, ScoringContextFactory
+from .exceptions import EvaluatorExecutionError
 from .registry import EvaluatorRegistry
 from .types import (
     CandidateScoringInput,
@@ -126,25 +127,15 @@ class CandidateScoreManager:
             result = evaluator.evaluate(context, rule.settings)
             validate_evaluator_result(str(rule.key), result, mode=context.mode)
         except Exception as exc:
-            if self._config.raise_on_evaluator_error:
-                raise
+            raise EvaluatorExecutionError(
+                f"Evaluator '{rule.key}' failed: {exc}"
+            ) from exc
 
-            finding = ScoreFinding(
-                code="EVALUATOR_ERROR",
-                message=f"Evaluator '{rule.key}' failed: {exc}",
-                severity=FindingSeverity.ERROR,
-            )
-            return EvaluatorExecutionResult(
-                evaluator_key=rule.key,
-                category=rule.category,
-                status=EvaluationStatus.ERROR,
-                raw_score=None,
-                configured_weight=rule.weight,
-                normalized_weight=0.0,
-                contribution=0.0,
-                threshold=rule.minimum_score,
-                passed_threshold=False if rule.category is EvaluatorCategory.CRITICAL else None,
-                findings=(finding,),
+        if result.status is EvaluationStatus.ERROR:
+            message = "; ".join(finding.message for finding in result.findings)
+            raise EvaluatorExecutionError(
+                f"Evaluator '{rule.key}' returned an error"
+                + (f": {message}" if message else ".")
             )
 
         passed_threshold: bool | None = None
@@ -182,10 +173,6 @@ class CandidateScoreManager:
             execution
             for execution in executions
             if execution.status is EvaluationStatus.COMPLETED
-            or (
-                self._config.not_applicable_quality_contributes
-                and execution.status is EvaluationStatus.NOT_APPLICABLE
-            )
         ]
         total_weight = sum(item.configured_weight for item in eligible)
 

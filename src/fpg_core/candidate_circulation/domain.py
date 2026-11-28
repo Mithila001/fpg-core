@@ -5,11 +5,9 @@ from enum import StrEnum
 
 from ..domain import (
     CirculationGridNode,
+    CirculationPathDetails,
     CirculationTrafficClass,
-    DestinationSelection,
     HallwayTrafficClass,
-    RoomType,
-    RouteCostBreakdown,
 )
 
 # Compatibility names retained at the feature boundary.
@@ -31,34 +29,6 @@ class HallwayConsolidationDecision(StrEnum):
     KEPT_ROUTE_UNAVAILABLE = "kept_route_unavailable"
     KEPT_ROUTE_COVERAGE_CHANGED = "kept_route_coverage_changed"
     KEPT_ROUTE_COST_INCREASE = "kept_route_cost_increase"
-
-
-@dataclass(frozen=True, slots=True)
-class CirculationPathDetails:
-    """DEBUG data for one expanded and resolved route."""
-
-    rule_id: int
-    rule_name: str
-    traffic_class: CirculationTrafficClass
-    destination_selection: DestinationSelection
-    allowed_transit_room_types: tuple[RoomType, ...]
-    required_transit_room_types: tuple[RoomType, ...]
-    required_transit_point_keys: tuple[str, ...]
-    importance_weight: float
-    source_point_key: str
-    source_room_id: str
-    source_room_type: RoomType
-    destination_point_key: str
-    destination_room_id: str
-    destination_room_type: RoomType
-    nodes: tuple[CirculationGridNode, ...]
-    step_count: int
-    manhattan_step_count: int
-    detour_step_count: int
-    turn_count: int
-    manhattan_reference_cost: float
-    costs: RouteCostBreakdown
-    path_efficiency_score: float
 
 
 @dataclass(frozen=True, slots=True)

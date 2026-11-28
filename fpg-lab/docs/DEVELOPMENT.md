@@ -173,3 +173,12 @@ door dimensions, profile identities, saved plans and historical snapshots remain
 Secondary entrances are required at the existing configured exterior door width.
 No tables change and no reset is needed. Stop Lab and headless execution, back up
 the database and use the revision 8 commands above, reviewing the dry run first.
+
+## Revision 10 candidate scoring migration
+
+Stop Lab and back up the database. Run `python -m scripts.lab_db migrate --dry-run
+--json`, review conflicts, then run `python -m scripts.lab_db migrate --json` and
+`python -m scripts.lab_db profiles validate --all --json`. Revision 10 updates saved
+profiles to schema 7, removes candidate relationship quality and the old error and
+N/A flags, adds circulation quality and functional group purity, and sets candidate
+weights to 1.0. Other settings and historical experiment snapshots are preserved.

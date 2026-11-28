@@ -6,6 +6,14 @@
 
 ## Unreleased
 
+- Breaking: candidate scoring replaces relationship quality with circulation quality
+  and functional group purity, uses equal weights, and excludes not-applicable
+  evaluators. Pass the final circulation result into scoring. Migrate Lab profiles
+  to revision 10; historical snapshots are not recalculated.
+
+- Breaking: candidate evaluator errors now raise `EvaluatorExecutionError` instead
+  of being omitted from the score. Consumers must fail the pending search trial.
+
 - Breaking: non-empty opening-generation plans now require a full-width secondary
   entrance connected to the main entrance. Ensure an eligible kitchen or hallway
   has an exterior wall long enough for the configured width and clearances.

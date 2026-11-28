@@ -8,11 +8,14 @@ from .config import (
     ZoneSuitabilityConfig,
 )
 from .evaluators import (
+    CIRCULATION_QUALITY_KEY,
     EXTERIOR_CLEARANCE_KEY,
+    FUNCTIONAL_GROUP_PURITY_KEY,
     SPATIAL_DISTRIBUTION_KEY,
     ZONE_SUITABILITY_KEY,
+    CirculationQualityEvaluator,
     ExteriorClearanceEvaluator,
-    RelationshipQualityEvaluator,
+    FunctionalGroupPurityEvaluator,
     SpatialDistributionEvaluator,
     ZoneSuitabilityEvaluator,
 )
@@ -25,7 +28,8 @@ def create_default_registry() -> EvaluatorRegistry:
         (
             ZoneSuitabilityEvaluator(),
             ExteriorClearanceEvaluator(),
-            RelationshipQualityEvaluator(),
+            CirculationQualityEvaluator(),
+            FunctionalGroupPurityEvaluator(),
             SpatialDistributionEvaluator(),
         )
     )
@@ -42,14 +46,14 @@ def create_default_config(
             EvaluatorRule(
                 key=ZONE_SUITABILITY_KEY,
                 category=EvaluatorCategory.QUALITY,
-                weight=20.0,
+                weight=1.0,
                 order=10,
                 settings={"zone_config": zone_config},
             ),
             EvaluatorRule(
                 key=EXTERIOR_CLEARANCE_KEY,
                 category=EvaluatorCategory.QUALITY,
-                weight=20.0,
+                weight=1.0,
                 order=20,
                 settings={
                     "rules": (
@@ -74,10 +78,12 @@ def create_default_config(
                     )
                 },
             ),
+            EvaluatorRule(key=CIRCULATION_QUALITY_KEY, category=EvaluatorCategory.QUALITY, weight=1.0, order=30),
+            EvaluatorRule(key=FUNCTIONAL_GROUP_PURITY_KEY, category=EvaluatorCategory.QUALITY, weight=1.0, order=50),
             EvaluatorRule(
                 key=SPATIAL_DISTRIBUTION_KEY,
                 category=EvaluatorCategory.QUALITY,
-                weight=25.0,
+                weight=1.0,
                 order=40,
             ),
         )

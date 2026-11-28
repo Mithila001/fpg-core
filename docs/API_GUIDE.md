@@ -446,7 +446,7 @@ surfaces; consumers may catch the documented feature-root base class.
 
 | Feature | Public default/profile | Exact role and important values |
 |---|---|---|
-| Candidate Scoring | `create_default_config()` | enables zone suitability (weight 20/order 10), exterior clearance (20/20), spatial distribution (25/40); relationship quality is registered but not enabled |
+| Candidate Scoring | `create_default_config()` | enables zone suitability, exterior clearance, circulation quality, spatial distribution, and functional group purity, each with weight 1.0 |
 | Floor Plan Solver | `DEFAULT_PROFILES`; three named constants | `initial_generation`: 5 s, optional candidate hints; `refinement_a`: 2 s, required existing plan, position/size tolerance 10; `refinement_b`: 2 s, required existing plan, tolerances 5. All use coordinate scale 1, enforce `hallway_shared_wall` with a maximum shared wall of 12 project units, and enable the configurable bathroom hallway sharing rule (one unrestricted side plus 10 project units across other sides); all enabled soft constraints default to weight 1 and contribute one 0?100 penalty each |
 | Post-Processing | `INITIAL_GENERATION_PROFILE` | order: placeholder removal, grid snap, problem-driven wall extension, hallway merge, rectilinear simplification; tolerance `1e-6`, grid 1, rejects existing openings |
 | Openings | `DEFAULT_OPENING_CONFIG` / `DEFAULT_OPENING_PROFILE` | name `default_openings`; features `interior_doors`, `exterior_doors`, `windows`; mandatory main and secondary entrances and room access; room-specific window and interior door policies; connection limits; 10 s, one worker, seed 0 |
@@ -554,6 +554,9 @@ the previously documented version:
 | `FloorSpec` | dataclass/contract | `(width: float, length: float) -> None` | FloorSpec(width: float, length: float) |
 | `FloorWidthAlignment` | enum | `PARALLEL_TO_ENTRY_ROAD='parallel_to_entry_road'; PERPENDICULAR_TO_ENTRY_ROAD='perpendicular_to_entry_road'` | Documented in the corresponding feature/shared section. |
 | `GridRoutingCostProfile` | dataclass/contract | `(empty_node_cost: 'float', traversable_hint_node_cost: 'float', turn_cost: 'float', perimeter_bias_max_cost: 'float') -> None` | Costs shared by orthogonal grid-routing features. |
+| `FinalCirculation` | dataclass/contract | `(routes, hallways)` | Immutable final routes and retained hallway traffic. |
+| `CirculationPathDetails` | dataclass/contract | See [circulation feature](feature_documentations/candidate_circulation.md). | Route endpoints, path, traffic, weight and costs. |
+| `RetainedHallwayTraffic` | dataclass/contract | `(point_key, room_id, hint_index, x, y, public_route_count, private_route_count, public_importance_weight, private_importance_weight, traffic_class)` | Traffic for a retained hallway. |
 | `HallwayClassification` | dataclass/contract | `(room_id: 'RoomId', hint_index: 'int', traffic_class: 'HallwayTrafficClass') -> None` | Production-safe traffic classification for one hallway hint point. |
 | `HallwayRoomCountRange` | dataclass/contract | `(maximum: 'int', minimum: 'int' = 1) -> None` | Allowed number of distinct hallway rooms in one candidate trial. |
 | `HallwayTrafficClass` | enum | `PUBLIC='public'; PRIVATE='private'; MIXED='mixed'; UNCLASSIFIED='unclassified'; UNUSED='unused'` | Traffic role assigned to one hallway hint point. |
@@ -612,3 +615,8 @@ The canonical consumer documentation set is:
 - `docs/feature_documentations/<feature>.md` — one complete consumer document per public feature.
 
 Internal architecture and feature notes under `docs/architecture/` and `docs/features/` explain design and maintenance rationale. The consumer guide and per-feature documents own supported API contracts.
+
+Final circulation domain contracts: `CirculationPathDetails` records endpoint identities,
+route nodes, importance, traffic class, reference cost and cost breakdown;
+`RetainedHallwayTraffic` records retained point identity, classification and public
+and private traffic weights; `FinalCirculation` groups their immutable tuples.

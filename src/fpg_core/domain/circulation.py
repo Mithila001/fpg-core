@@ -261,3 +261,62 @@ class RouteCostBreakdown:
     turn_cost: float
     traffic_conflict_cost: float
     total_cost: float
+
+
+@dataclass(frozen=True, slots=True)
+class CirculationPathDetails:
+    """One expanded and resolved circulation route."""
+
+    rule_id: int
+    rule_name: str
+    traffic_class: CirculationTrafficClass
+    destination_selection: DestinationSelection
+    allowed_transit_room_types: tuple[RoomType, ...]
+    required_transit_room_types: tuple[RoomType, ...]
+    required_transit_point_keys: tuple[str, ...]
+    importance_weight: float
+    source_point_key: str
+    source_room_id: str
+    source_room_type: RoomType
+    destination_point_key: str
+    destination_room_id: str
+    destination_room_type: RoomType
+    nodes: tuple[CirculationGridNode, ...]
+    step_count: int
+    manhattan_step_count: int
+    detour_step_count: int
+    turn_count: int
+    manhattan_reference_cost: float
+    costs: RouteCostBreakdown
+    path_efficiency_score: float
+
+
+@dataclass(frozen=True, slots=True)
+class RetainedHallwayTraffic:
+    """Final traffic weights for a retained hallway point."""
+    point_key: str
+    room_id: str
+    hint_index: int
+    x: float
+    y: float
+    public_route_count: int
+    private_route_count: int
+    public_importance_weight: float
+    private_importance_weight: float
+    traffic_class: HallwayTrafficClass
+
+
+@dataclass(frozen=True, slots=True)
+class FinalCirculation:
+    """Routes and hallway traffic for the cleaned candidate."""
+    routes: tuple[CirculationPathDetails, ...]
+    hallways: tuple[RetainedHallwayTraffic, ...]
+
+    def __post_init__(self) -> None:
+        routes, hallways = tuple(self.routes), tuple(self.hallways)
+        if any(not isinstance(route, CirculationPathDetails) for route in routes):
+            raise TypeError("routes must contain CirculationPathDetails.")
+        if any(not isinstance(hallway, RetainedHallwayTraffic) for hallway in hallways):
+            raise TypeError("hallways must contain RetainedHallwayTraffic.")
+        object.__setattr__(self, "routes", routes)
+        object.__setattr__(self, "hallways", hallways)

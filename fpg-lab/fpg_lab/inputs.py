@@ -106,7 +106,7 @@ class SystemConfigurationCreate(StrictModel):
     name: Name
     description: Description | None = None
     configuration_data: SystemConfigurationDocument
-    schema_version: str = "6"
+    schema_version: str = "7"
 
 
 SystemConfigurationUpdate = SystemConfigurationCreate

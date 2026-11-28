@@ -7,8 +7,6 @@ from types import MappingProxyType
 from typing import Any
 
 from ..domain import (
-    CirculationRouteRule,
-    GridRoutingCostProfile,
     LandSide,
     RoomType,
 )
@@ -202,43 +200,6 @@ class ExteriorClearanceRule:
 
 
 @dataclass(frozen=True, slots=True)
-class RelationshipQualityConfig:
-    """Typed single-pass routing configuration for relationship scoring."""
-
-    costs: GridRoutingCostProfile
-    route_rules: tuple[CirculationRouteRule, ...]
-    always_traversable_room_types: tuple[RoomType, ...] = (RoomType.HALLWAY,)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.costs, GridRoutingCostProfile):
-            raise TypeError("costs must be a GridRoutingCostProfile instance.")
-
-        route_rules = tuple(self.route_rules)
-        if not route_rules:
-            raise ValueError("At least one relationship route rule is required.")
-        if any(not isinstance(rule, CirculationRouteRule) for rule in route_rules):
-            raise TypeError("Every route rule must be a CirculationRouteRule.")
-        rule_ids = [rule.id for rule in route_rules]
-        if len(rule_ids) != len(set(rule_ids)):
-            raise ValueError("Relationship route rule IDs must be unique.")
-
-        always_traversable = tuple(self.always_traversable_room_types)
-        if any(not isinstance(room_type, RoomType) for room_type in always_traversable):
-            raise TypeError(
-                "Every always_traversable_room_type must be a RoomType member."
-            )
-        if len(always_traversable) != len(set(always_traversable)):
-            raise ValueError("always_traversable_room_types must be unique.")
-
-        object.__setattr__(self, "route_rules", route_rules)
-        object.__setattr__(
-            self,
-            "always_traversable_room_types",
-            always_traversable,
-        )
-
-
-@dataclass(frozen=True, slots=True)
 class EvaluatorRule:
     """Manager-owned configuration for one registered evaluator."""
 
@@ -260,5 +221,3 @@ class ScoringConfig:
 
     evaluator_rules: tuple[EvaluatorRule, ...]
     fail_fast_on_critical_failure: bool = True
-    not_applicable_quality_contributes: bool = False
-    raise_on_evaluator_error: bool = False

@@ -1,9 +1,9 @@
 {
   "name": "research-default",
-  "description": "Lab schema 6 research starter profile for local fpg-core. Setbacks and room references are example policy, not regulatory guidance.",
-  "schema_version": "6",
+  "description": "Lab schema 7 research starter profile for local fpg-core. Setbacks and room references are example policy, not regulatory guidance.",
+  "schema_version": "7",
   "configuration_data": {
-    "schema_version": 6,
+    "schema_version": 7,
     "project_units_per_meter": 10,
     "buildable_space": {
       "active_profile": {
@@ -470,7 +470,7 @@
           "category": "quality",
           "enabled": true,
           "order": 10,
-          "weight": 20.0,
+          "weight": 1.0,
           "minimum_score": null,
           "key": "zone_suitability",
           "settings": {
@@ -628,7 +628,7 @@
           "category": "quality",
           "enabled": true,
           "order": 20,
-          "weight": 20.0,
+          "weight": 1.0,
           "minimum_score": null,
           "key": "exterior_clearance",
           "settings": {
@@ -665,7 +665,7 @@
           "category": "quality",
           "enabled": true,
           "order": 40,
-          "weight": 25.0,
+          "weight": 1.0,
           "minimum_score": null,
           "key": "spatial_distribution",
           "settings": {
@@ -678,54 +678,41 @@
         },
         {
           "category": "quality",
-          "enabled": false,
+          "enabled": true,
           "order": 30,
-          "weight": 25.0,
+          "weight": 1.0,
           "minimum_score": null,
-          "key": "relationship_quality",
+          "key": "circulation_quality",
           "settings": {
-            "costs": {
-              "empty_node_cost": 1.0,
-              "traversable_hint_node_cost": 0.5,
-              "turn_cost": 0.25,
-              "perimeter_bias_max_cost": 0.5,
-              "traffic_conflict_cost": 2.0
-            },
-            "route_rules": [
+            "efficiency_weight": 0.7,
+            "traffic_separation_weight": 0.3,
+            "single_hallway_penalty_multiplier": 0.5,
+            "multiple_hallway_penalty_multiplier": 1.0
+          }
+        },
+        {
+          "category": "quality",
+          "enabled": true,
+          "order": 50,
+          "weight": 1.0,
+          "minimum_score": null,
+          "key": "functional_group_purity",
+          "settings": {
+            "groups": [
               {
-                "id": 1,
-                "name": "Living to bedrooms",
-                "source_room_type": "living_room",
-                "destination_room_type": "bedroom",
-                "destination_selection": "all_matching",
-                "traffic_class": "private",
-                "allowed_transit_room_types": [
-                  "hallway"
-                ],
-                "importance_weight": 2.0
-              },
-              {
-                "id": 2,
-                "name": "Living to kitchen",
-                "source_room_type": "living_room",
-                "destination_room_type": "kitchen",
-                "destination_selection": "lowest_cost_match",
-                "traffic_class": "public",
-                "allowed_transit_room_types": [
-                  "hallway"
-                ],
-                "importance_weight": 1.0
+                "name": "bedrooms",
+                "room_types": [
+                  "bedroom"
+                ]
               }
             ],
-            "always_traversable_room_types": [
-              "hallway"
-            ]
+            "direct_interruption_penalty": 1.0,
+            "regional_intrusion_penalty": 0.5,
+            "connection_tolerance_grid_steps": 0.5
           }
         }
       ],
-      "fail_fast_on_critical_failure": true,
-      "not_applicable_quality_contributes": false,
-      "raise_on_evaluator_error": false
+      "fail_fast_on_critical_failure": true
     },
     "floor_plan_solver": {
       "initial": {
@@ -2068,7 +2055,9 @@
           "required": true,
           "validate_after": true,
           "processor_id": "grid_snap",
-          "config": {"grid_size": null}
+          "config": {
+            "grid_size": null
+          }
         },
         {
           "required": false,
@@ -2076,17 +2065,52 @@
           "processor_id": "wall_extension",
           "config": {
             "rules": [
-              {"room_type": "veranda", "max_distance": 40.0},
-              {"room_type": "living_room", "max_distance": 20.0},
-              {"room_type": "kitchen", "max_distance": 10.0},
-              {"room_type": "hallway", "max_distance": 2.0},
-              {"room_type": "bedroom", "max_distance": 10.0}
+              {
+                "room_type": "veranda",
+                "max_distance": 40.0
+              },
+              {
+                "room_type": "living_room",
+                "max_distance": 20.0
+              },
+              {
+                "room_type": "kitchen",
+                "max_distance": 10.0
+              },
+              {
+                "room_type": "hallway",
+                "max_distance": 2.0
+              },
+              {
+                "room_type": "bedroom",
+                "max_distance": 10.0
+              }
             ],
             "exterior_steps": [
-              {"direction": "left", "minimum_depth": 10, "minimum_segment_length": 10, "preferred_max_steps": 2},
-              {"direction": "right", "minimum_depth": 10, "minimum_segment_length": 10, "preferred_max_steps": 2},
-              {"direction": "back", "minimum_depth": 8, "minimum_segment_length": 8, "preferred_max_steps": 3},
-              {"direction": "front", "minimum_depth": 5, "minimum_segment_length": 5, "preferred_max_steps": 4}
+              {
+                "direction": "left",
+                "minimum_depth": 10,
+                "minimum_segment_length": 10,
+                "preferred_max_steps": 2
+              },
+              {
+                "direction": "right",
+                "minimum_depth": 10,
+                "minimum_segment_length": 10,
+                "preferred_max_steps": 2
+              },
+              {
+                "direction": "back",
+                "minimum_depth": 8,
+                "minimum_segment_length": 8,
+                "preferred_max_steps": 3
+              },
+              {
+                "direction": "front",
+                "minimum_depth": 5,
+                "minimum_segment_length": 5,
+                "preferred_max_steps": 4
+              }
             ],
             "max_recess_ratio": 1.0,
             "max_recess_levels": 1,
@@ -2149,10 +2173,34 @@
         "minimum_shared_wall": 10.0
       },
       "interior_doors": {
-        "default": {"door_width": 10.0, "preferred_clearance": 5.0, "minimum_clearance": 0.0, "minimum_shared_wall": 10.0, "placement_preference": "wall_end"},
+        "default": {
+          "door_width": 10.0,
+          "preferred_clearance": 5.0,
+          "minimum_clearance": 0.0,
+          "minimum_shared_wall": 10.0,
+          "placement_preference": "wall_end"
+        },
         "overrides": [
-          {"room_type": "bathroom", "policy": {"door_width": 8.0, "preferred_clearance": 2.0, "minimum_clearance": 0.0, "minimum_shared_wall": 8.0, "placement_preference": "center"}},
-          {"room_type": "attached_bathroom", "policy": {"door_width": 8.0, "preferred_clearance": 2.0, "minimum_clearance": 0.0, "minimum_shared_wall": 8.0, "placement_preference": "center"}}
+          {
+            "room_type": "bathroom",
+            "policy": {
+              "door_width": 8.0,
+              "preferred_clearance": 2.0,
+              "minimum_clearance": 0.0,
+              "minimum_shared_wall": 8.0,
+              "placement_preference": "center"
+            }
+          },
+          {
+            "room_type": "attached_bathroom",
+            "policy": {
+              "door_width": 8.0,
+              "preferred_clearance": 2.0,
+              "minimum_clearance": 0.0,
+              "minimum_shared_wall": 8.0,
+              "placement_preference": "center"
+            }
+          }
         ]
       },
       "policy": {
@@ -2273,18 +2321,78 @@
           "attached_bathroom"
         ],
         "window_policies": [
-          {"room_type": "bedroom", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
-          {"room_type": "living_room", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
-          {"room_type": "kitchen", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
-          {"room_type": "dining_room", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
-          {"room_type": "bathroom", "policy": {"width": 5.0, "target_count": 1, "preferred_clearance": 2.0, "minimum_clearance": 0.0}},
-          {"room_type": "attached_bathroom", "policy": {"width": 5.0, "target_count": 1, "preferred_clearance": 2.0, "minimum_clearance": 0.0}}
+          {
+            "room_type": "bedroom",
+            "policy": {
+              "width": 16.0,
+              "target_count": 1,
+              "preferred_clearance": 5.0,
+              "minimum_clearance": 0.0
+            }
+          },
+          {
+            "room_type": "living_room",
+            "policy": {
+              "width": 16.0,
+              "target_count": 1,
+              "preferred_clearance": 5.0,
+              "minimum_clearance": 0.0
+            }
+          },
+          {
+            "room_type": "kitchen",
+            "policy": {
+              "width": 16.0,
+              "target_count": 1,
+              "preferred_clearance": 5.0,
+              "minimum_clearance": 0.0
+            }
+          },
+          {
+            "room_type": "dining_room",
+            "policy": {
+              "width": 16.0,
+              "target_count": 1,
+              "preferred_clearance": 5.0,
+              "minimum_clearance": 0.0
+            }
+          },
+          {
+            "room_type": "bathroom",
+            "policy": {
+              "width": 5.0,
+              "target_count": 1,
+              "preferred_clearance": 2.0,
+              "minimum_clearance": 0.0
+            }
+          },
+          {
+            "room_type": "attached_bathroom",
+            "policy": {
+              "width": 5.0,
+              "target_count": 1,
+              "preferred_clearance": 2.0,
+              "minimum_clearance": 0.0
+            }
+          }
         ],
         "normal_connection_caps": [
-          {"room_type": "bedroom", "maximum": 1},
-          {"room_type": "kitchen", "maximum": 1},
-          {"room_type": "bathroom", "maximum": 1},
-          {"room_type": "attached_bathroom", "maximum": 1}
+          {
+            "room_type": "bedroom",
+            "maximum": 1
+          },
+          {
+            "room_type": "kitchen",
+            "maximum": 1
+          },
+          {
+            "room_type": "bathroom",
+            "maximum": 1
+          },
+          {
+            "room_type": "attached_bathroom",
+            "maximum": 1
+          }
         ],
         "prevent_duplicate_connections": true,
         "main_side_priority": [

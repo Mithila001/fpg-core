@@ -200,9 +200,6 @@ class P01FlowRunner:
                     self._finish_terminated(session, experiment)
                     return
                 if experiment.persist_trial_data and experiment.flow_type == "p01a":
-                    circulation_data["lab_final_routing"] = to_jsonable(
-                        adapter.final_circulation_routing(circulation)
-                    )
                     # Keep the specification paired with the cleaned candidate, including
                     # the hallway identities selected by circulation.
                     try:

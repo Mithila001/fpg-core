@@ -260,6 +260,8 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
         with runtime.database.session_factory() as session:
             config = session.get(SystemConfiguration, 42)
             old = deepcopy(config.configuration_data)
+            old["schema_version"] = 6
+            config.schema_version = "6"
             old["preprocessing"]["hallway_min_width"] = 8
             old["openings"]["dimensions"]["door_width"] = 8
             old["experiments"]["p01c"] = {"floor_plan_generation_score_threshold": 80}
@@ -285,14 +287,22 @@ def test_saved_profile_migration_preserves_run_snapshot(tmp_path):
             session.add(experiment)
             session.commit()
             config_id, experiment_id = config.id, experiment.id
+        with runtime.database.engine.begin() as connection:
+            connection.exec_driver_sql("PRAGMA user_version = 9")
         with pytest.raises(ValueError, match="lab_db.* migrate"):
             runtime.start()
         assert migrate(runtime.database)["applied"]
         runtime.start()
         with runtime.database.session_factory() as session:
             migrated = session.get(SystemConfiguration, config_id)
-            assert migrated.configuration_data["preprocessing"]["hallway_min_width"] == 10
-            assert migrated.configuration_data["openings"]["dimensions"]["door_width"] == 10
+            assert migrated.configuration_data["preprocessing"]["hallway_min_width"] == 8
+            assert migrated.configuration_data["openings"]["dimensions"]["door_width"] == 8
+            scoring = migrated.configuration_data["candidate_scoring"]
+            assert {item["key"] for item in scoring["evaluator_rules"]} == {
+                "zone_suitability", "exterior_clearance", "circulation_quality",
+                "spatial_distribution", "functional_group_purity",
+            }
+            assert all(item["weight"] == 1.0 for item in scoring["evaluator_rules"])
             assert "p01c" not in migrated.configuration_data["experiments"]
             assert migrated.config_hash != "old"
             assert session.get(P01Experiment, experiment_id).system_configuration_snapshot == old

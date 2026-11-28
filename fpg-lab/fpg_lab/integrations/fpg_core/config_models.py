@@ -216,16 +216,29 @@ class ExteriorClearanceSettingsDocument(StrictModel):
     rules: list[ExteriorClearanceRuleDocument] = Field(min_length=1)
 
 
-class RelationshipQualitySettingsDocument(StrictModel):
-    costs: RoutingCostDocument
-    route_rules: list[RouteRuleDocument] = Field(min_length=1)
-    always_traversable_room_types: list[RoomTypeValue] = Field(default_factory=lambda: ["hallway"])
+class CirculationQualitySettingsDocument(StrictModel):
+    efficiency_weight: float = Field(default=0.7, ge=0, allow_inf_nan=False)
+    traffic_separation_weight: float = Field(default=0.3, ge=0, allow_inf_nan=False)
+    single_hallway_penalty_multiplier: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    multiple_hallway_penalty_multiplier: float = Field(default=1.0, ge=0, le=1, allow_inf_nan=False)
 
     @model_validator(mode="after")
-    def validate_required_transit(self) -> RelationshipQualitySettingsDocument:
-        if any(rule.required_transit_room_types for rule in self.route_rules):
-            raise ValueError("relationship quality does not support required transit room types")
+    def validate_weights(self):
+        if self.efficiency_weight + self.traffic_separation_weight <= 0:
+            raise ValueError("circulation weights must have a positive sum")
         return self
+
+
+class FunctionalGroupDocument(StrictModel):
+    name: str = Field(min_length=1)
+    room_types: list[RoomTypeValue] = Field(min_length=1)
+
+
+class FunctionalGroupPuritySettingsDocument(StrictModel):
+    groups: list[FunctionalGroupDocument] = Field(default_factory=lambda: [FunctionalGroupDocument(name="bedrooms", room_types=["bedroom"])])
+    direct_interruption_penalty: float = Field(default=1.0, ge=0, allow_inf_nan=False)
+    regional_intrusion_penalty: float = Field(default=0.5, ge=0, allow_inf_nan=False)
+    connection_tolerance_grid_steps: float = Field(default=0.5, ge=0, allow_inf_nan=False)
 
 
 class SpatialDistributionSettingsDocument(StrictModel):
@@ -260,9 +273,14 @@ class ExteriorClearanceEvaluatorDocument(CandidateEvaluatorBaseDocument):
     settings: ExteriorClearanceSettingsDocument
 
 
-class RelationshipQualityEvaluatorDocument(CandidateEvaluatorBaseDocument):
-    key: Literal["relationship_quality"]
-    settings: RelationshipQualitySettingsDocument
+class CirculationQualityEvaluatorDocument(CandidateEvaluatorBaseDocument):
+    key: Literal["circulation_quality"]
+    settings: CirculationQualitySettingsDocument
+
+
+class FunctionalGroupPurityEvaluatorDocument(CandidateEvaluatorBaseDocument):
+    key: Literal["functional_group_purity"]
+    settings: FunctionalGroupPuritySettingsDocument
 
 
 class SpatialDistributionEvaluatorDocument(CandidateEvaluatorBaseDocument):
@@ -273,7 +291,8 @@ class SpatialDistributionEvaluatorDocument(CandidateEvaluatorBaseDocument):
 CandidateEvaluatorDocument = Annotated[
     ZoneSuitabilityEvaluatorDocument
     | ExteriorClearanceEvaluatorDocument
-    | RelationshipQualityEvaluatorDocument
+    | CirculationQualityEvaluatorDocument
+    | FunctionalGroupPurityEvaluatorDocument
     | SpatialDistributionEvaluatorDocument,
     Field(discriminator="key"),
 ]
@@ -282,8 +301,6 @@ CandidateEvaluatorDocument = Annotated[
 class CandidateScoringDocument(StrictModel):
     evaluator_rules: list[CandidateEvaluatorDocument] = Field(min_length=1)
     fail_fast_on_critical_failure: bool = True
-    not_applicable_quality_contributes: bool = False
-    raise_on_evaluator_error: bool = False
 
     @model_validator(mode="after")
     def unique_rules(self) -> CandidateScoringDocument:
@@ -640,7 +657,7 @@ class ExperimentsDocument(StrictModel):
 
 
 class SystemConfigurationDocument(StrictModel):
-    schema_version: Literal[6] = 6
+    schema_version: Literal[7] = 7
     project_units_per_meter: int = Field(gt=0)
     buildable_space: BuildableSpaceDocument | None = None
     preprocessing: PreprocessingDocument | None = None

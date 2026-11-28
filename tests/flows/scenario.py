@@ -7,10 +7,6 @@ from fpg_core.candidate_circulation import (
     RoutingCostProfile,
 )
 from fpg_core.candidate_scoring import (
-    RELATIONSHIP_QUALITY_KEY,
-    EvaluatorCategory,
-    EvaluatorRule,
-    RelationshipQualityConfig,
     ScoringConfig,
 )
 from fpg_core.candidate_scoring import (
@@ -23,7 +19,6 @@ from fpg_core.domain import (
     CirculationTrafficClass,
     ConstraintStrength,
     DestinationSelection,
-    GridRoutingCostProfile,
     LandSide,
     MatchPolicy,
     Point,
@@ -308,32 +303,7 @@ def build_candidate_circulation_config() -> CandidateCirculationConfig:
     )
 
 def build_candidate_scoring_config() -> ScoringConfig:
-    base = create_default_candidate_scoring_config()
-    relationship_config = RelationshipQualityConfig(
-        costs=GridRoutingCostProfile(
-            empty_node_cost=1.0,
-            traversable_hint_node_cost=0.35,
-            turn_cost=0.25,
-            perimeter_bias_max_cost=0.40,
-        ),
-        route_rules=build_route_rules(),
-        always_traversable_room_types=(RoomType.HALLWAY,),
-    )
-    return ScoringConfig(
-        evaluator_rules=base.evaluator_rules
-        + (
-            EvaluatorRule(
-                key=RELATIONSHIP_QUALITY_KEY,
-                category=EvaluatorCategory.QUALITY,
-                weight=35.0,
-                order=30,
-                settings={"routing_config": relationship_config},
-            ),
-        ),
-        fail_fast_on_critical_failure=base.fail_fast_on_critical_failure,
-        not_applicable_quality_contributes=base.not_applicable_quality_contributes,
-        raise_on_evaluator_error=base.raise_on_evaluator_error,
-    )
+    return create_default_candidate_scoring_config()
 
 def build_candidate_search_config() -> CandidateSearchConfig:
     return CandidateSearchConfig(

@@ -30,7 +30,7 @@ Scoring uses [geometry analysis](../feature_documentations/geometry_analysis.md)
 ## Crucial hand-offs
 
 - `BuildableLandResult.normalized_land` supplies the road orientation needed by usable-land search; `buildable_land` supplies the allowed polygon.
-- Preprocessing creates the *one* exact `ResolvedCandidateGrid`. Search, circulation, and relationship scoring must use it, not reconstruct their own coordinate grid.
+- Preprocessing creates the *one* exact `ResolvedCandidateGrid`. Search, circulation, and group purity scoring must use it, not reconstruct their own coordinate grid.
 - Candidate Search owns trial generation, **not** the scoring logic. Its evaluator callback is supplied by the caller; a consumer can call circulation and candidate scoring **inside every trial**.
 - Search returns its selected **raw** hint map. Selected-candidate circulation and scoring run again to recover the cleaned map/diagnostics. Use `generation_spec_for_candidate()` on that cleaned map before the solver: the preprocessing template contains every *potential* hallway, not only those actually used.
 - The solver cannot delete supplied rooms. Hallway-count reduction occurs before solving; compatible hallway geometries can be merged later during post-processing.
@@ -45,3 +45,6 @@ Single-storey, 2D, residential rooms and convex parcels are the current targets.
 ## Consumer policy consistency
 
 A hard preprocessing room relation must be realizable under the consumer's opening policy. For example, a required kitchen/dining adjacency needs a compatible allowed opening pair if the consumer expects a connecting door. Keep these application-owned policies aligned; generation success does not replace final geometry and accessibility checks.
+
+Candidate Circulation supplies its cleaned candidate and final circulation routes and
+retained hallway traffic to Candidate Scoring. Scoring does not reroute.

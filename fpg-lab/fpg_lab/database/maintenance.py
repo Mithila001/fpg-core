@@ -26,7 +26,7 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 9
+REVISION = 10
 # Revision 6 enables living room and bedroom quality scoring; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 PREVIOUS_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
@@ -482,6 +482,16 @@ def _migration(connection, session, report, *, dry_run):
                     data = _upgrade_interior_doors(data)
                 if revision < 9:
                     data = _upgrade_opening_quality(data)
+                if revision < 10:
+                    scoring = data["candidate_scoring"]
+                    scoring["evaluator_rules"] = [rule for rule in scoring["evaluator_rules"] if rule["key"] != "relationship_quality"]
+                    for rule in scoring["evaluator_rules"]:
+                        rule["weight"] = 1.0
+                    existing = {rule["key"] for rule in scoring["evaluator_rules"]}
+                    scoring["evaluator_rules"].extend(deepcopy(rule) for rule in baseline.payload["candidate_scoring"]["evaluator_rules"] if rule["key"] in {"circulation_quality", "functional_group_purity"} and rule["key"] not in existing)
+                    scoring.pop("raise_on_evaluator_error", None)
+                    scoring.pop("not_applicable_quality_contributes", None)
+                    data["schema_version"] = 7
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):

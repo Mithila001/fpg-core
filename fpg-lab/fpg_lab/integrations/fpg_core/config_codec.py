@@ -91,8 +91,8 @@ class CoreConfigCodec:
     def _validate(self, payload, required, *, full=False, flow=None):
         if not isinstance(payload, Mapping):
             raise CoreConfigurationError("configuration_data must be a JSON object")
-        if type(payload.get("schema_version")) is not int or payload["schema_version"] != 6:
-            raise CoreConfigurationError("schema_version: expected Lab configuration version 6")
+        if type(payload.get("schema_version")) is not int or payload["schema_version"] != 7:
+            raise CoreConfigurationError("schema_version: expected Lab configuration version 7")
         missing = [name for name in required if payload.get(name) is None]
         if missing:
             raise CoreConfigurationError(f"Missing configuration sections: {', '.join(missing)}")
@@ -385,11 +385,10 @@ class CoreConfigCodec:
             EvaluatorKey,
             EvaluatorRule,
             ExteriorClearanceRule,
-            RelationshipQualityConfig,
             ScoringConfig,
             ZoneSuitabilityConfig,
         )
-        from fpg_core.domain import GridRoutingCostProfile, LandSide, RoomType
+        from fpg_core.domain import LandSide, RoomType
 
         rules = []
         for item in source.evaluator_rules:
@@ -416,17 +415,6 @@ class CoreConfigCodec:
                         for rule in item.settings.rules
                     )
                 }
-            elif item.key == "relationship_quality":
-                costs = item.settings.costs.model_dump(exclude={"traffic_conflict_cost"})
-                settings = {
-                    "routing_config": RelationshipQualityConfig(
-                        costs=GridRoutingCostProfile(**costs),
-                        route_rules=cls._route_rules(item.settings.route_rules),
-                        always_traversable_room_types=tuple(
-                            RoomType(v) for v in item.settings.always_traversable_room_types
-                        ),
-                    )
-                }
             else:
                 settings = item.settings.model_dump()
             rules.append(
@@ -443,8 +431,6 @@ class CoreConfigCodec:
         config = ScoringConfig(
             evaluator_rules=tuple(rules),
             fail_fast_on_critical_failure=source.fail_fast_on_critical_failure,
-            not_applicable_quality_contributes=source.not_applicable_quality_contributes,
-            raise_on_evaluator_error=source.raise_on_evaluator_error,
         )
         return config
 
@@ -590,9 +576,9 @@ class CoreConfigCodec:
             GeometryConfig,
             InteriorDoorConfig,
             InteriorDoorPolicy,
-            WindowPolicy,
             ObjectiveConfig,
             SolverConfig,
+            WindowPolicy,
         )
 
         policy = source.policy

@@ -6,7 +6,7 @@
 
 Scores a candidate hint map on a 0..100 scale using independently configurable
 critical and quality evaluators. Built-ins cover relative zone suitability, exterior
-clearance, route relationship quality, and spatial distribution. Use it to rank
+clearance, spatial distribution, circulation quality, and functional group purity. Use it to rank
 candidate points before room geometry exists.
 
 ## Public API
@@ -47,9 +47,9 @@ minimum_score=None, settings={})` selects a registered evaluator.
 - `ScoringConfig.evaluator_rules` must be non-empty and unique. Enabled quality rules
   need positive weights; critical rules need a 0..100 `minimum_score`.
 - `fail_fast_on_critical_failure=True` skips later evaluation after a failed critical
-  threshold. `not_applicable_quality_contributes=False` excludes N/A weight rather
-  than treating it as full credit. `raise_on_evaluator_error=False` converts
-  unexpected evaluator failures to structured error results; `True` propagates them.
+  threshold. Not-applicable quality evaluators are excluded and remaining weights
+  normalized. Evaluator exceptions and explicit error results raise
+  `EvaluatorExecutionError`.
 - `ZoneSuitabilityConfig(zone_count_per_axis=3, falloff_multiplier=1.5,
   valid_zones=DEFAULT_VALID_ZONES)` uses 1-based cells; a larger falloff multiplier
   penalizes distance from preferred cells faster.
@@ -64,8 +64,21 @@ minimum_score=None, settings={})` selects a registered evaluator.
 | `BATHROOM` | `(1,1)`, `(2,1)`, `(3,1)`, `(1,2)`, `(3,2)`, `(1,3)`, `(2,3)`, `(3,3)` |
 - `ExteriorClearanceRule` chooses room types, required qualifying room count,
   positive corridor width, and front/back/left/right direction.
-- `RelationshipQualityConfig` uses shared routing costs/rules and defaults hallways as
-  always traversable.
+- `circulation_quality` settings default to efficiency weight 0.7, traffic separation
+  weight 0.3, single hallway penalty multiplier 0.5 and multiple hallway multiplier 1.0.
+  Weights are nonnegative with positive sum and multipliers range from 0 to 1.
+  Efficiency is the importance-weighted mean of clamped 100 ? Manhattan reference
+  cost divided by movement, perimeter and turn costs; traffic conflict cost is excluded.
+  Separation weights each retained hallway's mixing ratio `2 * min(public, private) /
+  (public + private)` by its total traffic. A hallway-free factor is not applicable.
+- `functional_group_purity` defaults to one bedrooms group, direct penalty 1.0,
+  regional penalty 0.5, and connection tolerance 0.5 grid steps. Each group with at
+  least two non-hallway points uses deterministic MST connections and a convex hull
+  for non-collinear groups. Each foreign non-hallway point incurs its highest
+  applicable penalty once; group score is `clamp(100 * (1 - penalty / members))`.
+  Group scores are averaged. Distant members are not penalized merely for distance.
+  Convex hulls may include acceptable spaces in irregular groups; this is an
+  experimental baseline.
 - Spatial-distribution settings are passed in the evaluator rule mapping. Defaults are
   `nnd_weight=0.4`, `coverage_weight=0.6`, `nnd_cv_sensitivity=8`,
   `sample_count_per_axis=20`, and `gap_zero_score_ratio=1.5`; both weights must be
@@ -74,7 +87,7 @@ minimum_score=None, settings={})` selects a registered evaluator.
 ## Recommended values
 
 Start with `create_default_config()` and `create_default_registry()`. It uses weights
-20/20/25 for zone/clearance/distribution and 20-unit clearance rules; these are
+1.0 for each of the five evaluators and 20-unit clearance rules; these are
 package baselines, not universal architectural standards. Use DEBUG metrics to
 calibrate project-specific zones and weights.
 
@@ -113,10 +126,9 @@ if result.passed_critical_checks:
 
 ## Important behavioral notes
 
-The default config does not enable relationship quality, although its evaluator is in
-the default registry. Candidate scoring returns `ScoringResult` directly, not a
-`FeatureExecution`. Zone and distribution grids are scoring overlays; relationship
-routing alone uses `candidate.grid`.
+Pass `final_circulation` from the circulation result into `CandidateScoringInput`
+for circulation scoring; without it that evaluator is not applicable. Candidate
+scoring returns `ScoringResult` directly, not a `FeatureExecution`.
 
 
 ## Warnings / diagnostics
@@ -131,13 +143,18 @@ Candidate Scoring communicates non-fatal observations through structured `ScoreF
 |---|---|---|---|
 | `CandidateEvaluator` | class/interface/registry | `()` | Contract implemented by every candidate-scoring evaluator. |
 | `CandidateScoreManager` | class/interface/registry | `(registry: 'EvaluatorRegistry', config: 'ScoringConfig', context_factory: 'ScoringContextFactory \| None' = None) -> 'None'` | Runs configured evaluator stages and calculates the final score. |
-| `CandidateScoringInput` | dataclass/contract | `(specification: 'FloorPlanGenerationSpec', candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = ()) -> None` | One generation specification, candidate, and optional hallway tags. |
+| `CandidateScoringInput` | dataclass/contract | `(specification: 'FloorPlanGenerationSpec', candidate: 'CandidateMap', hallway_classifications: 'tuple[HallwayClassification, ...]' = (), final_circulation: 'FinalCirculation | None' = None) -> None` | One generation specification, candidate, and optional hallway tags. |
 | `ClearanceCorridorBounds` | dataclass/contract | `(min_x: 'float', min_y: 'float', max_x: 'float', max_y: 'float') -> None` | Axis-aligned no-hint-point corridor bounds in project units. |
 | `ClearanceCorridorDebug` | dataclass/contract | `(rule_index: 'int', point_id: 'str', source_room_id: 'str', room_name: 'str', room_type: 'RoomType', hint_x: 'float', hint_y: 'float', direction: 'LandSide', bounds: 'ClearanceCorridorBounds', blocker_point_ids: 'tuple[str, ...]', blocker_room_ids: 'tuple[str, ...]', is_clear: 'bool', selected_for_score: 'bool') -> None` | Point-level exterior-clearance geometry collected in DEBUG mode. |
 | `DEFAULT_VALID_ZONES` | constant/type alias | `mappingproxy instance` | Documented in the corresponding feature/shared section. |
+| `CIRCULATION_QUALITY_KEY` | constant/type alias | `'circulation_quality'` | Final circulation evaluator key. |
+| `FUNCTIONAL_GROUP_PURITY_KEY` | constant/type alias | `'functional_group_purity'` | Group purity evaluator key. |
+| `CirculationQualityEvaluator` | class/interface/registry | `()` | Scores final routes and traffic separation. |
+| `FunctionalGroupPurityEvaluator` | class/interface/registry | `()` | Scores functional group purity. |
 | `EXTERIOR_CLEARANCE_KEY` | constant/type alias | `'exterior_clearance'` | Documented in the corresponding feature/shared section. |
 | `EvaluationStatus` | enum | `COMPLETED='completed'; NOT_APPLICABLE='not_applicable'; SKIPPED='skipped'; ERROR='error'` | Execution state of one evaluator. |
 | `EvaluatorCategory` | enum | `CRITICAL='critical'; QUALITY='quality'` | Determines how an evaluator participates in the scoring pipeline. |
+| `EvaluatorExecutionError` | exception | `constructor has no separately inspectable signature` | Raised when an evaluator fails to execute successfully. |
 | `EvaluatorExecutionResult` | dataclass/contract | `(evaluator_key: 'EvaluatorKey', category: 'EvaluatorCategory', status: 'EvaluationStatus', raw_score: 'float \| None', configured_weight: 'float', normalized_weight: 'float', contribution: 'float', threshold: 'float \| None' = None, passed_threshold: 'bool \| None' = None, findings: 'tuple[ScoreFinding, ...]' = (), metrics: 'Mapping[str, float]' = <factory>, details: 'object \| None' = None) -> None` | Manager-owned view of one evaluator's execution and contribution. |
 | `EvaluatorKey` | constant/type alias | `NewType instance` | NewType creates simple unique types with almost zero runtime overhead. |
 | `EvaluatorRegistry` | class/interface/registry | `(evaluators: 'Iterable[CandidateEvaluator]' = ()) -> 'None'` | Maps stable evaluator keys to evaluator implementations. |
@@ -149,15 +166,9 @@ Candidate Scoring communicates non-fatal observations through structured `ScoreF
 | `ExteriorClearanceRule` | dataclass/contract | `(room_types: 'tuple[RoomType, ...]', required_clear_room_count: 'int', clearance_width: 'float', direction: 'LandSide') -> None` | One global-direction clearance requirement for selected room types. |
 | `ExteriorClearanceRuleEvaluation` | dataclass/contract | `(rule_index: 'int', room_types: 'tuple[RoomType, ...]', required_clear_room_count: 'int', clearance_width: 'float', direction: 'LandSide', applicable: 'bool', eligible_room_count: 'int', clear_room_count: 'int', score: 'float \| None', room_evaluations: 'tuple[ExteriorClearanceRoomEvaluation, ...]') -> None` | Detailed score calculation for one configured clearance rule. |
 | `FindingSeverity` | enum | `INFO='info'; WARNING='warning'; ERROR='error'` | Documented in the corresponding feature/shared section. |
-| `RELATIONSHIP_QUALITY_KEY` | constant/type alias | `'relationship_quality'` | Documented in the corresponding feature/shared section. |
-| `RelationshipPathDetails` | dataclass/contract | `(rule_id: 'int', rule_name: 'str', traffic_class: 'CirculationTrafficClass', destination_selection: 'DestinationSelection', source_point_id: 'str', source_room_id: 'str', source_room_type: 'RoomType', destination_point_id: 'str', destination_room_id: 'str', destination_room_type: 'RoomType', nodes: 'tuple[CirculationGridNode, ...]', step_count: 'int', manhattan_step_count: 'int', detour_step_count: 'int', turn_count: 'int', manhattan_reference_cost: 'float', costs: 'RouteCostBreakdown', path_efficiency_score: 'float') -> None` | DEBUG-only information for one resolved relationship route. |
-| `RelationshipQualityConfig` | dataclass/contract | `(costs: 'GridRoutingCostProfile', route_rules: 'tuple[CirculationRouteRule, ...]', always_traversable_room_types: 'tuple[RoomType, ...]' = (<RoomType.HALLWAY: 'hallway'>,)) -> None` | Typed single-pass routing configuration for relationship scoring. |
-| `RelationshipQualityDetails` | dataclass/contract | `(floor_width: 'float', floor_length: 'float', grid_node_count: 'int', path_efficiency_score: 'float', paths: 'tuple[RelationshipPathDetails, ...]', route_failures: 'tuple[RelationshipRouteFailureDetails, ...]') -> None` | Single-pass relationship routing data collected in DEBUG mode. |
-| `RelationshipQualityEvaluator` | class/interface/registry | `()` | Scores one-pass grid-route efficiency between configured room types. |
-| `RelationshipRouteFailureDetails` | dataclass/contract | `(rule_id: 'int', rule_name: 'str', traffic_class: 'CirculationTrafficClass', source_point_id: 'str', source_room_id: 'str', destination_point_id: 'str \| None', destination_room_id: 'str \| None', message: 'str') -> None` | DEBUG-only information for one relationship route that could not resolve. |
 | `SPATIAL_DISTRIBUTION_KEY` | constant/type alias | `'spatial_distribution'` | Documented in the corresponding feature/shared section. |
 | `ScoreFinding` | dataclass/contract | `(code: 'str', message: 'str', severity: 'FindingSeverity' = <FindingSeverity.INFO: 'info'>, subject_ids: 'tuple[str, ...]' = ()) -> None` | Structured explanation emitted by an evaluator or the manager. |
-| `ScoringConfig` | dataclass/contract | `(evaluator_rules: 'tuple[EvaluatorRule, ...]', fail_fast_on_critical_failure: 'bool' = True, not_applicable_quality_contributes: 'bool' = False, raise_on_evaluator_error: 'bool' = False) -> None` | Configuration for the complete evaluator pipeline. |
+| `ScoringConfig` | dataclass/contract | `(evaluator_rules: 'tuple[EvaluatorRule, ...]', fail_fast_on_critical_failure: 'bool' = True) -> None` | Configuration for the complete evaluator pipeline. |
 | `ScoringContext` | dataclass/contract | `(scoring_input: 'CandidateScoringInput', derived: 'Mapping[str, Any]' = <factory>, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> None` | Read-only data shared with evaluators. |
 | `ScoringContextFactory` | class/interface/registry | `()` | Single extension point for preparing shared evaluator data. |
 | `ScoringResult` | dataclass/contract | `(total_score: 'float', passed_critical_checks: 'bool', stopped_early: 'bool', stop_reason: 'str \| None', evaluator_results: 'tuple[EvaluatorExecutionResult, ...]', findings: 'tuple[ScoreFinding, ...]' = ()) -> None` | Complete score-manager output for one candidate. |

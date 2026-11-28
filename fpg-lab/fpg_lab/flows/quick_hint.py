@@ -28,11 +28,18 @@ def search_hint_map(adapter, request, configuration, count, threshold, state, ca
                 search.record_score(trial, 0.0)
                 state["completed"] += 1
                 continue
+            except Exception:
+                search.fail_pending()
+                raise
             if cancel.is_set():
                 search.fail_pending()
                 state.update(status="cancelled", result=None)
                 return
-            _, score = score_candidate(adapter, prepared.generation_spec, circulation, debug=False)
+            try:
+                _, score = score_candidate(adapter, prepared.generation_spec, circulation, debug=False)
+            except Exception:
+                search.fail_pending()
+                raise
             if cancel.is_set():
                 search.fail_pending()
                 state.update(status="cancelled", result=None)
