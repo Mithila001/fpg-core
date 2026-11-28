@@ -91,3 +91,21 @@ def test_e02c_requires_matching_units_and_explicit_regeneration(tmp_path):
             start(runtime, document=document, configuration_id=profile.id)
 
 
+
+
+def test_result_canvas_opening_visibility_and_selection():
+    from fpg_lab.ui.e02c import opening_figure, opening_label
+
+    plan = portable()["floor_plan"]
+    opening = {"id": "raw-id", "opening_type": "door", "purpose": "room_connection",
+               "start": {"x": 20, "y": 5}, "end": {"x": 20, "y": 13},
+               "connected_room_ids": ["living", "bedroom"]}
+    assert "Living ? Bedroom" in opening_label(opening, {"living": "Living", "bedroom": "Bedroom"})
+    chart = opening_figure(plan, [opening], [opening], True, True, False, ("Generated", 0))
+    assert chart.data[-2].line.width == 10
+    assert chart.data[-1].visible is False
+    assert chart.layout.yaxis.scaleanchor == "x"
+    assert chart.layout.uirevision == "e02c-plan"
+    hidden = opening_figure(plan, [opening], [opening], False, False, True, ("Generated", 0))
+    assert not hidden.data[-2].visible and not hidden.data[-1].visible
+    assert all(not trace.showlegend for trace in hidden.data)

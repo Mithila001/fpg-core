@@ -1,6 +1,7 @@
 """Setup and inspect opening generation on portable plans."""
 
 import json
+from math import hypot
 
 from nicegui import run, ui
 from nicegui.elements.dialog import Dialog
@@ -263,12 +264,61 @@ async def _config_editor(runtime, profile, area, feedback, save, validate, disca
     await load_saved()
 
 
+def opening_label(opening, rooms):
+    names = [rooms.get(room_id, str(room_id)) for room_id in opening.get("connected_room_ids", [])]
+    connection = " ? ".join(names) if names else "Exterior"
+    if len(names) == 1:
+        connection += " ? Exterior"
+    return f"{connection} ? {plots.label(opening['purpose'])}"
+
+
+def opening_figure(plan, generated, original, show_doors, show_windows, show_original, selected):
+    chart = figures.floor_plan({**plan, "openings": []})
+    chart.update_traces(showlegend=False)
+    chart.update_layout(
+        title=None, uirevision="e02c-plan", margin=dict(l=10, r=10, t=10, b=10),
+        dragmode="pan", legend=dict(orientation="h", x=0, y=1, yanchor="top",
+                                    itemclick=False, itemdoubleclick=False),
+    )
+    chart.update_xaxes(title=None, showgrid=False, showticklabels=False, ticks="")
+    chart.update_yaxes(title=None, showgrid=False, showticklabels=False, ticks="")
+    points = [point for polygon in [plan.get("boundary"), *(r.get("boundary") for r in plan.get("rooms", []))]
+              for point in (polygon or {}).get("points", [])]
+    if points:
+        xs, ys = [p["x"] for p in points], [p["y"] for p in points]
+        padding = max(max(xs) - min(xs), max(ys) - min(ys)) * 0.03 or 1
+        chart.update_xaxes(range=[min(xs) - padding, max(xs) + padding])
+        chart.update_yaxes(range=[min(ys) - padding, max(ys) + padding])
+    seen = set()
+    for source, openings in (("Generated", generated), ("Original", original)):
+        for index, opening in enumerate(openings):
+            kind = opening["opening_type"]
+            visible = (show_doors if kind == "door" else show_windows) and (source == "Generated" or show_original)
+            start, end = opening["start"], opening["end"]
+            focused = visible and selected == (source, index)
+            chart.add_scatter(
+                x=[start["x"], end["x"]], y=[start["y"], end["y"]], mode="lines",
+                name=kind.title(), legendgroup=kind, showlegend=visible and kind not in seen,
+                visible=visible,
+                line=dict(color="#ffffff" if focused else ("#75beff" if kind == "window" else "#dcdcaa"),
+                          width=10 if focused else 6, dash="dash" if source == "Original" else "solid"),
+                hovertext=f"{source} {kind}", hoverinfo="text",
+            )
+            if visible:
+                seen.add(kind)
+    return chart
+
+
 async def run_page(runtime, run_id):
-    workspace = ResultWorkspace(f"E-02-C run #{run_id}", back_link=PATH, views=("Original", "Generated"))
+    workspace = ResultWorkspace(f"E-02-C run #{run_id}", back_link=PATH)
+    workspace.main("Canvas").classes("lab-replay-pane")
     with workspace.controls:
-        status = ui.label("Loading run…").classes("font-semibold")
+        status = ui.label("Loading run?").classes("font-semibold")
         provenance = ui.label().classes("text-sm lab-muted")
-        error = ui.label().classes("text-sm whitespace-pre-wrap")
+        error = ui.label().classes("text-sm whitespace-pre-wrap").style(f"color: {plots.FAIL}")
+    with workspace.main("Canvas"):
+        chart = ui.plotly(figures.floor_plan(None)).classes("lab-primary-plot")
+    context = workspace.context("Canvas")
 
     async def refresh():
         record = await db_call(runtime, lambda session: row_document(row) if (row := session.get(E02CRun, run_id)) else None)
@@ -277,57 +327,81 @@ async def run_page(runtime, run_id):
             timer.deactivate()
             return
         snapshot = record["snapshot"]
-        status.set_text(record["status"].capitalize())
-        provenance.set_text(f"{snapshot['layout_name']} · Core {snapshot['core_version']} · {snapshot['configuration_hash'][:12]}")
+        status.set_text(plots.label(record["status"]).capitalize())
+        provenance.set_text(f"{snapshot['layout_name']} ? Core {snapshot['core_version']} ? {snapshot['configuration_hash'][:12]}")
+        original = snapshot["input"]
+        plan = original["floor_plan"]
         if record["status"] in {"queued", "running"}:
+            chart.figure = opening_figure(plan, [], plan.get("openings", []), True, True, True, None)
+            chart.update()
             timer.activate()
             return
         timer.deactivate()
         if record["duration_seconds"] is not None:
-            status.set_text(f"{status.text} · {record['duration_seconds']:.3f} s")
+            status.set_text(f"{status.text} ? {record['duration_seconds']:.3f} s")
         if record["error"]:
-            error.set_text(record["error"]["message"])
-        original = snapshot["input"]
+            error.set_text(f"{plots.label(record['error']['stage'])} ? {record['error']['message']}")
         result = record["result"] or {}
-        generated = result.get("floor_plan")
-        with workspace.main("Original"):
-            ui.plotly(figures.floor_plan(original["floor_plan"], title="Original floor plan")).classes("w-full")
-        with workspace.main("Generated"):
-            if generated:
-                chart = ui.plotly(figures.floor_plan(generated, title="Generated openings")).classes("w-full")
-            else:
-                ui.label("No generated floor plan.").classes("lab-muted")
-        with workspace.context("Generated"):
-            if generated:
-                openings = generated.get("openings", [])
-                ui.label(f"Doors: {sum(o['opening_type'] == 'door' for o in openings)} · Windows: {sum(o['opening_type'] == 'window' for o in openings)}")
-                for purpose in ("main_entrance", "secondary_entrance"):
-                    matches = [o['id'] for o in openings if o['purpose'] == purpose]
-                    ui.label(f"{purpose.replace('_', ' ').title()}: {', '.join(matches) or 'None'}")
-                doors = ui.checkbox("Show doors", value=True)
-                windows = ui.checkbox("Show windows", value=True)
-                picker = ui.select({o['id']: f"{o['opening_type']} · {o['id']}" for o in openings}, label="Opening", clearable=True).classes("w-full")
-                details = ui.column().classes("w-full")
-                def redraw():
-                    visible = {name for name, toggle in (("door", doors), ("window", windows)) if toggle.value}
-                    chart.figure = figures.floor_plan({**generated, "openings": [o for o in openings if o["opening_type"] in visible]}, title="Generated openings")
-                    chart.update()
-                def selection():
-                    details.clear()
-                    selected = next((o for o in openings if o['id'] == picker.value), None)
-                    if selected:
-                        with details:
-                            json_panel("Opening details", selected)
-                doors.on_value_change(redraw)
-                windows.on_value_change(redraw)
-                picker.on_value_change(selection)
-                document = {**original, "floor_plan": generated}
+        generated_plan = result.get("floor_plan") if record["status"] == "completed" else None
+        generated = (generated_plan or {}).get("openings", [])
+        original_openings = plan.get("openings", [])
+        rooms = {room["id"]: room.get("name") or room["id"] for room in plan.get("rooms", [])}
+        choices = [(source, i, opening) for source, openings in (("Generated", generated), ("Original", original_openings))
+                   for i, opening in enumerate(openings)]
+        with context:
+            ui.label(f"{sum(o['opening_type'] == 'door' for o in generated)} doors ? {sum(o['opening_type'] == 'window' for o in generated)} windows").classes("text-sm font-medium")
+            ui.label("Opening visibility").classes("font-semibold text-sm")
+            doors = ui.checkbox("Doors", value=True).props("dense")
+            windows = ui.checkbox("Windows", value=True).props("dense")
+            show_original = ui.checkbox("Original openings", value=not bool(generated_plan)).props("dense") if original_openings else None
+            ui.label("Inspect opening").classes("font-semibold text-sm")
+            picker = ui.select(
+                {f"{source}:{i}": f"{opening_label(opening, rooms)} ? {source} {opening['opening_type']}"
+                 for source, i, opening in choices}, label="Opening", clearable=True,
+            ).props("dense outlined").classes("w-full")
+            details = ui.column().classes("w-full gap-1")
+            if generated_plan:
+                document = {**original, "floor_plan": generated_plan}
                 def copy_plan():
                     ui.run_javascript(f"navigator.clipboard.writeText({json.dumps(json.dumps(document))})")
                     ui.notify("Generated floor plan copied")
                 action_button("Copy generated plan", icon="content_copy", on_click=copy_plan).props("dense outline")
-            json_panel("Generation result", result)
-            json_panel("Core diagnostics", record["diagnostics"])
+            with ui.expansion("Diagnostics").props("dense").classes("w-full"):
+                json_panel("Generation result", result)
+                json_panel("Core diagnostics", record["diagnostics"])
+                json_panel("Run snapshot", snapshot)
+                if record["error"]:
+                    json_panel("Error details", record["error"])
+
+        def redraw():
+            selected = next(((source, i, opening) for source, i, opening in choices if picker.value == f"{source}:{i}"), None)
+            chart.figure = opening_figure(plan, generated, original_openings, doors.value, windows.value,
+                                          show_original.value if show_original else False,
+                                          selected[:2] if selected else None)
+            chart.update()
+            details.clear()
+            if selected:
+                opening = selected[2]
+                start, end = opening["start"], opening["end"]
+                width = hypot(end["x"] - start["x"], end["y"] - start["y"])
+                with details:
+                    ui.label(opening_label(opening, rooms)).classes("text-sm font-medium")
+                    ui.label(f"{opening['opening_type'].title()} ? {width:.3g} project units").classes("text-sm")
+                    json_panel("Technical details", opening)
+        doors.on_value_change(redraw)
+        windows.on_value_change(redraw)
+        if show_original:
+            show_original.on_value_change(redraw)
+        def select_opening():
+            selected = next(((source, opening) for source, i, opening in choices if picker.value == f"{source}:{i}"), None)
+            if selected:
+                source, opening = selected
+                (doors if opening["opening_type"] == "door" else windows).set_value(True)
+                if source == "Original" and show_original:
+                    show_original.set_value(True)
+            redraw()
+        picker.on_value_change(select_opening)
+        redraw()
 
     timer = ui.timer(0.75, refresh, active=False, immediate=False)
     await refresh()
