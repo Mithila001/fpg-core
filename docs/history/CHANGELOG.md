@@ -6,6 +6,11 @@
 
 ## Unreleased
 
+- Re-enabled living room balance and bedroom quality as default functional
+  scoring evaluators. Lab revision 6 enables both in saved profiles, preserving
+  existing custom settings and historical run snapshots. Final score weighting
+  changes when these evaluators are applicable.
+
 - Breaking: removed `room_size_hierarchy` and the `room_size_relations.rules`
   setting. Migrate saved solver profiles to `cross_type_rules` and
   `same_type_rules`, or use the current seed. Empty settings now include a

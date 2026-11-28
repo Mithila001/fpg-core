@@ -26,8 +26,8 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 5
-# Revision 5 adds the front wall setback policy to saved solver profiles; DDL is unchanged.
+REVISION = 6
+# Revision 6 enables living room and bedroom quality scoring; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 CURRENT_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
 RUN_TABLES = {
@@ -355,6 +355,28 @@ def _upgrade_front_wall_setback(data, baseline):
     return data
 
 
+def _enable_room_quality_evaluators(data, baseline):
+    scoring = data["floor_plan_scoring"]
+    groups = scoring["groups"]
+    functional = next((group for group in groups if group["key"] == "functional"), None)
+    if functional is None:
+        functional = deepcopy(next(group for group in baseline["groups"] if group["key"] == "functional"))
+        critical = next(group for group in groups if group["key"] == "critical")
+        functional["order"] = max(functional["order"], critical["order"] + 1)
+        groups.append(functional)
+    functional["enabled"] = True
+    rules = scoring["evaluators"]
+    for default in baseline["evaluators"]:
+        if default["key"] not in {"living_room_balance", "bedroom_quality"}:
+            continue
+        existing = next((rule for rule in rules if rule["key"] == default["key"]), None)
+        if existing is None:
+            rules.append(deepcopy(default))
+        else:
+            existing.update(enabled=True, group_key="functional", minimum_score=None)
+    return data
+
+
 def _migration(connection, session, report, *, dry_run):
     revision, compatibility = _state(connection)
     report.update(from_revision=revision, compatibility=compatibility)
@@ -390,7 +412,10 @@ def _migration(connection, session, report, *, dry_run):
                     data = _upgrade_post_processing(
                         data, baseline.payload["post_processing"]
                     )
-                data = _upgrade_front_wall_setback(data, baseline.payload)
+                if revision < 5:
+                    data = _upgrade_front_wall_setback(data, baseline.payload)
+                if revision < 6:
+                    data = _enable_room_quality_evaluators(data, baseline.payload["floor_plan_scoring"])
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):

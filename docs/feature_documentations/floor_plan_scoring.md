@@ -6,9 +6,8 @@
 
 Scores completed room geometry against its generation specification and returns a
 0..100 quality score plus structured findings. Critical geometry checks remain hard
-gates. The default functional scoring now uses the generic `room_size_consistency`
-evaluator instead of the former default `living_room_balance` and `bedroom_quality`
-evaluators.
+gates. The default functional scoring uses room-size consistency, room relationship
+quality, living-room balance and bedroom quality.
 
 Physical measurements are supplied by [Geometry Analysis](geometry_analysis.md); scoring retains specification validation, tolerances, evaluation and diagnostic payloads. Proximity uses boundary distance, while clustering uses centroid distance.
 
@@ -239,10 +238,14 @@ Functional evaluators:
 |---|---:|---:|---|
 | `room_size_consistency` | 10 | `2.0` | exact rules listed above |
 | `room_relationship_quality` | 20 | `1.0` | four configurable distance rules |
+| `living_room_balance` | 30 | `1.0` | maximum excess ratio `2.0` |
+| `bedroom_quality` | 40 | `1.0` | area compliance weight `3.0`, consistency weight `1.0`, full spread penalty ratio `0.5`, maximum spread penalty `40.0` |
 
-`LivingRoomBalanceEvaluator` and `BedroomQualityEvaluator` remain exported and are
-still registered by `create_default_registry()` for compatibility with custom
-configs. They are **not enabled by the default scoring config**.
+Living-room balance penalizes combined living area exceeding the combined area of
+other rooms. Bedroom quality scores bedroom area compliance and area spread.
+Both are non-critical, and are not applicable when their room type is absent.
+Bedroom spread is also evaluated by room-size consistency, so it can affect both
+scores. Saved Lab profiles receive these rules in revision 6.
 
 ## Room Relationship Quality
 
@@ -344,9 +347,9 @@ official findings.
 
 ## Recommended values
 
-Use `create_default_config()` as the canonical baseline. The four critical checks are
+Use `create_default_config()` as the canonical baseline. The three critical checks are
 strict 100-point gates. The default functional allocation gives
-`room_size_consistency` twice the configured weight of `room_relationship_quality` before
+`room_size_consistency` twice the configured weight of each other functional evaluator before
 normalization. Treat the built-in room-size ratios as package preferences that can be
 replaced by project-specific values.
 

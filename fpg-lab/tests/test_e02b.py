@@ -203,11 +203,14 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
         assert official["result"]["total_score"] == production.result.total_score
         assert official["result"]["passed_critical"] == production.result.passed_critical is False
         results = {item["evaluator_key"]: item for item in official["details"]["evaluator_results"]}
+        statuses = {attempt["evaluator_key"]: attempt["status"] for attempt in historical.diagnostics}
+        assert statuses == {
+            "room_size_consistency": "completed", "room_relationship_quality": "completed",
+            "living_room_balance": "completed", "bedroom_quality": "not_applicable",
+        }
         for attempt in historical.diagnostics:
-            assert attempt["status"] == "completed"
             assert results[attempt["evaluator_key"]]["raw_score"] is None
             results[attempt["evaluator_key"]] = attempt["evaluation"]
-        assert len(historical.diagnostics) == 2
         assert results["geometry_integrity"]["findings"][0]["metrics"][0]["value"] == 195
         assert results["enclosed_voids"]["visualization_payload"]["voids"][0]["area"] == 3000
         recess = results["inward_recess"]["visualization_payload"]["recesses"][0]
@@ -223,6 +226,8 @@ def test_storage_snapshot_recovery_and_measurements(tmp_path):
         assert relationships[1]["score"] == 0
         assert plots.size_matrix(results["room_size_consistency"]["visualization_payload"])
         for key, evaluation in results.items():
+            if key in {"living_room_balance", "bedroom_quality"}:
+                continue  # These evaluators expose metrics, not dedicated geometry overlays.
             observations = plots.observations(key, evaluation, document["floor_plan"])
             assert observations
             enabled = {layer.overlay for item in observations for layer in item.layers}
@@ -268,7 +273,10 @@ def test_diagnostics_handle_exceptions_inapplicability_and_passed_gate():
     request = FloorPlanScoringInput(*decode_plan(document), config)
     official = score_floor_plan(request, mode=ExecutionMode.DEBUG, registry=registry)
     attempts = diagnose_skipped_evaluators(request, official, registry=registry)
-    assert [item.status for item in attempts] == ["failed", "not_applicable"]
+    assert {item.evaluator_key: item.status for item in attempts} == {
+        "room_size_consistency": "failed", "room_relationship_quality": "not_applicable",
+        "living_room_balance": "completed", "bedroom_quality": "not_applicable",
+    }
     assert "test evaluator failure" in attempts[0].error
 
     document["floor_plan"]["rooms"] = document["floor_plan"]["rooms"][:1]
@@ -303,5 +311,5 @@ def test_unmet_solver_adjacency_does_not_gate_functional_scoring():
     relationship = evaluations["room_relationship_quality"]
     assert relationship.status.value == "completed"
     assert relationship.threshold is None
-    assert relationship.normalized_weight == pytest.approx(1 / 3)
+    assert relationship.normalized_weight == pytest.approx(1 / 4)
     assert 0 < relationship.raw_score < 100

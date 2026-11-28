@@ -2591,6 +2591,31 @@
               }
             ]
           }
+        },
+        {
+          "group_key": "functional",
+          "enabled": true,
+          "order": 30,
+          "weight": 1,
+          "minimum_score": null,
+          "key": "living_room_balance",
+          "settings": {
+            "maximum_excess_ratio": 2
+          }
+        },
+        {
+          "group_key": "functional",
+          "enabled": true,
+          "order": 40,
+          "weight": 1,
+          "minimum_score": null,
+          "key": "bedroom_quality",
+          "settings": {
+            "area_compliance_weight": 3,
+            "consistency_weight": 1,
+            "full_spread_penalty_ratio": 0.5,
+            "maximum_spread_penalty": 40
+          }
         }
       ]
     },

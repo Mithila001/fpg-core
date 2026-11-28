@@ -114,3 +114,19 @@ python -m scripts.lab_db profiles validate --all --json
 Review the dry run before applying it. No reset is necessary. To opt out of
 a room policy, remove its rule from the saved solver profile after migration.
 See the [Core contract](../../docs/feature_documentations/floor_plan_solver.md#front-wall-setback).
+
+## Revision 6 room quality scoring profile migration
+
+Revision 6 enables `living_room_balance` and `bedroom_quality` for saved profiles
+as functional evaluators. Missing rules use the starter profile settings;
+existing settings, weights and order are retained. If needed the functional
+group is created or enabled. The two rules are non-critical. Profile IDs,
+active selection, other settings and historical snapshots are retained; no
+database reset or DDL change is required. The previous revision's setback
+migration does not rerun on revision 5 databases.
+
+Stop Lab, back up the selected SQLite file, and run the existing
+`migrate --dry-run --json`, `migrate --json` and `profiles validate --all --json`
+commands. Resolve any profile validation conflicts before applying the migration.
+Older custom solver room-size rules using the removed legacy settings must
+already conform to the current solver contract.

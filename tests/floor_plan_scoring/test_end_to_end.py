@@ -39,6 +39,12 @@ def test_production_and_debug_execution(
     assert debug.details.group_results
     assert debug.details.evaluator_results
     assert any(item.metrics for item in debug.details.evaluator_results)
+    assert debug.result.passed_critical
+    by_key = {item.evaluator_key: item for item in debug.details.evaluator_results}
+    for key in ("living_room_balance", "bedroom_quality"):
+        assert by_key[key].status.value == "completed"
+        assert by_key[key].threshold is None
+        assert by_key[key].contribution > 0
 
 
 def test_critical_failure_short_circuits_later_groups(

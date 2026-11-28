@@ -13,12 +13,15 @@ from .config import (
     ScoringProfile,
 )
 from .evaluators import (
+    BEDROOM_QUALITY_KEY,
+    LIVING_ROOM_BALANCE_KEY,
     ENCLOSED_VOIDS_KEY,
     GEOMETRY_INTEGRITY_KEY,
     INWARD_RECESS_KEY,
     ROOM_RELATIONSHIP_QUALITY_KEY,
     ROOM_SIZE_CONSISTENCY_KEY,
     BedroomQualityEvaluator,
+    BedroomQualitySettings,
     EnclosedVoidsEvaluator,
     EnclosedVoidsSettings,
     GeometryIntegrityEvaluator,
@@ -26,6 +29,7 @@ from .evaluators import (
     InwardRecessEvaluator,
     InwardRecessSettings,
     LivingRoomBalanceEvaluator,
+    LivingRoomBalanceSettings,
     RoomAreaAggregation,
     RoomClusteringRule,
     RoomProximityRule,
@@ -134,6 +138,23 @@ DEFAULT_FLOOR_PLAN_SCORING_CONFIG = FloorPlanScoringConfig(
                 ),
             ),
             order=20,
+        ),
+        EvaluatorRule(
+            LIVING_ROOM_BALANCE_KEY,
+            FUNCTIONAL_GROUP,
+            LivingRoomBalanceSettings(maximum_excess_ratio=2.0),
+            order=30,
+        ),
+        EvaluatorRule(
+            BEDROOM_QUALITY_KEY,
+            FUNCTIONAL_GROUP,
+            BedroomQualitySettings(
+                area_compliance_weight=3.0,
+                consistency_weight=1.0,
+                full_spread_penalty_ratio=0.5,
+                maximum_spread_penalty=40.0,
+            ),
+            order=40,
         ),
     ),
 )

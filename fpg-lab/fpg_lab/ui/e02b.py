@@ -35,6 +35,8 @@ VIEWS = {
     "Inward recesses": "inward_recess",
     "Room size consistency": "room_size_consistency",
     "Room Relationship Quality": "room_relationship_quality",
+    "Living room balance": "living_room_balance",
+    "Bedroom quality": "bedroom_quality",
 }
 
 

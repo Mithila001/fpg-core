@@ -338,7 +338,7 @@ def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
     assert [item["id"] for item in planned["profiles"]] == [profile_id]
     assert db.status(database)["revision"] == 2
     assert db.migrate(database)["applied"]
-    assert db.status(database)["revision"] == 5
+    assert db.status(database)["revision"] == db.REVISION
     assert not db.migrate(database)["applied"]
     with database.session_factory() as session:
         updated = session.get(SystemConfiguration, profile_id)
@@ -349,10 +349,12 @@ def test_revision2_reseeds_relationship_evaluator_without_reset(tmp_path):
         assert {rule["key"] for rule in scoring["evaluators"]} == {
             "geometry_integrity", "enclosed_voids", "inward_recess",
             "room_size_consistency", "room_relationship_quality",
+            "living_room_balance", "bedroom_quality",
         }
-        assert scoring["evaluators"][-1]["settings"] == (
-            codec.default_configuration().payload["floor_plan_scoring"]["evaluators"][-1]["settings"]
-        )
+        relationship = next(rule for rule in scoring["evaluators"] if rule["key"] == "room_relationship_quality")
+        default_relationship = next(rule for rule in codec.default_configuration().payload["floor_plan_scoring"]["evaluators"]
+                                    if rule["key"] == "room_relationship_quality")
+        assert relationship["settings"] == default_relationship["settings"]
     database.dispose()
 
 
@@ -389,5 +391,62 @@ def test_revision5_preserves_profiles_and_snapshots(tmp_path):
         for name in ("initial", "refinement_a", "refinement_b"):
             assert any(r["key"] == "front_wall_setback" for r in updated.configuration_data["floor_plan_solver"][name]["hard_constraints"])
         assert retained.configuration_data == custom_data
+    assert not db.migrate(database)["applied"]
+    database.dispose()
+
+def test_revision6_enables_room_quality_in_all_profiles(tmp_path):
+    database = Database(f"sqlite:///{tmp_path / 'revision6.db'}")
+    db.migrate(database)
+    codec = CoreConfigCodec()
+    keys = {"living_room_balance", "bedroom_quality"}
+    with database.session_factory() as session:
+        service = SystemConfigurationService(session)
+        primary = service.get_active()
+        custom = service.duplicate(primary.id, "custom quality")
+        service.activate(custom.id)
+        ids = primary.id, custom.id
+        original = deepcopy(primary.configuration_data)
+        original["floor_plan_scoring"]["evaluators"] = [
+            rule for rule in original["floor_plan_scoring"]["evaluators"]
+            if rule["key"] not in keys
+        ]
+        custom_data = deepcopy(custom.configuration_data)
+        for rule in custom_data["floor_plan_scoring"]["evaluators"]:
+            if rule["key"] in keys:
+                rule["enabled"] = False
+                rule["weight"] = 0.5
+            if rule["key"] == "living_room_balance":
+                rule["settings"]["maximum_excess_ratio"] = 1.5
+        # An intentional opt-out from the previous migration must stay intact.
+        hard = custom_data["floor_plan_solver"]["initial"]["hard_constraints"]
+        hard[:] = [rule for rule in hard if rule["key"] != "front_wall_setback"]
+        primary.configuration_data, custom.configuration_data = original, custom_data
+        primary.config_hash, custom.config_hash = codec.hash_payload(original), codec.hash_payload(custom_data)
+        snapshot = {"configuration": original}
+        run = E02Run(status="completed", snapshot=snapshot, cases=[])
+        session.add(run)
+        session.commit()
+        run_id = run.id
+    with database.engine.begin() as connection:
+        connection.exec_driver_sql("PRAGMA user_version = 5")
+
+    planned = db.migrate(database, dry_run=True)
+    assert not planned["conflicts"] and not planned["applied"]
+    assert {item["id"] for item in planned["profiles"]} == set(ids)
+    assert db.status(database)["revision"] == 5
+    assert db.migrate(database)["applied"]
+    with database.session_factory() as session:
+        assert session.get(E02Run, run_id).snapshot == snapshot
+        for profile_id in ids:
+            profile = session.get(SystemConfiguration, profile_id)
+            rules = {rule["key"]: rule for rule in codec.validate_payload(
+                profile.configuration_data
+            ).payload["floor_plan_scoring"]["evaluators"]}
+            assert all(rules[key]["enabled"] and rules[key]["group_key"] == "functional" for key in keys)
+            if profile_id == ids[1]:
+                assert profile.is_active
+                assert all(rules[key]["weight"] == 0.5 for key in keys)
+                assert rules["living_room_balance"]["settings"]["maximum_excess_ratio"] == 1.5
+                assert profile.configuration_data["floor_plan_solver"] == custom_data["floor_plan_solver"]
     assert not db.migrate(database)["applied"]
     database.dispose()
