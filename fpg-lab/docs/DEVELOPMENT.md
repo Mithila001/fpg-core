@@ -161,3 +161,15 @@ python -m scripts.lab_db profiles validate --all --json
 ```
 
 Review the dry-run conflicts and proposed hashes before applying. No reset is needed.
+
+## Revision 9 opening quality policies
+
+Revision 9 adds room-specific window policies, bathroom windows, normal connection
+limits, kitchen-dining connectivity and duplicate prevention. It enables exterior
+doors, windows and room door limits for these policies. Existing standard window
+dimensions and preferred clearance are carried into each profile; bathroom widths
+and preferred clearances are 0.5 m and 0.2 m in profile units. Existing interior
+door dimensions, profile identities, saved plans and historical snapshots remain.
+Secondary entrances are required at the existing configured exterior door width.
+No tables change and no reset is needed. Stop Lab and headless execution, back up
+the database and use the revision 8 commands above, reviewing the dry run first.

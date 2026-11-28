@@ -40,13 +40,14 @@ def wait_for_run(runtime, run_id):
 def source_plan():
     def polygon(points):
         return Polygon(tuple(Point(x, y) for x, y in points))
-    floor = FloorPlan(polygon([(0, 0), (40, 0), (40, 20), (0, 20)]), [
-        FloorPlanRoom(RoomId("living"), RoomType.LIVING_ROOM, "Living", polygon([(0, 0), (20, 0), (20, 20), (0, 20)])),
-        FloorPlanRoom(RoomId("bedroom"), RoomType.BEDROOM, "Bedroom", polygon([(20, 0), (40, 0), (40, 20), (20, 20)])),
+    floor = FloorPlan(polygon([(0, 0), (60, 0), (60, 20), (0, 20)]), [
+        FloorPlanRoom(RoomId("bedroom"), RoomType.BEDROOM, "Bedroom", polygon([(0, 0), (20, 0), (20, 20), (0, 20)])),
+        FloorPlanRoom(RoomId("living"), RoomType.LIVING_ROOM, "Living", polygon([(20, 0), (40, 0), (40, 20), (20, 20)])),
+        FloorPlanRoom(RoomId("kitchen"), RoomType.KITCHEN, "Kitchen", polygon([(40, 0), (60, 0), (60, 20), (40, 20)])),
     ])
-    spec = FloorPlanGenerationSpec(FloorSpec(40, 20), tuple(
+    spec = FloorPlanGenerationSpec(FloorSpec(60, 20), tuple(
         RoomSpec(RoomId(name), kind, name, RoomSizeSpec(5, 20, 40, 400))
-        for name, kind in (("living", RoomType.LIVING_ROOM), ("bedroom", RoomType.BEDROOM))
+        for name, kind in (("living", RoomType.LIVING_ROOM), ("bedroom", RoomType.BEDROOM), ("kitchen", RoomType.KITCHEN))
     ), ())
     return floor, spec
 

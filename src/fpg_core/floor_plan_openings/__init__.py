@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         InteriorDoorPolicy,
         ObjectiveConfig,
         SolverConfig,
+        WindowPolicy,
     )
     from .contracts import (
         OpeningDiagnostics,
@@ -44,6 +45,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     "GeometryConfig": (".config", "GeometryConfig"),
     "InteriorDoorConfig": (".config", "InteriorDoorConfig"),
     "InteriorDoorPolicy": (".config", "InteriorDoorPolicy"),
+    "WindowPolicy": (".config", "WindowPolicy"),
     "ObjectiveConfig": (".config", "ObjectiveConfig"),
     "SolverConfig": (".config", "SolverConfig"),
     "OpeningDiagnostics": (".contracts", "OpeningDiagnostics"),
@@ -69,6 +71,7 @@ __all__ = [
     "GeometryConfig",
     "InteriorDoorConfig",
     "InteriorDoorPolicy",
+    "WindowPolicy",
     "ObjectiveConfig",
     "SolverConfig",
     "OpeningDiagnostics",

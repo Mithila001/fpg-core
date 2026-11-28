@@ -34,7 +34,9 @@ OpeningGenerationRequest(
 
 The source plan must have valid finite rectilinear floor/room geometry, positive room
 area, unique room IDs, standard rooms inside the floor without area overlap, and **no
-existing openings**. The source plan is never mutated.
+existing openings**. The source plan is never mutated. Exterior walls are taken from
+the outside boundary of the union of room geometries, including recesses and steps;
+boundaries of enclosed voids are excluded.
 
 ## Configuration
 
@@ -63,9 +65,10 @@ SolverConfig(
 
 `coordinate_scale` must be at least `1`; geometry tolerance and dimensions must be
 positive; corner/window clearances cannot be negative. Solver time and workers must
-be positive and the random seed cannot be negative. At 10 project units per metre,
-the default window clearance requires a 26-unit wall for a 16-unit window.
-Exterior-door fallback retains its existing behavior. Interior doors use the policy below.
+be positive and the random seed cannot be negative. Window policies specify their
+own widths and minimum and preferred clearances.
+Main-entrance fallback retains its existing behavior. Secondary entrances require the
+full configured door width. Interior doors use the policy below.
 
 ### Interior door policy
 
@@ -97,9 +100,24 @@ minimum; both searches share the configured time budget. If the minimum cannot b
 proven in time, a feasible result may not optimize optional openings. Short walls
 can therefore have less corner space, but door width is never reduced. Standard
 interior doors prefer a wall end; bathroom overrides prefer the center. The existing
-`geometry.corner_clearance` and `dimensions.door_width` continue to govern exterior
-doors and windows; they no longer set interior policy. Callers customizing those
-values must set `interior_doors` explicitly as well.
+`geometry.corner_clearance` and `dimensions.door_width` govern exterior doors;
+interior and window policies are configured separately.
+
+### Window policy
+
+`WindowPolicy(width=16.0, target_count=1, preferred_clearance=5.0,
+minimum_clearance=0.0)` describes an eligible room type. Bathroom and attached
+bathroom defaults are width 5 and preferred clearance 2. Width and clearances are
+in project units; width and count must be positive, and preferred clearance must
+be at least the non-negative minimum. The target is optional, so a missing window
+does not make a plan infeasible. The first window in each room has higher selection
+priority than additional targets. Placement favors preferred clearance and the
+wall center, subject to opening spacing and other constraints.
+
+`FeaturePolicy.window_room_types` selects eligible types; `window_policies` maps
+types to `WindowPolicy` values. An eligible type without an override uses
+`dimensions.window_width`, `geometry.corner_clearance`, one window and zero
+minimum clearance. Add the type to `window_room_types` to enable it.
 
 ### FeaturePolicy
 
@@ -116,7 +134,12 @@ FeaturePolicy(
         RoomType.LIVING_ROOM,
         RoomType.KITCHEN,
         RoomType.DINING_ROOM,
+        RoomType.BATHROOM,
+        RoomType.ATTACHED_BATHROOM,
     ),
+    window_policies: tuple[tuple[RoomType, WindowPolicy], ...] = DEFAULT_WINDOW_POLICIES,
+    normal_connection_caps: tuple[tuple[RoomType, int], ...] = DEFAULT_NORMAL_CAPS,
+    prevent_duplicate_connections: bool = True,
     main_side_priority: tuple[str, ...] = ("south", "east", "north", "west"),
     secondary_side_priority: tuple[str, ...] = ("north", "west", "east", "south"),
     window_side_priority: tuple[str, ...] = ("east", "north", "south", "west"),
@@ -131,6 +154,7 @@ Exact default `allowed_room_pairs`:
 (
     (RoomType.BEDROOM, RoomType.LIVING_ROOM),
     (RoomType.KITCHEN, RoomType.LIVING_ROOM),
+    (RoomType.KITCHEN, RoomType.DINING_ROOM),
     (RoomType.BATHROOM, RoomType.LIVING_ROOM),
     (RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM),
     (RoomType.VERANDA, RoomType.LIVING_ROOM),
@@ -148,9 +172,7 @@ Exact default `allowed_room_pairs`:
 ```
 
 This tuple is authoritative. Pair order does not matter, duplicate logical pairs are
-rejected, and the implementation no longer silently adds hallway connections or a
-special attached-bathroom pairing rule. If a consumer wants
-`ATTACHED_BATHROOM <-> HALLWAY`, it must explicitly add that pair.
+rejected. Attached bathrooms connect only to bedrooms, even if another pair is configured.
 
 Exact default door caps:
 
@@ -168,8 +190,15 @@ Exact default door caps:
 )
 ```
 
-Caps must be positive and each room type may appear only once. The same cap mechanism
-is applied uniformly; there is no Bedroom/Attached-Bathroom-specific cap behavior.
+Caps must be positive and each room type may appear only once. Normal connection
+caps default to one for bedrooms, kitchens, bathrooms and attached bathrooms.
+One bedroom-to-attached-bathroom or kitchen-to-dining connection is allowed in
+addition to the bedroom or kitchen's normal and total cap. Other rooms' caps still
+apply. Duplicate connections between the same room instances are prevented by
+default, with shared wall segments treated as alternative placements.
+Normal connections without a specific preference are selected when needed for
+access, rather than rewarded solely to increase the door count. Kitchen-dining
+and preferred hallway connections can receive an optional selection reward.
 
 Exact default required-access room types:
 
@@ -248,12 +277,12 @@ be disabled. `room_door_limits` remains selectable.
 
 ```python
 (
-    "window",
-    "secondary_entrance",
     "other_interior",
     "preferred_hallway",
     "bathroom_hallway",
     "attached_bathroom",
+    "window",
+    "secondary_entrance",
     "main_entrance",
 )
 ```
@@ -263,7 +292,9 @@ Tier IDs must be unique.
 ## Required room access behavior
 
 For a non-empty floor plan, `required_room_access` enforces exactly one selected main
-entrance. Every room whose type is in `required_access_room_types` must be reachable
+entrance and exactly one full-width secondary entrance on an eligible exterior wall.
+The secondary entrance room must be reachable from the main entrance. Secondary wall
+direction is preferred before room type. Every room whose type is in `required_access_room_types` must be reachable
 from that entrance through selected doors. A local isolated pair of rooms does not
 satisfy this rule merely because those two rooms have a door between them.
 
@@ -309,7 +340,7 @@ PRODUCTION. DEBUG diagnostics include raw solver status/timing/objective statist
 wall count, demand/candidate/selected counts, applied constraint IDs, objective terms,
 and structured `OpeningIssue` values.
 
-DEBUG issues can identify conditions such as no main-entrance candidate, a
+DEBUG issues can identify conditions such as no main-entrance or secondary-entrance candidate, a
 required-access room with no door candidate, an optional demand with no candidate, an
 unselected optional demand, an undersized exterior door, or `reduced_preferred_clearance`
 with requested and actual clearance at each end.
@@ -327,7 +358,7 @@ constraint IDs, and other generation contract failures raise the
 
 ## Usage example
 
-This example uses the shared `rectangle` helper and a two-room plan with sufficient
+This example uses the shared `rectangle` helper and a three-room plan with sufficient
 wall lengths for the default opening policy.
 
 ```python
@@ -339,12 +370,14 @@ from fpg_core.floor_plan_openings import (
 )
 
 opening_source = FloorPlan(
-    boundary=rectangle(0, 0, 40, 20),
+    boundary=rectangle(0, 0, 60, 20),
     rooms=[
         FloorPlanRoom(RoomId("living"), RoomType.LIVING_ROOM, "Living",
-                      rectangle(0, 0, 20, 20)),
-        FloorPlanRoom(RoomId("bedroom"), RoomType.BEDROOM, "Bedroom",
                       rectangle(20, 0, 40, 20)),
+        FloorPlanRoom(RoomId("bedroom"), RoomType.BEDROOM, "Bedroom",
+                      rectangle(0, 0, 20, 20)),
+        FloorPlanRoom(RoomId("kitchen"), RoomType.KITCHEN, "Kitchen",
+                      rectangle(40, 0, 60, 20)),
     ],
 )
 execution = generate_openings(
@@ -373,18 +406,19 @@ Expected generation outcomes are represented by `OpeningGenerationStatus` and `O
 
 ## Public Export Inventory
 
-### `fpg_core.floor_plan_openings` exports (22)
+### `fpg_core.floor_plan_openings` exports (23)
 
 | Export | Kind | Exact contract/value | Coverage |
 |---|---|---|---|
 | `generate_openings` | function | `generate_openings(request: 'OpeningGenerationRequest', *, registry: 'OpeningFeatureRegistry \| None' = None, mode: 'ExecutionMode' = <ExecutionMode.PRODUCTION: 'production'>) -> 'OpeningGenerationExecution'` | Generate openings on a finalized floor plan without mutating it. |
 | `DimensionConfig` | dataclass/contract | `(door_width: 'float' = 10.0, window_width: 'float' = 16.0, minimum_shared_wall: 'float' = 10.0) -> None` | DimensionConfig(door_width: 'float' = 10.0, window_width: 'float' = 16.0, minimum_shared_wall: 'float' = 10.0) |
-| `FeaturePolicy` | dataclass/contract | `(allowed_room_pairs: 'tuple[tuple[RoomType, RoomType], ...]' = ((RoomType.BEDROOM, RoomType.LIVING_ROOM), (RoomType.KITCHEN, RoomType.LIVING_ROOM), (RoomType.BATHROOM, RoomType.LIVING_ROOM), (RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM), (RoomType.VERANDA, RoomType.LIVING_ROOM), (RoomType.GARAGE, RoomType.LIVING_ROOM), (RoomType.DINING_ROOM, RoomType.LIVING_ROOM), (RoomType.BEDROOM, RoomType.HALLWAY), (RoomType.BATHROOM, RoomType.HALLWAY), (RoomType.LIVING_ROOM, RoomType.HALLWAY), (RoomType.KITCHEN, RoomType.HALLWAY), (RoomType.DINING_ROOM, RoomType.HALLWAY), (RoomType.VERANDA, RoomType.HALLWAY), (RoomType.GARAGE, RoomType.HALLWAY), (RoomType.HALLWAY, RoomType.HALLWAY)), room_door_caps: 'tuple[tuple[RoomType, int], ...]' = ((RoomType.BEDROOM, 2), (RoomType.BATHROOM, 1), (RoomType.LIVING_ROOM, 10), (RoomType.HALLWAY, 10), (RoomType.KITCHEN, 1), (RoomType.ATTACHED_BATHROOM, 1), (RoomType.VERANDA, 1), (RoomType.GARAGE, 1), (RoomType.DINING_ROOM, 2)), secondary_room_priority: 'tuple[RoomType, ...]' = (RoomType.KITCHEN, RoomType.HALLWAY), window_room_types: 'tuple[RoomType, ...]' = (RoomType.BEDROOM, RoomType.LIVING_ROOM, RoomType.KITCHEN, RoomType.DINING_ROOM), main_side_priority: 'tuple[str, ...]' = ('south', 'east', 'north', 'west'), secondary_side_priority: 'tuple[str, ...]' = ('north', 'west', 'east', 'south'), window_side_priority: 'tuple[str, ...]' = ('east', 'north', 'south', 'west'), required_access_room_types: 'tuple[RoomType, ...]' = (RoomType.BEDROOM, RoomType.BATHROOM, RoomType.ATTACHED_BATHROOM, RoomType.LIVING_ROOM, RoomType.KITCHEN, RoomType.DINING_ROOM, RoomType.HALLWAY, RoomType.VERANDA, RoomType.GARAGE), door_placement_priority: 'tuple[tuple[RoomType, int], ...]' = ((RoomType.BEDROOM, 100), (RoomType.BATHROOM, 100), (RoomType.ATTACHED_BATHROOM, 100), (RoomType.KITCHEN, 80), (RoomType.DINING_ROOM, 60), (RoomType.GARAGE, 60), (RoomType.VERANDA, 40), (RoomType.LIVING_ROOM, 20), (RoomType.HALLWAY, 10))) -> None` | Consumer-owned authoritative room-pair, access, door-limit, side-priority, and door-end-placement policy. |
+| `FeaturePolicy` | dataclass/contract | Room pairs, connection limits, room-specific window policies, and priorities. | See FeaturePolicy above. |
 | `FloorPlanOpeningsConfig` | dataclass/contract | `(name: 'str', enabled_features: 'tuple[str, ...]' = ('interior_doors', 'exterior_doors', 'windows'), enabled_constraints: 'tuple[str, ...]' = ('shared_placement', 'room_door_limits', 'required_room_access'), geometry: 'GeometryConfig' = <factory>, dimensions: 'DimensionConfig' = <factory>, policy: 'FeaturePolicy' = <factory>, objective: 'ObjectiveConfig' = <factory>, solver: 'SolverConfig' = <factory>, interior_doors: 'InteriorDoorConfig' = <factory>) -> None` | Reusable configuration controlling opening generation behavior. |
 | `InteriorDoorConfig` | dataclass/contract | Default policy and ordered room-type overrides. | See interior door policy above. |
 | `InteriorDoorPolicy` | dataclass/contract | Width, preferred and minimum clearances, minimum wall and placement preference. | See interior door policy above. |
+| `WindowPolicy` | dataclass/contract | Width, target count, preferred and minimum corner clearances. | See window policy above. |
 | `GeometryConfig` | dataclass/contract | `(coordinate_scale: 'int' = 10, tolerance: 'float' = 1e-06, corner_clearance: 'float' = 5.0, window_spacing: 'float' = 5.0) -> None` | GeometryConfig(coordinate_scale: 'int' = 10, tolerance: 'float' = 1e-06, corner_clearance: 'float' = 5.0, window_spacing: 'float' = 5.0) |
-| `ObjectiveConfig` | dataclass/contract | `(tier_order: 'tuple[str, ...]' = ('window', 'secondary_entrance', 'other_interior', 'preferred_hallway', 'bathroom_hallway', 'attached_bathroom', 'main_entrance')) -> None` | ObjectiveConfig(tier_order: 'tuple[str, ...]' = ('window', 'secondary_entrance', 'other_interior', 'preferred_hallway', 'bathroom_hallway', 'attached_bathroom', 'main_entrance')) |
+| `ObjectiveConfig` | dataclass/contract | Ordered objective tier IDs. | See FloorPlanOpeningsConfig above. |
 | `SolverConfig` | dataclass/contract | `(max_time_seconds: 'float' = 10.0, num_search_workers: 'int' = 1, random_seed: 'int' = 0, cp_model_presolve: 'bool' = True, log_search_progress: 'bool' = False) -> None` | SolverConfig(max_time_seconds: 'float' = 10.0, num_search_workers: 'int' = 1, random_seed: 'int' = 0, cp_model_presolve: 'bool' = True, log_search_progress: 'bool' = False) |
 | `OpeningDiagnostics` | dataclass/contract | `(raw_status: 'str', wall_time_seconds: 'float' = 0.0, objective_value: 'float \| None' = None, best_objective_bound: 'float \| None' = None, conflicts: 'int' = 0, branches: 'int' = 0, analyzed_wall_count: 'int' = 0, demand_counts: 'Mapping[str, int]' = <factory>, candidate_counts: 'Mapping[str, int]' = <factory>, selected_counts: 'Mapping[str, int]' = <factory>, applied_constraints: 'tuple[str, ...]' = (), objective_terms: 'tuple[str, ...]' = (), issues: 'tuple[OpeningIssue, ...]' = ()) -> None` | OpeningDiagnostics(raw_status: 'str', wall_time_seconds: 'float' = 0.0, objective_value: 'float \| None' = None, best_objective_bound: 'float \| None' = None, conflicts: 'int' = 0, branches: 'int' = 0, analyzed_wall_count: 'int' = 0, demand_counts: 'Mapping[str, int]' = <factory>, candidate_counts: 'Mapping[str, int]' = <factory>, selected_counts: 'Mapping[str, int]' = <factory>, applied_constraints: 'tuple[str, ...]' = (), objective_terms: 'tuple[str, ...]' = (), issues: 'tuple[OpeningIssue, ...]' = ()) |
 | `OpeningGenerationExecution` | constant/type alias | `_GenericAlias instance` | Documented in the corresponding feature/shared section. |

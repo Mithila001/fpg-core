@@ -19,8 +19,6 @@ class WindowFeature:
         prepared: PreparedFloorPlan,
         config: FloorPlanOpeningsConfig,
     ) -> tuple[OpeningDemand, ...]:
-        width = round(config.dimensions.window_width * prepared.scale)
-        clearance = round(config.geometry.corner_clearance * prepared.scale)
         side_priority = {
             side: index for index, side in enumerate(config.policy.window_side_priority)
         }
@@ -39,6 +37,9 @@ class WindowFeature:
             key=lambda room: str(room.id),
         )
         for room in eligible:
+            policy = config.window_policy(room.room_type)
+            width = round(policy.width * prepared.scale)
+            clearance = round(policy.minimum_clearance * prepared.scale)
             options: list[PlacementOption] = []
             for index, wall in enumerate(exterior_by_room.get(room.id, [])):
                 if wall.length - 2 * clearance < width:
@@ -53,16 +54,17 @@ class WindowFeature:
                         preference_rank=side_priority[wall.exterior_side.value],
                     )
                 )
-            demands.append(
-                OpeningDemand(
-                    id=f"window:{room.id!s}",
-                    feature_id=self.feature_id,
-                    opening_type=OpeningType.WINDOW,
-                    purpose=OpeningPurpose.DAYLIGHT,
-                    room_ids=(room.id,),
-                    options=tuple(options),
-                    objective_tier="window",
-                    category="window",
+            for number in range(policy.target_count):
+                demands.append(
+                    OpeningDemand(
+                        id=f"window:{room.id!s}:{number}",
+                        feature_id=self.feature_id,
+                        opening_type=OpeningType.WINDOW,
+                        purpose=OpeningPurpose.DAYLIGHT,
+                        room_ids=(room.id,),
+                        options=tuple(options),
+                        objective_tier="window" if number == 0 else "other_interior",
+                        category="window",
+                    )
                 )
-            )
         return tuple(demands)

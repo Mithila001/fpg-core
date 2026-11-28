@@ -34,6 +34,7 @@ class PlacementVariables:
     position_cost: Any
     option_cost: int
     clearance_deficit: Any
+    window_clearance_deficit: Any
 
 
 @dataclass(slots=True)
@@ -184,7 +185,7 @@ def _create_position_cost(
     clearance: int,
     latest: int,
 ) -> Any:
-    maximum_cost = wall.length * (wall.length + 1) + wall.length
+    maximum_cost = wall.length
     position_cost = context.model.NewIntVar(
         0,
         maximum_cost,
@@ -204,7 +205,7 @@ def _create_position_cost(
             context.model.Add(edge_deviation == latest - start)
         else:
             context.model.Add(edge_deviation == start - clearance)
-        full_position_cost = edge_deviation * (wall.length + 1) + start
+        full_position_cost = edge_deviation
     else:
         center_expression = 2 * start + option.width - wall.length
         center_deviation = context.model.NewIntVar(
@@ -213,7 +214,7 @@ def _create_position_cost(
             context.new_name("center_deviation", option.id),
         )
         context.model.AddAbsEquality(center_deviation, center_expression)
-        full_position_cost = center_deviation * (wall.length + 1) + start
+        full_position_cost = center_deviation
 
     context.model.Add(position_cost == full_position_cost).OnlyEnforceIf(selected)
     context.model.Add(position_cost == 0).OnlyEnforceIf(selected.Not())
@@ -227,7 +228,8 @@ def _create_variables(context: OpeningModelContext) -> None:
             wall = walls[option.wall_id]
             interior = demand.opening_type is OpeningType.DOOR and wall.kind is WallKind.SHARED
             policy = context.config.interior_doors.resolve(tuple(context.prepared.rooms_by_id[room_id].room_type for room_id in wall.room_ids)) if interior else None
-            clearance = round((policy.minimum_clearance if policy else context.config.geometry.corner_clearance) * context.prepared.scale)
+            window_policy = context.config.window_policy(context.prepared.rooms_by_id[wall.room_ids[0]].room_type) if demand.opening_type is OpeningType.WINDOW else None
+            clearance = round((policy.minimum_clearance if policy else window_policy.minimum_clearance if window_policy else context.config.geometry.corner_clearance) * context.prepared.scale)
             latest = wall.length - clearance - option.width
             if latest < clearance:
                 raise OpeningConfigurationError(
@@ -261,6 +263,7 @@ def _create_variables(context: OpeningModelContext) -> None:
                 latest=latest,
             )
             deficit = 0
+            window_deficit = 0
             if policy:
                 preferred = round(policy.preferred_clearance * context.prepared.scale)
                 deficits = []
@@ -272,6 +275,17 @@ def _create_variables(context: OpeningModelContext) -> None:
                     context.model.Add(active == 0).OnlyEnforceIf(selected.Not())
                     deficits.append(active)
                 deficit = sum(deficits)
+            if window_policy:
+                preferred = round(window_policy.preferred_clearance * context.prepared.scale)
+                deficits = []
+                for distance in (start, wall.length - end):
+                    raw = context.model.NewIntVar(0, preferred, context.new_name("window_raw_deficit", option.id))
+                    context.model.AddMaxEquality(raw, [0, preferred - distance])
+                    active = context.model.NewIntVar(0, preferred, context.new_name("window_deficit", option.id))
+                    context.model.Add(active == raw).OnlyEnforceIf(selected)
+                    context.model.Add(active == 0).OnlyEnforceIf(selected.Not())
+                    deficits.append(active)
+                window_deficit = sum(deficits)
             variables = PlacementVariables(
                 demand=demand,
                 option=option,
@@ -282,6 +296,7 @@ def _create_variables(context: OpeningModelContext) -> None:
                 interval=interval,
                 position_cost=position_cost,
                 clearance_deficit=deficit,
+                window_clearance_deficit=window_deficit,
                 option_cost=(
                     option.preference_rank * (len(demand.options) + 1) + option_index
                 ),
@@ -311,16 +326,21 @@ def _apply_objective(context: OpeningModelContext) -> tuple[bool, Any]:
     if not context.all_variables:
         return False, 0
     maximum_position = sum(
-        item.wall.length * (item.wall.length + 1) + item.wall.length
+        item.wall.length
         for item in context.all_variables
     )
-    option_stride = maximum_position + 1
+    option_stride = maximum_position + len(context.all_variables) + 1
     maximum_preference = sum(
-        item.wall.length * (item.wall.length + 1)
-        + item.wall.length
+        item.wall.length + 1
         + item.option_cost * option_stride
         for item in context.all_variables
     )
+    clearance_stride = maximum_preference + 1
+    maximum_window_deficit = sum(
+        2 * round(context.config.window_policy(context.prepared.rooms_by_id[item.wall.room_ids[0]].room_type).preferred_clearance * context.prepared.scale)
+        for item in context.all_variables if item.demand.opening_type is OpeningType.WINDOW
+    )
+    maximum_preference += maximum_window_deficit * clearance_stride
 
     demand_selection = {
         demand.id: sum(
@@ -348,20 +368,21 @@ def _apply_objective(context: OpeningModelContext) -> tuple[bool, Any]:
         )
 
     objective_bound = sum(
-        item.wall.length * (item.wall.length + 1) + item.wall.length
+        item.wall.length + 1
         + item.option_cost * option_stride + coefficient_by_tier[item.demand.objective_tier]
         for item in context.all_variables
     )
+    objective_bound += maximum_window_deficit * clearance_stride
     if objective_bound >= (1 << 62):
         raise OpeningConfigurationError("opening objective exceeds safe integer limits")
     preference_costs = [
-        item.position_cost + item.option_cost * option_stride * item.selected
+        item.position_cost + (item.option_cost * option_stride + 1) * item.selected + item.window_clearance_deficit * clearance_stride
         for item in context.all_variables
     ]
     rewards = []
     for demand in context.demands:
         selection = demand_selection[demand.id]
-        if demand.options:
+        if demand.options and not (demand.feature_id == "interior_doors" and demand.category == "other_interior"):
             rewards.append(coefficient_by_tier[demand.objective_tier] * selection)
             context.objective_terms.append(
                 f"select:{demand.id}:{demand.objective_tier}"

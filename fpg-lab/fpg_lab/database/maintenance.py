@@ -26,7 +26,7 @@ from fpg_lab.services.common import (
     seed_namespace_registry,
 )
 
-REVISION = 8
+REVISION = 9
 # Revision 6 enables living room and bedroom quality scoring; DDL is unchanged.
 REVIEWED_SCHEMA_HASH = "26cf6f2e4a498ea86ac7adb6211ccaf13fd024ff6d1eb99c12f0de9f651d955a"
 PREVIOUS_SCHEMA_HASH = "7c271e966b5efc5981e5bc0b0aee9ac880285ff3634306424d81cd5bc52c47f5"
@@ -398,6 +398,45 @@ def _upgrade_interior_doors(data):
     return data
 
 
+def _upgrade_opening_quality(data):
+    openings = data["openings"]
+    policy = openings["policy"]
+    units = data["project_units_per_meter"]
+    for feature in ("exterior_doors", "windows"):
+        if feature not in openings["enabled_features"]:
+            openings["enabled_features"].append(feature)
+    if "room_door_limits" not in openings["enabled_constraints"]:
+        openings["enabled_constraints"].append("room_door_limits")
+    for room_type in ("kitchen", "hallway"):
+        if room_type not in policy["secondary_room_priority"]:
+            policy["secondary_room_priority"].append(room_type)
+    eligible = policy["window_room_types"]
+    for room_type in ("bathroom", "attached_bathroom"):
+        if room_type not in eligible:
+            eligible.append(room_type)
+    policy.setdefault("window_policies", [
+        {"room_type": room_type, "policy": {
+            "width": units * 0.5 if room_type in ("bathroom", "attached_bathroom") else openings["dimensions"]["window_width"],
+            "target_count": 1,
+            "preferred_clearance": units * 0.2 if room_type in ("bathroom", "attached_bathroom") else openings["geometry"]["corner_clearance"],
+            "minimum_clearance": 0.0,
+        }} for room_type in eligible
+    ])
+    policy.setdefault("normal_connection_caps", [
+        {"room_type": room_type, "maximum": 1}
+        for room_type in ("bedroom", "kitchen", "bathroom", "attached_bathroom")
+    ])
+    policy.setdefault("prevent_duplicate_connections", True)
+    pairs = policy["allowed_room_pairs"]
+    if not any({pair["first"], pair["second"]} == {"kitchen", "dining_room"} for pair in pairs):
+        pairs.append({"first": "kitchen", "second": "dining_room"})
+    tiers = openings["objective"]["tier_order"]
+    if "window" in tiers and "other_interior" in tiers:
+        tiers.remove("window")
+        tiers.insert(tiers.index("other_interior") + 1, "window")
+    return data
+
+
 def _migration(connection, session, report, *, dry_run):
     revision, compatibility = _state(connection)
     report.update(from_revision=revision, compatibility=compatibility)
@@ -441,6 +480,8 @@ def _migration(connection, session, report, *, dry_run):
                     data["openings"]["geometry"]["corner_clearance"] = data["project_units_per_meter"] * 0.5
                 if revision < 8:
                     data = _upgrade_interior_doors(data)
+                if revision < 9:
+                    data = _upgrade_opening_quality(data)
                 validated = codec.validate_payload(data)
             values = SystemConfigurationService.configuration_values(validated)
             if any(getattr(row, key) != value for key, value in values.items()):

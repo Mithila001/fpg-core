@@ -54,19 +54,23 @@ def generation_spec() -> FloorPlanGenerationSpec:
 @pytest.fixture
 def floor_plan() -> FloorPlan:
     return FloorPlan(
-        boundary=rectangle(0, 0, 40, 20),
+        boundary=rectangle(0, 0, 60, 20),
         rooms=[
             FloorPlanRoom(
                 id=RoomId("living"),
                 room_type=RoomType.LIVING_ROOM,
                 name="Living Room",
-                boundary=rectangle(0, 0, 20, 20),
+                boundary=rectangle(20, 0, 40, 20),
             ),
             FloorPlanRoom(
                 id=RoomId("bedroom"),
                 room_type=RoomType.BEDROOM,
                 name="Bedroom",
-                boundary=rectangle(20, 0, 40, 20),
+                boundary=rectangle(0, 0, 20, 20),
+            ),
+            FloorPlanRoom(
+                id=RoomId("kitchen"), room_type=RoomType.KITCHEN, name="Kitchen",
+                boundary=rectangle(40, 0, 60, 20),
             ),
         ],
     )

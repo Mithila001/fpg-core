@@ -590,6 +590,7 @@ class CoreConfigCodec:
             GeometryConfig,
             InteriorDoorConfig,
             InteriorDoorPolicy,
+            WindowPolicy,
             ObjectiveConfig,
             SolverConfig,
         )
@@ -614,6 +615,9 @@ class CoreConfigCodec:
                 ),
                 secondary_room_priority=tuple(RoomType(v) for v in policy.secondary_room_priority),
                 window_room_types=tuple(RoomType(v) for v in policy.window_room_types),
+                window_policies=tuple((RoomType(v.room_type), WindowPolicy(**v.policy.model_dump())) for v in policy.window_policies),
+                normal_connection_caps=tuple((RoomType(v.room_type), v.maximum) for v in policy.normal_connection_caps),
+                prevent_duplicate_connections=policy.prevent_duplicate_connections,
                 main_side_priority=tuple(policy.main_side_priority),
                 secondary_side_priority=tuple(policy.secondary_side_priority),
                 window_side_priority=tuple(policy.window_side_priority),

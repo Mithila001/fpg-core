@@ -489,11 +489,26 @@ class OpeningDoorPriorityDocument(StrictModel):
     priority: int = Field(ge=0)
 
 
+class WindowPolicyDocument(StrictModel):
+    width: float = Field(gt=0, allow_inf_nan=False)
+    target_count: int = Field(ge=1)
+    preferred_clearance: float = Field(ge=0, allow_inf_nan=False)
+    minimum_clearance: float = Field(ge=0, allow_inf_nan=False)
+
+
+class WindowPolicyOverrideDocument(StrictModel):
+    room_type: RoomTypeValue
+    policy: WindowPolicyDocument
+
+
 class OpeningFeaturePolicyDocument(StrictModel):
     allowed_room_pairs: list[OpeningRoomPairDocument]
     room_door_caps: list[OpeningRoomDoorCapDocument]
     secondary_room_priority: list[RoomTypeValue]
     window_room_types: list[RoomTypeValue]
+    window_policies: list[WindowPolicyOverrideDocument]
+    normal_connection_caps: list[OpeningRoomDoorCapDocument]
+    prevent_duplicate_connections: bool
     main_side_priority: list[CardinalSideValue]
     secondary_side_priority: list[CardinalSideValue]
     window_side_priority: list[CardinalSideValue]

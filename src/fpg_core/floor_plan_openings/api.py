@@ -9,8 +9,11 @@ from .config import (
     FeaturePolicy,
     FloorPlanOpeningsConfig,
     GeometryConfig,
+    InteriorDoorConfig,
+    InteriorDoorPolicy,
     ObjectiveConfig,
     SolverConfig,
+    WindowPolicy,
 )
 from .contracts import (
     OpeningDiagnostics,
@@ -42,6 +45,8 @@ __all__ = [
     "FeaturePolicy",
     "FloorPlanOpeningsConfig",
     "GeometryConfig",
+    "InteriorDoorConfig",
+    "InteriorDoorPolicy",
     "ObjectiveConfig",
     "OpeningConfigurationError",
     "OpeningDiagnostics",
@@ -54,6 +59,7 @@ __all__ = [
     "OpeningGenerationStatus",
     "OpeningIssue",
     "SolverConfig",
+    "WindowPolicy",
     "create_default_registry",
     "generate_openings",
 ]

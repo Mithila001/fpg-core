@@ -2166,6 +2166,10 @@
             "second": "living_room"
           },
           {
+            "first": "kitchen",
+            "second": "dining_room"
+          },
+          {
             "first": "bathroom",
             "second": "living_room"
           },
@@ -2264,8 +2268,25 @@
           "bedroom",
           "living_room",
           "kitchen",
-          "dining_room"
+          "dining_room",
+          "bathroom",
+          "attached_bathroom"
         ],
+        "window_policies": [
+          {"room_type": "bedroom", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
+          {"room_type": "living_room", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
+          {"room_type": "kitchen", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
+          {"room_type": "dining_room", "policy": {"width": 16.0, "target_count": 1, "preferred_clearance": 5.0, "minimum_clearance": 0.0}},
+          {"room_type": "bathroom", "policy": {"width": 5.0, "target_count": 1, "preferred_clearance": 2.0, "minimum_clearance": 0.0}},
+          {"room_type": "attached_bathroom", "policy": {"width": 5.0, "target_count": 1, "preferred_clearance": 2.0, "minimum_clearance": 0.0}}
+        ],
+        "normal_connection_caps": [
+          {"room_type": "bedroom", "maximum": 1},
+          {"room_type": "kitchen", "maximum": 1},
+          {"room_type": "bathroom", "maximum": 1},
+          {"room_type": "attached_bathroom", "maximum": 1}
+        ],
+        "prevent_duplicate_connections": true,
         "main_side_priority": [
           "south",
           "east",
@@ -2336,12 +2357,12 @@
       },
       "objective": {
         "tier_order": [
-          "window",
-          "secondary_entrance",
           "other_interior",
           "preferred_hallway",
           "bathroom_hallway",
           "attached_bathroom",
+          "window",
+          "secondary_entrance",
           "main_entrance"
         ]
       },

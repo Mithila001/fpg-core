@@ -159,6 +159,58 @@ def validate_generated_floor_plan(
     if len(opening_ids) != len(set(opening_ids)):
         raise OpeningExtractionError("generated opening IDs are not unique")
 
+    if prepared.rooms_by_id:
+        for purpose in (OpeningPurpose.MAIN_ENTRANCE, OpeningPurpose.SECONDARY_ENTRANCE):
+            if sum(opening.purpose is purpose for opening in generated.openings) != 1:
+                raise OpeningExtractionError(f"expected exactly one {purpose.value}")
+
+    pairs: set[frozenset[RoomId]] = set()
+    adjacency = {room_id: set() for room_id in prepared.rooms_by_id}
+    normal_counts = {room_id: 0 for room_id in adjacency}
+    special_counts = {room_id: 0 for room_id in adjacency}
+    total_counts = {room_id: 0 for room_id in adjacency}
+    for opening in generated.openings:
+        if opening.opening_type is not OpeningType.DOOR or len(opening.connected_room_ids) != 2:
+            continue
+        left, right = opening.connected_room_ids
+        if left not in adjacency or right not in adjacency or left == right:
+            raise OpeningExtractionError("door has invalid connected rooms")
+        pair = frozenset((left, right))
+        room_types = frozenset(prepared.rooms_by_id[room_id].room_type for room_id in pair)
+        if not any(room_types == frozenset(allowed) for allowed in config.policy.allowed_room_pairs):
+            raise OpeningExtractionError("door connects disallowed room types")
+        if RoomType.ATTACHED_BATHROOM in room_types and room_types != {RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM}:
+            raise OpeningExtractionError("attached bathroom must connect to a bedroom")
+        if config.policy.prevent_duplicate_connections and pair in pairs:
+            raise OpeningExtractionError("duplicate connection between rooms")
+        pairs.add(pair)
+        adjacency[left].add(right)
+        adjacency[right].add(left)
+        for room_id, other_id in ((left, right), (right, left)):
+            room_type = prepared.rooms_by_id[room_id].room_type
+            other_type = prepared.rooms_by_id[other_id].room_type
+            special = (room_type, other_type) in {(RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM), (RoomType.KITCHEN, RoomType.DINING_ROOM)}
+            total_counts[room_id] += 1
+            (special_counts if special else normal_counts)[room_id] += 1
+    if "room_door_limits" in config.enabled_constraints:
+        for room_id, room in prepared.rooms_by_id.items():
+            cap = dict(config.policy.normal_connection_caps).get(room.room_type)
+            if special_counts[room_id] > 1 or (cap is not None and normal_counts[room_id] > cap) or total_counts[room_id] > config.policy.cap_by_room_type.get(room.room_type, 10) + special_counts[room_id]:
+                raise OpeningExtractionError(f"room {room_id!s} exceeds its connection limit")
+    if prepared.rooms_by_id:
+        main = next(opening for opening in generated.openings if opening.purpose is OpeningPurpose.MAIN_ENTRANCE)
+        reachable = set(main.connected_room_ids)
+        pending = list(reachable)
+        while pending:
+            for room_id in adjacency.get(pending.pop(), ()):
+                if room_id not in reachable:
+                    reachable.add(room_id)
+                    pending.append(room_id)
+        required = {room_id for room_id, room in prepared.rooms_by_id.items() if room.room_type in config.policy.required_access_room_types}
+        secondary = next(opening for opening in generated.openings if opening.purpose is OpeningPurpose.SECONDARY_ENTRANCE)
+        if not required.issubset(reachable) or not set(secondary.connected_room_ids).issubset(reachable):
+            raise OpeningExtractionError("required rooms or secondary entrance are not accessible from the main entrance")
+
     walls = prepared.walls
     placements: list[tuple[FloorPlanOpening, AnalyzedWall, tuple[int, int]]] = []
     for opening in generated.openings:
@@ -197,9 +249,13 @@ def validate_generated_floor_plan(
             raise OpeningExtractionError(f"opening {opening.id!s} does not lie on its connected wall")
         length = match[1][1] - match[1][0]
         door_width = round(config.dimensions.door_width * prepared.scale)
-        window_width = round(config.dimensions.window_width * prepared.scale)
+        window_width = round(config.window_policy(prepared.rooms_by_id[match[0].room_ids[0]].room_type).width * prepared.scale) if opening.opening_type is OpeningType.WINDOW else 0
         if opening.opening_type is OpeningType.WINDOW and length != window_width:
             raise OpeningExtractionError(f"opening {opening.id!s} has an invalid window width")
+        if opening.opening_type is OpeningType.WINDOW:
+            minimum = round(config.window_policy(prepared.rooms_by_id[match[0].room_ids[0]].room_type).minimum_clearance * prepared.scale)
+            if match[1][0] < minimum or match[0].length - match[1][1] < minimum:
+                raise OpeningExtractionError(f"opening {opening.id!s} violates minimum window clearance")
         if opening.opening_type is OpeningType.DOOR:
             if match[0].kind is WallKind.SHARED:
                 policy = config.interior_doors.resolve(tuple(prepared.rooms_by_id[room_id].room_type for room_id in match[0].room_ids))
@@ -210,20 +266,24 @@ def validate_generated_floor_plan(
                     raise OpeningExtractionError(f"opening {opening.id!s} violates minimum interior clearance")
             if match[0].kind is WallKind.EXTERIOR and not (0 < length <= door_width):
                 raise OpeningExtractionError(f"opening {opening.id!s} has an invalid exterior door width")
+            if opening.purpose is OpeningPurpose.SECONDARY_ENTRANCE and length != door_width:
+                raise OpeningExtractionError(f"opening {opening.id!s} has an invalid secondary entrance width")
+            if opening.purpose is OpeningPurpose.SECONDARY_ENTRANCE and (prepared.rooms_by_id[match[0].room_ids[0]].room_type not in config.policy.secondary_room_priority or prepared.rooms_by_id[match[0].room_ids[0]].room_type not in {RoomType.KITCHEN, RoomType.HALLWAY}):
+                raise OpeningExtractionError(f"opening {opening.id!s} has an ineligible secondary entrance room")
         placements.append((opening, match[0], match[1]))
 
     spacing = round(config.geometry.window_spacing * prepared.scale)
     for index, (left, left_wall, left_interval) in enumerate(placements):
         for right, right_wall, right_interval in placements[index + 1 :]:
-            if left_wall.id != right_wall.id:
+            if left_wall.orientation is not right_wall.orientation or left_wall.fixed_coordinate != right_wall.fixed_coordinate:
                 continue
             required_gap = (
                 spacing
                 if OpeningType.WINDOW in {left.opening_type, right.opening_type}
                 else 0
             )
-            left_start, left_end = left_interval
-            right_start, right_end = right_interval
+            left_start, left_end = (left_wall.start + value for value in left_interval)
+            right_start, right_end = (right_wall.start + value for value in right_interval)
             if not (
                 left_end + required_gap <= right_start
                 or right_end + required_gap <= left_start

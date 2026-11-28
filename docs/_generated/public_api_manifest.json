@@ -212,7 +212,7 @@
     },
     "fpg_core.floor_plan_openings": {
       "source": "src/fpg_core/floor_plan_openings/__init__.py",
-      "export_count": 22,
+      "export_count": 23,
       "exports": [
         "generate_openings",
         "DimensionConfig",
@@ -221,6 +221,7 @@
         "GeometryConfig",
         "InteriorDoorConfig",
         "InteriorDoorPolicy",
+        "WindowPolicy",
         "ObjectiveConfig",
         "SolverConfig",
         "OpeningDiagnostics",

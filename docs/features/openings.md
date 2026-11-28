@@ -4,11 +4,10 @@ Call `generate_openings(OpeningGenerationRequest(floor_plan=..., config=...), mo
 
 ## Model rules
 
-- `FloorPlanOpeningsConfig.policy.allowed_room_pairs` is the **sole authority** for interior room-type connections. The algorithm does not silently allow all hallway pairs or special attached-bathroom pairs.
-- The default allowed pairs include bedroom/attached-bathroom and several explicit hallway combinations. It does **not** include every logically imaginable pair (for example, kitchen/dining); consumers must align opening policy with hard adjacency requirements.
-- `shared_placement` and `required_room_access` are **structural** constraints and cannot be disabled. `required_room_access` requires exactly one selected main entrance for non-empty plans and a connected door path from that entrance to every required-access room. A separate connected island is not sufficient.
-- `room_door_caps` applies per room type without hidden exceptions. Interior door policies choose centered or wall-end placement, with minimum clearance hard and preferred clearance optimized before optional openings. Wall-end positions use `door_placement_priority`; windows remain center-oriented. Hard bounds and non-overlap take precedence.
-- Defaults: door width `8`, window width `16`, minimum shared wall `10`, window spacing `5` project units. All are policy/configuration, not universal regulations.
+- Room union exterior rings determine outdoor exposure; shared spans are interior walls and enclosed voids are excluded. Room-type pairs are configurable, with attached bathrooms restricted to bedrooms.
+- `shared_placement` and `required_room_access` are structural. Non-empty plans require one main entrance, one full-width secondary entrance and paths from the main entrance to the secondary entrance and required rooms.
+- Normal connection caps apply independently of the extra bedroom/attached-bathroom and kitchen/dining connections. Multiple shared spans between the same rooms are alternatives by default.
+- Interior door minimum clearances are hard; preferred clearance deficits are minimized before optional selections. Window coverage is preferred, with room-specific width and clearance policies. See the [consumer contract](../feature_documentations/floor_plan_openings.md) for defaults and configuration.
 
 ## Outcomes
 

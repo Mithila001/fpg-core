@@ -42,6 +42,7 @@ class DimensionConfig:
 _DEFAULT_ALLOWED_ROOM_PAIRS: tuple[tuple[RoomType, RoomType], ...] = (
     (RoomType.BEDROOM, RoomType.LIVING_ROOM),
     (RoomType.KITCHEN, RoomType.LIVING_ROOM),
+    (RoomType.KITCHEN, RoomType.DINING_ROOM),
     (RoomType.BATHROOM, RoomType.LIVING_ROOM),
     (RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM),
     (RoomType.VERANDA, RoomType.LIVING_ROOM),
@@ -97,6 +98,20 @@ class InteriorDoorConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class WindowPolicy:
+    width: float = 16.0
+    target_count: int = 1
+    preferred_clearance: float = 5.0
+    minimum_clearance: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not all(isfinite(v) for v in (self.width, self.preferred_clearance, self.minimum_clearance)) or self.width <= 0:
+            raise OpeningConfigurationError("window dimensions must be finite and width positive")
+        if type(self.target_count) is not int or self.target_count < 1 or self.minimum_clearance < 0 or self.preferred_clearance < self.minimum_clearance:
+            raise OpeningConfigurationError("invalid window count or clearances")
+
+
+@dataclass(frozen=True, slots=True)
 class FeaturePolicy:
     """Consumer-owned architectural policy for opening generation.
 
@@ -128,7 +143,22 @@ class FeaturePolicy:
         RoomType.LIVING_ROOM,
         RoomType.KITCHEN,
         RoomType.DINING_ROOM,
+        RoomType.BATHROOM,
+        RoomType.ATTACHED_BATHROOM,
     )
+    window_policies: tuple[tuple[RoomType, WindowPolicy], ...] = field(default_factory=lambda: (
+        (RoomType.BEDROOM, WindowPolicy()),
+        (RoomType.LIVING_ROOM, WindowPolicy()),
+        (RoomType.KITCHEN, WindowPolicy()),
+        (RoomType.DINING_ROOM, WindowPolicy()),
+        (RoomType.BATHROOM, WindowPolicy(5.0, 1, 2.0, 0.0)),
+        (RoomType.ATTACHED_BATHROOM, WindowPolicy(5.0, 1, 2.0, 0.0)),
+    ))
+    normal_connection_caps: tuple[tuple[RoomType, int], ...] = (
+        (RoomType.BEDROOM, 1), (RoomType.KITCHEN, 1),
+        (RoomType.BATHROOM, 1), (RoomType.ATTACHED_BATHROOM, 1),
+    )
+    prevent_duplicate_connections: bool = True
     main_side_priority: tuple[str, ...] = ("south", "east", "north", "west")
     secondary_side_priority: tuple[str, ...] = (
         "north",
@@ -161,6 +191,14 @@ class FeaturePolicy:
     )
 
     def __post_init__(self) -> None:
+        for name, entries in (("window policies", self.window_policies), ("normal connection caps", self.normal_connection_caps)):
+            types = [room_type for room_type, _ in entries]
+            if any(not isinstance(room_type, RoomType) for room_type in types) or len(types) != len(set(types)):
+                raise OpeningConfigurationError(f"{name} must have unique room types")
+        if any(cap < 1 for _, cap in self.normal_connection_caps):
+            raise OpeningConfigurationError("normal connection caps must be positive")
+        if any(not isinstance(policy, WindowPolicy) for _, policy in self.window_policies):
+            raise OpeningConfigurationError("window policies must be WindowPolicy values")
         normalized_pairs = [frozenset(pair) for pair in self.allowed_room_pairs]
         if len(normalized_pairs) != len(set(normalized_pairs)):
             raise OpeningConfigurationError("allowed room pairs must be unique")
@@ -222,12 +260,12 @@ class SolverConfig:
 @dataclass(frozen=True, slots=True)
 class ObjectiveConfig:
     tier_order: tuple[str, ...] = (
-        "window",
-        "secondary_entrance",
         "other_interior",
         "preferred_hallway",
         "bathroom_hallway",
         "attached_bathroom",
+        "window",
+        "secondary_entrance",
         "main_entrance",
     )
 
@@ -257,6 +295,11 @@ class FloorPlanOpeningsConfig:
     objective: ObjectiveConfig = field(default_factory=ObjectiveConfig)
     solver: SolverConfig = field(default_factory=SolverConfig)
     interior_doors: InteriorDoorConfig = field(default_factory=InteriorDoorConfig)
+
+    def window_policy(self, room_type: RoomType) -> WindowPolicy:
+        return dict(self.policy.window_policies).get(
+            room_type, WindowPolicy(self.dimensions.window_width, 1, self.geometry.corner_clearance, 0.0)
+        )
 
     def __post_init__(self) -> None:
         if not self.name.strip():

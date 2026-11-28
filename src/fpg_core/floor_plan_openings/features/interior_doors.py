@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from ...domain import OpeningPurpose, OpeningType, RoomId, RoomType
 from ..config import FloorPlanOpeningsConfig
 from ..domain import OpeningDemand, PlacementOption, PreparedFloorPlan, WallKind
@@ -31,6 +33,8 @@ class InteriorDoorFeature:
                 continue
             left = prepared.rooms_by_id[wall.room_ids[0]]
             right = prepared.rooms_by_id[wall.room_ids[1]]
+            if RoomType.ATTACHED_BATHROOM in (left.room_type, right.room_type) and {left.room_type, right.room_type} != {RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM}:
+                continue
             policy = config.interior_doors.resolve((left.room_type, right.room_type))
             if wall.length >= round(policy.minimum_shared_wall * prepared.scale) and self._allowed(left.room_type, right.room_type, config):
                 candidates.append((wall, left, right))
@@ -70,6 +74,8 @@ class InteriorDoorFeature:
             elif pair == frozenset((RoomType.BEDROOM, RoomType.ATTACHED_BATHROOM)):
                 category = "attached_bathroom"
                 tier = "attached_bathroom"
+            elif pair == frozenset((RoomType.KITCHEN, RoomType.DINING_ROOM)):
+                category = "kitchen_dining"
             elif pair == frozenset((RoomType.BATHROOM, RoomType.HALLWAY)):
                 category = "bathroom_hallway"
                 tier = "bathroom_hallway"
@@ -108,4 +114,10 @@ class InteriorDoorFeature:
                     category=category,
                 )
             )
-        return tuple(demands)
+        if not config.policy.prevent_duplicate_connections:
+            return tuple(demands)
+        grouped: dict[tuple[RoomId, ...], OpeningDemand] = {}
+        for demand in demands:
+            previous = grouped.get(demand.room_ids)
+            grouped[demand.room_ids] = replace(previous, options=previous.options + demand.options) if previous else demand
+        return tuple(grouped.values())

@@ -223,7 +223,7 @@ async def _config_editor(runtime, profile, area, feedback, save, validate, disca
                 return
             loaded = (profile_id, expected, payload)
             with area:
-                ui.label("Dimensions, geometry, room connections, accessibility, priorities and solver settings").classes("text-sm lab-muted")
+                ui.label("Configure window room types and policies, connection limits, door dimensions, clearances and solver settings. A secondary entrance is required.").classes("text-sm lab-muted")
                 editor = ui.json_editor({"content": {"json": payload["openings"]}, "mode": "tree"}).classes("w-full")
             save.enable()
             feedback.set_text("Saved opening settings loaded.")
@@ -350,6 +350,17 @@ async def run_page(runtime, run_id):
                    for i, opening in enumerate(openings)]
         with context:
             ui.label(f"{sum(o['opening_type'] == 'door' for o in generated)} doors ? {sum(o['opening_type'] == 'window' for o in generated)} windows").classes("text-sm font-medium")
+            issues = (record["diagnostics"] or {}).get("issues", [])
+            visible_issues = [issue for issue in issues if issue.get("code") not in {"not_selected", "no_candidate"}]
+            warnings = [issue for issue in visible_issues if issue.get("code") in {"missing_window", "reduced_preferred_clearance", "undersized_exterior_door"}]
+            failures = [issue for issue in visible_issues if issue not in warnings]
+            for title, group in (("Generation problems", failures), ("Optional opening warnings", warnings)):
+                if group:
+                    ui.label(title).classes("font-semibold text-sm")
+                for issue in group:
+                    ui.label(issue.get("message", "Generation issue")).classes("text-sm whitespace-pre-wrap")
+            if not generated_plan and result.get("status") == "infeasible":
+                ui.label("The required entrances and room connections could not all be placed with these settings.").classes("text-sm")
             ui.label("Opening visibility").classes("font-semibold text-sm")
             doors = ui.checkbox("Doors", value=True).props("dense")
             windows = ui.checkbox("Windows", value=True).props("dense")

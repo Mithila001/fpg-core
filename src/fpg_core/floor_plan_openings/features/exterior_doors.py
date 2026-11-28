@@ -85,9 +85,10 @@ class ExteriorDoorFeature:
         eligible_rooms = {
             room.id
             for room in prepared.rooms_by_id.values()
-            if room.room_type in config.policy.secondary_room_priority
+            if room.room_type in {RoomType.KITCHEN, RoomType.HALLWAY}
+            and room.room_type in config.policy.secondary_room_priority
         }
-        if eligible_rooms:
+        if prepared.rooms_by_id:
             room_priority = {
                 room_type: index
                 for index, room_type in enumerate(config.policy.secondary_room_priority)
@@ -101,22 +102,20 @@ class ExteriorDoorFeature:
                 if wall.room_ids[0] not in eligible_rooms:
                     continue
                 usable = wall.length - 2 * clearance
-                if usable <= 0:
+                if usable < preferred_width:
                     continue
                 if wall.exterior_side is None:
                     continue
                 room = prepared.rooms_by_id[wall.room_ids[0]]
-                width = min(preferred_width, usable)
                 options.append(
                     PlacementOption(
                         id=f"secondary:{index}:{wall.id}",
                         wall_id=wall.id,
-                        width=width,
+                        width=preferred_width,
                         preference_rank=(
-                            room_priority[room.room_type] * 4
-                            + side_priority[wall.exterior_side.value]
+                            side_priority[wall.exterior_side.value] * len(room_priority)
+                            + room_priority[room.room_type]
                         ),
-                        undersized=width < preferred_width,
                     )
                 )
             demands.append(

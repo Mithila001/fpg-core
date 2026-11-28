@@ -6,6 +6,14 @@
 
 ## Unreleased
 
+- Breaking: non-empty opening-generation plans now require a full-width secondary
+  entrance connected to the main entrance. Ensure an eligible kitchen or hallway
+  has an exterior wall long enough for the configured width and clearances.
+  Exterior exposure is determined from the room footprint, excluding enclosed voids.
+- Breaking: windows use room-specific policies, including bathroom defaults, and
+  normal room connections and duplicate room pairs are limited. Migrate Lab
+  profiles to revision 9 and review their opening policies before generating plans.
+
 - Breaking: interior door widths and corner clearances now use `interior_doors`
   policies, rather than exterior dimensions and geometry clearance. Configure the
   default and room overrides explicitly; Lab revision 8 carries existing standard

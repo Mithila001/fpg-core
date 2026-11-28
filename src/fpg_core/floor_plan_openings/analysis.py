@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.ops import unary_union
 
 from ..domain import FloorPlan, Point, RoomId
 from .config import FloorPlanOpeningsConfig
@@ -24,7 +25,6 @@ class _RawSegment:
     start: int
     end: int
     room_id: RoomId | None
-    floor_boundary: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,7 +58,6 @@ def _segments(
                     min(x1, x2),
                     max(x1, x2),
                     room_id,
-                    room_id is None,
                 )
             )
         elif x1 == x2:
@@ -69,7 +68,6 @@ def _segments(
                     min(y1, y2),
                     max(y1, y2),
                     room_id,
-                    room_id is None,
                 )
             )
         else:
@@ -118,13 +116,20 @@ def analyze_floor_plan(
     config: FloorPlanOpeningsConfig,
 ) -> PreparedFloorPlan:
     scale = config.geometry.coordinate_scale
-    raw: list[_RawSegment] = _segments(floor_plan.boundary.points, scale, None)
+    raw: list[_RawSegment] = []
     room_shapes: dict[RoomId, ShapelyPolygon] = {}
     for room in floor_plan.rooms:
         raw.extend(_segments(room.boundary.points, scale, room.id))
         room_shapes[room.id] = ShapelyPolygon(
             [(point.x, point.y) for point in room.boundary.points]
         )
+
+    footprint = unary_union(list(room_shapes.values()))
+    polygons = (footprint,) if footprint.geom_type == "Polygon" else footprint.geoms
+    shells = tuple(ShapelyPolygon(polygon.exterior) for polygon in polygons if polygon.geom_type == "Polygon")
+    exterior_rings = tuple(shell.exterior for shell in shells if not any(
+        other is not shell and other.covers(shell) for other in shells
+    ))
 
     by_line: dict[tuple[WallOrientation, int], list[_RawSegment]] = {}
     for segment in raw:
@@ -145,14 +150,16 @@ def analyze_floor_plan(
                     key=str,
                 )
             )
-            on_boundary = any(segment.floor_boundary for segment in covering)
+            midpoint = (start + end) / (2 * scale)
+            point = ShapelyPoint(midpoint, fixed / scale) if orientation is WallOrientation.HORIZONTAL else ShapelyPoint(fixed / scale, midpoint)
+            on_exterior = any(ring.distance(point) <= config.geometry.tolerance for ring in exterior_rings)
             if len(room_ids) > 2:
                 raise OpeningInputError("more than two rooms share an atomic wall span")
             if len(room_ids) == 2:
                 atomic.append(
                     _AtomicWall(orientation, fixed, start, end, WallKind.SHARED, room_ids, None)
                 )
-            elif len(room_ids) == 1 and on_boundary:
+            elif len(room_ids) == 1 and on_exterior:
                 side = _exterior_side(
                     orientation,
                     fixed,
